@@ -447,7 +447,8 @@ ifdef USE_CICE
     LIBS  +=    $(SCRATCH_DIR)/libCICE.a
 endif
  modules  +=	ROMS/Utility \
-		ROMS/Modules
+		ROMS/Modules \
+		ROMS/IcePlume
 
  includes :=	ROMS/Include
 ifdef MY_ANALYTICAL

@@ -635,13 +635,59 @@
      &              ((Jstr.le.Jsrc).and.(Jsrc.le.Jend))) THEN
 # endif
                   IF (LtracerSrc(itrc,ng)) THEN
-                    FX(Isrc,Jsrc)=Huon(Isrc,Jsrc,k)*                    &
-# ifdef ONE_TRACER_SOURCE
+# if defined MASKING && defined ICEPLUME
+!----- iceplume model here (Chuning Wang) ------------------------------
+                    IF ((rmask(Isrc  ,Jsrc).eq.0.0_r8).and.             &
+     &                  (rmask(Isrc-1,Jsrc).eq.1.0_r8)) THEN
+                      IF (Huon(Isrc,Jsrc,k).gt.0.0_r8) THEN
+                        FX(Isrc,Jsrc)=Huon(Isrc,Jsrc,k)*                &
+     &                                t(Isrc-1,Jsrc,k,3,itrc)
+                      ELSE
+                        IF (LtracerSrc(itrc,ng)) THEN
+                          FX(Isrc,Jsrc)=Huon(Isrc,Jsrc,k)*              &
+#  ifdef ONE_TRACER_SOURCE
      &                      SOURCES(ng)%Tsrc(itrc)
-# elif defined TWO_D_TRACER_SOURCE
+#  elif defined TWO_D_TRACER_SOURCE
      &                      SOURCES(ng)%Tsrc(is,itrc)
-# else
+#  else
      &                      SOURCES(ng)%Tsrc(is,k,itrc)
+#  endif
+                        ELSE
+                          FX(Isrc,Jsrc)=0.0_r8
+                        ENDIF
+                      ENDIF
+                    ELSE IF ((rmask(Isrc  ,Jsrc).eq.1.0_r8).and.        &
+     &                       (rmask(Isrc-1,Jsrc).eq.0.0_r8)) THEN
+                      IF (Huon(Isrc,Jsrc,k).lt.0.0_r8) THEN
+                        FX(Isrc,Jsrc)=Huon(Isrc,Jsrc,k)*                &
+     &                                t(Isrc  ,Jsrc,k,3,itrc)
+                      ELSE
+                        IF (LtracerSrc(itrc,ng)) THEN
+                          FX(Isrc,Jsrc)=Huon(Isrc,Jsrc,k)*              &
+#  ifdef ONE_TRACER_SOURCE
+     &                      SOURCES(ng)%Tsrc(itrc)
+#  elif defined TWO_D_TRACER_SOURCE
+     &                      SOURCES(ng)%Tsrc(is,itrc)
+#  else
+     &                      SOURCES(ng)%Tsrc(is,k,itrc)
+#  endif
+                        ELSE
+                          FX(Isrc,Jsrc)=0.0_r8
+                        ENDIF
+                      ENDIF
+                    ELSE
+                      FX(Isrc,Jsrc)=0.0_r8
+                    ENDIF
+!-----------------------------------------------------------------------
+# else
+                    FX(Isrc,Jsrc)=Huon(Isrc,Jsrc,k)*                    &
+#  ifdef ONE_TRACER_SOURCE
+     &                      SOURCES(ng)%Tsrc(itrc)
+#  elif defined TWO_D_TRACER_SOURCE
+     &                      SOURCES(ng)%Tsrc(is,itrc)
+#  else
+     &                      SOURCES(ng)%Tsrc(is,k,itrc)
+#  endif
 # endif
 # ifdef MASKING
                   ELSE

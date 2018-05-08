@@ -150,6 +150,9 @@
 # endif
       USE strings_mod,          ONLY : FoundError
       USE wvelocity_mod,        ONLY : wvelocity
+# ifdef ICEPLUME
+      USE iceplume_mod,         ONLY : iceplume
+# endif
 !
       implicit none
 !
@@ -245,6 +248,9 @@
               ng=GridNumber(ig,nl)
               DO tile=first_tile(ng),last_tile(ng),+1
                 CALL set_data (ng, tile)
+# ifdef ICEPLUME
+                CALL iceplume (ng, tile)
+# endif
               END DO
 !$OMP BARRIER
             END DO

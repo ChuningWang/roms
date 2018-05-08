@@ -63,6 +63,11 @@
 #if defined ICE_MODEL || defined CICE_MODEL
       USE mod_ice, ONLY : allocate_ice, initialize_ice
 #endif
+#ifdef ICEPLUME
+!----- iceplume model here (Chuning Wang) ------------------------------
+      USE mod_iceplume, ONLY : allocate_iceplume
+!-----------------------------------------------------------------------
+#endif
 !
       implicit none
 !
@@ -166,6 +171,11 @@
           END IF
 #if defined TRC_PSOURCE
           CALL allocate_trc_sources (ng)
+#endif
+#ifdef ICEPLUME
+!----- iceplume model here (Chuning Wang) ------------------------------
+          CALL allocate_iceplume(ng)
+!-----------------------------------------------------------------------
 #endif
 !$OMP END MASTER
 !$OMP BARRIER
