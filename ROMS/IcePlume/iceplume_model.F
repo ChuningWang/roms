@@ -107,9 +107,10 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
     PLUME(ng) % volFlux(iceDepthK) = QIni
 
 ! Calculate volume flux differential to give entrainment / extrainment
-! First clear ent
+! First clear ent / det
     DO K = 1,Nr
       PLUME(ng) % ent(K) = 0.0d0
+      PLUME(ng) % det(K) = 0.0d0
     ENDDO
 
     DO K = iceDepthK, Nr
@@ -123,7 +124,7 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
       negSum = 0.d0
       posSum = 0.d0
 
-      DO K = 1,Nr
+      DO K = iceDepthK,Nr
         IF ( PLUME(ng) % ent(K) .LT. 0 ) THEN
           negSum = PLUME(ng) % ent(K) + negSum
         ELSE
@@ -134,14 +135,20 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
       IF ( negSum .NE. 0 ) THEN
         posNegRatio = -negSum / posSum
           DO K = 1,Nr
-            IF ( PLUME(ng) % ent(K) .GT. 0 ) &
+            IF (PLUME(ng) % ent(K) .GT. 0) &
             & PLUME(ng) % ent(K) = (PLUME(ng) % ent(K)) * posNegRatio
         ENDDO
       ENDIF
     ENDIF
-
+! Separate entrainment / detrainment
+    DO K = iceDepthK,Nr
+      IF (PLUME(ng) % ent(K) .GT. 0.d0) THEN
+        PLUME(ng) % det(K) = PLUME(ng) % ent(K)
+        PLUME(ng) % ent(K) = 0.d0
+      ENDIF
+    ENDDO
+!
   ELSE  ! (QIni .EQ. 0)
-
 ! If no subglacial output, then there is no plume
     DO k = 1,Nr
       PLUME(ng) % r(K) = 0.d0
@@ -150,6 +157,8 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
       PLUME(ng) % s(K) = 0.d0
       PLUME(ng) % a(K) = 0.d0
       PLUME(ng) % mInt(K) = 0.d0
+      PLUME(ng) % ent(K) = 0.d0
+      PLUME(ng) % det(K) = 0.d0
     ENDDO
   ENDIF
 
@@ -165,22 +174,18 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
 ! 2018/4/20 Chuning Wang
 ! ==================================================================
   IF (QIni .GT. 0) THEN
-! First, clear variable PLUME % DetrEntr
-    DO K = 1,Nr
-      PLUME(ng) % DetrEntr(K) = 0
-    ENDDO
 ! Find detrainment depth index, Calculate total detrainment volume
 ! and thickness
     detr = 0.d0
     detrDz = 1.d-5
     DO K = 1,Nr
-      IF (PLUME(ng) % ent(K) .GT. 0) THEN
+      IF (PLUME(ng) % det(K) .GT. 0.d0) THEN
         plumeDepthK = K
-        PLUME(ng) % DetrEntr(K) = 1
-        detr = detr + PLUME(ng) % ent(K)
+        detr = detr + PLUME(ng) % det(K)
         detrDz = detrDz + PLUME(ng) % dz(K)
-      ELSEIF (PLUME(ng) % ent(K) .LT. 0) THEN
-        PLUME(ng) % DetrEntr(K) = -1
+        PLUME(ng) % detI(K) = 1
+      ELSE
+        PLUME(ng) % detI(K) = 0
       ENDIF
     ENDDO
 !
@@ -195,41 +200,47 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
 !
       DO WHILE (detrVel .GT. maxVel)
 ! Search for the nearest layer
-        IF (PLUME(ng) % DetrEntr(Nr) .NE. 1) THEN
+        IF (PLUME(ng) % det(Nr) .EQ. 0.d0) THEN
 ! If the plume has not yet reached the surface, search for one layer up
           DO K = 2,Nr
-            IF ((PLUME(ng) % DetrEntr(K) .EQ. 0) .and. &
-            & (PLUME(ng) % DetrEntr(K-1) .EQ. 1)) THEN
+            IF ((PLUME(ng) % det(K) .EQ. 0.d0) .and. &
+            & (PLUME(ng) % det(K-1) .GT. 0.d0)) THEN
               KI = K
             ENDIF
           ENDDO
         ELSE
 ! If all surface layers are plume water, search for one layer down
-          DO K=1,Nr-1
-            IF ((PLUME(ng) % DetrEntr(K+1) .EQ. 1) .and. &
-            & (PLUME(ng) % DetrEntr(K) .EQ. -1)) THEN
+          DO K = 1,Nr-1
+            IF ((PLUME(ng) % det(K+1) .GT. 0.d0) .and. &
+            & (PLUME(ng) % det(K) .EQ. 0.d0)) THEN
               KI = K
             ENDIF
           ENDDO
         ENDIF
-! Update detrainment layer flag, detrainment volume and depth
-        PLUME(ng) % DetrEntr(KI) = 1
-        detr = detr + PLUME(ng) % ent(KI)
+! Update detrainment layer flag and detrainment depth
+        PLUME(ng) % detI(KI) = 1
         detrDz = detrDz + PLUME(ng) % dz(KI)
-! Updare detrainment velocity
+! Update detrainment velocity
         detrVel = detr/detrDz
 ! If KI is at the bottom of the plume, the search reaches the bottom and
 ! the barotropic velocity is possibly too large. Print the message to log
 ! file to alert the Users.
-        IF (KI==iceDepthK) THEN
+        IF (KI .EQ. iceDepthK) THEN
           write(*, *)  'ICEPLUME ALERT - KI = IceDepthK'
           write(*, *)  'checkCFL searched to the bottom of plume!'
         ENDIF
         IF (checkCFLVerbal) THEN
           write(*, '(2I3, 10E12.3)')  KI, &
-          & PLUME(ng) % DetrEntr(KI), &
+          & PLUME(ng) % detI(KI), &
           & PLUME(ng) % ent(KI), &
+          & PLUME(ng) % det(KI), &
           & detrVel, maxVel, detrDz, detr
+        ENDIF
+      ENDDO
+! Update detrainment volume flux
+      DO K = 1,Nr
+        IF (PLUME(ng) % detI(K) .EQ. 1) THEN
+          PLUME(ng) % det(K) = detrVel*dy*PLUME(ng) % dz(K)
         ENDIF
       ENDDO
     ENDIF
@@ -262,7 +273,7 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
     IF (useTracers) THEN
 ! If use passive tracers, calculate passive tracer concentrations
 ! in the runoff
-
+!
 ! Add ptracers in runoff
       IF (useInputTracers) THEN
         DO iTracer = 3, NT(ng)
@@ -271,7 +282,7 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
             & PLUME(ng) % trcIni(iTracer) * QIni
         ENDDO
       ENDIF
-
+!
 ! Add up total sum of each tracer in plume
       DO K = iceDepthK, Nr
         IF (PLUME(ng) % ent(K) .LT. 0.) THEN
@@ -282,17 +293,12 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
           ENDDO
         ENDIF
       ENDDO
-
+!
 ! Calculate concentration of tracer in outflow 
-      DO K = iceDepthK, Nr
-        IF (PLUME(ng) % ent(K) .GT. 0. ) THEN
-          DO iTracer = 3, NT(ng)
-            PLUME(ng) % trc(iTracer) = &
-              & PLUME(ng) % trcCum(iTracer) / PLUME(ng) % ent(K)
-          ENDDO
-        ENDIF
+      DO iTracer = 3, NT(ng)
+        PLUME(ng) % trc(iTracer) = &
+          & PLUME(ng) % trcCum(iTracer) / detr
       ENDDO
-
     ENDIF
   ENDIF
 

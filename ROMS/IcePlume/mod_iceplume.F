@@ -125,9 +125,9 @@ MODULE mod_iceplume
 ! tendT         - a tendency term calculated as in MITgcm.
 ! tendS         - a tendency term calculated as in MITgcm.
 ! delta_z       - veritcal resolution [m]
-! volFluxDiff   - entrainment rate [m^3 s^-1]
-!
-! DetrEntr      - Detrainment/Entrainment flag
+! ent           - entrainment rate [m^3 s^-1]
+! det           - detrainment rate [m^3 s^-1]
+! detI          - detrainment flag
 !
 ! AT OMEGA POINTS
 ! zW            - depth [m]
@@ -165,6 +165,8 @@ MODULE mod_iceplume
     real(r8), pointer :: m(:)
     real(r8), pointer :: mAm(:)
     real(r8), pointer :: ent(:)
+    real(r8), pointer :: det(:)
+    integer(r8), pointer :: detI(:)
     real(r8), pointer :: fwFlux(:)
     real(r8), pointer :: heatFlux(:)
 
@@ -178,11 +180,6 @@ MODULE mod_iceplume
     real(r8), pointer :: volFlux(:)
     real(r8), pointer :: tB(:)
     real(r8), pointer :: sB(:)
-
-! Detrainment/Entrainment flag.
-! If detrainment layer, DetrEntr = 1; if entrainment layer, DetrEntr = -1;
-! if none of the above, DetrEntr = 0.
-    integer, pointer :: DetrEntr(:)
 
 ! Passive tracer concentration.
     real(r8), pointer :: trcAm(:, :)
@@ -222,6 +219,8 @@ MODULE mod_iceplume
       allocate(PLUME(ng) % m(N(ng)))
       allocate(PLUME(ng) % mAm(N(ng)))
       allocate(PLUME(ng) % ent(N(ng)))
+      allocate(PLUME(ng) % det(N(ng)))
+      allocate(PLUME(ng) % detI(N(ng)))
       allocate(PLUME(ng) % fwFlux(N(ng)))
       allocate(PLUME(ng) % heatFlux(N(ng)))
 !
@@ -233,8 +232,6 @@ MODULE mod_iceplume
       allocate(PLUME(ng) % volFlux(N(ng)+1))
       allocate(PLUME(ng) % tB(N(ng)))
       allocate(PLUME(ng) % sB(N(ng)))
-!
-      allocate(PLUME(ng) % DetrEntr(N(ng)))
 !
       allocate(PLUME(ng) % trcAm(N(ng), NT(ng)))
       allocate(PLUME(ng) % trc(NT(ng)))
