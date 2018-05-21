@@ -262,21 +262,6 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
               SOURCES(ng) % Tsrc(I, K, iTracer) = 0.d0
             ENDDO
           ENDIF
-!          IF (PLUME(ng) % ent(K) .GT. 0.d0) THEN
-!            SOURCES(ng) % Tsrc(I, K, isalt) = &
-!              & PLUME(ng) % trc(isalt)
-!            SOURCES(ng) % Tsrc(I, K, itemp) = &
-!              & PLUME(ng) % trc(itemp)
-!!
-!            DO iTracer = 3, NT(ng)
-!              SOURCES(ng) % Tsrc(I, K, iTracer) = &
-!                & PLUME(ng) % trc(iTracer)
-!            ENDDO
-!          ELSE
-!            DO iTracer = 1, NT(ng)
-!              SOURCES(ng) % Tsrc(I, K, iTracer) = 0.d0
-!            ENDDO
-!          ENDIF
         ENDDO
 ! Use the tendency terms to update T & S in OCEAN
         DO K = 1, Nr
@@ -288,12 +273,12 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
             & dt(ng) * PLUME(ng) % tendT(K)
         ENDDO
 
-        ! DO K = 1, Nr
-        !   write(*, *)  K, PLUME(ng) % sAm(K), &
-        !     & PLUME(ng) % ent(K), &
-        !     & PLUME(ng) % det(K), &
-        !     & SOURCES(ng) % Tsrc(I, K, isalt)
-        ! ENDDO
+        !DO K = 1, Nr
+        !  write(*, *)  K, PLUME(ng) % sAm(K), &
+        !    & PLUME(ng) % ent(K), &
+        !    & PLUME(ng) % det(K), &
+        !    & SOURCES(ng) % Tsrc(I, K, isalt)
+        !ENDDO
 
 ! Write to file for diagonse
         IF (useDebug) THEN

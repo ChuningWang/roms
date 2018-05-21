@@ -203,16 +203,16 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
         IF (PLUME(ng) % det(Nr) .EQ. 0.d0) THEN
 ! If the plume has not yet reached the surface, search for one layer up
           DO K = 2,Nr
-            IF ((PLUME(ng) % det(K) .EQ. 0.d0) .and. &
-            & (PLUME(ng) % det(K-1) .GT. 0.d0)) THEN
+            IF ((PLUME(ng) % detI(K) .EQ. 0) .and. &
+            & (PLUME(ng) % detI(K-1) .EQ. 1)) THEN
               KI = K
             ENDIF
           ENDDO
         ELSE
 ! If all surface layers are plume water, search for one layer down
           DO K = 1,Nr-1
-            IF ((PLUME(ng) % det(K+1) .GT. 0.d0) .and. &
-            & (PLUME(ng) % det(K) .EQ. 0.d0)) THEN
+            IF ((PLUME(ng) % detI(K+1) .EQ. 1) .and. &
+            & (PLUME(ng) % detI(K) .EQ. 0)) THEN
               KI = K
             ENDIF
           ENDDO
@@ -221,7 +221,7 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
         PLUME(ng) % detI(KI) = 1
         detrDz = detrDz + PLUME(ng) % dz(KI)
 ! Update detrainment velocity
-        detrVel = detr/detrDz
+        detrVel = detr/(detrDz*dy)
 ! If KI is at the bottom of the plume, the search reaches the bottom and
 ! the barotropic velocity is possibly too large. Print the message to log
 ! file to alert the Users.
