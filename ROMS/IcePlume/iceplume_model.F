@@ -35,6 +35,8 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
   real(r8) :: detr, detrVel, maxVel
   real(r8) :: detrDz
   integer :: KI
+! For checkRiB
+  real(r8) :: RHO, rhoUp, rhoDown, RiB
 
 ! Read in the subglacial discharge for this cell
   IF (useSheetPlume) THEN
@@ -162,6 +164,7 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
     ENDDO
   ENDIF
 
+  IF (QIni .GT. 0) THEN
 ! ==================================================================
 ! Check if detrainment velocity meets the CFL criteria
 !
@@ -173,7 +176,6 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
 ! mod_iceplume.F to .false.
 ! 2018/4/20 Chuning Wang
 ! ==================================================================
-  IF (QIni .GT. 0) THEN
 ! Find detrainment depth index, Calculate total detrainment volume
 ! and thickness
     detr = 0.d0
@@ -187,6 +189,7 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
       ELSE
         PLUME(ng) % detI(K) = 0
       ENDIF
+      detrVel = detr/(detrDz*dy)
     ENDDO
 !
     IF (checkCFL) THEN
@@ -196,7 +199,6 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
 ! Calculate maxinum velocity based on the CFL criteria
       maxVel = CuMax*dx/dtn
 ! Calculate mean detrainment velocity
-      detrVel = detr/(detrDz*dy)
 !
       DO WHILE (detrVel .GT. maxVel)
 ! Search for the nearest layer
@@ -244,8 +246,34 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
         ENDIF
       ENDDO
     ENDIF
+! ==================================================================
+! Check if detrainment velocity meets Richardson number criteria
+!
+! This section is added to deal with the surface intensification
+! of ROMS grid. When the grid thickness is too thin, the output
+! velocity is too high that violates the hroziontal advection CFL
+! criteria. If you are confident that the detrainment velocity
+! is small enough that would blow-up the model, turn checkCFL in
+! mod_iceplume.F to .false.
+! 2018/4/20 Chuning Wang
+! ==================================================================
+!    IF (checkRiB) THEN
+!! Calculate Brunt-Vaisala frequency
+!      DO K = 2,Nr-1
+!        rhoUp = RHO(0.5*(PLUME(ng) % tAm(K+1)+PLUME(ng) % tAm(K)), &
+!                  & 0.5*(PLUME(ng) % sAm(K+1)+PLUME(ng) % sAm(K)), &
+!                  & PLUME(ng) % zW(K+1))
+!        rhoDown = RHO(0.5*(PLUME(ng) % tAm(K-1)+PLUME(ng) % tAm(K)), &
+!                    & 0.5*(PLUME(ng) % sAm(K-1)+PLUME(ng) % sAm(K)), &
+!                    & PLUME(ng) % zW(K))
+!        bvf(K) = -g*(rhoUp-rhoDown)/(PLUME % dz(K)*rho0)
+!      ENDDO
+!      bvf(1) = 0.d0
+!      bvf(Nr) = 0.d0
+!! Calculate Bulk Richardson Number
+!      RiB = 
+!    ENDIF
   ENDIF
-
 ! ==================================================================
 ! Calculate active and passive tracers
 !
@@ -850,7 +878,7 @@ END
 
 ! =========================================================================
 
-DOUBLE PRECISION FUNCTION RHO(t,S,z)
+DOUBLE PRECISION FUNCTION RHO(T,S,z)
 
 ! Equation of state (UNESCO 1983)
 !     T = temperature (deg C)

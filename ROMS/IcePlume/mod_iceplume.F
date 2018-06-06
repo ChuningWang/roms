@@ -23,14 +23,16 @@ MODULE mod_iceplume
   logical :: useDebug            = .true.
   logical :: checkCFL            = .true.
   logical :: checkCFLVerbal      = .false.
+  logical :: checkRiB            = .false.
 
-  integer :: ngr             ! nested grid ID
-  integer :: Nr              ! total number of layers
-  real(r8) :: dy             ! grid cell resolution [m]
-  real(r8) :: dx             ! grid cell resolution [m]
-  real(r8) :: dtn            ! slow-mode time step [m], this is required when
-                             ! checkCFL is activated.
-  real(r8) :: CuMax = 2.0d0  ! maximum Cu criteria for ckeckCFL.
+  integer :: ngr              ! nested grid ID
+  integer :: Nr               ! total number of layers
+  real(r8) :: dy              ! grid cell resolution [m]
+  real(r8) :: dx              ! grid cell resolution [m]
+  real(r8) :: dtn             ! slow-mode time step [m],
+                              ! this is required when
+                              ! checkCFL is activated.
+  real(r8) :: CuMax = 0.8d0   ! maximum Cu criteria for ckeckCFL.
 ! ice bottom depth [m], if iceDepth is positive,
 ! then the ice bottom depth is always equal to
 ! the water depth (iceDepthK = 1)
@@ -124,10 +126,11 @@ MODULE mod_iceplume
 ! heatFlux      - meltwater heat flux into grid cell [W m^-2]
 ! tendT         - a tendency term calculated as in MITgcm.
 ! tendS         - a tendency term calculated as in MITgcm.
-! delta_z       - veritcal resolution [m]
+! dz            - veritcal resolution [m]
 ! ent           - entrainment rate [m^3 s^-1]
 ! det           - detrainment rate [m^3 s^-1]
 ! detI          - detrainment flag
+! bvf           - Brunt-Vaisala frequency [s^-2]
 !
 ! AT OMEGA POINTS
 ! zW            - depth [m]
@@ -169,6 +172,9 @@ MODULE mod_iceplume
     integer(r8), pointer :: detI(:)
     real(r8), pointer :: fwFlux(:)
     real(r8), pointer :: heatFlux(:)
+
+! For Richardson number calculation.
+    real(r8), pointer :: bvf(:)
 
 ! Tendency terms.
     real(r8), pointer :: tendT(:)
@@ -223,6 +229,8 @@ MODULE mod_iceplume
       allocate(PLUME(ng) % detI(N(ng)))
       allocate(PLUME(ng) % fwFlux(N(ng)))
       allocate(PLUME(ng) % heatFlux(N(ng)))
+!
+      allocate(PLUME(ng) % bvf(N(ng)))
 !
       allocate(PLUME(ng) % tendT(N(ng)))
       allocate(PLUME(ng) % tendS(N(ng)))
