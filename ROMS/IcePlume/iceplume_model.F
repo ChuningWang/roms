@@ -197,7 +197,7 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
 ! determine if to distribute the detrainment in several layers.
 !
 ! Calculate maxinum velocity based on the CFL criteria
-      maxVel = CuMax*dx/dtn
+      maxVel = CuMax*dx/dtr
 ! Calculate mean detrainment velocity
 !
       DO WHILE (detrVel .GT. maxVel)
@@ -284,7 +284,7 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
 ! 2018/4/20 Chuning Wang
 ! ==================================================================
 ! Clear local plume tracer variables
-  DO iTracer = 1, NT(ng)
+  DO iTracer = 1, NTr
     PLUME(ng) % trc(iTracer)    = 0.d0
     PLUME(ng) % trcCum(iTracer) = 0.d0
   ENDDO
@@ -304,7 +304,7 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
 !
 ! Add ptracers in runoff
       IF (useInputTracers) THEN
-        DO iTracer = 3, NT(ng)
+        DO iTracer = 3, NTr
           PLUME(ng) % trcCum(iTracer) = &
             & PLUME(ng) % trcCum(iTracer) + &
             & PLUME(ng) % trcIni(iTracer) * QIni
@@ -314,7 +314,7 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
 ! Add up total sum of each tracer in plume
       DO K = iceDepthK, Nr
         IF (PLUME(ng) % ent(K) .LT. 0.) THEN
-          DO iTracer = 3, NT(ng)
+          DO iTracer = 3, NTr
             PLUME(ng) % trcCum(iTracer) = &
               & PLUME(ng) % trcCum(iTracer) + &
               & (-PLUME(ng) % ent(K) * PLUME(ng) % trcAm(K, iTracer))
@@ -323,7 +323,7 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
       ENDDO
 !
 ! Calculate concentration of tracer in outflow 
-      DO iTracer = 3, NT(ng)
+      DO iTracer = 3, NTr
         PLUME(ng) % trc(iTracer) = &
           & PLUME(ng) % trcCum(iTracer) / detr
       ENDDO
@@ -587,7 +587,7 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, rIni, tIni, sIni)
 
 ! Start at bottom of ice face
   zIn = PLUME(ng) % zW(iceDepthK)
-! Backup the depth
+! Current depth
   depth = zIn
 
 ! Next point at which to retrieve values
@@ -640,7 +640,7 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, rIni, tIni, sIni)
 
 ! Calculate plume density (rho = RHO(temp, salt, depth))
       rhoPlume0 = rhoPlume
-      rhoPlume = RHO(Y(3), Y(4), zIn)
+      rhoPlume = RHO(Y(3), Y(4), depth)
 
 ! Calculate ambient density
       IF (K .EQ. Nr+1) THEN
@@ -650,7 +650,7 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, rIni, tIni, sIni)
         tAmbient = .5*(PLUME(ng) % tAm(K-1) + PLUME(ng) % tAm(K))
         sAmbient = .5*(PLUME(ng) % sAm(K-1) + PLUME(ng) % sAm(K))
       ENDIF
-      rhoAmbient = RHO(tAmbient, sAmbient, zIn)
+      rhoAmbient = RHO(tAmbient, sAmbient, depth)
 
       IF (((rhoPlume0 .GT. rhoAmbient) .AND. &
          & (rhoPlume .GT. rhoAmbient)) .OR. &

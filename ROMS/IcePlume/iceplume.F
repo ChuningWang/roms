@@ -105,10 +105,11 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 ! Read in some scalar parameters
   ngr = ng
   Nr = N(ng)
+  NTr = NT(ng)
 !   iceDepth = -abs(GRID(ng) % h(II, JI))
 ! If checkCFL is activited, need to read in slow-mode time step
   IF (checkCFL) THEN
-    dtn = dt(ng)
+    dtr = dt(ng)
   ENDIF
 !
   IF (LuvSrc(ng)) THEN
@@ -271,13 +272,6 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
             & t(II, JI, K, nrhs, itemp) + &
             & dt(ng) * PLUME(ng) % tendT(K)
         ENDDO
-
-        !DO K = 1, Nr
-        !  write(*, *)  K, PLUME(ng) % sAm(K), &
-        !    & PLUME(ng) % ent(K), &
-        !    & PLUME(ng) % det(K), &
-        !    & SOURCES(ng) % Tsrc(I, K, isalt)
-        !ENDDO
 
 ! Write to file for diagonse
         IF (useDebug) THEN

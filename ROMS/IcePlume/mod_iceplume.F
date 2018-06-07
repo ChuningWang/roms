@@ -27,9 +27,10 @@ MODULE mod_iceplume
 
   integer :: ngr              ! nested grid ID
   integer :: Nr               ! total number of layers
+  integer :: NTr              ! total number of tracers
   real(r8) :: dy              ! grid cell resolution [m]
   real(r8) :: dx              ! grid cell resolution [m]
-  real(r8) :: dtn             ! slow-mode time step [m],
+  real(r8) :: dtr             ! slow-mode time step [m],
                               ! this is required when
                               ! checkCFL is activated.
   real(r8) :: CuMax = 0.8d0   ! maximum Cu criteria for ckeckCFL.
