@@ -587,6 +587,8 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, rIni, tIni, sIni)
 
 ! Start at bottom of ice face
   zIn = PLUME(ng) % zW(iceDepthK)
+! Backup the depth
+  depth = zIn
 
 ! Next point at which to retrieve values
   zOut = PLUME(ng) % zW(iceDepthK+1)
@@ -648,7 +650,7 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, rIni, tIni, sIni)
         tAmbient = .5*(PLUME(ng) % tAm(K-1) + PLUME(ng) % tAm(K))
         sAmbient = .5*(PLUME(ng) % sAm(K-1) + PLUME(ng) % sAm(K))
       ENDIF
-      rhoAmbient = RHO(tAmbient, sAmbient, depth)
+      rhoAmbient = RHO(tAmbient, sAmbient, zIn)
 
       IF (((rhoPlume0 .GT. rhoAmbient) .AND. &
          & (rhoPlume .GT. rhoAmbient)) .OR. &
