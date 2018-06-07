@@ -106,7 +106,6 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
   ngr = ng
   Nr = N(ng)
 !   iceDepth = -abs(GRID(ng) % h(II, JI))
-!   iceDepth = -400
 ! If checkCFL is activited, need to read in slow-mode time step
   IF (checkCFL) THEN
     dtn = dt(ng)

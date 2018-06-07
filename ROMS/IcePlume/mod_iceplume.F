@@ -198,55 +198,49 @@ MODULE mod_iceplume
 
 ! ===================================================================
   CONTAINS
-
     SUBROUTINE allocate_iceplume(ng)
-
       USE mod_param
       integer :: ng
-
       IF (ng .EQ. 1) allocate(PLUME(Ngrids))
-
 ! Allocate profiles
-      allocate(PLUME(ng) % zW(N(ng)+1))
-      allocate(PLUME(ng) % tAm(N(ng)))
-      allocate(PLUME(ng) % sAm(N(ng)))
-      allocate(PLUME(ng) % vAm(N(ng)))
-      allocate(PLUME(ng) % wAm(N(ng)))
-      allocate(PLUME(ng) % tpAm(N(ng)))
+        allocate(PLUME(ng) % zW(N(ng)+1))
+        allocate(PLUME(ng) % tAm(N(ng)))
+        allocate(PLUME(ng) % sAm(N(ng)))
+        allocate(PLUME(ng) % vAm(N(ng)))
+        allocate(PLUME(ng) % wAm(N(ng)))
+        allocate(PLUME(ng) % tpAm(N(ng)))
 !
-      allocate(PLUME(ng) % r(N(ng)+1))
-      allocate(PLUME(ng) % t(N(ng)+1))
-      allocate(PLUME(ng) % s(N(ng)+1))
-      allocate(PLUME(ng) % w(N(ng)+1))
-      allocate(PLUME(ng) % a(N(ng)+1))
-      allocate(PLUME(ng) % mInt(N(ng)+1))
+        allocate(PLUME(ng) % r(N(ng)+1))
+        allocate(PLUME(ng) % t(N(ng)+1))
+        allocate(PLUME(ng) % s(N(ng)+1))
+        allocate(PLUME(ng) % w(N(ng)+1))
+        allocate(PLUME(ng) % a(N(ng)+1))
+        allocate(PLUME(ng) % mInt(N(ng)+1))
 !
-      allocate(PLUME(ng) % mAv(N(ng)))
-      allocate(PLUME(ng) % m(N(ng)))
-      allocate(PLUME(ng) % mAm(N(ng)))
-      allocate(PLUME(ng) % ent(N(ng)))
-      allocate(PLUME(ng) % det(N(ng)))
-      allocate(PLUME(ng) % detI(N(ng)))
-      allocate(PLUME(ng) % fwFlux(N(ng)))
-      allocate(PLUME(ng) % heatFlux(N(ng)))
+        allocate(PLUME(ng) % mAv(N(ng)))
+        allocate(PLUME(ng) % m(N(ng)))
+        allocate(PLUME(ng) % mAm(N(ng)))
+        allocate(PLUME(ng) % ent(N(ng)))
+        allocate(PLUME(ng) % det(N(ng)))
+        allocate(PLUME(ng) % detI(N(ng)))
+        allocate(PLUME(ng) % fwFlux(N(ng)))
+        allocate(PLUME(ng) % heatFlux(N(ng)))
 !
-      allocate(PLUME(ng) % bvf(N(ng)))
+        allocate(PLUME(ng) % bvf(N(ng)))
 !
-      allocate(PLUME(ng) % tendT(N(ng)))
-      allocate(PLUME(ng) % tendS(N(ng)))
+        allocate(PLUME(ng) % tendT(N(ng)))
+        allocate(PLUME(ng) % tendS(N(ng)))
 !
-      allocate(PLUME(ng) % zRho(N(ng)))
-      allocate(PLUME(ng) % dz(N(ng)))
-      allocate(PLUME(ng) % volFlux(N(ng)+1))
-      allocate(PLUME(ng) % tB(N(ng)))
-      allocate(PLUME(ng) % sB(N(ng)))
+        allocate(PLUME(ng) % zRho(N(ng)))
+        allocate(PLUME(ng) % dz(N(ng)))
+        allocate(PLUME(ng) % volFlux(N(ng)+1))
+        allocate(PLUME(ng) % tB(N(ng)))
+        allocate(PLUME(ng) % sB(N(ng)))
 !
-      allocate(PLUME(ng) % trcAm(N(ng), NT(ng)))
-      allocate(PLUME(ng) % trc(NT(ng)))
-      allocate(PLUME(ng) % trcCum(NT(ng)))
-      allocate(PLUME(ng) % trcIni(NT(ng)))
-
+        allocate(PLUME(ng) % trcAm(N(ng), NT(ng)))
+        allocate(PLUME(ng) % trc(NT(ng)))
+        allocate(PLUME(ng) % trcCum(NT(ng)))
+        allocate(PLUME(ng) % trcIni(NT(ng)))
     END SUBROUTINE allocate_iceplume
-
 #endif
 END
