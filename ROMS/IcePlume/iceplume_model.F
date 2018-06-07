@@ -230,6 +230,7 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
         IF (KI .EQ. iceDepthK) THEN
           write(*, *)  'ICEPLUME ALERT - KI = IceDepthK'
           write(*, *)  'checkCFL searched to the bottom of plume!'
+          EXIT
         ENDIF
         IF (checkCFLVerbal) THEN
           write(*, '(2I3, 10E12.3)')  KI, &

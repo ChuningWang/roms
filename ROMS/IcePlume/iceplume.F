@@ -197,6 +197,15 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
             & wvel(II, JI, K-1) + &
             & wvel(II, JI, K) &
             & )
+          !IF (K .EQ. 1) THEN
+          !  PLUME(ng) % wAm(K) = wvel(II, JI, K)
+          !ELSE
+          !  PLUME(ng) % wAm(K) = &
+          !    & 0.5 * ( &
+          !    & wvel(II, JI, K-1) + &
+          !    & wvel(II, JI, K) &
+          !    & )
+          !ENDIF
         ENDDO
 ! Discharge tracer concentration
         IF (useTracers .and. useInputTracers) THEN
