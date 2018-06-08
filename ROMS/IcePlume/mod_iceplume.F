@@ -23,7 +23,7 @@ MODULE mod_iceplume
   logical :: useDebug            = .true.
   logical :: checkCFL            = .true.
   logical :: checkCFLVerbal      = .false.
-  logical :: checkRiB            = .false.
+  logical :: checkRiB            = .true.
   integer :: depthFinder         = 2
 
   integer :: ngr              ! nested grid ID
