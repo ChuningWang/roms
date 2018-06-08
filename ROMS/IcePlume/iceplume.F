@@ -289,24 +289,25 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
           ! IF (mod(icc, 120) .EQ. 0)
             open(unit=15, file='./plume_debug.txt')
             write(15, '(I3)')  I
-            write(15, '(99 E12.4)')  PLUME(ng) % zW
-            write(15, '(99 E12.4)')  PLUME(ng) % tAm
-            write(15, '(99 E12.4)')  PLUME(ng) % sAm
-            write(15, '(99 E12.4)')  PLUME(ng) % vAm
-            write(15, '(99 E12.4)')  PLUME(ng) % wAm
-            write(15, *)  ' '
-            write(15, '(99 E12.4)')  PLUME(ng) % ent
-            write(15, '(99 E12.4)')  PLUME(ng) % s
-            write(15, '(99 E12.4)')  PLUME(ng) % t
-            write(15, '(99 E12.4)')  PLUME(ng) % r
-            write(15, '(99 E12.4)')  PLUME(ng) % a
-            write(15, '(99 E12.4)')  PLUME(ng) % w
-            write(15, '(99 E12.4)')  PLUME(ng) % mInt
-            write(15, *)  ' '
-            write(15, '(99 E12.4)')  SOURCES(ng) % Tsrc(I, :, 1)
-            write(15, '(99 E12.4)')  SOURCES(ng) % Tsrc(I, :, 2)
-            write(15, '(99 E12.4)')  SOURCES(ng) % Tsrc(I, :, 3)
-            write(15, *)  ' '
+            write(15, '(A3, 99 A12)')  'lev', 'zw', 'tAm', 't', &
+              & 'sAm', 's', 'rhoAm', 'rho', 'ent', 'det', &
+              & 'r', 'a', 'w', 'mInt'
+            DO K = 1, Nr
+              write(15, '(I4, 99 E12.4)')  K, PLUME(ng) % zW(K), &
+                & PLUME(ng) % tAm(K), PLUME(ng) % t(K), &
+                & PLUME(ng) % sAm(K), PLUME(ng) % s(K), &
+                & PLUME(ng) % rhoAm(K), PLUME(ng) % rho(K), &
+                & PLUME(ng) % ent(K), PLUME(ng) % det(K), &
+                & PLUME(ng) % r(K), PLUME(ng) % a(K), &
+                & PLUME(ng) % w(K), PLUME(ng) % mInt(K)
+            ENDDO
+            write(15, '(I4, 99 E12.4)')  41, PLUME(ng) % zW(Nr+1), &
+              & 0.0d0, PLUME(ng) % tAm(Nr+1), &
+              & 0.0d0, PLUME(ng) % sAm(Nr+1), &
+              & 0.0d0, PLUME(ng) % rhoAm(Nr+1), &
+              & 0.0d0, 0.0d0, &
+              & PLUME(ng) % r(Nr+1), PLUME(ng) % a(Nr+1), &
+              & PLUME(ng) % w(Nr+1), PLUME(ng) % mInt(Nr+1)
           ENDIF
         ENDIF
       ENDIF
