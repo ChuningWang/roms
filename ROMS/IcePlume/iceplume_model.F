@@ -540,7 +540,8 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, rIni, tIni, sIni)
 ! ==================================================================
   real(r8) :: RHO, temperature, salinity, depth
   real(r8) :: tAmbient, sAmbient
-  real(r8) :: rhoPlume0, rhoPlume, rhoAmbient
+  real(r8) :: rhoPlume, rhoAmbient
+!  real(r8) :: rhoPlume0
   real(r8) :: vAmbient, wAmbient, meanVel, meltAmbient
   real(r8) :: plumeAreaInCell, plumeMass, meltMass
   real(r8) :: Sb, Tb
@@ -575,13 +576,15 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, rIni, tIni, sIni)
   Y(6) = 0.0   ! integrated melt rate
 
 ! Prepare profiles
-  DO K = 1, Nr
+  DO K = 1, Nr+1
     PLUME(ng) % r(K) = 0.0
     PLUME(ng) % w(K) = 0.0
     PLUME(ng) % t(K) = 0.0
     PLUME(ng) % s(K) = 0.0
     PLUME(ng) % a(K) = 0.0
     PLUME(ng) % mInt(K) = 0.0
+  ENDDO
+  DO K = 1, Nr
     PLUME(ng) % zRho(K) = 0.5d0*(PLUME(ng) % zW(K) + &
       & PLUME(ng) % zW(K+1))
   ENDDO
@@ -604,7 +607,6 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, rIni, tIni, sIni)
 
 ! clean up some variables
   plumeDepthK = 0
-  rhoPlume0 = 0.d0
   rhoPlume = 0.d0
 
 ! ==================================================================
@@ -640,7 +642,6 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, rIni, tIni, sIni)
 ! the call to the plume model.
 
 ! Calculate plume density (rho = RHO(temp, salt, depth))
-      rhoPlume0 = rhoPlume
       rhoPlume = RHO(Y(3), Y(4), depth)
 
 ! Calculate ambient density
@@ -653,8 +654,7 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, rIni, tIni, sIni)
       ENDIF
       rhoAmbient = RHO(tAmbient, sAmbient, depth)
 
-      IF (((rhoPlume0 .GT. rhoAmbient) .AND. &
-         & (rhoPlume .GT. rhoAmbient)) .OR. &
+      IF ((rhoPlume .GT. rhoAmbient) .OR. &
         & (K .EQ. Nr+1)) THEN
         ISTATE = -1
       ENDIF

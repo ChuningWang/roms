@@ -151,7 +151,7 @@ MODULE mod_iceplume
 ! Grid, ambient state.
     real(r8), pointer :: zW(:)
     real(r8), pointer :: tAm(:)
-    real(r8), pointer :: SAm(:)
+    real(r8), pointer :: sAm(:)
     real(r8), pointer :: vAm(:)
     real(r8), pointer :: wAm(:)
     real(r8), pointer :: tpAm(:)
