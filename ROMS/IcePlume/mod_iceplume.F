@@ -24,6 +24,7 @@ MODULE mod_iceplume
   logical :: checkCFL            = .true.
   logical :: checkCFLVerbal      = .false.
   logical :: checkRiB            = .false.
+  integer :: depthFinder         = 2
 
   integer :: ngr              ! nested grid ID
   integer :: Nr               ! total number of layers
@@ -34,6 +35,8 @@ MODULE mod_iceplume
                               ! this is required when
                               ! checkCFL is activated.
   real(r8) :: CuMax = 0.8d0   ! maximum Cu number to triger ckeckCFL.
+  real(r8) :: RiBMin = 1.0d0  ! minimum Richardson number to triger
+                              ! checkRiB.
 ! ice bottom depth [m], if iceDepth is positive,
 ! then the ice bottom depth is always equal to
 ! the water depth (iceDepthK = 1)
@@ -175,7 +178,7 @@ MODULE mod_iceplume
     real(r8), pointer :: heatFlux(:)
 
 ! For Richardson number calculation.
-    real(r8), pointer :: bvf(:)
+!    real(r8), pointer :: bvf(:)
 
 ! Tendency terms.
     real(r8), pointer :: tendT(:)
@@ -227,7 +230,7 @@ MODULE mod_iceplume
         allocate(PLUME(ng) % fwFlux(N(ng)))
         allocate(PLUME(ng) % heatFlux(N(ng)))
 !
-        allocate(PLUME(ng) % bvf(N(ng)))
+!        allocate(PLUME(ng) % bvf(N(ng)))
 !
         allocate(PLUME(ng) % tendT(N(ng)))
         allocate(PLUME(ng) % tendS(N(ng)))

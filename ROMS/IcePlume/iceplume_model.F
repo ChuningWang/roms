@@ -33,10 +33,10 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
   real(r8) :: plumeAreaInCell
 ! For checkCFL
   real(r8) :: detr, detrVel, maxVel
-  real(r8) :: detrDz
-  integer :: KI
+  real(r8) :: detrDz, minDetrDz
+  integer :: KI, searchSwitch
 ! For checkRiB
-  real(r8) :: RHO, rhoUp, rhoDown, RiB
+  real(r8) :: RHO, minDetrDz2, rho0, rhoUp, rhoDown, RiB, bvf
 
 ! Read in the subglacial discharge for this cell
   IF (useSheetPlume) THEN
@@ -175,79 +175,7 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
 ! is small enough that would blow-up the model, turn checkCFL in
 ! mod_iceplume.F to .false.
 ! 2018/4/20 Chuning Wang
-! ==================================================================
-! Find detrainment depth index, Calculate total detrainment volume
-! and thickness
-    detr = 0.d0
-    detrDz = 1.d-5
-    DO K = 1,Nr
-      IF (PLUME(ng) % det(K) .GT. 0.d0) THEN
-        plumeDepthK = K
-        detr = detr + PLUME(ng) % det(K)
-        detrDz = detrDz + PLUME(ng) % dz(K)
-        PLUME(ng) % detI(K) = 1
-      ELSE
-        PLUME(ng) % detI(K) = 0
-      ENDIF
-      detrVel = detr/(detrDz*dy)
-    ENDDO
 !
-    IF (checkCFL) THEN
-! If activiated, check the horizontal advection CFL criteria to
-! determine if to distribute the detrainment in several layers.
-!
-! Calculate maxinum velocity based on the CFL criteria
-      maxVel = CuMax*dx/dtr
-! Calculate mean detrainment velocity
-!
-      DO WHILE (detrVel .GT. maxVel)
-! Search for the nearest layer
-        IF (PLUME(ng) % det(Nr) .EQ. 0.d0) THEN
-! If the plume has not yet reached the surface, search for one layer up
-          DO K = 2,Nr
-            IF ((PLUME(ng) % detI(K) .EQ. 0) .and. &
-            & (PLUME(ng) % detI(K-1) .EQ. 1)) THEN
-              KI = K
-            ENDIF
-          ENDDO
-        ELSE
-! If all surface layers are plume water, search for one layer down
-          DO K = 1,Nr-1
-            IF ((PLUME(ng) % detI(K+1) .EQ. 1) .and. &
-            & (PLUME(ng) % detI(K) .EQ. 0)) THEN
-              KI = K
-            ENDIF
-          ENDDO
-        ENDIF
-! Update detrainment layer flag and detrainment depth
-        PLUME(ng) % detI(KI) = 1
-        detrDz = detrDz + PLUME(ng) % dz(KI)
-! Update detrainment velocity
-        detrVel = detr/(detrDz*dy)
-! If KI is at the bottom of the plume, the search reaches the bottom and
-! the barotropic velocity is possibly too large. Print the message to log
-! file to alert the Users.
-        IF (KI .EQ. iceDepthK) THEN
-          write(*, *)  'ICEPLUME ALERT - KI = IceDepthK'
-          write(*, *)  'checkCFL searched to the bottom of plume!'
-          EXIT
-        ENDIF
-        IF (checkCFLVerbal) THEN
-          write(*, '(2I3, 10E12.3)')  KI, &
-          & PLUME(ng) % detI(KI), &
-          & PLUME(ng) % ent(KI), &
-          & PLUME(ng) % det(KI), &
-          & detrVel, maxVel, detrDz, detr
-        ENDIF
-      ENDDO
-! Update detrainment volume flux
-      DO K = 1,Nr
-        IF (PLUME(ng) % detI(K) .EQ. 1) THEN
-          PLUME(ng) % det(K) = detrVel*dy*PLUME(ng) % dz(K)
-        ENDIF
-      ENDDO
-    ENDIF
-! ==================================================================
 ! Check if detrainment velocity meets Richardson number criteria
 !
 ! This section is added to deal with the surface intensification
@@ -258,22 +186,129 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
 ! mod_iceplume.F to .false.
 ! 2018/4/20 Chuning Wang
 ! ==================================================================
-!    IF (checkRiB) THEN
-!! Calculate Brunt-Vaisala frequency
-!      DO K = 2,Nr-1
-!        rhoUp = RHO(0.5*(PLUME(ng) % tAm(K+1)+PLUME(ng) % tAm(K)), &
-!                  & 0.5*(PLUME(ng) % sAm(K+1)+PLUME(ng) % sAm(K)), &
-!                  & PLUME(ng) % zW(K+1))
-!        rhoDown = RHO(0.5*(PLUME(ng) % tAm(K-1)+PLUME(ng) % tAm(K)), &
-!                    & 0.5*(PLUME(ng) % sAm(K-1)+PLUME(ng) % sAm(K)), &
-!                    & PLUME(ng) % zW(K))
-!        bvf(K) = -g*(rhoUp-rhoDown)/(PLUME % dz(K)*rho0)
-!      ENDDO
-!      bvf(1) = 0.d0
-!      bvf(Nr) = 0.d0
-!! Calculate Bulk Richardson Number
-!      RiB = 
-!    ENDIF
+! Find detrainment depth index, Calculate total detrainment volume
+! and thickness
+    detr = 0.d0
+    detrDz = 1.d-7
+! Initiate searchSwitch for depthFinder == 2
+    IF (depthFinder .EQ. 2) searchSwitch = 1
+    DO K = 1,Nr
+      IF (PLUME(ng) % det(K) .GT. 0.d0) THEN
+        plumeDepthK = K
+        detr = detr + PLUME(ng) % det(K)
+        detrDz = detrDz + PLUME(ng) % dz(K)
+        PLUME(ng) % detI(K) = 1
+      ELSE
+        PLUME(ng) % detI(K) = 0
+      ENDIF
+    ENDDO
+!
+    IF (checkCFL) THEN
+! If activiated, check the horizontal advection CFL criteria to
+! determine if to distribute the detrainment in several layers.
+!
+! Calculate maxinum velocity based on the CFL criteria
+      maxVel = CuMax*dx/dtr
+      minDetrDz = detr/(maxVel*dy)
+    ELSE
+      minDetrDz = 0.0d0
+    ENDIF
+!
+    IF (checkRiB) THEN
+! If activated, check the Richardson number criteria to determine
+! if to distribute the detrainment in several layers.
+!
+! Calculate Brunt-Vaisala frequency
+      K = plumeDepthK
+      rhoUp = RHO(0.5*(PLUME(ng) % tAm(K+1)+PLUME(ng) % tAm(K)), &
+                & 0.5*(PLUME(ng) % sAm(K+1)+PLUME(ng) % sAm(K)), &
+                & PLUME(ng) % zW(K+1))
+      rhoDown = RHO(0.5*(PLUME(ng) % tAm(K-1)+PLUME(ng) % tAm(K)), &
+                  & 0.5*(PLUME(ng) % sAm(K-1)+PLUME(ng) % sAm(K)), &
+                  & PLUME(ng) % zW(K))
+      rho0 = 0.5*(rhoUp + rhoDown)
+      bvf = -g*(rhoUp-rhoDown)/(PLUME(ng) % dz(K)*rho0)
+      minDetrDz2 = (detr**2*RiBmin/bvf/(dy**2))**0.25
+    ELSE
+      minDetrDz2 = 0.0d0
+    ENDIF
+!
+    minDetrDz = MAX(minDetrDz, minDetrDz2)
+!
+    DO WHILE (detrDz .LT. minDetrDz)
+!
+      IF (depthFinder .EQ. 1) THEN
+!
+! Search method 1, search one layer up until meet the surface
+! Search for the nearest layer
+        IF (PLUME(ng) % det(Nr) .EQ. 0.d0) THEN
+! If the plume has not yet reached the surface, search for one layer up
+          DO K = 2,Nr
+            IF ((PLUME(ng) % detI(K) .EQ. 0) .and. &
+            & (PLUME(ng) % detI(K-1) .EQ. 1)) THEN
+              KI = K
+            ENDIF
+          ENDDO
+        ELSE
+! If the plume has reached surface, search for one layer down
+          DO K = 1,Nr-1
+            IF ((PLUME(ng) % detI(K+1) .EQ. 1) .and. &
+            & (PLUME(ng) % detI(K) .EQ. 0)) THEN
+              KI = K
+            ENDIF
+          ENDDO
+        ENDIF
+!
+      ELSEIF (depthFinder .EQ. 2) THEN
+!
+! Search method 2, search one layer up then one layer down
+! If the plume has reached surface, hard code searchSwitch to -1
+        IF (PLUME(ng) % det(Nr) .GT. 0.d0) searchSwitch = -1
+        IF (searchSwitch .EQ. 1) THEN
+! Search one layer up
+          DO K = 2,Nr
+            IF ((PLUME(ng) % detI(K) .EQ. 0) .and. &
+            & (PLUME(ng) % detI(K-1) .EQ. 1)) THEN
+              KI = K
+            ENDIF
+          ENDDO
+        ELSEIF (searchSwitch .EQ. -1) THEN
+! Search one layer down
+          DO K = 1,Nr-1
+            IF ((PLUME(ng) % detI(K+1) .EQ. 1) .and. &
+            & (PLUME(ng) % detI(K) .EQ. 0)) THEN
+              KI = K
+            ENDIF
+          ENDDO
+        ENDIF
+        searchSwitch = searchSwitch*(-1)
+!
+      ELSE
+!
+! Other unknown search method will triger this error
+        KI = -1
+!
+      ENDIF
+!
+! Update detrainment layer flag and detrainment depth
+      PLUME(ng) % detI(KI) = 1
+      detrDz = detrDz + PLUME(ng) % dz(KI)
+! If KI is at the bottom of the plume, the search reaches the bottom and
+! the barotropic velocity is possibly too large. Print the message to log
+! file to alert the Users.
+      IF (KI .EQ. iceDepthK) THEN
+        write(*, *)  'ICEPLUME ALERT - KI = IceDepthK'
+        write(*, *)  'checkCFL searched to the bottom of plume!'
+        EXIT
+      ENDIF
+    ENDDO
+! Update detrainment volume flux
+    detrVel = detr/(dy*detrDz)
+    DO K = 1,Nr
+      IF (PLUME(ng) % detI(K) .EQ. 1) THEN
+        PLUME(ng) % det(K) = detrVel*dy*PLUME(ng) % dz(K)
+      ENDIF
+    ENDDO
   ENDIF
 ! ==================================================================
 ! Calculate active and passive tracers
