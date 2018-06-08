@@ -33,7 +33,7 @@ MODULE mod_iceplume
   real(r8) :: dtr             ! slow-mode time step [m],
                               ! this is required when
                               ! checkCFL is activated.
-  real(r8) :: CuMax = 0.8d0   ! maximum Cu criteria for ckeckCFL.
+  real(r8) :: CuMax = 0.8d0   ! maximum Cu number to triger ckeckCFL.
 ! ice bottom depth [m], if iceDepth is positive,
 ! then the ice bottom depth is always equal to
 ! the water depth (iceDepthK = 1)

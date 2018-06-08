@@ -288,15 +288,14 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
           IF (iic(ng) .EQ. 1) THEN
           ! IF (mod(icc, 120) .EQ. 0)
             open(unit=15, file='./plume_debug.txt')
-            write(15, '(I3)')  I
+            write(15, '(2 I5, 99 I10)')  II, JI, iic(ng)
             write(15, '(A3, 99 A12)')  'lev', 'zw', 'tAm', 't', &
-              & 'sAm', 's', 'rhoAm', 'rho', 'ent', 'det', &
+              & 'sAm', 's', 'ent', 'det', &
               & 'r', 'a', 'w', 'mInt'
             DO K = 1, Nr
               write(15, '(I4, 99 E12.4)')  K, PLUME(ng) % zW(K), &
                 & PLUME(ng) % tAm(K), PLUME(ng) % t(K), &
                 & PLUME(ng) % sAm(K), PLUME(ng) % s(K), &
-                & PLUME(ng) % rhoAm(K), PLUME(ng) % rho(K), &
                 & PLUME(ng) % ent(K), PLUME(ng) % det(K), &
                 & PLUME(ng) % r(K), PLUME(ng) % a(K), &
                 & PLUME(ng) % w(K), PLUME(ng) % mInt(K)
@@ -304,7 +303,6 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
             write(15, '(I4, 99 E12.4)')  41, PLUME(ng) % zW(Nr+1), &
               & 0.0d0, PLUME(ng) % tAm(Nr+1), &
               & 0.0d0, PLUME(ng) % sAm(Nr+1), &
-              & 0.0d0, PLUME(ng) % rhoAm(Nr+1), &
               & 0.0d0, 0.0d0, &
               & PLUME(ng) % r(Nr+1), PLUME(ng) % a(Nr+1), &
               & PLUME(ng) % w(Nr+1), PLUME(ng) % mInt(Nr+1)
