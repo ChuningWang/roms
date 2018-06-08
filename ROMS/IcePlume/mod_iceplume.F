@@ -35,7 +35,7 @@ MODULE mod_iceplume
                               ! this is required when
                               ! checkCFL is activated.
   real(r8) :: CuMax = 0.8d0   ! maximum Cu number to triger ckeckCFL.
-  real(r8) :: RiBMin = 1.0d0  ! minimum Richardson number to triger
+  real(r8) :: RiBMin = 0.5d0  ! minimum Richardson number to triger
                               ! checkRiB.
 ! ice bottom depth [m], if iceDepth is positive,
 ! then the ice bottom depth is always equal to

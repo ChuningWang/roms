@@ -31,13 +31,16 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
   real(r8) :: negSum, posSum, posNegRatio
   real(r8) :: meanVel, depth
   real(r8) :: plumeAreaInCell
-! For checkCFL
-  real(r8) :: detr, detrVel, maxVel
+! For checkCFL & checkRiB
   real(r8) :: detrDz, minDetrDz
-  integer :: KI, searchSwitch
-! For checkRiB
-  real(r8) :: RHO, minDetrDz2, rho0, rhoUp, rhoDown, RiB, bvf
-
+  real(r8) :: detr, maxVel
+  real(r8) :: minDetrDz2, rho0, rhoUp, rhoDown, RiB, bvf
+  real(r8) :: RHO
+! For detrainment weight function
+  real(r8) :: detrVel
+  integer  :: KI, detrN, searchSwitch
+  real(r8) :: detrWeight, detrWeightSum
+!
 ! Read in the subglacial discharge for this cell
   IF (useSheetPlume) THEN
       rIni = QIni/(wIni*dy)
@@ -234,7 +237,13 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
     ENDIF
 !
     minDetrDz = MAX(minDetrDz, minDetrDz2)
+! ==================================================================
+! Distribute detrainmnet in several layers
 !
+! Update log
+! Use a Gause function to smooth the distribution
+! 2018/06/08 Chuning Wang
+! ==================================================================
     DO WHILE (detrDz .LT. minDetrDz)
 !
       IF (depthFinder .EQ. 1) THEN
@@ -303,6 +312,19 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
       ENDIF
     ENDDO
 ! Update detrainment volume flux
+!! Generate weight function
+!    detrN = 0
+!    DO K = 1,Nr
+!      IF (PLUME(ng) % detI(K) .EQ. 1) THEN
+!        detrN = detrN + 1
+!      ENDIF
+!    ENDDO
+!    detrWeightSum = 0.0d0
+!    DO K = 1,detrN
+!      detrWeightSum = detrWeightSum + &
+!        & EXP(0.5*(REAL(K)-0.5*(REAL(detrN)+1))/(REAL(detrN)-1))
+!    ENDDO
+!
     detrVel = detr/(dy*detrDz)
     DO K = 1,Nr
       IF (PLUME(ng) % detI(K) .EQ. 1) THEN
