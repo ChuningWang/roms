@@ -645,7 +645,7 @@ SUBROUTINE ICEPLUME_CURVE_DET(ng, detr, detrDz)
 ! For detrainment weight function
   real(r8) :: detrVel
   integer  :: KI, detrN, searchSwitch
-  real(r8) :: detrK, detrWeight, detrWeightSum
+  real(r8) :: detrWeight, detrWeightSum
 
       IF (checkCFL) THEN
 ! If activiated, check the horizontal advection CFL criteria to
@@ -758,13 +758,12 @@ SUBROUTINE ICEPLUME_CURVE_DET(ng, detr, detrDz)
 ! Update detrainment volume flux
       detrN = SUM(PLUME(ng) % detI)
       IF (detrN .GT. 1) THEN
-        detrK = 0.0d0
         detrVel = detr/(dy*detrDz)
         DO K = 1,Nr
           IF (PLUME(ng) % detI(K) .EQ. 1) THEN
-            detrK = detrK + 1.0d0
             detrWeight = &
-              & EXP(-1.0*((2*detrK-(REAL(detrN)+1))/(REAL(detrN)-1))**2)
+              & EXP(-1.0 * &
+              & (2*(real(K)-real(plumeDepthK))/real(detrN))**2)
             PLUME(ng) % det(K) = detrWeight * detrVel * dy * &
               & PLUME(ng) % dz(K)
           ENDIF
