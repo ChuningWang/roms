@@ -31,15 +31,7 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
   real(r8) :: negSum, posSum, posNegRatio
   real(r8) :: meanVel, depth
   real(r8) :: plumeAreaInCell
-! For checkCFL & checkRiB
-  real(r8) :: detrDz, minDetrDz
-  real(r8) :: detr, maxVel
-  real(r8) :: minDetrDz2, rho0, rhoUp, rhoDown, RiB, bvf
-  real(r8) :: RHO
-! For detrainment weight function
-  real(r8) :: detrVel
-  integer  :: KI, detrN, searchSwitch
-  real(r8) :: detrWeight, detrWeightSum
+  real(r8) :: detr, detrDz
 !
 ! Read in the subglacial discharge for this cell
   IF (useSheetPlume) THEN
@@ -193,8 +185,6 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
 ! and thickness
     detr = 0.d0
     detrDz = 1.d-7
-! Initiate searchSwitch for depthFinder == 2
-    IF (depthFinder .EQ. 2) searchSwitch = 1
     DO K = 1,Nr
       IF (PLUME(ng) % det(K) .GT. 0.d0) THEN
         plumeDepthK = K
@@ -206,132 +196,10 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
       ENDIF
     ENDDO
 !
-    IF (checkCFL) THEN
-! If activiated, check the horizontal advection CFL criteria to
-! determine if to distribute the detrainment in several layers.
-!
-! Calculate maxinum velocity based on the CFL criteria
-      maxVel = CuMax*dx/dtr
-      minDetrDz = detr/(maxVel*dy)
-    ELSE
-      minDetrDz = 0.0d0
-    ENDIF
-!
-    IF (checkRiB) THEN
-! If activated, check the Richardson number criteria to determine
-! if to distribute the detrainment in several layers.
-!
-! Calculate Brunt-Vaisala frequency
-      K = plumeDepthK
-      rhoUp = RHO(0.5*(PLUME(ng) % tAm(K+1)+PLUME(ng) % tAm(K)), &
-                & 0.5*(PLUME(ng) % sAm(K+1)+PLUME(ng) % sAm(K)), &
-                & PLUME(ng) % zW(K+1))
-      rhoDown = RHO(0.5*(PLUME(ng) % tAm(K-1)+PLUME(ng) % tAm(K)), &
-                  & 0.5*(PLUME(ng) % sAm(K-1)+PLUME(ng) % sAm(K)), &
-                  & PLUME(ng) % zW(K))
-      rho0 = 0.5*(rhoUp + rhoDown)
-      bvf = -g*(rhoUp-rhoDown)/(PLUME(ng) % dz(K)*rho0)
-      minDetrDz2 = (detr**2*RiBmin/bvf/(dy**2))**0.25
-    ELSE
-      minDetrDz2 = 0.0d0
-    ENDIF
-!
-    minDetrDz = MAX(minDetrDz, minDetrDz2)
-! ==================================================================
-! Distribute detrainmnet in several layers
-!
-! Update log
-! Use a Gause function to smooth the distribution
-! 2018/06/08 Chuning Wang
-! ==================================================================
-    DO WHILE (detrDz .LT. minDetrDz)
-!
-      IF (depthFinder .EQ. 1) THEN
-!
-! Search method 1, search one layer up until meet the surface
-! Search for the nearest layer
-        IF (PLUME(ng) % det(Nr) .EQ. 0.d0) THEN
-! If the plume has not yet reached the surface, search for one layer up
-          DO K = 2,Nr
-            IF ((PLUME(ng) % detI(K) .EQ. 0) .and. &
-            & (PLUME(ng) % detI(K-1) .EQ. 1)) THEN
-              KI = K
-            ENDIF
-          ENDDO
-        ELSE
-! If the plume has reached surface, search for one layer down
-          DO K = 1,Nr-1
-            IF ((PLUME(ng) % detI(K+1) .EQ. 1) .and. &
-            & (PLUME(ng) % detI(K) .EQ. 0)) THEN
-              KI = K
-            ENDIF
-          ENDDO
-        ENDIF
-!
-      ELSEIF (depthFinder .EQ. 2) THEN
-!
-! Search method 2, search one layer up then one layer down
-! If the plume has reached surface, hard code searchSwitch to -1
-        IF (PLUME(ng) % det(Nr) .GT. 0.d0) searchSwitch = -1
-        IF (searchSwitch .EQ. 1) THEN
-! Search one layer up
-          DO K = 2,Nr
-            IF ((PLUME(ng) % detI(K) .EQ. 0) .and. &
-            & (PLUME(ng) % detI(K-1) .EQ. 1)) THEN
-              KI = K
-            ENDIF
-          ENDDO
-        ELSEIF (searchSwitch .EQ. -1) THEN
-! Search one layer down
-          DO K = 1,Nr-1
-            IF ((PLUME(ng) % detI(K+1) .EQ. 1) .and. &
-            & (PLUME(ng) % detI(K) .EQ. 0)) THEN
-              KI = K
-            ENDIF
-          ENDDO
-        ENDIF
-        searchSwitch = searchSwitch*(-1)
-!
-      ELSE
-!
-! Other unknown search method will triger this error
-        KI = -1
-!
-      ENDIF
-!
-! Update detrainment layer flag and detrainment depth
-      PLUME(ng) % detI(KI) = 1
-      detrDz = detrDz + PLUME(ng) % dz(KI)
-! If KI is at the bottom of the plume, the search reaches the bottom and
-! the barotropic velocity is possibly too large. Print the message to log
-! file to alert the Users.
-      IF (KI .EQ. iceDepthK) THEN
-        write(*, *)  'ICEPLUME ALERT - KI = IceDepthK'
-        write(*, *)  'checkCFL searched to the bottom of plume!'
-        EXIT
-      ENDIF
-    ENDDO
-! Update detrainment volume flux
-!! Generate weight function
-!    detrN = 0
-!    DO K = 1,Nr
-!      IF (PLUME(ng) % detI(K) .EQ. 1) THEN
-!        detrN = detrN + 1
-!      ENDIF
-!    ENDDO
-!    detrWeightSum = 0.0d0
-!    DO K = 1,detrN
-!      detrWeightSum = detrWeightSum + &
-!        & EXP(0.5*(REAL(K)-0.5*(REAL(detrN)+1))/(REAL(detrN)-1))
-!    ENDDO
-!
-    detrVel = detr/(dy*detrDz)
-    DO K = 1,Nr
-      IF (PLUME(ng) % detI(K) .EQ. 1) THEN
-        PLUME(ng) % det(K) = detrVel*dy*PLUME(ng) % dz(K)
-      ENDIF
-    ENDDO
-  ENDIF
+    IF (checkCFL .OR. checkRiB) THEN
+      CALL ICEPLUME_CURVE_DET(ng, detr, detrDz)
+    ENDIF  ! checkCFL .OR. checkRiB
+  ENDIF  ! Qini .GT. 0.0d0
 ! ==================================================================
 ! Calculate active and passive tracers
 !
@@ -521,43 +389,6 @@ SUBROUTINE ICEPLUME_CALC(ng, QIni, TIni, SIni)
     ENDIF
   ENDDO
 END SUBROUTINE ICEPLUME_CALC
-
-! =========================================================================
-
-SUBROUTINE ICEPLUME_MELTRATE(temperature, salinity, velocity, depth, &
-                           & mdot, Sb, Tb)
-
-  USE mod_iceplume
-  implicit none
-
-  real(r8) :: temperature, salinity, velocity, &
-            & depth, absVelocity
-  real(r8) :: a, b, c
-  real(r8), intent(inout) :: mdot, Sb, Tb
-
-! Routine can't cope with zero velocity.
-! Unlikely to occur anyway with currents, waves, convection etc.
-! This isn't very physical, but will do for now.
-  IF ( velocity .LT. backgroundVel ) velocity = backgroundVel
-
-  absVelocity = abs(velocity)
-
-! Calculate melt rate from 3 equation formualtion (as for plume models)
-! Equations for Sb, Tb and mdot
-
-  a = lambda1*(GamT*c_w-GamS*c_i)
-
-  b = GamS*c_i*(lambda1*salinity-lambda2-lambda3*depth+ &
-   &         iceTemp-(L/c_i)) &
-   &        -GamT*c_w*(temperature-lambda2-lambda3*depth)
-
-  c = GamS*salinity*(c_i*(lambda2+lambda3*depth-iceTemp)+L)
-
-  Sb   = (1./(2.*a))*(-b-((b**2.-4.*a*c)**0.5))      ! Sb
-  Tb   = lambda1*Sb+lambda2+lambda3*depth            ! Tb
-  mdot = GamS*(Cd**0.5)*absVelocity*(salinity-Sb)/Sb ! mdot
-
-END
 
 ! ==================================================================!
 !                                                                   !
@@ -795,6 +626,193 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, rIni, tIni, sIni)
       ENDIF
     ENDIF
   ENDDO
+
+END
+
+! =========================================================================
+
+SUBROUTINE ICEPLUME_CURVE_DET(ng, detr, detrDz)
+  USE mod_iceplume
+  implicit none
+! In/out variables
+  integer, intent(in) :: ng
+  real(r8), intent(in) :: detr
+  real(r8), intent(inout) :: detrDz
+! For checkCFL & checkRiB
+  real(r8) :: maxVel, minDetrDz
+  real(r8) :: minDetrDz2, rho0, rhoUp, rhoDown, RiB, bvf
+  real(r8) :: RHO
+! For detrainment weight function
+  real(r8) :: detrVel
+  integer  :: KI, detrN, searchSwitch
+  real(r8) :: detrK, detrWeight, detrWeightSum
+
+      IF (checkCFL) THEN
+! If activiated, check the horizontal advection CFL criteria to
+! determine if to distribute the detrainment in several layers.
+!
+! Calculate maxinum velocity based on the CFL criteria
+        maxVel = CuMax*dx/dtr
+        minDetrDz = detr/(maxVel*dy)
+      ELSE
+        minDetrDz = 0.0d0
+      ENDIF
+!
+      IF (checkRiB) THEN
+! If activated, check the Richardson number criteria to determine
+! if to distribute the detrainment in several layers.
+!
+! Calculate Brunt-Vaisala frequency
+        K = plumeDepthK
+        rhoUp = RHO(0.5*(PLUME(ng) % tAm(K+1)+PLUME(ng) % tAm(K)), &
+                  & 0.5*(PLUME(ng) % sAm(K+1)+PLUME(ng) % sAm(K)), &
+                  & PLUME(ng) % zW(K+1))
+        rhoDown = RHO(0.5*(PLUME(ng) % tAm(K-1)+PLUME(ng) % tAm(K)), &
+                    & 0.5*(PLUME(ng) % sAm(K-1)+PLUME(ng) % sAm(K)), &
+                    & PLUME(ng) % zW(K))
+        rho0 = 0.5*(rhoUp + rhoDown)
+        bvf = -g*(rhoUp-rhoDown)/(PLUME(ng) % dz(K)*rho0)
+        minDetrDz2 = (detr**2*RiBmin/bvf/(dy**2))**0.25
+      ELSE
+        minDetrDz2 = 0.0d0
+      ENDIF
+!
+      minDetrDz = MAX(minDetrDz, minDetrDz2)
+! ==================================================================
+! Distribute detrainmnet in several layers
+!
+! Update log
+! Use a Gause function to smooth the distribution
+! 2018/06/08 Chuning Wang
+! ==================================================================
+! Initiate searchSwitch for depthFinder == 2
+    IF (depthFinder .EQ. 2) searchSwitch = 1
+      DO WHILE (detrDz .LT. minDetrDz)
+!
+        IF (depthFinder .EQ. 1) THEN
+!
+! Search method 1, search one layer up until meet the surface
+! Search for the nearest layer
+          IF (PLUME(ng) % det(Nr) .EQ. 0.d0) THEN
+! If the plume has not yet reached the surface, search for one layer up
+            DO K = 2,Nr
+              IF ((PLUME(ng) % detI(K) .EQ. 0) .and. &
+              & (PLUME(ng) % detI(K-1) .EQ. 1)) THEN
+                KI = K
+              ENDIF
+            ENDDO
+          ELSE
+! If the plume has reached surface, search for one layer down
+            DO K = 1,Nr-1
+              IF ((PLUME(ng) % detI(K+1) .EQ. 1) .and. &
+              & (PLUME(ng) % detI(K) .EQ. 0)) THEN
+                KI = K
+              ENDIF
+            ENDDO
+          ENDIF
+!
+        ELSEIF (depthFinder .EQ. 2) THEN
+!
+! Search method 2, search one layer up then one layer down
+! If the plume has reached surface, hard code searchSwitch to -1
+          IF (PLUME(ng) % det(Nr) .GT. 0.d0) searchSwitch = -1
+          IF (searchSwitch .EQ. 1) THEN
+! Search one layer up
+            DO K = 2,Nr
+              IF ((PLUME(ng) % detI(K) .EQ. 0) .and. &
+              & (PLUME(ng) % detI(K-1) .EQ. 1)) THEN
+                KI = K
+              ENDIF
+            ENDDO
+          ELSEIF (searchSwitch .EQ. -1) THEN
+! Search one layer down
+            DO K = 1,Nr-1
+              IF ((PLUME(ng) % detI(K+1) .EQ. 1) .and. &
+              & (PLUME(ng) % detI(K) .EQ. 0)) THEN
+                KI = K
+              ENDIF
+            ENDDO
+          ENDIF
+          searchSwitch = searchSwitch*(-1)
+!
+        ELSE
+!
+! Other unknown search method will triger this error
+          KI = -1
+!
+        ENDIF
+!
+! Update detrainment layer flag and detrainment depth
+        PLUME(ng) % detI(KI) = 1
+        detrDz = detrDz + PLUME(ng) % dz(KI)
+! If KI is at the bottom of the plume, the search reaches the bottom and
+! the barotropic velocity is possibly too large. Print the message to log
+! file to alert the Users.
+        IF (KI .EQ. iceDepthK) THEN
+          write(*, *)  'ICEPLUME ALERT - KI = IceDepthK'
+          write(*, *)  'checkCFL searched to the bottom of plume!'
+          EXIT
+        ENDIF
+      ENDDO  ! WHILE detrDz .LT. minDetrDz
+!
+! Update detrainment volume flux
+      detrN = SUM(PLUME(ng) % detI)
+      IF (detrN .GT. 1) THEN
+        detrK = 0.0d0
+        detrVel = detr/(dy*detrDz)
+        DO K = 1,Nr
+          IF (PLUME(ng) % detI(K) .EQ. 1) THEN
+            detrK = detrK + 1.0d0
+            detrWeight = &
+              & EXP(-1.0*((2*detrK-(REAL(detrN)+1))/(REAL(detrN)-1))**2)
+            PLUME(ng) % det(K) = detrWeight * detrVel * dy * &
+              & PLUME(ng) % dz(K)
+          ENDIF
+        ENDDO
+! Normalize
+        detrWeightSum = SUM(PLUME(ng) % det)
+        DO K = 1,Nr
+          PLUME(ng) % det(K) = PLUME(ng) % det(K) * &
+            & detr / detrWeightSum
+        ENDDO
+      ENDIF  ! detrN .GT. 1
+
+END SUBROUTINE
+
+! =========================================================================
+
+SUBROUTINE ICEPLUME_MELTRATE(temperature, salinity, velocity, depth, &
+                           & mdot, Sb, Tb)
+
+  USE mod_iceplume
+  implicit none
+
+  real(r8) :: temperature, salinity, velocity, &
+            & depth, absVelocity
+  real(r8) :: a, b, c
+  real(r8), intent(inout) :: mdot, Sb, Tb
+
+! Routine can't cope with zero velocity.
+! Unlikely to occur anyway with currents, waves, convection etc.
+! This isn't very physical, but will do for now.
+  IF ( velocity .LT. backgroundVel ) velocity = backgroundVel
+
+  absVelocity = abs(velocity)
+
+! Calculate melt rate from 3 equation formualtion (as for plume models)
+! Equations for Sb, Tb and mdot
+
+  a = lambda1*(GamT*c_w-GamS*c_i)
+
+  b = GamS*c_i*(lambda1*salinity-lambda2-lambda3*depth+ &
+   &         iceTemp-(L/c_i)) &
+   &        -GamT*c_w*(temperature-lambda2-lambda3*depth)
+
+  c = GamS*salinity*(c_i*(lambda2+lambda3*depth-iceTemp)+L)
+
+  Sb   = (1./(2.*a))*(-b-((b**2.-4.*a*c)**0.5))      ! Sb
+  Tb   = lambda1*Sb+lambda2+lambda3*depth            ! Tb
+  mdot = GamS*(Cd**0.5)*absVelocity*(salinity-Sb)/Sb ! mdot
 
 END
 
