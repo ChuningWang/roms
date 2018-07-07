@@ -39,12 +39,12 @@
       integer :: i, j, ifield, nvd3, nvd4
       integer :: recdim, status, ifile, varid
 
-      integer :: DimIDs(32), t2dgrd(3), u2dgrd(3), v2dgrd(3)
+      integer :: DimIDs(32), p2dgrd(3), t2dgrd(3), u2dgrd(3), v2dgrd(3)
 
 # ifdef SOLVE3D
       integer :: itrc
 
-      integer :: t3dgrd(4), u3dgrd(4), v3dgrd(4), w3dgrd(4)
+      integer :: p3dgrd(4), t3dgrd(4), u3dgrd(4), v3dgrd(4), w3dgrd(4)
 # endif
 
       integer :: def_dim
@@ -212,6 +212,28 @@
           t3dgrd(2)=DimIDs( 5)
           t3dgrd(3)=DimIDs( 9)
           t3dgrd(4)=DimIDs(32)
+#  endif
+# endif
+!
+!  Define dimension vectors for staggered vorticity type variables.
+!
+# if defined WRITE_WATER && defined MASKING
+          NOT SUPPORTED at this TIME!
+          p2dgrd(1)=DimIDs(17)
+          p2dgrd(2)=DimIDs(32)
+#  ifdef SOLVE3D
+          p3dgrd(1)=DimIDs(20)
+          p3dgrd(2)=DimIDs(32)
+#  endif
+# else
+          p2dgrd(1)=DimIDs( 4)
+          p2dgrd(2)=DimIDs( 8)
+          p2dgrd(3)=DimIDs(32)
+#  ifdef SOLVE3D
+          p3dgrd(1)=DimIDs( 4)
+          p3dgrd(2)=DimIDs( 8)
+          p3dgrd(3)=DimIDs( 9)
+          p3dgrd(4)=DimIDs(32)
 #  endif
 # endif
 !
@@ -902,6 +924,88 @@
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
      &                   __FILE__)) RETURN
         END IF
+!
+!  Define 2d potential vorticity
+!
+        IF (Aout(id2dPV,ng)) THEN
+          Vinfo( 1)=Vname(1,id2dPV)
+          Vinfo( 2)=Vname(2,id2dPV)
+          Vinfo( 3)=Vname(3,id2dPV)
+          Vinfo(14)=Vname(4,id2dPV)
+          Vinfo(16)=Vname(1,idtime)
+# if defined WRITE_WATER && defined MASKING
+          Vinfo(20)='mask_u'
+# endif
+          Vinfo(22)='coordinates'
+          Aval(5)=REAL(Iinfo(1,id2dPV,ng),r8)
+          status=def_var(ng, iNLM, FIL(1,ng)%ncid,                      &
+     &                 FIL(1,ng)%Vid(id2dPV),                           &
+     &                 NF_FOUT, nvd3, p2dgrd, Aval, Vinfo, ncname)
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
+        END IF
+!
+!  Define 2d relative vorticity
+!
+        IF (Aout(id2dRV,ng)) THEN
+          Vinfo( 1)=Vname(1,id2dRV)
+          Vinfo( 2)=Vname(2,id2dRV)
+          Vinfo( 3)=Vname(3,id2dRV)
+          Vinfo(14)=Vname(4,id2dRV)
+          Vinfo(16)=Vname(1,idtime)
+# if defined WRITE_WATER && defined MASKING
+          Vinfo(20)='mask_u'
+# endif
+          Vinfo(22)='coordinates'
+          Aval(5)=REAL(Iinfo(1,id2dRV,ng),r8)
+          status=def_var(ng, iNLM, FIL(1,ng)%ncid,                      &
+     &                 FIL(1,ng)%Vid(id2dRV),                           &
+     &                 NF_FOUT, nvd3, p2dgrd, Aval, Vinfo, ncname)
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
+        END IF
+# ifdef SOLVE3D
+!
+!  Define 3d potential vorticity
+!
+        IF (Aout(id3dPV,ng)) THEN
+          Vinfo( 1)=Vname(1,id3dPV)
+          Vinfo( 2)=Vname(2,id3dPV)
+          Vinfo( 3)=Vname(3,id3dPV)
+          Vinfo(14)=Vname(4,id3dPV)
+          Vinfo(16)=Vname(1,idtime)
+# if defined WRITE_WATER && defined MASKING
+          Vinfo(20)='mask_u'
+# endif
+          Vinfo(22)='coordinates'
+          Aval(5)=REAL(Iinfo(1,id3dPV,ng),r8)
+          status=def_var(ng, iNLM, FIL(1,ng)%ncid,                      &
+     &                 FIL(1,ng)%Vid(id3dPV),                           &
+     &                 NF_FOUT, nvd4, p3dgrd, Aval, Vinfo, ncname)
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
+        END IF
+!
+!  Define 3d relative vorticity
+!
+        IF (Aout(id3dRV,ng)) THEN
+          Vinfo( 1)=Vname(1,id3dRV)
+          Vinfo( 2)=Vname(2,id3dRV)
+          Vinfo( 3)=Vname(3,id3dRV)
+          Vinfo(14)=Vname(4,id3dRV)
+          Vinfo(16)=Vname(1,idtime)
+# if defined WRITE_WATER && defined MASKING
+          Vinfo(20)='mask_u'
+# endif
+          Vinfo(22)='coordinates'
+          Aval(5)=REAL(Iinfo(1,id3dRV,ng),r8)
+          status=def_var(ng, iNLM, FIL(1,ng)%ncid,                      &
+     &                 FIL(1,ng)%Vid(id3dRV),                           &
+     &                 NF_FOUT, nvd4, p3dgrd, Aval, Vinfo, ncname)
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
+        END IF
+# endif
 # ifdef ICE_MODEL
 !
 !  Define 2D ice momentum in the XI-direction.
@@ -1004,48 +1108,6 @@
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
      &                   __FILE__)) RETURN
         END IF
-#ifdef MELT_PONDS
-!
-!  Define surface melt ponds
-!
-        IF (Aout(idApond,ng)) THEN
-          Vinfo( 1)=Vname(1,idApond)
-          Vinfo( 2)=Vname(2,idApond)
-          Vinfo( 3)=Vname(3,idApond)
-          Vinfo(14)=Vname(4,idApond)
-          Vinfo(16)='filter level'
-#  if defined WRITE_WATER && defined MASKING
-          Vinfo(20)='mask_rho'
-#  endif
-          Vinfo(22)='coordinates'
-          Aval(5)=REAL(Iinfo(1,idApond,ng),r8)
-          status=def_var(ng, iNLM, FIL(10,ng)%ncid,                     &
-     &                 FIL(10,ng)%Vid(idApond),                         &
-     &                 NF_FOUT, nvd3, t2dgrd, Aval, Vinfo, ncname)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
-        END IF
-!
-!  Define surface melt ponds
-!
-        IF (Aout(idHpond,ng)) THEN
-          Vinfo( 1)=Vname(1,idHpond)
-          Vinfo( 2)=Vname(2,idHpond)
-          Vinfo( 3)=Vname(3,idHpond)
-          Vinfo(14)=Vname(4,idHpond)
-          Vinfo(16)='filter level'
-#  if defined WRITE_WATER && defined MASKING
-          Vinfo(20)='mask_rho'
-#  endif
-          Vinfo(22)='coordinates'
-          Aval(5)=REAL(Iinfo(1,idHpond,ng),r8)
-          status=def_var(ng, iNLM, FIL(10,ng)%ncid,                     &
-     &                 FIL(10,ng)%Vid(idHpond),                         &
-     &                 NF_FOUT, nvd3, t2dgrd, Aval, Vinfo, ncname)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &                   __FILE__)) RETURN
-        END IF
-#endif
 !
 !  Define ice surface temperature
 !
@@ -1828,14 +1890,6 @@
             ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idHsno))) THEN
               got_var(idHsno)=.true.
               FIL(10,ng)%Vid(idHsno)=var_id(i)
-#ifdef MELT_PONDS
-            ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idApond))) THEN
-              got_var(idApond)=.true.
-              FIL(10,ng)%Vid(idApond)=var_id(i)
-            ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idHpond))) THEN
-              got_var(idHpond)=.true.
-              FIL(10,ng)%Vid(idHpond)=var_id(i)
-#endif
             ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idAgeice))) THEN
               got_var(idAgeice)=.true.
               FIL(10,ng)%Vid(idAgeice)=var_id(i)
@@ -1936,6 +1990,20 @@
             ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idVbms))) THEN
               got_var(idVbms)=.TRUE.
               FIL(1,ng)%Vid(idVbms)=var_id(i)
+            ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,id2dPV))) THEN
+              got_var(id2dPV)=.TRUE.
+              FIL(1,ng)%Vid(id2dPV)=var_id(i)
+            ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,id2dRV))) THEN
+              got_var(id2dRV)=.TRUE.
+              FIL(1,ng)%Vid(id2dRV)=var_id(i)
+# ifdef SOLVE3D
+            ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,id3dPV))) THEN
+              got_var(id3dPV)=.TRUE.
+              FIL(1,ng)%Vid(id3dPV)=var_id(i)
+            ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,id3dRV))) THEN
+              got_var(id3dRV)=.TRUE.
+              FIL(1,ng)%Vid(id3dRV)=var_id(i)
+# endif
             END IF
 # ifdef SOLVE3D
             DO itrc=1,NAT
@@ -2039,20 +2107,6 @@
           exit_flag=3
           RETURN
         END IF
-#ifdef MELT_PONDS
-        IF (.not.got_var(idApond).and.Aout(idApond,ng)) THEN
-          IF (Master) WRITE (stdout,40) TRIM(Vname(1,idApond)),         &
-     &                                  TRIM(ncname)
-          exit_flag=3
-          RETURN
-        END IF
-        IF (.not.got_var(idHpond).and.Aout(idHpond,ng)) THEN
-          IF (Master) WRITE (stdout,40) TRIM(Vname(1,idHpond)),         &
-     &                                  TRIM(ncname)
-          exit_flag=3
-          RETURN
-        END IF
-#endif
         IF (.not.got_var(idAgeice).and.Aout(idAgeice,ng)) THEN
           IF (Master) WRITE (stdout,40) TRIM(Vname(1,idAgeice)),        &
      &                                  TRIM(ncname)
@@ -2241,18 +2295,30 @@
           exit_flag=3
           RETURN
         END IF
-!       IF (.not.got_var(idUbms).and.Aout(idUbms,ng)) THEN
-!         IF (Master) WRITE (stdout,40) TRIM(Vname(1,idUbms)),          &
-!    &                                  TRIM(ncname)
-!         exit_flag=3
-!         RETURN
-!       END IF
-!       IF (.not.got_var(idVbms).and.Aout(idVbms,ng)) THEN
-!         IF (Master) WRITE (stdout,40) TRIM(Vname(1,idVbms)),          &
-!    &                                  TRIM(ncname)
-!         exit_flag=3
-!         RETURN
-!       END IF
+        IF (.not.got_var(id2dPV).and.Aout(id2dPV,ng)) THEN
+          IF (Master) WRITE (stdout,40) TRIM(Vname(1,id2dPV)),          &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+        IF (.not.got_var(id2dRV).and.Aout(id2dRV,ng)) THEN
+          IF (Master) WRITE (stdout,40) TRIM(Vname(1,id2dRV)),          &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+        IF (.not.got_var(id3dPV).and.Aout(id3dPV,ng)) THEN
+          IF (Master) WRITE (stdout,40) TRIM(Vname(1,id3dPV)),          &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+        IF (.not.got_var(id3dRV).and.Aout(id3dRV,ng)) THEN
+          IF (Master) WRITE (stdout,40) TRIM(Vname(1,id3dRV)),          &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
 !
 !  Set unlimited time record dimension to current value.
 !

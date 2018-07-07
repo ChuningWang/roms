@@ -1396,6 +1396,13 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+14)=' IMPACT_INNER,'
 #endif
+#ifdef IMPLICIT_NUDGING
+!
+      IF (Master) WRITE (stdout,20) 'IMPLICIT_NUDGING',                 &
+     &   'Implicit nudging term in momentum radiation conditions.'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+18)=' IMPLICIT_NUDGING,'
+#endif
 #if defined IMPLICIT_VCONV && defined FOUR_DVAR && defined VCONVOLUTION
 !
       IF (Master) WRITE (stdout,20) 'IMPLICIT_VCONV',                   &
@@ -1685,12 +1692,6 @@
      &   'Using Model Coupling Toolkit library.'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+9)=' MCT_LIB,'
-#endif
-#ifdef MELT_PONDS
-      IF (Master) WRITE (stdout,20) 'MELT_PONDS',                       &
-     &   'Melt ponds on ice.'
-      is=LEN_TRIM(Coptions)+1
-      Coptions(is:is+11)=' MELT_PONDS,'
 #endif
 #if defined MINRES && defined FOUR_DVAR
 !

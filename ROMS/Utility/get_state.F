@@ -281,7 +281,8 @@
 !
       mySize=var_Dsize(1)
       IF (.not.allocated(TimeVar)) allocate (TimeVar(mySize))
-      CALL netcdf_get_fvar (ng, IDmod, ncname, TRIM(tvarnam), TimeVar,  &
+      CALL netcdf_get_time (ng, IDmod, ncname, TRIM(tvarnam),           &
+     &                      Rclock%DateNumber, TimeVar,                 &
      &                      ncid = ncINPid)
       IF (FoundError(exit_flag, NoError, __LINE__,                      &
      &               __FILE__)) RETURN
@@ -2621,9 +2622,9 @@
               RETURN
             END IF
           END IF
-#ifdef INI_GLORYS_ICE
-        END IF
-#endif
+!#ifdef INI_GLORYS_ICE
+!        END IF
+!#endif
 !
 !  Read in ice/snow surface temperature.
 !
@@ -2664,123 +2665,9 @@
             RETURN
           END IF
         END IF
-#ifdef INI_GLORYS_ICE
-      IF (read_ice) THEN
-#endif
-#ifdef MELT_PONDS
-!
-!  Read in surface water fraction (on ice).
-!
-        foundit=find_string(var_name, n_var, TRIM(Vname(1,idApond)),    &
-     &                        varid)
-        IF (foundit) THEN
-          IF (Perfect2D) THEN
-            gtype=var_flag(varid)*r3dvar
-          ELSE
-            gtype=var_flag(varid)*r2dvar
-          END IF
-          IF (Perfect2D) THEN
-            status=nf_fread3d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idApond), varid,                  &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj, 1, 2,                 &
-     &                        Fscl, Fmin, Fmax,                         &
-# ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
-# endif
-     &                        ICE(ng) % apond)
-          ELSE
-            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,idApond), varid, InpRec, gtype,   &
-     &                        Vsize, LBi, UBi, LBj, UBj,                &
-     &                        Fscl, Fmin, Fmax,                         &
-#   ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
-#   endif
-     &                        ICE(ng) % apond(:,:,Tindex))
-          END IF
-          IF (FoundError(status, nf90_noerr, __LINE__,                  &
-     &                   __FILE__)) THEN
-            IF (Master) THEN
-              WRITE (stdout,60) string, TRIM(Vname(1,idApond)),         &
-     &                          InpRec, TRIM(ncname)
-            END IF
-            exit_flag=2
-            ioerror=status
-            RETURN
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,70) TRIM(Vname(2,idApond)), Fmin, Fmax
-            END IF
-        ELSE
-          IF (Master) THEN
-            WRITE (stdout,80) string, TRIM(Vname(1,idApond)),           &
-     &                        TRIM(ncname)
-          END IF
-          exit_flag=4
-          IF (FoundError(exit_flag, nf90_noerr, __LINE__,               &
-     &                   __FILE__)) THEN
-            RETURN
-          END IF
-        END IF
-      END IF
-!
-!  Read in surface water thickness (on ice).
-!
-          foundit=find_string(var_name, n_var, TRIM(Vname(1,idHpond)),  &
-     &                        varid)
-          IF (foundit) THEN
-            IF (Perfect2D) THEN
-              gtype=var_flag(varid)*r3dvar
-            ELSE
-              gtype=var_flag(varid)*r2dvar
-            END IF
-            IF (Perfect2D) THEN
-              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
-     &                          Vname(1,idHpond), varid,                &
-     &                          InpRec, gtype, Vsize,                   &
-     &                          LBi, UBi, LBj, UBj, 1, 2,               &
-     &                          Fscl, Fmin, Fmax,                       &
-# ifdef MASKING
-     &                          GRID(ng) % rmask,                       &
-# endif
-     &                          ICE(ng) % hpond)
-            ELSE
-              status=nf_fread2d(ng, IDmod, ncname, ncINPid,             &
-     &                          Vname(1,idHpond), varid, InpRec, gtype, &
-     &                          Vsize, LBi, UBi, LBj, UBj,              &
-     &                          Fscl, Fmin, Fmax,                       &
-#   ifdef MASKING
-     &                          GRID(ng) % rmask,                       &
-#   endif
-     &                          ICE(ng) % hpond(:,:,Tindex))
-            END IF
-            IF (FoundError(status, nf90_noerr, __LINE__,                &
-     &                     __FILE__)) THEN
-              IF (Master) THEN
-                WRITE (stdout,60) string, TRIM(Vname(1,idHpond)),       &
-     &                            InpRec, TRIM(ncname)
-              END IF
-              exit_flag=2
-              ioerror=status
-              RETURN
-            ELSE
-              IF (Master) THEN
-                WRITE (stdout,70) TRIM(Vname(2,idHpond)), Fmin, Fmax
-              END IF
-            END IF
-          ELSE
-            IF (Master) THEN
-              WRITE (stdout,80) string, TRIM(Vname(1,idHpond)),         &
-     &                          TRIM(ncname)
-            END IF
-            exit_flag=4
-            IF (FoundError(exit_flag, nf90_noerr, __LINE__,             &
-     &                     __FILE__)) THEN
-              RETURN
-            END IF
-          END IF
-#endif
+!#ifdef INI_GLORYS_ICE
+!      IF (read_ice) THEN
+!#endif
 !
 !  Read in ice age.
 !
@@ -7146,8 +7033,8 @@
 !
 !  Read in next impulse forcing time to process.
 !
-        CALL netcdf_get_fvar (ng, IDmod, ncname, TRIM(tvarnam),         &
-     &                        FrcTime(ng:),                             &
+        CALL netcdf_get_time (ng, IDmod, ncname, TRIM(tvarnam),         &
+     &                        Rclock%DateNumber, FrcTime(ng:),          &
      &                        ncid = ncINPid,                           &
      &                        start = (/InpRec/),                       &
      &                        total = (/1/))
@@ -7857,8 +7744,8 @@
 !
 !  Read in next impulse forcing time to process.
 !
-        CALL netcdf_get_fvar (ng, IDmod, ncname, TRIM(tvarnam),         &
-     &                        ForceTime(ng:),                           &
+        CALL netcdf_get_time (ng, IDmod, ncname, TRIM(tvarnam),         &
+     &                        Rclock%DateNumber, ForceTime(ng:),        &
      &                        ncid = ncINPid,                           &
      &                        start = (/InpRec/),                       &
      &                        total = (/1/))

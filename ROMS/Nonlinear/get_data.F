@@ -94,7 +94,7 @@
 !
       IF (LuvSrc(ng).or.LwSrc(ng)) THEN
         CALL get_ngfld (ng, iNLM, idRtra, ncSSFid(idRtra,ng),           &
-     &                  nSSFfiles, SSF(1,ng), update(1),                &
+     &                  nSSFfiles(ng), SSF(1,ng), update(1),            &
      &                  1, Nsrc(ng), 1, 2, 1, Nsrc(ng), 1,              &
      &                  SOURCES(ng) % QbarG)
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
@@ -108,7 +108,7 @@
       DO i=1,NT(ng)
         IF (LtracerSrc(i,ng)) THEN
           CALL get_ngfld (ng, iNLM, idRtrc(i), ncSSFid(idRtrc(i),ng),   &
-     &                    nSSFfiles, SSF(1,ng), update(1),              &
+     &                    nSSFfiles(ng), SSF(1,ng), update(1),          &
 #  ifdef ONE_TRACER_SOURCE
      &                    1, 1, 1, 2, 1, 1, 1,                          &
      &                    SOURCES(ng) % TsrcG(:,i))
@@ -1484,82 +1484,6 @@
      &                    nBCfiles(ng), BRY(1,ng), update(1),           &
      &                    ILB, IUB, 1, 2, 0, Lm(ng)+1, 1,               &
      &                    BOUNDARY(ng) % tiG_north)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &               __FILE__)) RETURN
-        END IF
-      END IF
-#  endif
-#  if defined MELT_PONDS && !defined ANA_SFWATOBC
-      IF (.not.(RefinedGrid(ng).and.RefineScale(ng).gt.0)) THEN
-        IF (LBC(iwest,isApond,ng)%acquire) THEN
-          CALL get_ngfld (ng, iNLM, idApdbc(iwest),                     &
-     &                    ncBRYid(idApdbc(iwest),ng),                   &
-     &                    nBCfiles(ng), BRY(1,ng), update(1),           &
-     &                    JLB, JUB, 1, 2, 0, Mm(ng)+1, 1,               &
-     &                    BOUNDARY(ng) % apondG_west)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &               __FILE__)) RETURN
-        END IF
-        IF (LBC(ieast,isApond,ng)%acquire) THEN
-          CALL get_ngfld (ng, iNLM, idApdbc(ieast),                     &
-     &                    ncBRYid(idApdbc(ieast),ng),                   &
-     &                    nBCfiles(ng), BRY(1,ng), update(1),           &
-     &                    JLB, JUB, 1, 2, 0, Mm(ng)+1, 1,               &
-     &                    BOUNDARY(ng) % apondG_east)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &               __FILE__)) RETURN
-        END IF
-        IF (LBC(isouth,isApond,ng)%acquire) THEN
-          CALL get_ngfld (ng, iNLM, idApdbc(isouth),                    &
-     &                    ncBRYid(idApdbc(isouth),ng),                  &
-     &                    nBCfiles(ng), BRY(1,ng), update(1),           &
-     &                    ILB, IUB, 1, 2, 0, Lm(ng)+1, 1,               &
-     &                    BOUNDARY(ng) % apondG_south)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &               __FILE__)) RETURN
-        END IF
-        IF (LBC(inorth,isApond,ng)%acquire) THEN
-          CALL get_ngfld (ng, iNLM, idApdbc(inorth),                    &
-     &                    ncBRYid(idApdbc(inorth),ng),                  &
-     &                    nBCfiles(ng), BRY(1,ng), update(1),           &
-     &                    ILB, IUB, 1, 2, 0, Lm(ng)+1, 1,               &
-     &                    BOUNDARY(ng) % apondG_north)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &               __FILE__)) RETURN
-        END IF
-        IF (LBC(iwest,isHpond,ng)%acquire) THEN
-          CALL get_ngfld (ng, iNLM, idHpdbc(iwest),                     &
-     &                    ncBRYid(idHpdbc(iwest),ng),                   &
-     &                    nBCfiles(ng), BRY(1,ng), update(1),           &
-     &                    JLB, JUB, 1, 2, 0, Mm(ng)+1, 1,               &
-     &                    BOUNDARY(ng) % hpondG_west)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &               __FILE__)) RETURN
-        END IF
-        IF (LBC(ieast,isHpond,ng)%acquire) THEN
-          CALL get_ngfld (ng, iNLM, idHpdbc(ieast),                     &
-     &                    ncBRYid(idHpdbc(ieast),ng),                   &
-     &                    nBCfiles(ng), BRY(1,ng), update(1),           &
-     &                    JLB, JUB, 1, 2, 0, Mm(ng)+1, 1,               &
-     &                    BOUNDARY(ng) % hpondG_east)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &               __FILE__)) RETURN
-        END IF
-        IF (LBC(isouth,isHpond,ng)%acquire) THEN
-          CALL get_ngfld (ng, iNLM, idHpdbc(isouth),                    &
-     &                    ncBRYid(idHpdbc(isouth),ng),                  &
-     &                    nBCfiles(ng), BRY(1,ng), update(1),           &
-     &                    ILB, IUB, 1, 2, 0, Lm(ng)+1, 1,               &
-     &                    BOUNDARY(ng) % hpondG_south)
-          IF (FoundError(exit_flag, NoError, __LINE__,                  &
-     &               __FILE__)) RETURN
-        END IF
-        IF (LBC(inorth,isHpond,ng)%acquire) THEN
-          CALL get_ngfld (ng, iNLM, idHpdbc(inorth),                    &
-     &                    ncBRYid(idHpdbc(inorth),ng),                  &
-     &                    nBCfiles(ng), BRY(1,ng), update(1),           &
-     &                    ILB, IUB, 1, 2, 0, Lm(ng)+1, 1,               &
-     &                    BOUNDARY(ng) % hpondG_north)
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
      &               __FILE__)) RETURN
         END IF

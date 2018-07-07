@@ -981,30 +981,6 @@
             END DO
           END DO
         END IF
-#  ifdef MELT_PONDS
-        IF (Aout(idApond,ng)) THEN
-          DO j=JstrR,JendR
-            DO i=IstrR,IendR
-              AVERAGE(ng)%avgapond(i,j)=ICE(ng)%apond(i,j,Iout)
-#   ifdef WET_DRY
-              AVERAGE(ng)%avgapond(i,j)=AVERAGE(ng)%avgapond(i,j)*      &
-     &                                  GRID(ng)%rmask_full(i,j)
-#   endif
-            END DO
-          END DO
-        END IF
-        IF (Aout(idHpond,ng)) THEN
-          DO j=JstrR,JendR
-            DO i=IstrR,IendR
-              AVERAGE(ng)%avghpond(i,j)=ICE(ng)%hpond(i,j,Iout)
-#   ifdef WET_DRY
-              AVERAGE(ng)%avghpond(i,j)=AVERAGE(ng)%avghpond(i,j)*      &
-     &                                  GRID(ng)%rmask_full(i,j)
-#   endif
-            END DO
-          END DO
-        END IF
-#  endif
         IF (Aout(idAgeice,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
@@ -1744,8 +1720,8 @@
 !  Initialize vorticity fields.
 !
         IF (Aout(id2dPV,ng)) THEN
-          DO j=Jstr,Jend
-            DO i=Istr,Iend
+          DO j=Jstr,JendR
+            DO i=Istr,IendR
               AVERAGE(ng)%avgpvor2d(i,j)=potvor_bar(i,j)
 # ifdef WET_DRY
               AVERAGE(ng)%avgpvor2d(i,j)=AVERAGE(ng)%avgpvor2d(i,j)*    &
@@ -1755,8 +1731,8 @@
           END DO
         END IF
         IF (Aout(id2dRV,ng)) THEN
-          DO j=Jstr,Jend
-            DO i=Istr,Iend
+          DO j=Jstr,JendR
+            DO i=Istr,IendR
               AVERAGE(ng)%avgrvor2d(i,j)=relvor_bar(i,j)
 # ifdef WET_DRY
               AVERAGE(ng)%avgrvor2d(i,j)=AVERAGE(ng)%avgrvor2d(i,j)*    &
@@ -1768,8 +1744,8 @@
 # ifdef SOLVE3D
         IF (Aout(id3dPV,ng)) THEN
           DO k=1,N(ng)
-            DO j=Jstr,Jend
-              DO i=Istr,Iend
+            DO j=Jstr,JendR
+              DO i=Istr,IendR
                 AVERAGE(ng)%avgpvor3d(i,j,k)=potvor(i,j,k)
 #  ifdef WET_DRY
                 AVERAGE(ng)%avgpvor3d(i,j,k)=AVERAGE(ng)%avgpvor3d(i,j, &
@@ -1782,8 +1758,8 @@
         END IF
         IF (Aout(id3dRV,ng)) THEN
           DO k=1,N(ng)
-            DO j=Jstr,Jend
-              DO i=Istr,Iend
+            DO j=Jstr,JendR
+              DO i=Istr,IendR
                 AVERAGE(ng)%avgrvor3d(i,j,k)=relvor(i,j,k)
 #  ifdef WET_DRY
                 AVERAGE(ng)%avgrvor3d(i,j,k)=AVERAGE(ng)%avgrvor3d(i,j, &
@@ -2750,30 +2726,6 @@
             END DO
           END DO
         END IF
-#  ifdef MELT_PONDS
-        IF (Aout(idApond,ng)) THEN
-          DO j=JstrR,JendR
-            DO i=Istr,IendR
-              AVERAGE(ng)%avgapond(i,j)=AVERAGE(ng)%avgapond(i,j)+      &
-#   ifdef WET_DRY
-     &                                 GRID(ng)%rmask_full(i,j)*        &
-#   endif
-     &                                 ICE(ng)%apond(i,j,Iout)
-            END DO
-          END DO
-        END IF
-        IF (Aout(idHpond,ng)) THEN
-          DO j=JstrR,JendR
-            DO i=Istr,IendR
-              AVERAGE(ng)%avghpond(i,j)=AVERAGE(ng)%avghpond(i,j)+      &
-#   ifdef WET_DRY
-     &                                 GRID(ng)%rmask_full(i,j)*        &
-#   endif
-     &                                 ICE(ng)%hpond(i,j,Iout)
-            END DO
-          END DO
-        END IF
-#  endif
         IF (Aout(idAgeice,ng)) THEN
           DO j=JstrR,JendR
             DO i=Istr,IendR
@@ -3514,8 +3466,8 @@
 !  Accumulate vorticity fields.
 !
         IF (Aout(id2dPV,ng)) THEN
-          DO j=Jstr,Jend
-            DO i=Istr,Iend
+          DO j=Jstr,JendR
+            DO i=Istr,IendR
               AVERAGE(ng)%avgpvor2d(i,j)=AVERAGE(ng)%avgpvor2d(i,j)+    &
 # ifdef WET_DRY
      &                                   GRID(ng)%pmask_full(i,j)*      &
@@ -3525,8 +3477,8 @@
           END DO
         END IF
         IF (Aout(id2dRV,ng)) THEN
-          DO j=Jstr,Jend
-            DO i=Istr,Iend
+          DO j=Jstr,JendR
+            DO i=Istr,IendR
               AVERAGE(ng)%avgrvor2d(i,j)=AVERAGE(ng)%avgrvor2d(i,j)+    &
 # ifdef WET_DRY
      &                                   GRID(ng)%pmask_full(i,j)*      &
@@ -3538,8 +3490,8 @@
 # ifdef SOLVE3D
         IF (Aout(id3dPV,ng)) THEN
           DO k=1,N(ng)
-            DO j=Jstr,Jend
-              DO i=Istr,Iend
+            DO j=Jstr,JendR
+              DO i=Istr,IendR
                 AVERAGE(ng)%avgpvor3d(i,j,k)=AVERAGE(ng)%avgpvor3d(i,j, &
      &                                                             k)+  &
 #  ifdef WET_DRY
@@ -3552,8 +3504,8 @@
         END IF
         IF (Aout(id3dRV,ng)) THEN
           DO k=1,N(ng)
-            DO j=Jstr,Jend
-              DO i=Istr,Iend
+            DO j=Jstr,JendR
+              DO i=Istr,IendR
                 AVERAGE(ng)%avgrvor3d(i,j,k)=AVERAGE(ng)%avgrvor3d(i,j, &
      &                                                             k)+  &
 #  ifdef WET_DRY
@@ -5042,48 +4994,6 @@
 #  endif
           END IF
         END IF
-#  ifdef MELT_PONDS
-        IF (Aout(idApond,ng)) THEN
-          DO j=JstrR,JendR
-            DO i=IstrR,IendR
-              AVERAGE(ng)%avgapond(i,j)=rfac(i,j)*                      &
-     &                   AVERAGE(ng)%avgapond(i,j)
-            END DO
-          END DO
-          IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-            CALL exchange_r2d_tile (ng, tile,                           &
-     &                              LBi, UBi, LBj, UBj,                 &
-     &                              AVERAGE(ng)%avgapond)
-#   ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          NghostPoints,                           &
-     &                          EWperiodic(ng), NSperiodic(ng),         &
-     &                          AVERAGE(ng)%avgapond)
-#   endif
-          END IF
-        END IF
-        IF (Aout(idHpond,ng)) THEN
-          DO j=JstrR,JendR
-            DO i=IstrR,IendR
-              AVERAGE(ng)%avghpond(i,j)=rfac(i,j)*                      &
-     &                   AVERAGE(ng)%avghpond(i,j)
-            END DO
-          END DO
-          IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-            CALL exchange_r2d_tile (ng, tile,                           &
-     &                              LBi, UBi, LBj, UBj,                 &
-     &                              AVERAGE(ng)%avghpond)
-#   ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          NghostPoints,                           &
-     &                          EWperiodic(ng), NSperiodic(ng),         &
-     &                          AVERAGE(ng)%avghpond)
-#   endif
-          END IF
-        END IF
-#  endif
         IF (Aout(idAgeice,ng)) THEN
           DO j=JstrR,JendR
             DO i=IstrR,IendR
@@ -6271,8 +6181,8 @@
 !  Process vorticity fields.
 !
         IF (Aout(id2dPV,ng)) THEN
-          DO j=Jstr,Jend
-            DO i=Istr,Iend
+          DO j=Jstr,JendR
+            DO i=Istr,IendR
               AVERAGE(ng)%avgpvor2d(i,j)=pfac(i,j)*                     &
      &                                   AVERAGE(ng)%avgpvor2d(i,j)
             END DO
@@ -6292,8 +6202,8 @@
         END IF
 
         IF (Aout(id2dRV,ng)) THEN
-          DO j=Jstr,Jend
-            DO i=Istr,Iend
+          DO j=Jstr,JendR
+            DO i=Istr,IendR
               AVERAGE(ng)%avgrvor2d(i,j)=pfac(i,j)*                     &
      &                                   AVERAGE(ng)%avgrvor2d(i,j)
             END DO
@@ -6315,8 +6225,8 @@
 # ifdef SOLVE3D
         IF (Aout(id3dPV,ng)) THEN
           DO k=1,N(ng)
-            DO j=Jstr,Jend
-              DO i=Istr,Iend
+            DO j=Jstr,JendR
+              DO i=Istr,IendR
                 AVERAGE(ng)%avgpvor3d(i,j,k)=pfac(i,j)*                 &
      &                                      AVERAGE(ng)%avgpvor3d(i,j,k)
               END DO
@@ -6338,8 +6248,8 @@
 
         IF (Aout(id3dRV,ng)) THEN
           DO k=1,N(ng)
-            DO j=Jstr,Jend
-              DO i=Istr,Iend
+            DO j=Jstr,JendR
+              DO i=Istr,IendR
                 AVERAGE(ng)%avgrvor3d(i,j,k)=pfac(i,j)*                 &
      &                                      AVERAGE(ng)%avgrvor3d(i,j,k)
               END DO

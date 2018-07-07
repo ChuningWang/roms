@@ -84,6 +84,7 @@ ifdef USE_OpenMP
 endif
 
 ifdef USE_DEBUG
+#          FFLAGS += -fcheck=all -fsanitize=address -fsanitize=undefined
            FFLAGS += -g -fbounds-check -fbacktrace
            FFLAGS += -finit-real=nan -ffpe-trap=invalid,zero,overflow
            CFLAGS += -g
@@ -156,7 +157,7 @@ FC_TEST := $(findstring $(shell ${FC} --version | head -1 | \
 #$(SCRATCH_DIR)/mod_strings.o: FFLAGS += -ffree-form -ffree-line-length-none
 #$(SCRATCH_DIR)/analytical.o: FFLAGS += -ffree-form -ffree-line-length-none
 $(SCRATCH_DIR)/mod_ncparam.o: FFLAGS += -ffree-form
-$(SCRATCH_DIR)/mod_strings.o: FFLAGS += -ffree-form
+$(SCRATCH_DIR)/mod_strings.o: FFLAGS += -ffree-form -ffree-line-length-none
 $(SCRATCH_DIR)/analytical.o: FFLAGS += -ffree-form
 $(SCRATCH_DIR)/biology.o: FFLAGS += -ffree-form -ffree-line-length-none
 ifdef USE_ADJOINT
