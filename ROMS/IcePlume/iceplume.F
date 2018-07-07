@@ -2,6 +2,12 @@
 MODULE iceplume_mod
 #ifdef ICEPLUME
 !
+!=======================================================================
+!                                                                      !
+!  This subroutine is a wraaper for the ICEPLUME module.               !
+!                                                                      !
+!=======================================================================
+!
 implicit none
 !
 PRIVATE
@@ -9,7 +15,9 @@ PUBLIC :: iceplume
 !
 CONTAINS
 !
+!***********************************************************************
 SUBROUTINE iceplume (ng, tile)
+!***********************************************************************
 !
   USE mod_grid
   USE mod_ocean
@@ -27,9 +35,7 @@ SUBROUTINE iceplume (ng, tile)
     &                 LBi, UBi, LBj, UBj,                          &
     &                 IminS, ImaxS, JminS, JmaxS,                  &
     &                 nrhs(ng),                                    &
-# ifdef MASKING
     &                 GRID(ng) % rmask,                            &
-# endif
     &                 GRID(ng) % om_r,                             &
     &                 GRID(ng) % on_r,                             &
     &                 GRID(ng) % h,                                &
@@ -41,16 +47,22 @@ SUBROUTINE iceplume (ng, tile)
 !
   RETURN
 END SUBROUTINE iceplume
-
+!
+!***********************************************************************
 SUBROUTINE iceplume_tile(ng, tile,                                 &
     &                    LBi, UBi, LBj, UBj,                       &
     &                    IminS, ImaxS, JminS, JmaxS,               &
     &                    nrhs,                                     &
-# ifdef MASKING
     &                    rmask,                                    &
-# endif
-    &                    om_r, on_r, h, z_w,                       &
-    &                    u, v, wvel, t)
+    &                    om_r,                                     &
+    &                    on_r,                                     &
+    &                    h,                                        &
+    &                    z_w,                                      &
+    &                    u,                                        &
+    &                    v,                                        &
+    &                    wvel,                                     &
+    &                    t)
+!***********************************************************************
 !
 ! Load public modules
 !
@@ -69,21 +81,17 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
   integer, intent(in) :: nrhs
 !
 # ifdef ASSUMED_SHAPE
-#  ifdef MASKING
   real(r8), intent(in) :: rmask(LBi:,LBj:)
-#  endif
   real(r8), intent(in) :: om_r(LBi:,LBj:)
   real(r8), intent(in) :: on_r(LBi:,LBj:)
   real(r8), intent(in) :: h(LBi:,LBj:)
   real(r8), intent(in) :: z_w(LBi:,LBj:,0:)
   real(r8), intent(in) :: u(LBi:,LBj:,:,:)
   real(r8), intent(in) :: v(LBi:,LBj:,:,:)
-  real(r8), intent(in) :: wvel(LBi:,LBj:,:)
+  real(r8), intent(in) :: wvel(LBi:,LBj:,0:)
   real(r8), intent(inout) :: t(LBi:,LBj:,:,:,:)
 # else
-#  ifdef MASKING
   real(r8), intent(in) :: rmask(LBi:UBi,LBj:UBj)
-#  endif
   real(r8), intent(in) :: om_r(LBi:UBi,LBj:UBj)
   real(r8), intent(in) :: on_r(LBi:UBi,LBj:UBj)
   real(r8), intent(in) :: h(LBi:UBi,LBj:UBj)
@@ -103,11 +111,13 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 !
 ! ==================================================================
 ! Read in some scalar parameters
+!
   ngr = ng
   Nr = N(ng)
   NTr = NT(ng)
-!   iceDepth = -abs(GRID(ng) % h(II, JI))
+!
 ! If checkCFL is activited, need to read in slow-mode time step
+!
   IF (checkCFL) THEN
     dtr = dt(ng)
   ENDIF
@@ -141,7 +151,7 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
             DIR2 = 1
           ENDIF
         ENDIF
-
+!
         IF ((SOURCES(ng) % Dsrc(I)) .EQ. 0) THEN  ! read in v direction
           dx = abs(om_r(II, JI))
           dy = abs(on_r(II, JI))
@@ -154,60 +164,62 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 ! Read in profiles from OCEAN.
 ! ==================================================================
 !
-        DO K = 1, N(ng)+1
-          PLUME(ng) % zW(K) = z_w(II, JI, K-1)
+        DO K = 0, Nr
+          PLUME(ng) % zW(K) = z_w(II, JI, K)
         ENDDO
 !
-        DO K = 1, N(ng)
+        DO K = 1, Nr
+!
 ! temp and salt
-!     PLUME(ng) % tAm(K) = OCEAN(ng) % t(II, JI, K, nrhs, itemp)
+!
           PLUME(ng) % sAm(K) = t(II, JI, K, nrhs, isalt)
           PLUME(ng) % tpAm(K) = t(II, JI, K, nrhs, itemp)
+!
 ! convert potential temp to in-situ temp
+!
           prRef = 101.d3*1.d-4
           pr = prRef + &
             & (abs(PLUME(ng) % zW(K))*rho_ref*g)*1.d-4  ! [dbar]
           CALL SW_TEMP(PLUME(ng) % sAm(K),  &
                      & PLUME(ng) % tpAm(K), &
-                     & pr, prRef, PLUME(ng) % tAm(K))
+                     & pr,                  &
+                     & prRef,               &
+                     & PLUME(ng) % tAm(K))
+!
 ! tracers
+!
           IF (useTracers) THEN
             DO iTracer = 3, NT(ng)
               PLUME(ng) % trcAm(K, iTracer) = &
                 & t(II, JI, K, nrhs, iTracer)
             ENDDO
           ENDIF
+!
 ! u/v, w
+!
           IF (DIR .EQ. 0) THEN
-            PLUME(ng) % vAm(K) = &
-              & 0.25d0 * ( &
-              & v(II, JI,   K, nrhs) + &
-              & v(II, JI+1, K, nrhs) &
+            PLUME(ng) % vAm(K) =        &
+              & 0.5d0 * (               &
+              & v(II, JI,   K, nrhs) +  &
+              & v(II, JI+1, K, nrhs)    &
               & )
           ELSEIF (DIR .EQ. 1) THEN
-            PLUME(ng) % vAm(K) = &
-              & 0.25d0 * ( &
-              & u(II,   JI, K, nrhs) + &
-              & u(II+1, JI, K, nrhs) &
+            PLUME(ng) % vAm(K) =        &
+              & 0.5d0 * (               &
+              & u(II,   JI, K, nrhs) +  &
+              & u(II+1, JI, K, nrhs)    &
               & )
           ENDIF
-
-          PLUME(ng) % wAm(K) = &
-            & 0.5 * ( &
-            & wvel(II, JI, K-1) + &
-            & wvel(II, JI, K) &
+!
+          PLUME(ng) % wAm(K) =          &
+            & 0.5 * (                   &
+            & wvel(II, JI, K-1) +       &
+            & wvel(II, JI, K)           &
             & )
-          !IF (K .EQ. 1) THEN
-          !  PLUME(ng) % wAm(K) = wvel(II, JI, K)
-          !ELSE
-          !  PLUME(ng) % wAm(K) = &
-          !    & 0.5 * ( &
-          !    & wvel(II, JI, K-1) + &
-          !    & wvel(II, JI, K) &
-          !    & )
-          !ENDIF
         ENDDO
+!
 ! Discharge tracer concentration
+!
         IF (useTracers .and. useInputTracers) THEN
           DO iTracer = 3, NT(ng)
             PLUME(ng) % trcIni(iTracer) = &
@@ -218,12 +230,14 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
             PLUME(ng) % trcIni(iTracer) = 0.d0
           ENDDO
         ENDIF
-
+!
 ! ==================================================================
+!
         CALL iceplume_calc(ng, &
                          & abs(SOURCES(ng) % Qbar(I)),      &
                          & SOURCES(ng) % Tsrc(I, 1, itemp), &
                          & SOURCES(ng) % Tsrc(I, 1, isalt))
+!
 ! ==================================================================
 ! Rewrite Qsrc, T & S in SOURCES
 !
@@ -235,10 +249,12 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 ! Since entrainment / detrainment are separated in PLUME, here I
 ! updte the volume flux Qsrc and tracer flux Tsrc accordingly.
 ! 2018/05/21 Chuning Wang
-!
 ! ==================================================================
+!
         DO K = 1, Nr
+!
 ! Qsrc
+!
           IF (SOURCES(ng) % Qbar(I) .GT. 0.d0) THEN
             SOURCES(ng) % Qsrc(I, K) = &
               & (PLUME(ng) % ent(K) + PLUME(ng) % det(K))
@@ -248,7 +264,9 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
           ELSE
             SOURCES(ng) % Qsrc(I, K) = 0.d0
           ENDIF
+!
 ! T, S, Tracer concentration
+!
           IF (SOURCES(ng) % Qsrc(I, K) .NE. 0.d0) THEN
             SOURCES(ng) % Tsrc(I, K, isalt) = &
               & (PLUME(ng) % det(K)*PLUME(ng) % trc(isalt) + &
@@ -272,7 +290,9 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
             ENDDO
           ENDIF
         ENDDO
+!
 ! Use the tendency terms to update T & S in OCEAN
+!
         DO K = 1, Nr
           t(II, JI, K, nrhs, isalt) = &
             & t(II, JI, K, nrhs, isalt) + &
@@ -281,38 +301,39 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
             & t(II, JI, K, nrhs, itemp) + &
             & dt(ng) * PLUME(ng) % tendT(K)
         ENDDO
-
+!
 ! Write to file for diagonse
+!
         IF (useDebug) THEN
-          ! IF (iic(ng) .EQ. ntimes(ng)) THEN
-          IF (iic(ng) .EQ. 1) THEN
-          ! IF (mod(icc, 120) .EQ. 0)
-            open(unit=15, file='./plume_debug.txt')
-            write(15, '(2 I5, 99 I10)')  II, JI, iic(ng)
-            write(15, '(A3, 99 A12)')  'lev', 'zw', 'tAm', 't', &
-              & 'sAm', 's', 'ent', 'det', &
-              & 'r', 'a', 'w', 'mInt'
-            DO K = 1, Nr
+          IF (iic(ng) .EQ. ntimes(ng)) THEN
+            open(unit=15, file='./plume_out_zw.txt')
+            write(15, '(A3, 99 A12)')  'lev', 'zW', &
+              & 't', 's', 'r', 'w', 'a', 'mInt', 'volFlux'
+            DO K = 0, Nr
               write(15, '(I4, 99 E12.4)')  K, PLUME(ng) % zW(K), &
-                & PLUME(ng) % tAm(K), PLUME(ng) % t(K), &
-                & PLUME(ng) % sAm(K), PLUME(ng) % s(K), &
-                & PLUME(ng) % ent(K), PLUME(ng) % det(K), &
-                & PLUME(ng) % r(K), PLUME(ng) % a(K), &
-                & PLUME(ng) % w(K), PLUME(ng) % mInt(K)
+                & PLUME(ng) % t(K), PLUME(ng) % s(K), &
+                & PLUME(ng) % r(K), PLUME(ng) % w(K), &
+                & PLUME(ng) % a(K), PLUME(ng) % mInt(K), &
+                & PLUME(ng) % volFlux(K)
             ENDDO
-            write(15, '(I4, 99 E12.4)')  41, PLUME(ng) % zW(Nr+1), &
-              & 0.0d0, PLUME(ng) % tAm(Nr+1), &
-              & 0.0d0, PLUME(ng) % sAm(Nr+1), &
-              & 0.0d0, 0.0d0, &
-              & PLUME(ng) % r(Nr+1), PLUME(ng) % a(Nr+1), &
-              & PLUME(ng) % w(Nr+1), PLUME(ng) % mInt(Nr+1)
+            close(unit=15)
+            open(unit=15, file='./plume_out_zr.txt')
+            write(15, '(A3, 99 A12)')  'lev', 'zR', &
+              & 'tAm', 'sAm', 'vAm', 'wAm', 'ent', 'det', &
+              & 'fwFlux', 'heatFlux'
+            DO K = 1, Nr
+              write(15, '(I4, 99 E12.4)')  K, PLUME(ng) % zR(K), &
+                & PLUME(ng) % tAm(K), PLUME(ng) % sAm(K), &
+                & PLUME(ng) % vAm(K), PLUME(ng) % wAm(K), &
+                & PLUME(ng) % ent(K), PLUME(ng) % det(K), &
+                & PLUME(ng) % fwFlux(K), PLUME(ng) % heatFlux(K)
+            ENDDO
+            close(unit=15)
           ENDIF
         ENDIF
       ENDIF
     ENDDO
   ENDIF
-
 END SUBROUTINE iceplume_tile
-
 #endif
 END MODULE iceplume_mod
