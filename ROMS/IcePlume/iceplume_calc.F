@@ -558,6 +558,10 @@ SUBROUTINE ICEPLUME_CURVE_DET(ng, detr, detrDz)
     IF (depthFinder .EQ. 2) searchSwitch = 1
       DO WHILE (detrDz .LT. minDetrDz)
 !
+! If detrDz is NaN, exit loop
+!
+        IF (detrDz .EQ. (detrDz+1)) EXIT
+!
         IF (depthFinder .EQ. 1) THEN
 !
 ! Search method 1, search one layer up until meet the surface

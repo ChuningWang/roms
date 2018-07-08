@@ -55,7 +55,7 @@ MODULE mod_iceplume
 ! ====================================================================
 !
 ! Model parameters
-  real(r8), parameter :: pi            = 4.0d0*atan(1.0d0)    ! Pi
+  real(r8), parameter :: pi = 4.0d0*atan(1.0d0)    ! Pi
 
 ! For plume model
 ! -------------- Parameters ------------------------------------------
@@ -113,7 +113,7 @@ MODULE mod_iceplume
   real(r8), parameter :: meltEnt       = 5.d-1
 !
   real(r8) :: CuMax = 0.8d0   ! maximum Cu number to triger ckeckCFL.
-  real(r8) :: RiBMin = 0.5d0  ! minimum Richardson number to triger
+  real(r8) :: RiBMin = 2.0d0  ! minimum Richardson number to triger
                               ! checkRiB.
 !
 ! ice bottom depth [m], if iceDepth is positive,
