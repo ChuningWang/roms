@@ -493,6 +493,7 @@ SUBROUTINE ICEPLUME_CURVE_DET(ng, detr, detrDz)
   real(r8) :: detrVel
   integer  :: KI, detrN, searchSwitch
   real(r8) :: detrWeight, detrWeightSum
+  integer :: counter
 !
       IF (checkCFL) THEN
 !
@@ -556,11 +557,13 @@ SUBROUTINE ICEPLUME_CURVE_DET(ng, detr, detrDz)
 ! Initiate searchSwitch for depthFinder == 2
 !
     IF (depthFinder .EQ. 2) searchSwitch = 1
+      counter = 0
       DO WHILE (detrDz .LT. minDetrDz)
+        counter = counter + 1
 !
 ! If detrDz is NaN, exit loop
 !
-        IF (detrDz .EQ. (detrDz+1)) EXIT
+        IF ((detrDz .EQ. (detrDz+1)) .OR. (counter .GT. 100)) EXIT
 !
         IF (depthFinder .EQ. 1) THEN
 !
@@ -569,7 +572,8 @@ SUBROUTINE ICEPLUME_CURVE_DET(ng, detr, detrDz)
 !
           IF (PLUME(ng) % det(Nr) .EQ. 0.d0) THEN
 !
-! If the plume has not yet reached the surface, search for one layer up
+! If the plume has not yet reached the surface, search for one layer
+! up
 !
             DO K = 2,Nr
               IF ((PLUME(ng) % detI(K) .EQ. 0) .and. &
