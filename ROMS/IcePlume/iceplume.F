@@ -105,38 +105,30 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 ! Local variable declarations.
 !
   integer :: I, II, JI, DIR, DIR2
+  integer :: K, iTracer
   real(r8) :: pr, prRef
+  real(r8) :: dx, dy
+  real(r8) :: QIni, TIni, SIni
 !
 # include "set_bounds.h"
 !
 ! ==================================================================
-! Read in some scalar parameters
-!
-  ngr = ng
-  Nr = N(ng)
-  NTr = NT(ng)
-!
-! If checkCFL is activited, need to read in slow-mode time step
-!
-  IF (checkCFL) THEN
-    dtr = dt(ng)
-  ENDIF
 !
   IF (LuvSrc(ng)) THEN
     DO I=1,Nsrc(ng)
-      II=SOURCES(ng)%Isrc(I)
-      JI=SOURCES(ng)%Jsrc(I)
-      IF (((IstrR.le.II).and.(II.le.IendR)).and. &
-        & ((JstrR.le.JI).and.(JI.le.JendR))) THEN
+      II = SOURCES(ng) % Isrc(I)
+      JI = SOURCES(ng) % Jsrc(I)
+      IF ( ((IstrR .LE. II) .AND. (II .LE. IendR)) .AND. &
+        &  ((JstrR .LE. JI) .AND. (JI .LE. JendR)) ) THEN
 !
 ! ==================================================================
 ! Find the right Rho coordinates
 ! ==================================================================
 !
-        DIR=SOURCES(ng)%Dsrc(I)
+        DIR = SOURCES(ng) % Dsrc(I)
         IF (DIR .EQ. 0) THEN
-          IF ((rmask(II  , JI) .EQ. 0) .AND. &
-            & (rmask(II-1, JI) .EQ. 1)) THEN
+          IF ( (rmask(II  , JI) .EQ. 0) .AND. &
+            &  (rmask(II-1, JI) .EQ. 1) ) THEN
             II = II-1
             DIR2 = -1
           ELSE
@@ -152,45 +144,68 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
           ENDIF
         ENDIF
 !
+! Get grid dimensions
+!
         IF ((SOURCES(ng) % Dsrc(I)) .EQ. 0) THEN  ! read in v direction
-          dx = abs(om_r(II, JI))
-          dy = abs(on_r(II, JI))
+          dx = ABS(om_r(II, JI))
+          dy = ABS(on_r(II, JI))
         ELSE
-          dx = abs(on_r(II, JI))
-          dy = abs(om_r(II, JI))
+          dx = ABS(on_r(II, JI))
+          dy = ABS(om_r(II, JI))
         ENDIF
+!
+! Get initial condition for iceplume model
+!
+        QIni = ABS(SOURCES(ng) % Qsrc(I, 1))
+        TIni = &
+# ifdef ONE_TRACER_SOURCE
+          & SOURCES(ng) % Tsrc(itemp)
+# elif defined TWO_D_TRACER_SOURCE
+          & SOURCES(ng) % Tsrc(I, itemp)
+# else
+          & SOURCES(ng) % Tsrc(I, 1, itemp)
+# endif
+        SIni = &
+# ifdef ONE_TRACER_SOURCE
+          & SOURCES(ng) % Tsrc(isalt)
+# elif defined TWO_D_TRACER_SOURCE
+          & SOURCES(ng) % Tsrc(I, isalt)
+# else
+          & SOURCES(ng) % Tsrc(I, 1, isalt)
+# endif
+        SOURCES(ng) % Qsrc(I, 1) = 0.d0
 !
 ! ==================================================================
 ! Read in profiles from OCEAN.
 ! ==================================================================
 !
-        DO K = 0, Nr
-          PLUME(ng) % zW(K) = z_w(II, JI, K)
+        DO K = 0, N(ng)
+          PLUME(ng) % zW(I, K) = z_w(II, JI, K)
         ENDDO
 !
-        DO K = 1, Nr
+        DO K = 1, N(ng)
 !
 ! temp and salt
 !
-          PLUME(ng) % sAm(K) = t(II, JI, K, nrhs, isalt)
-          PLUME(ng) % tpAm(K) = t(II, JI, K, nrhs, itemp)
+          PLUME(ng) % sAm(I, K) = t(II, JI, K, nrhs, isalt)
+          PLUME(ng) % tpAm(I, K) = t(II, JI, K, nrhs, itemp)
 !
 ! convert potential temp to in-situ temp
 !
           prRef = 101.d3*1.d-4
           pr = prRef + &
-            & (abs(PLUME(ng) % zW(K))*rho_ref*g)*1.d-4  ! [dbar]
-          CALL SW_TEMP(PLUME(ng) % sAm(K),  &
-                     & PLUME(ng) % tpAm(K), &
-                     & pr,                  &
-                     & prRef,               &
-                     & PLUME(ng) % tAm(K))
+            & (ABS(PLUME(ng) % zW(I, K))*rho_ref*g)*1.d-4  ! [dbar]
+          CALL SW_TEMP(PLUME(ng) % sAm(I, K),  &
+                     & PLUME(ng) % tpAm(I, K), &
+                     & pr,                     &
+                     & prRef,                  &
+                     & PLUME(ng) % tAm(I, K))
 !
 ! tracers
 !
           IF (useTracers) THEN
             DO iTracer = 3, NT(ng)
-              PLUME(ng) % trcAm(K, iTracer) = &
+              PLUME(ng) % trcAm(I, K, iTracer) = &
                 & t(II, JI, K, nrhs, iTracer)
             ENDDO
           ENDIF
@@ -198,21 +213,21 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 ! u/v, w
 !
           IF (DIR .EQ. 0) THEN
-            PLUME(ng) % vAm(K) =        &
+            PLUME(ng) % vAm(I, K) =     &
               & 0.5d0 * (               &
               & v(II, JI,   K, nrhs) +  &
               & v(II, JI+1, K, nrhs)    &
               & )
           ELSEIF (DIR .EQ. 1) THEN
-            PLUME(ng) % vAm(K) =        &
+            PLUME(ng) % vAm(I, K) =     &
               & 0.5d0 * (               &
               & u(II,   JI, K, nrhs) +  &
               & u(II+1, JI, K, nrhs)    &
               & )
           ENDIF
 !
-          PLUME(ng) % wAm(K) =          &
-            & 0.5 * (                   &
+          PLUME(ng) % wAm(I, K) =       &
+            & 0.5d0 * (                 &
             & wvel(II, JI, K-1) +       &
             & wvel(II, JI, K)           &
             & )
@@ -222,21 +237,29 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 !
         IF (useTracers .and. useInputTracers) THEN
           DO iTracer = 3, NT(ng)
-            PLUME(ng) % trcIni(iTracer) = &
+            PLUME(ng) % trcIni(I, iTracer) = &
+# ifdef ONE_TRACER_SOURCE
+              & SOURCES(ng) % Tsrc(iTracer)
+# elif defined TWO_D_TRACER_SOURCE
+              & SOURCES(ng) % Tsrc(I, iTracer)
+# else
               & SOURCES(ng) % Tsrc(I, 1, iTracer)
+# endif
           ENDDO
         ELSE
           DO iTracer = 3, NT(ng)
-            PLUME(ng) % trcIni(iTracer) = 0.d0
+            PLUME(ng) % trcIni(I, iTracer) = 0.d0
           ENDDO
         ENDIF
 !
 ! ==================================================================
 !
-        CALL iceplume_calc(ng, &
-                         & abs(SOURCES(ng) % Qbar(I)),      &
-                         & SOURCES(ng) % Tsrc(I, 1, itemp), &
-                         & SOURCES(ng) % Tsrc(I, 1, isalt))
+        CALL iceplume_calc(ng, I, dx, dy, &
+                         & QIni, TIni, SIni)
+        !write(*, *)  'det,  ', PLUME(ng) % det(I, :)
+        !write(*, *)  'ent,  ', PLUME(ng) % ent(I, :)
+        !write(*, *)  'salt, ', PLUME(ng) % sAm(I, :)
+        !write(*, *)  'temp, ', PLUME(ng) % tAm(I, :)
 !
 ! ==================================================================
 ! Rewrite Qsrc, T & S in SOURCES
@@ -251,86 +274,93 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 ! 2018/05/21 Chuning Wang
 ! ==================================================================
 !
-        DO K = 1, Nr
-!
-! Qsrc
-!
-          IF (SOURCES(ng) % Qbar(I) .GT. 0.d0) THEN
-            SOURCES(ng) % Qsrc(I, K) = &
-              & (PLUME(ng) % ent(K) + PLUME(ng) % det(K))
-          ELSEIF (SOURCES(ng) % Qbar(I) .LT. 0.d0) THEN
-            SOURCES(ng) % Qsrc(I, K) = &
-              & -(PLUME(ng) % ent(K) + PLUME(ng) % det(K))
-          ELSE
-            SOURCES(ng) % Qsrc(I, K) = 0.d0
-          ENDIF
-!
-! T, S, Tracer concentration
-!
-          IF (SOURCES(ng) % Qsrc(I, K) .NE. 0.d0) THEN
-            SOURCES(ng) % Tsrc(I, K, isalt) = &
-              & (PLUME(ng) % det(K)*PLUME(ng) % trc(isalt) + &
-              &  PLUME(ng) % ent(K)*PLUME(ng) % sAm(K)) / &
-              & (PLUME(ng) % det(K)+PLUME(ng) % ent(K))
-            SOURCES(ng) % Tsrc(I, K, itemp) = &
-              & (PLUME(ng) % det(K)*PLUME(ng) % trc(itemp) + &
-              &  PLUME(ng) % ent(K)*PLUME(ng) % tAm(K)) / &
-              & (PLUME(ng) % det(K)+PLUME(ng) % ent(K))
-            DO iTracer = 3, NT(ng)
-              SOURCES(ng) % Tsrc(I, K, iTracer) = &
-                & (PLUME(ng) % det(K)*PLUME(ng) % trc(iTracer) + &
-                &  PLUME(ng) % ent(K)*PLUME(ng) % trcAm(K,iTracer)) / &
-                & (PLUME(ng) % det(K)+PLUME(ng) % ent(K))
-            ENDDO
-          ELSE
-            SOURCES(ng) % Tsrc(I, K, isalt) = 0.d0
-            SOURCES(ng) % Tsrc(I, K, itemp) = 0.d0
-            DO iTracer = 3, NT(ng)
-              SOURCES(ng) % Tsrc(I, K, iTracer) = 0.d0
-            ENDDO
-          ENDIF
-        ENDDO
+!         DO K = 1, N(ng)
+! !
+! ! Qsrc
+! !
+!           IF (SOURCES(ng) % Qbar(I) .GT. 0.d0) THEN
+!             SOURCES(ng) % Qsrc(I, K) = &
+!               & (PLUME(ng) % ent(I, K) + PLUME(ng) % det(I, K))
+!           ELSEIF (SOURCES(ng) % Qbar(I) .LT. 0.d0) THEN
+!             SOURCES(ng) % Qsrc(I, K) = &
+!               & -(PLUME(ng) % ent(I, K) + PLUME(ng) % det(I, K))
+!           ELSE
+!             SOURCES(ng) % Qsrc(I, K) = 0.d0
+!           ENDIF
+! !
+! ! T, S, Tracer concentration
+! !
+!           IF (SOURCES(ng) % Qsrc(I, K) .NE. 0.d0) THEN
+!             SOURCES(ng) % Tsrc(I, K, isalt) = &
+!               & (PLUME(ng) % det(I, K) * &
+!               &  PLUME(ng) % trc(I, isalt) + &
+!               &  PLUME(ng) % ent(I, K) * &
+!               &  PLUME(ng) % sAm(I, K)) / &
+!               & (PLUME(ng) % det(I, K) + PLUME(ng) % ent(I, K))
+!             SOURCES(ng) % Tsrc(I, K, itemp) = &
+!               & (PLUME(ng) % det(I, K) * &
+!               &  PLUME(ng) % trc(I, itemp) + &
+!               &  PLUME(ng) % ent(I, K) * &
+!               &  PLUME(ng) % tAm(I, K)) / &
+!               & (PLUME(ng) % det(I, K) + PLUME(ng) % ent(I, K))
+!             DO iTracer = 3, NT(ng)
+!               SOURCES(ng) % Tsrc(I, K, iTracer) = &
+!                 & (PLUME(ng) % det(I, K) * &
+!                 &  PLUME(ng) % trc(I, iTracer) + &
+!                 &  PLUME(ng) % ent(I, K) * &
+!                 &  PLUME(ng) % trcAm(I, K,iTracer)) / &
+!                 & (PLUME(ng) % det(I, K) + PLUME(ng) % ent(I, K))
+!             ENDDO
+!           ELSE
+!             SOURCES(ng) % Tsrc(I, K, isalt) = 0.d0
+!             SOURCES(ng) % Tsrc(I, K, itemp) = 0.d0
+!             DO iTracer = 3, NT(ng)
+!               SOURCES(ng) % Tsrc(I, K, iTracer) = 0.d0
+!             ENDDO
+!           ENDIF
+!         ENDDO
 !
 ! Use the tendency terms to update T & S in OCEAN
 !
-        DO K = 1, Nr
+        DO K = 1, N(ng)
           t(II, JI, K, nrhs, isalt) = &
             & t(II, JI, K, nrhs, isalt) + &
-            & dt(ng) * PLUME(ng) % tendS(K)
+            & dt(ng) * PLUME(ng) % tendS(I, K)
           t(II, JI, K, nrhs, itemp) = &
             & t(II, JI, K, nrhs, itemp) + &
-            & dt(ng) * PLUME(ng) % tendT(K)
+            & dt(ng) * PLUME(ng) % tendT(I, K)
         ENDDO
 !
 ! Write to file for diagonse
 !
-        IF (useDebug) THEN
-          IF (iic(ng) .EQ. ntimes(ng)) THEN
-            open(unit=15, file='./plume_out_zw.txt')
-            write(15, '(A3, 99 A12)')  'lev', 'zW', &
-              & 't', 's', 'r', 'w', 'a', 'mInt', 'volFlux'
-            DO K = 0, Nr
-              write(15, '(I4, 99 E12.4)')  K, PLUME(ng) % zW(K), &
-                & PLUME(ng) % t(K), PLUME(ng) % s(K), &
-                & PLUME(ng) % r(K), PLUME(ng) % w(K), &
-                & PLUME(ng) % a(K), PLUME(ng) % mInt(K), &
-                & PLUME(ng) % volFlux(K)
-            ENDDO
-            close(unit=15)
-            open(unit=15, file='./plume_out_zr.txt')
-            write(15, '(A3, 99 A12)')  'lev', 'zR', &
-              & 'tAm', 'sAm', 'vAm', 'wAm', 'ent', 'det', &
-              & 'fwFlux', 'heatFlux'
-            DO K = 1, Nr
-              write(15, '(I4, 99 E12.4)')  K, PLUME(ng) % zR(K), &
-                & PLUME(ng) % tAm(K), PLUME(ng) % sAm(K), &
-                & PLUME(ng) % vAm(K), PLUME(ng) % wAm(K), &
-                & PLUME(ng) % ent(K), PLUME(ng) % det(K), &
-                & PLUME(ng) % fwFlux(K), PLUME(ng) % heatFlux(K)
-            ENDDO
-            close(unit=15)
-          ENDIF
-        ENDIF
+!         IF (useDebug) THEN
+!           IF (iic(ng) .EQ. ntimes(ng)) THEN
+!             open(unit=15, file='./plume_out_zw.txt')
+!             write(15, '(A3, 99 A12)')  'lev', 'zW', &
+!               & 't', 's', 'r', 'w', 'a', 'mInt', 'volFlux'
+!             DO K = 0, N(ng)
+!               write(15, '(I4, 99 E12.4)')  K, &
+!                 & PLUME(ng) % zW(I, K), &
+!                 & PLUME(ng) % t(I, K), PLUME(ng) % s(I, K), &
+!                 & PLUME(ng) % r(I, K), PLUME(ng) % w(I, K), &
+!                 & PLUME(ng) % a(I, K), PLUME(ng) % mInt(I, K), &
+!                 & PLUME(ng) % volFlux(I, K)
+!             ENDDO
+!             close(unit=15)
+!             open(unit=15, file='./plume_out_zr.txt')
+!             write(15, '(A3, 99 A12)')  'lev', 'zR', &
+!               & 'tAm', 'sAm', 'vAm', 'wAm', 'ent', 'det', &
+!               & 'fwFlux', 'heatFlux'
+!             DO K = 1, N(ng)
+!               write(15, '(I4, 99 E12.4)')  K, PLUME(ng) % zR(I, K), &
+!                 & PLUME(ng) % tAm(I, K), PLUME(ng) % sAm(I, K), &
+!                 & PLUME(ng) % vAm(I, K), PLUME(ng) % wAm(I, K), &
+!                 & PLUME(ng) % ent(I, K), PLUME(ng) % det(I, K), &
+!                 & PLUME(ng) % fwFlux(I, K), PLUME(ng) % heatFlux(I, K)
+!             ENDDO
+!             close(unit=15)
+!           ENDIF
+!         ENDIF
       ENDIF
     ENDDO
   ENDIF
