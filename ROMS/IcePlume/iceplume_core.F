@@ -109,10 +109,6 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, I, dy, &
 !
   zIn = PLUME(ng) % zW(I, iceDepthK)
 !
-! Replicate current depth
-!
-  depth = zIn
-!
 ! Next point at which to retrieve values
 !
   zOut = PLUME(ng) % zW(I, iceDepthK+1)
@@ -131,6 +127,10 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, I, dy, &
 ! ==================================================================
 !
   DO K = iceDepthK+1, N(ng)
+!
+! Replicate current depth
+!
+  depth = zIn
 !
 ! ==================================================================
 ! Use DLSODE to solve plume properties.

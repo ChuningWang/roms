@@ -109,6 +109,7 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
   real(r8) :: pr, prRef
   real(r8) :: dx, dy
   real(r8) :: QIni, TIni, SIni
+  real(r8) :: Qsrc
 !
 # include "set_bounds.h"
 !
@@ -256,10 +257,6 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 !
         CALL iceplume_calc(ng, I, dx, dy, &
                          & QIni, TIni, SIni)
-        !write(*, *)  'det,  ', PLUME(ng) % det(I, :)
-        !write(*, *)  'ent,  ', PLUME(ng) % ent(I, :)
-        !write(*, *)  'salt, ', PLUME(ng) % sAm(I, :)
-        !write(*, *)  'temp, ', PLUME(ng) % tAm(I, :)
 !
 ! ==================================================================
 ! Rewrite Qsrc, T & S in SOURCES
@@ -274,51 +271,55 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 ! 2018/05/21 Chuning Wang
 ! ==================================================================
 !
-!         DO K = 1, N(ng)
-! !
-! ! Qsrc
-! !
-!           IF (SOURCES(ng) % Qbar(I) .GT. 0.d0) THEN
-!             SOURCES(ng) % Qsrc(I, K) = &
-!               & (PLUME(ng) % ent(I, K) + PLUME(ng) % det(I, K))
-!           ELSEIF (SOURCES(ng) % Qbar(I) .LT. 0.d0) THEN
-!             SOURCES(ng) % Qsrc(I, K) = &
-!               & -(PLUME(ng) % ent(I, K) + PLUME(ng) % det(I, K))
-!           ELSE
-!             SOURCES(ng) % Qsrc(I, K) = 0.d0
-!           ENDIF
-! !
-! ! T, S, Tracer concentration
-! !
-!           IF (SOURCES(ng) % Qsrc(I, K) .NE. 0.d0) THEN
-!             SOURCES(ng) % Tsrc(I, K, isalt) = &
-!               & (PLUME(ng) % det(I, K) * &
-!               &  PLUME(ng) % trc(I, isalt) + &
-!               &  PLUME(ng) % ent(I, K) * &
-!               &  PLUME(ng) % sAm(I, K)) / &
-!               & (PLUME(ng) % det(I, K) + PLUME(ng) % ent(I, K))
-!             SOURCES(ng) % Tsrc(I, K, itemp) = &
-!               & (PLUME(ng) % det(I, K) * &
-!               &  PLUME(ng) % trc(I, itemp) + &
-!               &  PLUME(ng) % ent(I, K) * &
-!               &  PLUME(ng) % tAm(I, K)) / &
-!               & (PLUME(ng) % det(I, K) + PLUME(ng) % ent(I, K))
-!             DO iTracer = 3, NT(ng)
-!               SOURCES(ng) % Tsrc(I, K, iTracer) = &
-!                 & (PLUME(ng) % det(I, K) * &
-!                 &  PLUME(ng) % trc(I, iTracer) + &
-!                 &  PLUME(ng) % ent(I, K) * &
-!                 &  PLUME(ng) % trcAm(I, K,iTracer)) / &
-!                 & (PLUME(ng) % det(I, K) + PLUME(ng) % ent(I, K))
-!             ENDDO
-!           ELSE
-!             SOURCES(ng) % Tsrc(I, K, isalt) = 0.d0
-!             SOURCES(ng) % Tsrc(I, K, itemp) = 0.d0
-!             DO iTracer = 3, NT(ng)
-!               SOURCES(ng) % Tsrc(I, K, iTracer) = 0.d0
-!             ENDDO
-!           ENDIF
-!         ENDDO
+        DO K = 1, N(ng)
+          Qsrc = (PLUME(ng) % det(I, K) + &
+               &  PLUME(ng) % ent(I, K) + &
+               &  ABS(SOURCES(ng) % Qsrc(I, K)))
+!
+! T, S, Tracer concentration
+!
+          IF (Qsrc .NE. 0.0d0) THEN
+            SOURCES(ng) % Tsrc(I, K, isalt) = &
+              & (PLUME(ng) % det(I, K) * &
+              &  PLUME(ng) % trc(I, isalt) + &
+              &  PLUME(ng) % ent(I, K) * &
+              &  PLUME(ng) % sAm(I, K) + &
+              &  ABS(SOURCES(ng) % Qsrc(I, K)) * &
+              &  SOURCES(ng) % Tsrc(I, K, isalt)) / Qsrc
+            SOURCES(ng) % Tsrc(I, K, itemp) = &
+              & (PLUME(ng) % det(I, K) * &
+              &  PLUME(ng) % trc(I, itemp) + &
+              &  PLUME(ng) % ent(I, K) * &
+              &  PLUME(ng) % tAm(I, K) + &
+              &  ABS(SOURCES(ng) % Qsrc(I, K)) * &
+              &  SOURCES(ng) % Tsrc(I, K, itemp)) / Qsrc
+            DO iTracer = 3, NT(ng)
+              SOURCES(ng) % Tsrc(I, K, iTracer) = &
+                & (PLUME(ng) % det(I, K) * &
+                &  PLUME(ng) % trc(I, iTracer) + &
+                &  PLUME(ng) % ent(I, K) * &
+                &  PLUME(ng) % trcAm(I, K, iTracer) + &
+                &  ABS(SOURCES(ng) % Qsrc(I, K)) * &
+                &  SOURCES(ng) % Tsrc(I, K, iTracer)) / Qsrc
+            ENDDO
+          ELSE
+            SOURCES(ng) % Tsrc(I, K, isalt) = 0.d0
+            SOURCES(ng) % Tsrc(I, K, itemp) = 0.d0
+            DO iTracer = 3, NT(ng)
+              SOURCES(ng) % Tsrc(I, K, iTracer) = 0.d0
+            ENDDO
+          ENDIF
+!
+! Qsrc
+!
+          IF (SOURCES(ng) % Qbar(I) .GT. 0.d0) THEN
+            SOURCES(ng) % Qsrc(I, K) = Qsrc
+          ELSEIF (SOURCES(ng) % Qbar(I) .LT. 0.d0) THEN
+            SOURCES(ng) % Qsrc(I, K) = -Qsrc
+          ELSE
+            SOURCES(ng) % Qsrc(I, K) = 0.d0
+          ENDIF
+        ENDDO
 !
 ! Use the tendency terms to update T & S in OCEAN
 !
