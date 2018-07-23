@@ -440,7 +440,11 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, &
 !
 ! To convert from melt rate (m s^-1) to freshwater flux (kg m^-2 s^-1)
 !
-        PLUME(ng) % fwFlux(I, K) = -(PLUME(ng) % mAm(I, K))*rho_ice
+        PLUME(ng) % fwFlux(I, K) = &
+          & -(PLUME(ng) % mAm(I, K)) * &
+          & RHO(PLUME(ng) % tB(I, K), &
+          &     PLUME(ng) % sB(I, K), &
+          &     PLUME(ng) % zR(I, K))
 !
 ! Latent heat required to melt that much ice (W m^-2)
 !

@@ -244,7 +244,7 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, I, dy, &
 ! !
 !           plumeAreaInCell = Y(5) - PLUME(ng) % a(I, K-1)
 !           meltMass = &
-!             & meltEnt * meltAmbient * rho_ice * &
+!             & meltEnt * meltAmbient * RHO(tB, sB, depth) * &
 !             & (dy*(PLUME(ng) % dz(I, K)) - plumeAreaInCell)
 ! !
 ! ! Calculate plume mass [kg s^-1]
