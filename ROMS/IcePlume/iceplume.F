@@ -216,14 +216,14 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
           IF (DIR .EQ. 0) THEN
             PLUME(ng) % vAm(I, K) =     &
               & 0.5d0 * (               &
-              & v(II, JI,   K, nrhs) +  &
-              & v(II, JI+1, K, nrhs)    &
+              & v(II  , JI, K, nrhs) +  &
+              & v(II+1, JI, K, nrhs)    &
               & )
           ELSEIF (DIR .EQ. 1) THEN
             PLUME(ng) % vAm(I, K) =     &
               & 0.5d0 * (               &
-              & u(II,   JI, K, nrhs) +  &
-              & u(II+1, JI, K, nrhs)    &
+              & u(II, JI  , K, nrhs) +  &
+              & u(II, JI+1, K, nrhs)    &
               & )
           ENDIF
 !
@@ -334,34 +334,30 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 !
 ! Write to file for diagonse
 !
-!         IF (useDebug) THEN
-!           IF (iic(ng) .EQ. ntimes(ng)) THEN
-!             open(unit=15, file='./plume_out_zw.txt')
-!             write(15, '(A3, 99 A12)')  'lev', 'zW', &
-!               & 't', 's', 'r', 'w', 'a', 'mInt', 'volFlux'
-!             DO K = 0, N(ng)
-!               write(15, '(I4, 99 E12.4)')  K, &
-!                 & PLUME(ng) % zW(I, K), &
-!                 & PLUME(ng) % t(I, K), PLUME(ng) % s(I, K), &
-!                 & PLUME(ng) % r(I, K), PLUME(ng) % w(I, K), &
-!                 & PLUME(ng) % a(I, K), PLUME(ng) % mInt(I, K), &
-!                 & PLUME(ng) % volFlux(I, K)
-!             ENDDO
-!             close(unit=15)
-!             open(unit=15, file='./plume_out_zr.txt')
-!             write(15, '(A3, 99 A12)')  'lev', 'zR', &
-!               & 'tAm', 'sAm', 'vAm', 'wAm', 'ent', 'det', &
-!               & 'fwFlux', 'heatFlux'
-!             DO K = 1, N(ng)
-!               write(15, '(I4, 99 E12.4)')  K, PLUME(ng) % zR(I, K), &
-!                 & PLUME(ng) % tAm(I, K), PLUME(ng) % sAm(I, K), &
-!                 & PLUME(ng) % vAm(I, K), PLUME(ng) % wAm(I, K), &
-!                 & PLUME(ng) % ent(I, K), PLUME(ng) % det(I, K), &
-!                 & PLUME(ng) % fwFlux(I, K), PLUME(ng) % heatFlux(I, K)
-!             ENDDO
-!             close(unit=15)
-!           ENDIF
-!         ENDIF
+!        IF (QIni .GT. 0.0d0) THEN
+!          write(*, *)  II, JI
+!          write(*, '(A3, 99 A12)')  'lev', 'zW', &
+!            & 't', 's', 'r', 'w', 'a', 'mInt', 'volFlux'
+!          DO K = 0, N(ng)
+!            write(*, '(I4, 99 E12.4)')  K, &
+!              & PLUME(ng) % zW(I, K), &
+!              & PLUME(ng) % t(I, K), PLUME(ng) % s(I, K), &
+!              & PLUME(ng) % r(I, K), PLUME(ng) % w(I, K), &
+!              & PLUME(ng) % a(I, K), PLUME(ng) % mInt(I, K), &
+!              & PLUME(ng) % volFlux(I, K)
+!          ENDDO
+!          write(*, '(A3, 99 A12)')  'lev', 'zR', &
+!            & 'tAm', 'sAm', 'vAm', 'wAm', 'ent', 'det', &
+!            & 'fwFlux', 'heatFlux'
+!          DO K = 1, N(ng)
+!            write(*, '(I4, 99 E12.4)')  K, PLUME(ng) % zR(I, K), &
+!              & PLUME(ng) % tAm(I, K), PLUME(ng) % sAm(I, K), &
+!              & PLUME(ng) % vAm(I, K), PLUME(ng) % wAm(I, K), &
+!              & PLUME(ng) % ent(I, K), PLUME(ng) % det(I, K), &
+!              & PLUME(ng) % fwFlux(I, K), PLUME(ng) % heatFlux(I, K)
+!          ENDDO
+!        ENDIF
+!
       ENDIF
     ENDDO
   ENDIF

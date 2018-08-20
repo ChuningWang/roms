@@ -33,6 +33,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, &
   real(r8) :: plumeAreaInCell
   real(r8) :: detr, detrDz
   integer :: K, iTracer
+  real(r8) :: RHO
 !
 ! Read in the subglacial discharge for this cell
 !
