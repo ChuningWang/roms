@@ -321,16 +321,24 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
           ENDIF
         ENDDO
 !
-! Use the tendency terms to update T & S in OCEAN
+! Use the tendency terms to update T, S & tracers in OCEAN
 !
-        DO K = 1, N(ng)
-          t(II, JI, K, nrhs, isalt) = &
-            & t(II, JI, K, nrhs, isalt) + &
-            & dt(ng) * PLUME(ng) % tendS(I, K)
-          t(II, JI, K, nrhs, itemp) = &
-            & t(II, JI, K, nrhs, itemp) + &
-            & dt(ng) * PLUME(ng) % tendT(I, K)
-        ENDDO
+        IF (useBkgMelt) THEN
+          DO K = 1, N(ng)
+            DO iTracer = 1, NT(ng)
+              t(II, JI, K, nrhs, iTracer) = &
+                & t(II, JI, K, nrhs, iTracer) + &
+                & PLUME(ng) % tendT(I, K, iTracer)
+            ENDDO
+            IF (useBkgTracers) THEN
+!
+! Hard code meltwater concentration to at least 0.
+!
+              t(II, JI, K, nrhs, NT(ng)) = &
+                MAX(t(II, JI, K, nrhs, NT(ng)), 0.0d0)
+            ENDIF
+          ENDDO
+        ENDIF
 !
 ! Write to file for diagonse
 !

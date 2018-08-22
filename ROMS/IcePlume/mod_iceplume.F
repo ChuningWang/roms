@@ -3,7 +3,7 @@ MODULE mod_iceplume
 #ifdef ICEPLUME
 ! ==================================================================!
 !                                                                   !
-! These are the core functions of ICEPLUME model.                   !
+! These are the module functions of ICEPLUME model.                 !
 !                                                                   !
 ! ==================================================================!
 !
@@ -11,7 +11,7 @@ MODULE mod_iceplume
 !
   USE mod_kinds
   USE mod_param, ONLY: Ngrids, N, NT
-  USE mod_scalars, ONLY: isalt, itemp, dt, iic, ntimes
+  USE mod_scalars, ONLY: isalt, itemp, dt
   USE mod_sources, ONLY: Nsrc
   implicit none
 !
@@ -24,44 +24,25 @@ MODULE mod_iceplume
   logical :: useConePlume        = .true.
   logical :: useSheetPlume       = .false.
   logical :: conserveMass        = .false.
-  logical :: useBkgMelt          = .false.
-  logical :: correctMeltEnt      = .false.
+  logical :: useBkgMelt          = .true.
   logical :: useTracers          = .true.
   logical :: useInputTracers     = .true.
+  logical :: useBkgTracers       = .true.
   logical :: useDebug            = .true.
   logical :: checkCFL            = .true.
-  logical :: checkCFLVerbal      = .false.
   logical :: checkRiB            = .true.
   integer :: depthFinder         = 2
-!
-!   integer :: ngr              ! nested grid ID
-!   integer :: Ir               ! SOURCES index ID
-!   integer :: Nr               ! total number of layers
-!   integer :: NTr              ! total number of tracers
-!   real(r8) :: dy              ! grid cell resolution [m]
-!   real(r8) :: dx              ! grid cell resolution [m]
-!   real(r8) :: dtr             ! slow-mode time step [m],
-!                               ! this is required when
-!                               ! checkCFL is activated.
-! !
-! ! grouding line / plume depth index
-! !
-!   integer :: iceDepthK                             
-!   integer :: plumeDepthK                           
-! !
-! ! Looping vars
-! !
-!   integer :: K  ! vertical layers
-!   integer :: iTracer  ! tracer index
 !
 ! ====================================================================
 !
 ! Model parameters
 !
-  real(r8), parameter :: pi = 4.0d0*atan(1.0d0)    ! Pi
+  real(r8), parameter :: pi = 4.0d0*ATAN(1.0d0)    ! Pi
 !
 ! For plume model
+!
 ! -------------- Parameters ------------------------------------------
+!
 ! E_0 - entrainment rate (alpha)
 ! iceTemp - ice temperature [degC]
 ! rho_ref - reference density [kg m^-3]
@@ -91,6 +72,7 @@ MODULE mod_iceplume
 !
 ! iceDepth - ice bottom depth [m]
 ! if iceDepth is positive (iceDepth = 1), then iceDepth = water depth
+!
 ! -------------- Parameters ------------------------------------------
 !
   real(r8), parameter :: E_0           = 1.d-1
@@ -126,12 +108,14 @@ MODULE mod_iceplume
 ! Ice bottom depth [m], if iceDepth is positive, then the ice bottom
 ! depth is always equal to the water depth (iceDepthK = 1)
 !
-!  real(r8) :: iceDepth = -800.d0
   real(r8) :: iceDepth = 1.d0
 !
 ! ====================================================================
 ! Profiles
 ! ====================================================================
+!
+! -------------- Profiles --------------------------------------------
+!
 ! zR            - depth at Rho points [m]
 ! sAm           - ambient salinity [PSU]
 ! tAm           - ambient temperature [degC]
@@ -140,12 +124,12 @@ MODULE mod_iceplume
 ! tpAm          - ambient potential temperature [degC]
 !
 ! zW            - depth [m]
-! r             - radius of plume [m]
-! w             - vertical velocity of plume [m s^-1]
-! t             - temperature of plume [degC]
-! s             - salinity of plume [PSU]
-! a             - area of plume [m^2]
-! mInt          - area integrated melt of plume [m^3 s^-1]
+! r             - plume radius [m]
+! w             - plume vertical velocity [m s^-1]
+! t             - plume temperature [degC]
+! s             - plume salinity [PSU]
+! a             - plume area [m^2]
+! mInt          - plume area integrated melt [m^3 s^-1]
 !
 ! volFLux       - vertical volume flux [m^3 s^-1]
 ! ent           - entrainment rate [m^3 s^-1]
@@ -159,7 +143,6 @@ MODULE mod_iceplume
 ! heatFlux      - meltwater heat flux into grid cell [W m^-2]
 !
 ! tendT         - a tendency term calculated as in MITgcm
-! tendS         - a tendency term calculated as in MITgcm
 !
 ! dz            - veritcal resolution [m]
 ! tB            - ice/water boundary temperature [degC]
@@ -170,7 +153,8 @@ MODULE mod_iceplume
 ! trcAm         - ambient passive tracer concentration
 ! trcCum        - accumulative passive tracer concentration
 ! trcIni        - initial passive tracer concentration in discharge
-! ====================================================================
+!
+! -------------- Profiles --------------------------------------------
 !
   TYPE T_PLUME
 !
@@ -210,8 +194,7 @@ MODULE mod_iceplume
 !
 ! Tendency terms.
 !
-    real(r8), pointer :: tendT(:, :)
-    real(r8), pointer :: tendS(:, :)
+    real(r8), pointer :: tendT(:, :, :)
 !
 ! Other profiles.
 !
@@ -264,8 +247,7 @@ MODULE mod_iceplume
         allocate( PLUME(ng) % fwFlux(Nsrc(ng), N(ng)) )
         allocate( PLUME(ng) % heatFlux(Nsrc(ng), N(ng)) )
 !
-        allocate( PLUME(ng) % tendT(Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % tendS(Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % tendT(Nsrc(ng), N(ng), NT(ng)) )
 !
         allocate( PLUME(ng) % dz(Nsrc(ng), N(ng)) )
         allocate( PLUME(ng) % tB(Nsrc(ng), N(ng)) )

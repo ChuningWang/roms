@@ -15,12 +15,16 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, &
 !
 ! ==================================================================
 ! LOCAL VARIABLES:
-! plumeAreaInCell :: surface area of plume in contact with ice in
-! that cell (m^2)
-! negSum, posSum :: sum of negative and positive contributions to
-! the plume volume
-! posNegRatio    :: ratio of the above
-! meanVel :: ice tangental velocity
+! plumeAreaInCell - surface area of plume in contact with ice in
+!                   that cell (m^2)
+! negSum, posSum  - sum of negative and positive contributions to
+!                   the plume volume
+! posNegRatio     - ratio of the above
+! meanVel         - ice tangental velocity
+! detr, detrDz    - detrainment volume, detrainment thickness
+! tAmL            - new ambient temperature due to latent heat
+!                   transfer from background melting
+! mBkg, mAm       - background melt water mass, ambient water mass
 ! ==================================================================
 !
   integer, intent(in) :: ng, I
@@ -32,6 +36,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, &
   real(r8) :: meanVel, depth
   real(r8) :: plumeAreaInCell
   real(r8) :: detr, detrDz
+  real(r8) :: tAmL, mB, mAm
   integer :: K, iTracer
   real(r8) :: RHO
 !
@@ -301,6 +306,13 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, &
 !
 ! ==================================================================
 ! Calculate melt rates
+!
+! Update log
+! Add useBkgTracers to calculate tracer concentration from backgroud
+! melt water. Bakcground melt water tracer is added as the last
+! passive tracer (NT(ng)). Please do not use the last tracer for
+! other purposes.
+! 2018/08/21 Chuning Wang
 ! ==================================================================
 !
   DO K = 1, N(ng)
@@ -435,8 +447,9 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, &
 !
         PLUME(ng) % fwFlux(I, K) = 0.d0
         PLUME(ng) % heatFlux(I, K) = 0.d0
-        PLUME(ng) % tendT(I, K) = 0.d0
-        PLUME(ng) % tendS(I, K) = 0.d0
+        DO iTracer = 1, NT(ng)
+          PLUME(ng) % tendT(I, K, iTracer) = 0.d0
+        ENDDO
       ELSE
 !
 ! To convert from melt rate (m s^-1) to freshwater flux (kg m^-2 s^-1)
@@ -451,38 +464,47 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, &
 !
         PLUME(ng) % heatFlux(I, K) = -(PLUME(ng) % fwFlux(I, K))*L
 !
-! If there is a plume, some of the freshwater is entrained into the
-! plume. Scale fwFlux accordingly
+! Compute new temperature due to latent heat transfer
 !
-!         plumeAreaInCell = &
-!           & PLUME(ng) % a(I, K) - PLUME(ng) % a(I, K-1)
-!         IF ((plumeAreaInCell .GT. 0) .AND. (correctMeltEnt)) THEN
-!             PLUME(ng) % fwFlux(I, K) = &
-!               & (PLUME(ng) % fwFlux(I, K))*(1-meltEnt)
-!         ENDIF
+        tAmL = PLUME(ng) % tAm(I, K) - &
+          & (PLUME(ng) % heatFlux(I, K))*dt(ng)/c_i/rho_ref/dx
 !
-! Compute tendencies (as for pkg/icefront in MITgcm)
+! Use conservative mixing to calculate T & S tendency
 !
-        PLUME(ng) % tendT(I, K) = &
-          & -(PLUME(ng) % heatFlux(I, K)) / c_i / rho_ref
-        PLUME(ng) % tendS(I, K) = &
-          & (PLUME(ng) % fwFlux(I, K)) * (PLUME(ng) % sAm(I, K)) / &
-          & rho_ref
+        mB  = -(PLUME(ng) % fwFlux(I, K))*dt(ng)
+        mAm = RHO(PLUME(ng) % tAm(I, K), &
+                & PLUME(ng) % sAm(I, K), &
+                & PLUME(ng) % zR(I, K))*dx
 !
-! Scale by icefrontlength, which is the ratio of the horizontal length
-! of the ice front in each model grid cell divided by the grid cell
-! area. (icefrontlength = dy / dxdy = 1 / dx)
+        PLUME(ng) % tendT(I, K, itemp) =             &
+          & ((PLUME(ng) % tB(I, K))*mB + tAmL*mAm) / &
+          & (mB + mAm) - PLUME(ng) % tAm(I, K)
+        PLUME(ng) % tendT(I, K, isalt) =             &
+          & ((PLUME(ng) % sB(I, K))*mB +             &
+          &  (PLUME(ng) % sAm(I, K))*mAm) /          &
+          & (mB + mAm) - PLUME(ng) % sAm(I, K)
+        DO iTracer = 3, NT(ng)
+          PLUME(ng) % tendT(I, K, iTracer) = 0.0d0
+        ENDDO
 !
-        PLUME(ng) % tendT(I, K) = PLUME(ng) % tendT(I, K)/dx
-        PLUME(ng) % tendS(I, K) = PLUME(ng) % tendS(I, K)/dx
+! If use background melt tracers, calculate tracer concentration
+!
+        IF (useBkgTracers) THEN
+          PLUME(ng) % tendT(I, K, NT(ng)) =             &
+            & ((PLUME(ng) % trcIni(I, NT(ng)))*mB +     &
+            &  (PLUME(ng) % trcAm(I, K, NT(ng)))*mAm) / &
+            & (mB + mAm) - PLUME(ng) % trcAm(I, K, NT(ng))
+        ENDIF
       ENDIF
     ENDDO
+!
   ELSE
     DO K = 1, N(ng)
       PLUME(ng) % fwFlux(I, K) = 0.d0
       PLUME(ng) % heatFlux(I, K) = 0.d0
-      PLUME(ng) % tendT(I, K) = 0.d0
-      PLUME(ng) % tendS(I, K) = 0.d0
+      DO iTracer = 1, NT(ng)
+        PLUME(ng) % tendT(I, K, iTracer) = 0.d0
+      ENDDO
     ENDDO
   ENDIF
 END SUBROUTINE ICEPLUME_CALC
