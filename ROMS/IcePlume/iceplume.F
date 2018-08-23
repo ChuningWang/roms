@@ -330,7 +330,7 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
                 & t(II, JI, K, nrhs, iTracer) + &
                 & PLUME(ng) % tendT(I, K, iTracer)
             ENDDO
-            IF (useBkgTracers) THEN
+            IF (useMeltTracers) THEN
 !
 ! Hard code meltwater concentration to at least 0.
 !
@@ -356,13 +356,13 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 !          ENDDO
 !          write(*, '(A3, 99 A12)')  'lev', 'zR', &
 !            & 'tAm', 'sAm', 'vAm', 'wAm', 'ent', 'det', &
-!            & 'fwFlux', 'heatFlux'
+!            & 'fwFluxB', 'htFluxB'
 !          DO K = 1, N(ng)
 !            write(*, '(I4, 99 E12.4)')  K, PLUME(ng) % zR(I, K), &
 !              & PLUME(ng) % tAm(I, K), PLUME(ng) % sAm(I, K), &
 !              & PLUME(ng) % vAm(I, K), PLUME(ng) % wAm(I, K), &
 !              & PLUME(ng) % ent(I, K), PLUME(ng) % det(I, K), &
-!              & PLUME(ng) % fwFlux(I, K), PLUME(ng) % heatFlux(I, K)
+!              & PLUME(ng) % fwFluxB(I, K), PLUME(ng) % htFluxB(I, K)
 !          ENDDO
 !        ENDIF
 !

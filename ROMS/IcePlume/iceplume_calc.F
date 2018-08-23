@@ -17,6 +17,8 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, &
 ! LOCAL VARIABLES:
 ! plumeAreaInCell - surface area of plume in contact with ice in
 !                   that cell (m^2)
+! bkgAreaInCell   - surface area of non-plume in contact with ice in
+!                   that cell (m^2)
 ! negSum, posSum  - sum of negative and positive contributions to
 !                   the plume volume
 ! posNegRatio     - ratio of the above
@@ -34,7 +36,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, &
   integer :: iceDepthK, plumeDepthK
   real(r8) :: negSum, posSum, posNegRatio
   real(r8) :: meanVel, depth
-  real(r8) :: plumeAreaInCell
+  real(r8) :: plumeAreaInCell, bkgAreaInCell
   real(r8) :: detr, detrDz
   real(r8) :: tAmL, mB, mAm
   integer :: K, iTracer
@@ -232,87 +234,27 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, &
     ENDDO
 !
     IF (checkCFL .OR. checkRiB) THEN
-      CALL ICEPLUME_CURVE_DET(ng, I, &
+      CALL ICEPLUME_CURVE_DET(ng, I,                  &
                             & iceDepthK, plumeDepthK, &
-                            & dx, dy, &
+                            & dx, dy,                 &
                             & detr, detrDz)
     ENDIF  ! checkCFL .OR. checkRiB
   ENDIF  ! Qini .GT. 0.0d0
 !
 ! ==================================================================
-! Calculate active and passive tracers
-!
-! Update log
-! Add active tracers, T and S into this scheme. This is necessary
-! when distributing detrainment in several layers (checkCFL), since
-! rewriting T & S in PLUME directly is in general not a good idea.
-! 2018/4/20 Chuning Wang
-! ==================================================================
-!
-! Clear local plume tracer variables
-!
-  DO iTracer = 1, NT(ng)
-    PLUME(ng) % trc(I, iTracer)    = 0.d0
-    PLUME(ng) % trcCum(I, iTracer) = 0.d0
-  ENDDO
-!
-  IF (QIni .GT. 0) THEN
-!
-! Write the active tracer (T & S) concentration to PLUME (ng) % trc
-!
-    PLUME(ng) % trc(I, isalt) = &
-      & 0.5*(PLUME(ng) % s(I, plumeDepthK-1) + &
-      &      PLUME(ng) % s(I, plumeDepthK))
-    PLUME(ng) % trc(I, itemp) = &
-      & 0.5*(PLUME(ng) % t(I, plumeDepthK-1) + &
-      &      PLUME(ng) % t(I, plumeDepthK))
-!
-    IF (useTracers) THEN
-!
-! If use passive tracers, calculate passive tracer concentrations
-! in the runoff
-!
-! Add ptracers in runoff
-!
-      IF (useInputTracers) THEN
-        DO iTracer = 3, NT(ng)
-          PLUME(ng) % trcCum(I, iTracer) = &
-            & PLUME(ng) % trcCum(I, iTracer) + &
-            & PLUME(ng) % trcIni(I, iTracer) * QIni
-        ENDDO
-      ENDIF
-!
-! Add up total sum of each tracer in plume
-!
-      DO K = iceDepthK+1, N(ng)
-        IF (PLUME(ng) % ent(I, K) .LT. 0.) THEN
-          DO iTracer = 3, NT(ng)
-            PLUME(ng) % trcCum(I, iTracer) = &
-              & PLUME(ng) % trcCum(I, iTracer) + &
-              & (-PLUME(ng) % ent(I, K) * &
-              &   PLUME(ng) % trcAm(I, K, iTracer))
-          ENDDO
-        ENDIF
-      ENDDO
-!
-! Calculate concentration of tracer in outflow 
-!
-      DO iTracer = 3, NT(ng)
-        PLUME(ng) % trc(I, iTracer) = &
-          & PLUME(ng) % trcCum(I, iTracer) / detr
-      ENDDO
-    ENDIF
-  ENDIF
-!
-! ==================================================================
 ! Calculate melt rates
 !
 ! Update log
-! Add useBkgTracers to calculate tracer concentration from backgroud
+! Add useMeltTracers to calculate tracer concentration from backgroud
 ! melt water. Bakcground melt water tracer is added as the last
 ! passive tracer (NT(ng)). Please do not use the last tracer for
 ! other purposes.
 ! 2018/08/21 Chuning Wang
+!
+! useMeltTracers now takes two dye types. the last dye type is
+! for background meltwater; the second last dye type is now assigned
+! for the plume meltwater.
+! 2018/08/22 Chuning Wang
 ! ==================================================================
 !
   DO K = 1, N(ng)
@@ -325,7 +267,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, &
 !
       PLUME(ng) % mAv(I, K) = 0.d0
       PLUME(ng) % m(I, K) = 0.d0
-      PLUME(ng) % mAm(I, K) = 0.d0
+      PLUME(ng) % mB(I, K) = 0.d0
     ELSE
 !
 ! ==================================================================
@@ -371,11 +313,11 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, &
         CALL ICEPLUME_MELTRATE(PLUME(ng) % tAm(I, K), &
                              & PLUME(ng) % sAm(I, K), &
                              & meanVel, depth,     &
-                             & PLUME(ng) % mAm(I, K), &
+                             & PLUME(ng) % mB(I, K), &
                              & PLUME(ng) % sB(I, K),  &
                              & PLUME(ng) % tB(I, K))
       ELSE
-        PLUME(ng) % mAm(I, K) = 0.d0
+        PLUME(ng) % mB(I, K) = 0.d0
       ENDIF
 !
 ! Get average melt rate. This is useful for visualizing melt patterns
@@ -384,29 +326,29 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, &
 !
       IF (QIni .NE. 0) THEN
         plumeAreaInCell = PLUME(ng) % a(I, K) - PLUME(ng) % a(I, K-1)
-        IF (plumeAreaInCell .LE. dy*PLUME(ng) % dz(I, K)) THEN
-          IF (plumeAreaInCell .LE. 0) THEN
+        bkgAreaInCell = dy*(PLUME(ng) % dz(I, K)) - plumeAreaInCell
+        IF (bkgAreaInCell .GT. 0.0d0) THEN
+          IF (plumeAreaInCell .GT. 0.0d0) THEN
 !
-! If there is no plume in cell, then the melt rate is
-! equal to the background melt rate.
-!
-            PLUME(ng) % mAv(I, K) = PLUME(ng) % m(I, K)
-          ELSE
-!
-! If there is a plume in cell, calculate average melt rate
+! Calculate weighted average melt rate
 !
             PLUME(ng) % mAv(I, K) = &
               & (PLUME(ng) % m(I, K)*plumeAreaInCell + &
-              &  PLUME(ng) % mAm(I, K) * &
-              & (dy*(PLUME(ng) % dz(I, K))-plumeAreaInCell)) / &
+              &  PLUME(ng) % mB(I, K)*bkgAreaInCell) / &
               & (dy*(PLUME(ng) % dz(I, K)))
 !
 ! Scale down background melt rate to account for area occupied by
 ! plume (necessary so that tendency terms aren't over estimated)
 !
-            PLUME(ng) % mAm(I, K) = &
-              & PLUME(ng) % mAm(I, K) * &
-              & (1 - plumeAreaInCell/(dy*(PLUME(ng) % dz(I, K))))
+            PLUME(ng) % mB(I, K) = &
+              & (PLUME(ng) % mB(I, K))*bkgAreaInCell / &
+              & (dy*(PLUME(ng) % dz(I, K)))
+          ELSE
+!
+! If there is no plume in cell, then the melt rate is
+! equal to the background melt rate.
+!
+            PLUME(ng) % mAv(I, K) = PLUME(ng) % mB(I, K)
           ENDIF
         ELSE  ! plumeAreaInCell .GE. dy*dz(K)
 !
@@ -416,17 +358,99 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, &
           PLUME(ng) % mAv(I, K) = &
             & (PLUME(ng) % m(I, K)) * plumeAreaInCell / &
             & (dy*(PLUME(ng) % dz(I, K)))
-          PLUME(ng) % mAm(I, K) = 0.d0
+          PLUME(ng) % mB(I, K) = 0.d0
         ENDIF
-      ELSE
+      ELSE  ! QIni .EQ. 0
 !
 ! If it is not a plume cell, then no plume melting.
 !
-        PLUME(ng) % m(I, K) = 0.d0
-        PLUME(ng) % mAv(I, K) = PLUME(ng) % mAm(I, K)
+        PLUME(ng) % mAv(I, K) = PLUME(ng) % mB(I, K)
       ENDIF  ! plume type
     ENDIF  ! above or below sea bed
   ENDDO
+!
+! ==================================================================
+! Calculate active and passive tracers
+!
+! Update log
+! Add active tracers, T and S into this scheme. This is necessary
+! when distributing detrainment in several layers (checkCFL), since
+! rewriting T & S in PLUME directly is in general not a good idea.
+! 2018/4/20 Chuning Wang
+! ==================================================================
+!
+! Clear local plume tracer variables
+!
+  DO iTracer = 1, NT(ng)
+    PLUME(ng) % trc(I, iTracer)    = 0.d0
+    PLUME(ng) % trcCum(I, iTracer) = 0.d0
+  ENDDO
+!
+  IF (QIni .GT. 0) THEN
+!
+! Write the active tracer (T & S) concentration to PLUME (ng) % trc
+!
+    PLUME(ng) % trc(I, isalt) =                 &
+      & 0.5*(PLUME(ng) % s(I, plumeDepthK-1) +  &
+      &      PLUME(ng) % s(I, plumeDepthK))
+    PLUME(ng) % trc(I, itemp) =                 &
+      & 0.5*(PLUME(ng) % t(I, plumeDepthK-1) +  &
+      &      PLUME(ng) % t(I, plumeDepthK))
+!
+    IF (useTracers) THEN
+!
+! If use passive tracers, calculate passive tracer concentrations
+! in the runoff
+!
+! Add ptracers in runoff
+!
+      IF (useInputTracers) THEN
+        DO iTracer = 3, NT(ng)
+          PLUME(ng) % trcCum(I, iTracer) =      &
+            & PLUME(ng) % trcCum(I, iTracer) +  &
+            & PLUME(ng) % trcIni(I, iTracer) * QIni
+        ENDDO
+      ENDIF
+!
+! Add up total sum of each tracer in plume
+!
+      DO K = iceDepthK+1, plumeDepthK
+        DO iTracer = 3, NT(ng)
+          PLUME(ng) % trcCum(I, iTracer) =      &
+            & PLUME(ng) % trcCum(I, iTracer) +  &
+            & (-PLUME(ng) % ent(I, K) *         &
+            &   PLUME(ng) % trcAm(I, K, iTracer))
+        ENDDO
+      ENDDO
+!
+! Calculate concentration of tracer in outflow 
+!
+      DO iTracer = 3, NT(ng)
+        PLUME(ng) % trc(I, iTracer) = &
+          & PLUME(ng) % trcCum(I, iTracer) / detr
+      ENDDO
+!
+! If use melt water tracer, set background melt water tracer to
+! zero, and, calculate plume melt water tracer concentration
+!
+      IF (useMeltTracers) THEN
+        PLUME(ng) % trcCum(I, NT(ng)-1) = 0.0d0
+        DO K = iceDepthK+1, plumeDepthK
+          PLUME(ng) % trcCum(I, NT(ng)-1) =          &
+            & PLUME(ng) % trcCum(I, NT(ng)-1) +      &
+            & (-PLUME(ng) % ent(I, K) *              &
+            &   PLUME(ng) % trcAm(I, K, NT(ng)-1)) + &
+            & (PLUME(ng) % mInt(I, K) -              &
+            &  PLUME(ng) % mInt(I, K-1)) *           &
+            & PLUME(ng) % trcIni(I, NT(ng)-1)
+        ENDDO
+        PLUME(ng) % trc(I, NT(ng)-1) = &
+          & PLUME(ng) % trcCum(I, NT(ng)-1) / detr
+!
+        PLUME(ng) % trc(I, NT(ng)) = 0.0d0
+      ENDIF
+    ENDIF
+  ENDIF
 !
 ! ==================================================================
 ! Calculate thermodynamics
@@ -445,8 +469,8 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, &
 !
 ! Below the ice depth, there is no heat and freshwater flux
 !
-        PLUME(ng) % fwFlux(I, K) = 0.d0
-        PLUME(ng) % heatFlux(I, K) = 0.d0
+        PLUME(ng) % fwFluxB(I, K) = 0.d0
+        PLUME(ng) % htFluxB(I, K) = 0.d0
         DO iTracer = 1, NT(ng)
           PLUME(ng) % tendT(I, K, iTracer) = 0.d0
         ENDDO
@@ -454,24 +478,24 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, &
 !
 ! To convert from melt rate (m s^-1) to freshwater flux (kg m^-2 s^-1)
 !
-        PLUME(ng) % fwFlux(I, K) = &
-          & -(PLUME(ng) % mAm(I, K)) * &
+        PLUME(ng) % fwFluxB(I, K) = &
+          & -(PLUME(ng) % mB(I, K)) * &
           & RHO(PLUME(ng) % tB(I, K), &
           &     PLUME(ng) % sB(I, K), &
           &     PLUME(ng) % zR(I, K))
 !
 ! Latent heat required to melt that much ice (W m^-2)
 !
-        PLUME(ng) % heatFlux(I, K) = -(PLUME(ng) % fwFlux(I, K))*L
+        PLUME(ng) % htFluxB(I, K) = -(PLUME(ng) % fwFluxB(I, K))*L
 !
 ! Compute new temperature due to latent heat transfer
 !
         tAmL = PLUME(ng) % tAm(I, K) - &
-          & (PLUME(ng) % heatFlux(I, K))*dt(ng)/c_i/rho_ref/dx
+          & (PLUME(ng) % htFluxB(I, K))*dt(ng)/c_i/rho_ref/dx
 !
 ! Use conservative mixing to calculate T & S tendency
 !
-        mB  = -(PLUME(ng) % fwFlux(I, K))*dt(ng)
+        mB  = -(PLUME(ng) % fwFluxB(I, K))*dt(ng)
         mAm = RHO(PLUME(ng) % tAm(I, K), &
                 & PLUME(ng) % sAm(I, K), &
                 & PLUME(ng) % zR(I, K))*dx
@@ -489,7 +513,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, &
 !
 ! If use background melt tracers, calculate tracer concentration
 !
-        IF (useBkgTracers) THEN
+        IF (useMeltTracers) THEN
           PLUME(ng) % tendT(I, K, NT(ng)) =             &
             & ((PLUME(ng) % trcIni(I, NT(ng)))*mB +     &
             &  (PLUME(ng) % trcAm(I, K, NT(ng)))*mAm) / &
@@ -500,8 +524,8 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, &
 !
   ELSE
     DO K = 1, N(ng)
-      PLUME(ng) % fwFlux(I, K) = 0.d0
-      PLUME(ng) % heatFlux(I, K) = 0.d0
+      PLUME(ng) % fwFluxB(I, K) = 0.d0
+      PLUME(ng) % htFluxB(I, K) = 0.d0
       DO iTracer = 1, NT(ng)
         PLUME(ng) % tendT(I, K, iTracer) = 0.d0
       ENDDO

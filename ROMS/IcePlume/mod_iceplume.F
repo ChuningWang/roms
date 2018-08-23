@@ -24,10 +24,10 @@ MODULE mod_iceplume
   logical :: useConePlume        = .true.
   logical :: useSheetPlume       = .false.
   logical :: conserveMass        = .false.
-  logical :: useBkgMelt          = .true.
+  logical :: useBkgMelt          = .false.
   logical :: useTracers          = .true.
   logical :: useInputTracers     = .true.
-  logical :: useBkgTracers       = .true.
+  logical :: useMeltTracers      = .true.
   logical :: useDebug            = .true.
   logical :: checkCFL            = .true.
   logical :: checkRiB            = .true.
@@ -138,9 +138,9 @@ MODULE mod_iceplume
 !
 ! mAv           - total melt rate [m s^-1]
 ! m             - plume melt rate [m s^-1]
-! mAm           - background melt rate [m s^-1]
-! fwFlux        - meltwater freshwater flux into grid cell [kg m^-2 s^-1]
-! heatFlux      - meltwater heat flux into grid cell [W m^-2]
+! mB            - background melt rate [m s^-1]
+! fwFluxB       - background meltwater mass flux [kg m^-2 s^-1]
+! htFluxB       - background meltwater heat flux [W m^-2]
 !
 ! tendT         - a tendency term calculated as in MITgcm
 !
@@ -188,9 +188,9 @@ MODULE mod_iceplume
 !
     real(r8), pointer :: mAv(:, :)
     real(r8), pointer :: m(:, :)
-    real(r8), pointer :: mAm(:, :)
-    real(r8), pointer :: fwFlux(:, :)
-    real(r8), pointer :: heatFlux(:, :)
+    real(r8), pointer :: mB(:, :)
+    real(r8), pointer :: fwFluxB(:, :)
+    real(r8), pointer :: htFluxB(:, :)
 !
 ! Tendency terms.
 !
@@ -243,9 +243,9 @@ MODULE mod_iceplume
 !
         allocate( PLUME(ng) % mAv(Nsrc(ng), N(ng)) )
         allocate( PLUME(ng) % m(Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % mAm(Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % fwFlux(Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % heatFlux(Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % mB(Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % fwFluxB(Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % htFluxB(Nsrc(ng), N(ng)) )
 !
         allocate( PLUME(ng) % tendT(Nsrc(ng), N(ng), NT(ng)) )
 !
