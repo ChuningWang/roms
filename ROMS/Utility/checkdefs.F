@@ -1378,15 +1378,46 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+14)=' ICESHELF_3EQ,'
 #endif
-#ifdef ICEPLUME
+!
 !----- iceplume model here (Chuning Wang) ------------------------------
 !
+#ifdef ICEPLUME
       IF (Master) WRITE (stdout,20) 'ICEPLUME',                         &
      &   'Ice Plume model for subglacial discharge.'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+10)=' ICEPLUME,'
-!-----------------------------------------------------------------------
+# ifdef ICEPLUME_SHEETPLUME
+      IF (Master) WRITE (stdout,20) 'ICEPLUME_SHEETPLUME',              &
+     &   'JENKINS Sheet Plume model for subglacial discharge.'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+10)=' ICEPLUME_SHEETPLUME,'
+# endif
+!
+# ifdef ICEPLUME_TRACER
+      IF (Master) WRITE (stdout,20) 'ICEPLUME_TRACER',             &
+     &   'Tracers for plume water in iceplume model.'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+10)=' ICEPLUME_TRACER,'
+# endif
+!
+# ifdef ICEPLUME_MELT
+      IF (Master) WRITE (stdout,20) 'ICEPLUME_MELT',                &
+     &   'Background melting for the iceplume model.'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+10)=' ICEPLUME_MELT,'
+# endif
+!
+# ifdef ICEPLUME_MELT_TRACER
+      IF (Master) WRITE (stdout,20) 'ICEPLUME_MELT_TRACER',             &
+     &   'Tracers for background melting in iceplume model.'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+10)=' ICEPLUME_MELT_TRACER,'
+# endif
+!
 #endif
+!
+!-----------------------------------------------------------------------
+!
 #if defined IMPACT_INNER        && defined OBS_IMPACT          && \
    (defined W4DVAR_SENSITIVITY  || defined W4DPSAS_SENSITIVITY || \
     defined IS4DVAR_SENSITIVITY)

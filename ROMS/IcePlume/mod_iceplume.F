@@ -20,15 +20,31 @@ MODULE mod_iceplume
 ! User defined variables and logical switches
 ! These parameters are read when coupling with GCMs.
 !
-  logical :: usePlumeDiagnostics = .false.
+# ifdef ICEPLUME_SHEETPLUME
+  logical :: useConePlume        = .false.
+  logical :: useSheetPlume       = .true.
+# else
   logical :: useConePlume        = .true.
   logical :: useSheetPlume       = .false.
+# endif
   logical :: conserveMass        = .false.
-  logical :: useBkgMelt          = .false.
+# ifdef ICEPLUME_TRACER
   logical :: useTracers          = .true.
   logical :: useInputTracers     = .true.
+# else
+  logical :: useTracers          = .false.
+  logical :: useInputTracers     = .false.
+# endif
+# ifdef ICEPLUME_MELT
+  logical :: useBkgMelt          = .true.
+# else
+  logical :: useBkgMelt          = .false.
+# endif
+# ifdef ICEPLUME_MELT_TRACER
   logical :: useMeltTracers      = .true.
-  logical :: useDebug            = .true.
+# else
+  logical :: useMeltTracers      = .false.
+# endif
   logical :: checkCFL            = .true.
   logical :: checkRiB            = .true.
   integer :: depthFinder         = 2
