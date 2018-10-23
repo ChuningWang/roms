@@ -609,7 +609,8 @@ SUBROUTINE ICEPLUME_CURVE_DET(ng, I, &
       ENDIF
       rho0 = 0.5*(rhoUp + rhoDown)
       bvf = -g*(rhoUp-rhoDown)/(PLUME(ng) % dz(I, K)*rho0)
-      minDetrDz2 = (detr**2*RiBmin/bvf/(dy**2))**0.25
+      IF ( bvf .LT. bvf_bkg ) bvf = bvf_bkg
+      minDetrDz2 = (RiBmin*detr**2/(bvf*dy**2))**0.25
     ELSE
       minDetrDz2 = 0.0d0
     ENDIF

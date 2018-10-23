@@ -312,7 +312,7 @@ SUBROUTINE ICEPLUME_MELTRATE(temperature, salinity, &
 ! Unlikely to occur anyway with currents, waves, convection etc.
 ! This isn't very physical, but will do for now.
 !
-  IF ( velocity .LT. backgroundVel ) velocity = backgroundVel
+  IF ( velocity .LT. vel_bkg ) velocity = vel_bkg
 !
   absVelocity = ABS(velocity)
 !

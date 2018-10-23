@@ -106,8 +106,14 @@ MODULE mod_iceplume
 !
   real(r8), parameter :: GamT          = 2.20d-2
   real(r8), parameter :: GamS          = 6.20d-4
+# ifdef ICEPLUME_ENHANCED_DRAG
+  real(r8), parameter :: Cd            = 6.5d-2
+# else
   real(r8), parameter :: Cd            = 2.50d-3
-  real(r8), parameter :: backgroundVel = 1.d-2
+# endif
+  real(r8), parameter :: Cd_bkg        = 2.50d-3
+  real(r8), parameter :: bvf_bkg       = 1.d-10
+  real(r8), parameter :: vel_bkg       = 1.d-2
 !
   real(r8), parameter :: wIni          = 1.d0
 !
@@ -115,11 +121,11 @@ MODULE mod_iceplume
 !
 ! Maximum Cu number to triger ckeckCFL.
 !
-  real(r8) :: CuMax = 0.8d0
+  real(r8) :: CuMax = 0.5d0
 !
 ! Minimum Richardson number to triger checkRiB.
 !
-  real(r8) :: RiBMin = 2.0d0
+  real(r8) :: RiBMin = 5.0d0
 !
 ! Ice bottom depth [m], if iceDepth is positive, then the ice bottom
 ! depth is always equal to the water depth (iceDepthK = 1)
