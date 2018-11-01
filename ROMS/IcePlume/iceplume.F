@@ -110,7 +110,7 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
   real(r8) :: dx, dy
   real(r8) :: fIni, tIni, sIni
   real(r8) :: Qsrc
-  real(r8) :: cpp1, cpp2
+  real(r8) :: cff, cff1, cff2, cff3, cff4
 !
 # include "set_bounds.h"
 !
@@ -206,12 +206,10 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 !
 ! tracers
 !
-          IF (useTracers) THEN
-            DO iTracer = 3, NT(ng)
-              PLUME(ng) % trcAm(is, K, iTracer) = &
-                & t(Isrc, Jsrc, K, nrhs, iTracer)
-            ENDDO
-          ENDIF
+          DO iTracer = 1, NT(ng)
+            PLUME(ng) % trcAm(is, K, iTracer) = &
+              & t(Isrc, Jsrc, K, nrhs, iTracer)
+          ENDDO
 !
 ! u/v, w
 !
@@ -257,100 +255,29 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 !
         CALL iceplume_calc(ng, is, dx, dy, &
                          & fIni, tIni, sIni)
-!
-! ==================================================================!
-!                                                                   !
-! Rewrite Qsrc, T & S in SOURCES                                    !
-!                                                                   !
-! Update log                                                        !
-! Instead read T/S directly from PLUME(ng)%t/s, read them from      !
-! tracer values. This is done to accomodate the new checkCLF        !
-! switch.                                                           !
-! 2018/04/20 Chuning Wang                                           !
-!                                                                   !
-! Since entrainment / detrainment are separated in PLUME, here I    !
-! updte the volume flux Qsrc and tracer flux Tsrc accordingly.      !
-! 2018/05/21 Chuning Wang                                           !
-!                                                                   !
-! ==================================================================!
-!
-!         DO K = 1, N(ng)
-!           Qsrc = (PLUME(ng) % det(is, K) +        &
-!             &     PLUME(ng) % ent(is, K) +        &
-!             &     PLUME(ng) % mAm(is, K) +        &
-!             &     ABS(SOURCES(ng) % Qsrc(is, K)))
-! !
-! ! T, S, Tracer concentration
-! !
-!           IF (Qsrc .NE. 0.0d0) THEN
-!             SOURCES(ng) % Tsrc(is, K, isalt) =            &
-!               & (PLUME(ng) % det(is, K) *                 &
-!               &  PLUME(ng) % trc(is, isalt) +             &
-!               &  PLUME(ng) % ent(is, K) *                 &
-!               &  PLUME(ng) % sAm(is, K) +                 &
-!               &  PLUME(ng) % mAm(is, K) *                 &
-!               &  PLUME(ng) % sB(is, K) +                  &
-!               &  ABS(SOURCES(ng) % Qsrc(is, K)) *         &
-!               &  SOURCES(ng) % Tsrc(is, K, isalt)) / Qsrc
-!             SOURCES(ng) % Tsrc(is, K, itemp) =            &
-!               & (PLUME(ng) % det(is, K) *                 &
-!               &  PLUME(ng) % trc(is, itemp) +             &
-!               &  PLUME(ng) % ent(is, K) *                 &
-!               &  PLUME(ng) % tAm(is, K) +                 &
-!               &  PLUME(ng) % mAm(is, K) *                 &
-!               &  PLUME(ng) % tB(is, K) +                  &
-!               &  ABS(SOURCES(ng) % Qsrc(is, K)) *         &
-!               &  SOURCES(ng) % Tsrc(is, K, itemp)) / Qsrc
-!             DO iTracer = 3, NT(ng)
-!               SOURCES(ng) % Tsrc(is, K, iTracer) =            &
-!                 & (PLUME(ng) % det(is, K) *                   &
-!                 &  PLUME(ng) % trc(is, iTracer) +             &
-!                 &  PLUME(ng) % ent(is, K) *                   &
-!                 &  PLUME(ng) % trcAm(is, K, iTracer) +        &
-!                 &  ABS(SOURCES(ng) % Qsrc(is, K)) *           &
-!                 &  SOURCES(ng) % Tsrc(is, K, iTracer)) / Qsrc
-!             ENDDO
-! !
-! ! If use background melt tracer, rewrite tracer concentration
-! ! of the last tracer type.
-! !
-! !            IF (useBkgMelt .AND. useTracers .AND. &
-! !              & useMeltTracers) THEN
-! !              IF (D2src .GT. 0.d0) THEN
-! !                SOURCES(ng) % Tsrc(is, K, NT(ng)) = &
-! !                  & (PLUME(ng) % mAm(is, K) *       &
-! !                  &  PLUME(ng) % trc(is, NT(ng))) / &
-! !                  & Qsrc
-! !              ELSEIF (D2src .LT. 0.d0) THEN
-! !                SOURCES(ng) % Tsrc(is, K, NT(ng)) = &
-! !                  & (PLUME(ng) % mAm(is, K) *       &
-! !                  &  PLUME(ng) % trc(is, NT(ng))) / &
-! !                  & (-Qsrc)
-! !              ELSE
-! !                SOURCES(ng) % Tsrc(is, K, NT(ng)) = 0.d0
-! !              ENDIF
-! !            ENDIF
-!           ELSE  ! Qsrc .EQ. 0.0d0
-!             SOURCES(ng) % Tsrc(is, K, isalt) = 0.d0
-!             SOURCES(ng) % Tsrc(is, K, itemp) = 0.d0
-!             DO iTracer = 3, NT(ng)
-!               SOURCES(ng) % Tsrc(is, K, iTracer) = 0.d0
-!             ENDDO
-!           ENDIF
-! !
-! ! Qsrc
-! !
-!           IF (D2src .GT. 0.d0) THEN
-!             SOURCES(ng) % Qsrc(is, K) = Qsrc
-!           ELSEIF (D2src .LT. 0.d0) THEN
-!             SOURCES(ng) % Qsrc(is, K) = -Qsrc
-!           ELSE
-!             SOURCES(ng) % Qsrc(is, K) = 0.d0
-!           ENDIF
-!         ENDDO
       ENDIF
     ENDDO
   ENDIF
 END SUBROUTINE iceplume_tile
+!
+!***********************************************************************
+SUBROUTINE iceplume_spread (ng, tile)
+!***********************************************************************
+!
+! Imported variable declarations.
+!
+  integer, intent(in) :: ng, tile
+!
+! Local variable declarations.
+!
+# include "tile.h"
+!
+  CALL iceplume_spread_tile (ng, tile,                             &
+    &                        LBi, UBi, LBj, UBj,                   &
+    &                        IminS, ImaxS, JminS, JmaxS)
+  RETURN
+END SUBROUTINE iceplume
+!
+
 #endif
 END MODULE iceplume_mod

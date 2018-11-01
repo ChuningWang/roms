@@ -53,6 +53,9 @@
      &                     IminS, ImaxS, JminS, JmaxS,                  &
      &                     nrhs(ng), nstp(ng), nnew(ng),                &
 # ifdef MASKING
+#  ifdef ICEPLUME
+     &                     GRID(ng) % rmask,                            &
+#  endif
      &                     GRID(ng) % umask,                            &
      &                     GRID(ng) % vmask,                            &
 # endif
@@ -112,6 +115,9 @@
      &                           IminS, ImaxS, JminS, JmaxS,            &
      &                           nrhs, nstp, nnew,                      &
 # ifdef MASKING
+#  ifdef ICEPLUME
+     &                           rmask,                                 &
+#  endif
      &                           umask, vmask,                          &
 # endif
 # ifdef WET_DRY
@@ -169,6 +175,9 @@
 !
 # ifdef ASSUMED_SHAPE
 #  ifdef MASKING
+#   ifdef ICEPLUME
+      real(r8), intent(in) :: rmask(LBi:,LBj:)
+#   endif
       real(r8), intent(in) :: umask(LBi:,LBj:)
       real(r8), intent(in) :: vmask(LBi:,LBj:)
 #  endif
@@ -221,6 +230,9 @@
 # else
 
 #  ifdef MASKING
+#   ifdef ICEPLUME
+      real(r8), intent(in) :: rmask(LBi:UBi,LBj:UBj)
+#   endif
       real(r8), intent(in) :: umask(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: vmask(LBi:UBi,LBj:UBj)
 #  endif
@@ -1022,27 +1034,77 @@
           j=SOURCES(ng)%Jsrc(is)
           IF (((IstrR.le.i).and.(i.le.IendR)).and.                      &
      &        ((JstrR.le.j).and.(j.le.JendR))) THEN
-# ifdef ICEPLUME
-!            IF (INT(SOURCES(ng)%Dsrc(is)).eq.0) THEN
-!            ELSE
-!            END IF
-# else
             IF (INT(SOURCES(ng)%Dsrc(is)).eq.0) THEN
+# if defined MASKING && defined ICEPLUME
+!----- iceplume model here (Chuning Wang) ------------------------------
+              IF ((rmask(i  ,j).eq.0.0_r8).and.                         &
+     &            (rmask(i-1,j).eq.1.0_r8)) THEN
+                DO k=1,N(ng)
+                  cff1=1.0_r8/(on_u(i,j)*                               &
+     &                         0.5_r8*(z_w(i-1,j,k)-z_w(i-1,j,k-1)+     &
+     &                                 z_w(i  ,j,k)-z_w(i  ,j,k-1)))
+                  u(i,j,k,nnew)= (SOURCES(ng)%Qsrc(is,k) -              &
+     &                            PLUME(ng)%det(is,k) -                 &
+     &                            PLUME(ng)%ent(is,k) -                 &
+     &                            PLUME(ng)%mAm(is,k))*cff1
+                END DO
+              ELSE IF ((rmask(i  ,j).eq.1.0_r8).and.                    &
+     &                 (rmask(i-1,j).eq.0.0_r8)) THEN
+                DO k=1,N(ng)
+                  cff1=1.0_r8/(on_u(i,j)*                               &
+     &                         0.5_r8*(z_w(i-1,j,k)-z_w(i-1,j,k-1)+     &
+     &                                 z_w(i  ,j,k)-z_w(i  ,j,k-1)))
+                  u(i,j,k,nnew)= (SOURCES(ng)%Qsrc(is,k) +              &
+     &                            PLUME(ng)%det(is,k) +                 &
+     &                            PLUME(ng)%ent(is,k) +                 &
+     &                            PLUME(ng)%mAm(is,k))*cff1
+                END DO
+              END IF
+!-----------------------------------------------------------------------
+# else
               DO k=1,N(ng)
                 cff1=1.0_r8/(on_u(i,j)*                                 &
      &                       0.5_r8*(z_w(i-1,j,k)-z_w(i-1,j,k-1)+       &
      &                               z_w(i  ,j,k)-z_w(i  ,j,k-1)))
                 u(i,j,k,nnew)=SOURCES(ng)%Qsrc(is,k)*cff1
               END DO
+# endif
             ELSE
+# if defined MASKING && defined ICEPLUME
+!----- iceplume model here (Chuning Wang) ------------------------------
+              IF ((rmask(i,j  ).eq.0.0_r8).and.                         &
+     &            (rmask(i,j-1).eq.1.0_r8)) THEN
+                DO k=1,N(ng)
+                  cff1=1.0_r8/(om_v(i,j)*                               &
+     &                         0.5_r8*(z_w(i,j-1,k)-z_w(i,j-1,k-1)+     &
+     &                                 z_w(i,j  ,k)-z_w(i,j  ,k-1)))
+                  v(i,j,k,nnew)= (SOURCES(ng)%Qsrc(is,k) -              &
+     &                            PLUME(ng)%det(is,k) -                 &
+     &                            PLUME(ng)%ent(is,k) -                 &
+     &                            PLUME(ng)%mAm(is,k))*cff1
+                END DO
+              ELSE IF ((rmask(i,j  ).eq.1.0_r8).and.                    &
+     &                 (rmask(i,j-1).eq.0.0_r8)) THEN
+                DO k=1,N(ng)
+                  cff1=1.0_r8/(om_v(i,j)*                               &
+     &                         0.5_r8*(z_w(i,j-1,k)-z_w(i,j-1,k-1)+     &
+     &                                 z_w(i,j  ,k)-z_w(i,j  ,k-1)))
+                  v(i,j,k,nnew)= (SOURCES(ng)%Qsrc(is,k) +              &
+     &                            PLUME(ng)%det(is,k) +                 &
+     &                            PLUME(ng)%ent(is,k) +                 &
+     &                            PLUME(ng)%mAm(is,k))*cff1
+                END DO
+              END IF
+!-----------------------------------------------------------------------
+# else
               DO k=1,N(ng)
                 cff1=1.0_r8/(om_v(i,j)*                                 &
      &                       0.5_r8*(z_w(i,j-1,k)-z_w(i,j-1,k-1)+       &
      &                               z_w(i,j  ,k)-z_w(i,j  ,k-1)))
                 v(i,j,k,nnew)=SOURCES(ng)%Qsrc(is,k)*cff1
               END DO
-            END IF
 # endif
+            END IF
           END IF
         END DO
       END IF
