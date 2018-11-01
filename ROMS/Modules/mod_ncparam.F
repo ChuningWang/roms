@@ -255,6 +255,15 @@
         integer  :: idRepo        ! river runoff ETA-positions
         integer  :: idRflg        ! river runoff flag
         integer  :: idRtra        ! river runoff mass transport
+#if defined SOLVE3D && defined ICEPLUME
+        integer  :: idSGtra        ! subglacial runoff transport
+        integer  :: idSGdep        ! subglacial runoff depth
+        integer  :: idSGtyp        ! subglacial runoff type
+        integer  :: idSGlen        ! subglacial runoff source length
+# ifdef ICEPLUME_SPREAD
+        integer  :: idSGgid        ! glacier id number
+# endif
+#endif
         integer  :: idRuct        ! RHS of U-momentum coupling term
         integer  :: idRu2d        ! RHS of 2D U-momentum
         integer  :: idRu3d        ! RHS of total U-momentum
@@ -465,6 +474,9 @@
         integer  :: idSnoI         ! snow-ice conversion
 
         integer, allocatable :: idRtrc(:)    ! river runoff for tracers
+#if defined SOLVE3D && defined ICEPLUME
+        integer, allocatable :: idSGtrc(:)  ! subglacial runoff for tracers
+#endif
         integer, allocatable :: idsurT(:)    ! model surface tracers
         integer, allocatable :: idTads(:)    ! tracers adjoint sentivity
         integer, allocatable :: idTbot(:)    ! bottom flux for tracers
@@ -717,6 +729,9 @@
       allocate ( Sout(NV,Ngrids) )
 
       allocate ( idRtrc(MT) )
+#if defined SOLVE3D && defined ICEPLUME
+      allocate ( idSGtrc(MT) )
+#endif
       allocate ( idsurT(MT) )
       allocate ( idTads(MT) )
       allocate ( idTbot(MT) )
@@ -1394,6 +1409,24 @@
               idRtrc(itemp)=varid
             CASE ('idRtrc(isalt)')
               idRtrc(isalt)=varid
+#if defined SOLVE3D && defined ICEPLUME
+            CASE ('idSGtra')
+              idSGtra=varid
+            CASE ('idSGdep')
+              idSGdep=varid
+            CASE ('idSGtyp')
+              idSGtyp=varid
+            CASE ('idSGlen')
+              idSGlen=varid
+# ifdef ICEPLUME_SPREAD
+            CASE ('idSGgid')
+              idSGgid=varid
+# endif
+            CASE ('idSGtrc(itemp)')
+              idSGtrc(itemp)=varid
+            CASE ('idSGtrc(isalt)')
+              idSGtrc(isalt)=varid
+#endif
             CASE ('idHsbl')
               idHsbl=varid
             CASE ('idHbbl')
@@ -1661,6 +1694,10 @@
               load=.TRUE.
             CASE ('idRtrc(inert(i))')
               load=.TRUE.
+# if defined SOLVE3D && defined ICEPLUME
+            CASE ('idSGtrc(inert(i))')
+              load=.TRUE.
+# endif
 #endif
             CASE ('id2dPV')
               id2dPV=varid
@@ -2283,6 +2320,30 @@
      &                    TRIM(ADJUSTL(Vinfo(5)))
                   END DO
                 END IF
+# if defined SOLVE3D && defined ICEPLUME
+              CASE ('idSGtrc(inert(i))')
+                IF (NPT.gt.0) THEN
+                  varid=varid-1
+                  DO i=1,NPT
+                    varid=varid+1
+                    idSGtrc(inert(i))=varid
+                    DO ng=1,Ngrids
+                      Fscale(varid,ng)=scale
+                      Iinfo(1,varid,ng)=gtype
+                    END DO
+                    WRITE (Vname(1,varid),'(a,i2.2)')                   &
+     &                    TRIM(ADJUSTL(Vinfo(1))), i
+                    WRITE (Vname(2,varid),'(a,a,i2.2)')                 &
+     &                    TRIM(ADJUSTL(Vinfo(2))), ', type ', i
+                    WRITE (Vname(3,varid),'(a)')                        &
+     &                    TRIM(ADJUSTL(Vinfo(3)))
+                    WRITE (Vname(4,varid),'(a,a)')                      &
+     &                    TRIM(Vname(1,varid)), ', scalar, series'
+                    WRITE (Vname(5,varid),'(a)')                        &
+     &                    TRIM(ADJUSTL(Vinfo(5)))
+                  END DO
+                END IF
+# endif
               CASE ('age_west_')
                 IF (NPT.gt.0) THEN
                   varid=varid-1

@@ -124,6 +124,38 @@
         END IF
       END DO
 # endif
+
+# if defined SOLVE3D && defined ICEPLUME
+!
+!  Subglacial point Source/Sink mass transport.
+!
+      IF (LuvSrc(ng).or.LwSrc(ng)) THEN
+        CALL get_ngfld (ng, iNLM, idSGtra, ncSSFid(idSGtra,ng),         &
+     &                  nSSFfiles(ng), SSF(1,ng), update(1),            &
+     &                  1, Nsrc(ng), 1, 2, 1, Nsrc(ng), 1,              &
+     &                  SOURCES(ng) % SGtraG)
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+      END IF
+!
+!  Tracer Sources/Sinks.
+!
+      DO i=1,NT(ng)
+        IF (LtracerSrc(i,ng)) THEN
+          CALL get_ngfld (ng, iNLM, idSGtrc(i), ncSSFid(idSGtrc(i),ng), &
+     &                    nSSFfiles(ng), SSF(1,ng), update(1),          &
+#  ifdef ONE_TRACER_SOURCE
+     &                    1, 1, 1, 2, 1, 1, 1,                          &
+     &                    SOURCES(ng) % SGtrcG(:,i))
+#  else
+     &                    1, Nsrc(ng), 1, 2, 1, Nsrc(ng), 1,            &
+     &                    SOURCES(ng) % SGtrcG(:,:,i))
+#  endif
+          IF (FoundError(exit_flag, NoError, __LINE__,                  &
+     &                   __FILE__)) RETURN
+        END IF
+      END DO
+# endif
 #endif
 
 #if !defined ANA_NCEP && defined NCEP_FLUXES

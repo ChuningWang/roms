@@ -63,7 +63,7 @@
 #if defined ICE_MODEL || defined CICE_MODEL
       USE mod_ice, ONLY : allocate_ice, initialize_ice
 #endif
-#ifdef ICEPLUME
+#if defined SOLVE3D && defined ICEPLUME
 !----- iceplume model here (Chuning Wang) ------------------------------
       USE mod_iceplume, ONLY : allocate_iceplume
 !-----------------------------------------------------------------------
@@ -172,7 +172,7 @@
 #if defined TRC_PSOURCE
           CALL allocate_trc_sources (ng)
 #endif
-#ifdef ICEPLUME
+#if defined SOLVE3D && defined ICEPLUME
 !----- iceplume model here (Chuning Wang) ------------------------------
           CALL allocate_iceplume(ng)
 !-----------------------------------------------------------------------

@@ -570,6 +570,38 @@
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN
 
+# if defined SOLVE3D && defined ICEPLUME
+        CALL get_ngfld (ng, iNLM, idSGdep, ncSSFid(idSGdep,ng),         &
+     &                  1, SSF(1,ng), update(1),                        &
+     &                  1, Nsrc(ng), 1, 1, 1, Nsrc(ng), 1,              &
+     &                  SOURCES(ng) % SGdep)
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+
+        CALL get_ngfld (ng, iNLM, idSGtyp, ncSSFid(idSGtyp,ng),         &
+     &                  1, SSF(1,ng), update(1),                        &
+     &                  1, Nsrc(ng), 1, 1, 1, Nsrc(ng), 1,              &
+     &                  SOURCES(ng) % SGtyp)
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+
+        CALL get_ngfld (ng, iNLM, idSGlen, ncSSFid(idSGlen,ng),         &
+     &                  1, SSF(1,ng), update(1),                        &
+     &                  1, Nsrc(ng), 1, 1, 1, Nsrc(ng), 1,              &
+     &                  SOURCES(ng) % SGlen)
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+
+#  ifdef ICEPLUME_SPREAD
+        CALL get_ngfld (ng, iNLM, idSGgid, ncSSFid(idSGgid,ng),         &
+     &                  1, SSF(1,ng), update(1),                        &
+     &                  1, Nsrc(ng), 1, 1, 1, Nsrc(ng), 1,              &
+     &                  SOURCES(ng) % SGgid)
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+
+#  endif
+# endif
 # ifdef SOLVE3D
         CALL get_ngfld (ng, iNLM, idRvsh, ncSSFid(idRvsh,ng),           &
      &                  1, SSF(1,ng), update(1),                        &

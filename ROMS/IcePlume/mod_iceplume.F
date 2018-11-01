@@ -15,18 +15,13 @@ MODULE mod_iceplume
   USE mod_sources, ONLY: Nsrc
   implicit none
 !
-! ====================================================================
+! ====================================================================!
+!                                                                     !
+! User defined variables and logical switches                         !
+! These parameters are read when coupling with GCMs.                  !
+!                                                                     !
+! ====================================================================!
 !
-! User defined variables and logical switches
-! These parameters are read when coupling with GCMs.
-!
-# ifdef ICEPLUME_SHEETPLUME
-  logical :: useConePlume        = .false.
-  logical :: useSheetPlume       = .true.
-# else
-  logical :: useConePlume        = .true.
-  logical :: useSheetPlume       = .false.
-# endif
   logical :: conserveMass        = .false.
 # ifdef ICEPLUME_TRACER
   logical :: useTracers          = .true.
@@ -49,134 +44,115 @@ MODULE mod_iceplume
   logical :: checkRiB            = .true.
   integer :: depthFinder         = 2
 !
-! ====================================================================
-!
-! Model parameters
+! ====================================================================!
+!                                                                     !
+! Model parameters                                                    !
+!                                                                     !
+! alpha     - entrainment rate                                        !
+! iceTemp   - ice temperature [degC]                                  !
+! rho_ref   - reference density [kg m^-3]                             !
+! rho_fresh - reference density [kg m^-3]                             !
+! rho_ice   - ice density [kg m^-3]                                   !
+! g         - gravity acceleration [m s^-2]                           !
+! c_w       - heat capacity of water [J kg^-1 degC^-1]                !
+! c_i       - heat capacity of ice [J kg^-1 degC^-1]                  !
+! L         - latent heat of melting [J kg^-1]                        !
+! lambda1   - freezing point slope [degC PSU^-1]                      !
+! lambda2   - freezing point offset [degC]                            !
+! lambda3   - freezing point depth slope [degC m^-1]                  !
+! GamT      - thermal turbulent transfer coefficient                  !
+! GamS      - salt turbulent transfer coefficient                     !
+! Cd        - ice-plume drag coefficient                              !
+!                                                                     !
+! N2Bkg     - background N2                                           !
+! CdBkg     - background ice-plume drag coefficient                   !
+! velBkg    - background velocity [m s^-1]                            !
+!                                                                     !
+! wIni      - initial (discharge) velocity [m s^-1]                   !
+!                                                                     !
+! CuMax     - maximum Courant number to triger checkCFL.              !
+! RiBMin    - minimum Richardson number to triger checkRiB.           !
+!                                                                     !
+! iceDepth  - ice bottom depth [m]                                    !
+!             if iceDepth is positive (iceDepth = 1),                 !
+!             then iceDepth = water depth                             !
+! L0        - finite line source length [m]                           !
+!                                                                     !
+! ====================================================================!
 !
   real(r8), parameter :: pi = 4.0d0*ATAN(1.0d0)    ! Pi
 !
-! For plume model
+  real(r8), parameter :: alpha      = 1.d-1
+  real(r8), parameter :: iceTemp    = -1.d1
+  real(r8), parameter :: rho_ref    = 1.020d3
+  real(r8), parameter :: rho_fresh  = 1.000d3
+  real(r8), parameter :: rho_ice    = 0.9167d3
+  real(r8), parameter :: g          = 9.81d0
+  real(r8), parameter :: c_w        = 3.974d3
+  real(r8), parameter :: c_i        = 2.d3
+  real(r8), parameter :: L          = 3.35d5
+  real(r8), parameter :: lambda1    = -5.73d-2
+  real(r8), parameter :: lambda2    = 8.32d-2
+  real(r8), parameter :: lambda3    = 7.61d-4
 !
-! -------------- Parameters ------------------------------------------
+  real(r8), parameter :: GamT       = 2.20d-2
+  real(r8), parameter :: GamS       = 6.20d-4
+  real(r8), parameter :: Cd         = 6.5d-2
 !
-! E_0 - entrainment rate (alpha)
-! iceTemp - ice temperature [degC]
-! rho_ref - reference density [kg m^-3]
-! rho_fresh - reference density [kg m^-3]
-! rho_ice - ice density [kg m^-3]
-! g - gravity acceleration [m s^-2]
-! c_w - heat capacity of water [J kg^-1 degC^-1]
-! c_i - heat capacity of ice [J kg^-1 degC^-1]
-! L - latent heat of melting [J kg^-1]
-! lambda1 - freezing point slope [degC PSU^-1]
-! lambda2 - freezing point offset [degC]
-! lambda3 - freezing point depth slope [degC m^-1]
-! GamT - thermal turbulent transfer coefficient
-! GamS - salt turbulent transfer coefficient
-! Cd - ice-plume drag coefficient
-! BackgroundVel - background velocity [m s^-1]
+  real(r8), parameter :: N2Bkg      = 1.d-3
+  real(r8), parameter :: CdBkg      = 2.5d-3
+  real(r8), parameter :: velBkg     = 1.d-2
 !
-! wIni - Initial (discharge) velocity [m s^-1]
+  real(r8), parameter :: wIni       = 1.d0
 !
-! mletEnt - Meltwater entrainment ratio [ratio]
-! This is a parameter to quantify how much background meltwater is
-! entrained into the plume. This ratio varies between 0 and 1, where
-! 0 means no entrainment into the plume and 1 means all entrainment
+  real(r8), parameter :: CuMax      = 0.5d0
 !
-! CuMax - maximum Courant number to triger checkCFL.
-! RiBMin - minimum Richardson number to triger checkRiB.
+  real(r8), parameter :: RiBMin     = 1.0d0
 !
-! iceDepth - ice bottom depth [m]
-! if iceDepth is positive (iceDepth = 1), then iceDepth = water depth
+  real(r8) :: iceDepth              = 1.d0
+  real(r8) :: L0                    = 100.d0
 !
-! -------------- Parameters ------------------------------------------
-!
-  real(r8), parameter :: E_0           = 1.d-1
-  real(r8), parameter :: iceTemp       = -1.d1
-  real(r8), parameter :: rho_ref       = 1.020d3
-  real(r8), parameter :: rho_fresh     = 1.000d3
-  real(r8), parameter :: rho_ice       = 0.9167d3
-  real(r8), parameter :: g             = 9.81d0
-  real(r8), parameter :: c_w           = 3.974d3
-  real(r8), parameter :: c_i           = 2.d3
-  real(r8), parameter :: L             = 3.35d5
-  real(r8), parameter :: lambda1       = -5.73d-2
-  real(r8), parameter :: lambda2       = 8.32d-2
-  real(r8), parameter :: lambda3       = 7.61d-4
-!
-  real(r8), parameter :: GamT          = 2.20d-2
-  real(r8), parameter :: GamS          = 6.20d-4
-# ifdef ICEPLUME_ENHANCED_DRAG
-  real(r8), parameter :: Cd            = 6.5d-2
-# else
-  real(r8), parameter :: Cd            = 2.50d-3
-# endif
-  real(r8), parameter :: Cd_bkg        = 2.50d-3
-  real(r8), parameter :: bvf_bkg       = 1.d-10
-  real(r8), parameter :: vel_bkg       = 1.d-2
-!
-  real(r8), parameter :: wIni          = 1.d0
-!
-  real(r8), parameter :: meltEnt       = 5.d-1
-!
-! Maximum Cu number to triger ckeckCFL.
-!
-  real(r8) :: CuMax = 0.5d0
-!
-! Minimum Richardson number to triger checkRiB.
-!
-  real(r8) :: RiBMin = 5.0d0
-!
-! Ice bottom depth [m], if iceDepth is positive, then the ice bottom
-! depth is always equal to the water depth (iceDepthK = 1)
-!
-  real(r8) :: iceDepth = 1.d0
-!
-! ====================================================================
-! Profiles
-! ====================================================================
-!
-! -------------- Profiles --------------------------------------------
-!
-! zR            - depth at Rho points [m]
-! sAm           - ambient salinity [PSU]
-! tAm           - ambient temperature [degC]
-! vAm           - horizontal velocity parallel to the glacier wall [m s^-1]
-! wAm           - vertical velocity parallel to the glacier wall [m s^-1]
-! tpAm          - ambient potential temperature [degC]
-!
-! zW            - depth [m]
-! r             - plume radius [m]
-! w             - plume vertical velocity [m s^-1]
-! t             - plume temperature [degC]
-! s             - plume salinity [PSU]
-! a             - plume area [m^2]
-! mInt          - plume area integrated melt [m^3 s^-1]
-!
-! volFLux       - vertical volume flux [m^3 s^-1]
-! ent           - entrainment rate [m^3 s^-1]
-! det           - detrainment rate [m^3 s^-1]
-! detI          - detrainment flag
-!
-! mAv           - total melt rate [m s^-1]
-! m             - plume melt rate [m s^-1]
-! mB            - background melt rate [m s^-1]
-! fwFluxB       - background meltwater mass flux [kg m^-2 s^-1]
-! htFluxB       - background meltwater heat flux [W m^-2]
-!
-! tendT         - a tendency term calculated as in MITgcm
-!
-! dz            - veritcal resolution [m]
-! tB            - ice/water boundary temperature [degC]
-! sB            - ice/water boundary salinity [PSU]
-!
-! PASSIVE TRACERS
-! trc           - passive tracer concentration
-! trcAm         - ambient passive tracer concentration
-! trcCum        - accumulative passive tracer concentration
-! trcIni        - initial passive tracer concentration in discharge
-!
-! -------------- Profiles --------------------------------------------
+! ====================================================================!
+!                                                                     !
+! Profiles                                                            !
+!                                                                     !
+! zR            - depth at Rho points [m]                             !
+! sAm           - ambient salinity [PSU]                              !
+! tAm           - ambient temperature [degC]                          !
+! vAm           - horizontal velocity parallel to glacier [m s^-1]    !
+! wAm           - vertical velocity parallel to glacier [m s^-1]      !
+! tpAm          - ambient potential temperature [degC]                !
+! rhoAm         - ambient density [kg m^-3]                           !
+!                                                                     !
+! zW            - depth [m]                                           !
+! f             - plume vertical volume flux [m^3 s^-1]               !
+! w             - plume vertical velocity [m s^-1]                    !
+! t             - plume temperature [degC]                            !
+! s             - plume salinity [PSU]                                !
+! a             - plume area [m^2]                                    !
+! mInt          - plume area integrated melt [m^3 s^-1]               !
+!                                                                     !
+! lm            - plume/glacier contact length [m]                    !
+! lc            - plume/water contact length [m]                      !
+!                                                                     !
+! ent           - entrainment rate [m^3 s^-1]                         !
+! det           - detrainment rate [m^3 s^-1]                         !
+! detI          - detrainment flag                                    !
+!                                                                     !
+! m             - plume melt rate [m^3 s^-1]                          !
+! mAm           - background melt rate [m^3 s^-1]                     !
+!                                                                     !
+! dz            - RHO layer thickness [m]                             !
+! tB            - ice/water boundary temperature [degC]               !
+! sB            - ice/water boundary salinity [PSU]                   !
+!                                                                     !
+! PASSIVE TRACERS                                                     !
+! trc           - passive tracer concentration                        !
+! trcAm         - ambient passive tracer concentration                !
+! trcCum        - accumulative passive tracer concentration           !
+! trcIni        - initial passive tracer concentration in discharge   !
+!                                                                     !
+! ====================================================================!
 !
   TYPE T_PLUME
 !
@@ -188,35 +164,34 @@ MODULE mod_iceplume
     real(r8), pointer :: vAm(:, :)
     real(r8), pointer :: wAm(:, :)
     real(r8), pointer :: tpAm(:, :)
+    real(r8), pointer :: rhoAm(:, :)
 !
 ! Plume state.
 !
     real(r8), pointer :: zW(:, :)
-    real(r8), pointer :: r(:, :)
+    real(r8), pointer :: f(:, :)
+    real(r8), pointer :: w(:, :)
     real(r8), pointer :: t(:, :)
     real(r8), pointer :: s(:, :)
-    real(r8), pointer :: w(:, :)
     real(r8), pointer :: a(:, :)
     real(r8), pointer :: mInt(:, :)
+    real(r8), pointer :: rho(:, :)
+!
+! Plume shape parameters.
+!
+    real(r8), pointer :: lm(:, :)
+    real(r8), pointer :: lc(:, :)
 !
 ! Volume fluxes.
 !
-    real(r8), pointer :: volFlux(:, :)
     real(r8), pointer :: ent(:, :)
     real(r8), pointer :: det(:, :)
     integer(r8), pointer :: detI(:, :)
 !
 ! Melt rate, freshwater and heat fluxes.
 !
-    real(r8), pointer :: mAv(:, :)
     real(r8), pointer :: m(:, :)
-    real(r8), pointer :: mB(:, :)
-    real(r8), pointer :: fwFluxB(:, :)
-    real(r8), pointer :: htFluxB(:, :)
-!
-! Tendency terms.
-!
-    real(r8), pointer :: tendT(:, :, :)
+    real(r8), pointer :: mAm(:, :)
 !
 ! Other profiles.
 !
@@ -249,27 +224,26 @@ MODULE mod_iceplume
         allocate( PLUME(ng) % vAm(Nsrc(ng), N(ng)) )
         allocate( PLUME(ng) % wAm(Nsrc(ng), N(ng)) )
         allocate( PLUME(ng) % tpAm(Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % rhoAm(Nsrc(ng), N(ng)) )
 !
         allocate( PLUME(ng) % zW(Nsrc(ng), 0:N(ng)) )
-        allocate( PLUME(ng) % r(Nsrc(ng), 0:N(ng)) )
+        allocate( PLUME(ng) % f(Nsrc(ng), 0:N(ng)) )
+        allocate( PLUME(ng) % w(Nsrc(ng), 0:N(ng)) )
         allocate( PLUME(ng) % t(Nsrc(ng), 0:N(ng)) )
         allocate( PLUME(ng) % s(Nsrc(ng), 0:N(ng)) )
-        allocate( PLUME(ng) % w(Nsrc(ng), 0:N(ng)) )
         allocate( PLUME(ng) % a(Nsrc(ng), 0:N(ng)) )
         allocate( PLUME(ng) % mInt(Nsrc(ng), 0:N(ng)) )
+        allocate( PLUME(ng) % rho(Nsrc(ng), 0:N(ng)) )
 !
-        allocate( PLUME(ng) % volFlux(Nsrc(ng), 0:N(ng)) )
+        allocate( PLUME(ng) % lm(Nsrc(ng), 0:N(ng)) )
+        allocate( PLUME(ng) % lc(Nsrc(ng), 0:N(ng)) )
+!
         allocate( PLUME(ng) % ent(Nsrc(ng), N(ng)) )
         allocate( PLUME(ng) % det(Nsrc(ng), N(ng)) )
         allocate( PLUME(ng) % detI(Nsrc(ng), N(ng)) )
 !
-        allocate( PLUME(ng) % mAv(Nsrc(ng), N(ng)) )
         allocate( PLUME(ng) % m(Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % mB(Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % fwFluxB(Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % htFluxB(Nsrc(ng), N(ng)) )
-!
-        allocate( PLUME(ng) % tendT(Nsrc(ng), N(ng), NT(ng)) )
+        allocate( PLUME(ng) % mAm(Nsrc(ng), N(ng)) )
 !
         allocate( PLUME(ng) % dz(Nsrc(ng), N(ng)) )
         allocate( PLUME(ng) % tB(Nsrc(ng), N(ng)) )

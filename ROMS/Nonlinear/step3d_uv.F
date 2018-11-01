@@ -145,6 +145,9 @@
       USE mod_ncparam
       USE mod_scalars
       USE mod_sources
+# ifdef ICEPLUME
+      USE mod_iceplume, ONLY : PLUME
+# endif
 !
       USE exchange_2d_mod
       USE exchange_3d_mod
@@ -1019,6 +1022,11 @@
           j=SOURCES(ng)%Jsrc(is)
           IF (((IstrR.le.i).and.(i.le.IendR)).and.                      &
      &        ((JstrR.le.j).and.(j.le.JendR))) THEN
+# ifdef ICEPLUME
+!            IF (INT(SOURCES(ng)%Dsrc(is)).eq.0) THEN
+!            ELSE
+!            END IF
+# else
             IF (INT(SOURCES(ng)%Dsrc(is)).eq.0) THEN
               DO k=1,N(ng)
                 cff1=1.0_r8/(on_u(i,j)*                                 &
@@ -1034,6 +1042,7 @@
                 v(i,j,k,nnew)=SOURCES(ng)%Qsrc(is,k)*cff1
               END DO
             END IF
+# endif
           END IF
         END DO
       END IF

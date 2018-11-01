@@ -639,11 +639,11 @@
 !----- iceplume model here (Chuning Wang) ------------------------------
                     IF ((rmask(Isrc  ,Jsrc).eq.0.0_r8).and.             &
      &                  (rmask(Isrc-1,Jsrc).eq.1.0_r8)) THEN
-                      IF (Huon(Isrc,Jsrc,k).gt.0.0_r8) THEN
-                        FX(Isrc,Jsrc)=Huon(Isrc,Jsrc,k)*                &
+                      IF (SOURCES(ng)%Qsrc(is,k).gt.0.0_r8) THEN
+                        FX(Isrc,Jsrc)=SOURCES(ng)%Qsrc(is,k)*           &
      &                                t(Isrc-1,Jsrc,k,3,itrc)
                       ELSE
-                        FX(Isrc,Jsrc)=Huon(Isrc,Jsrc,k)*                &
+                        FX(Isrc,Jsrc)=SOURCES(ng)%Qsrc(is,k)*           &
 #  ifdef ONE_TRACER_SOURCE
      &                    SOURCES(ng)%Tsrc(itrc)
 #  elif defined TWO_D_TRACER_SOURCE
@@ -654,11 +654,11 @@
                       ENDIF
                     ELSE IF ((rmask(Isrc  ,Jsrc).eq.1.0_r8).and.        &
      &                       (rmask(Isrc-1,Jsrc).eq.0.0_r8)) THEN
-                      IF (Huon(Isrc,Jsrc,k).lt.0.0_r8) THEN
-                        FX(Isrc,Jsrc)=Huon(Isrc,Jsrc,k)*                &
+                      IF (SOURCES(ng)%Qsrc(is,k).lt.0.0_r8) THEN
+                        FX(Isrc,Jsrc)=SOURCES(ng)%Qsrc(is,k)*           &
      &                                t(Isrc  ,Jsrc,k,3,itrc)
                       ELSE
-                        FX(Isrc,Jsrc)=Huon(Isrc,Jsrc,k)*                &
+                        FX(Isrc,Jsrc)=SOURCES(ng)%Qsrc(is,k)*           &
 #  ifdef ONE_TRACER_SOURCE
      &                    SOURCES(ng)%Tsrc(itrc)
 #  elif defined TWO_D_TRACER_SOURCE
@@ -708,11 +708,11 @@
 !----- iceplume model here (Chuning Wang) ------------------------------
                     IF ((rmask(Isrc,Jsrc  ).eq.0.0_r8).and.             &
      &                  (rmask(Isrc,Jsrc-1).eq.1.0_r8)) THEN
-                      IF (Hvom(Isrc,Jsrc,k).gt.0.0_r8) THEN
-                        FE(Isrc,Jsrc)=Hvom(Isrc,Jsrc,k)*                &
+                      IF (SOURCES(ng)%Qsrc(is,k).gt.0.0_r8) THEN
+                        FE(Isrc,Jsrc)=SOURCES(ng)%Qsrc(is,k)*           &
      &                                t(Isrc,Jsrc-1,k,3,itrc)
                       ELSE
-                        FE(Isrc,Jsrc)=Hvom(Isrc,Jsrc,k)*                &
+                        FE(Isrc,Jsrc)=SOURCES(ng)%Qsrc(is,k)*           &
 #  ifdef ONE_TRACER_SOURCE
      &                    SOURCES(ng)%Tsrc(itrc)
 #  elif defined TWO_D_TRACER_SOURCE
@@ -723,11 +723,11 @@
                       ENDIF
                     ELSE IF ((rmask(Isrc,Jsrc  ).eq.1.0_r8).and.        &
      &                       (rmask(Isrc,Jsrc-1).eq.0.0_r8)) THEN
-                      IF (Hvom(Isrc,Jsrc,k).lt.0.0_r8) THEN
-                        FE(Isrc,Jsrc)=Hvom(Isrc,Jsrc,k)*                &
+                      IF (SOURCES(ng)%Qsrc(is,k).lt.0.0_r8) THEN
+                        FE(Isrc,Jsrc)=SOURCES(ng)%Qsrc(is,k)*           &
      &                                t(Isrc,Jsrc  ,k,3,itrc)
                       ELSE
-                        FE(Isrc,Jsrc)=Hvom(Isrc,Jsrc,k)*                &
+                        FE(Isrc,Jsrc)=SOURCES(ng)%Qsrc(is,k)*           &
 #  ifdef ONE_TRACER_SOURCE
      &                    SOURCES(ng)%Tsrc(itrc)
 #  elif defined TWO_D_TRACER_SOURCE

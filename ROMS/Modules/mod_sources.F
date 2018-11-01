@@ -40,6 +40,27 @@
 !  TsrcG      Latest two-time snapshots of tracer (tracer units)       !
 !               point Sources/Sinks.                                   !
 !                                                                      !
+#if defined SOLVE3D && defined ICEPLUME
+!  SGtra      Mass transport (m3/s) of subglacial Sources/Sinks.       !
+!  SGtraG     Latest two-time snapshots of mass transport of           !
+!                subglacial Sources/Sinks.                             !
+!  SGtrc      Tracer (tracer units) of subglacial Sources/Sinks.       !
+!  SGtrcG     Latest two-time snapshots of tracer (tracer units) of    !
+!                subglacial Sources/Sinks.                             !
+!  SGdep      Depth of subglacial point Sources/Sinks (m).             !
+!  SGtyp      Type of subglacial point Sources/Sinks:                  !
+!               TYPEsrc(:) = 1,  No subglaical plume or melt.          !
+!               TYPEsrc(:) = 2,  half-cone.                            !
+!               TYPEsrc(:) = 3,  finite-line.                          !
+!               TYPEsrc(:) = 4,  sheet.                                !
+!               TYPEsrc(:) = 5,  detached.                             !
+!  SGlen      Length of point Sources/Sinks (m).                       !
+# ifdef ICEPLUME_SPREAD
+!  SGgid      River/glacier ID number. The same ID suggests the point  !
+!               sources/sinks belong to the same river/glacier.        !
+# endif
+#endif
+!                                                                      !
 !=======================================================================
 !
         USE mod_kinds
@@ -78,6 +99,29 @@
           real(r8), pointer :: TsrcG(:,:,:)
 # else
           real(r8), pointer :: TsrcG(:,:,:,:)
+# endif
+#endif
+
+#ifdef ICEPLUME
+          real(r8), pointer :: SGtra(:)
+# ifdef ONE_TRACER_SOURCE
+          real(r8), pointer :: SGtrc(:)
+# else
+          real(r8), pointer :: SGtrc(:,:)
+# endif
+# ifndef ANA_PSOURCE
+          real(r8), pointer :: SGtraG(:,:)
+#  ifdef ONE_TRACER_SOURCE
+          real(r8), pointer :: SGtrcG(:,:)
+#  else
+          real(r8), pointer :: SGtrcG(:,:,:)
+#  endif
+# endif
+          real(r8), pointer :: SGdep(:)
+          real(r8), pointer :: SGtyp(:)
+          real(r8), pointer :: SGlen(:)
+# ifdef ICEPLUME_SPREAD
+          real(r8), pointer :: SGgid(:)
 # endif
 #endif
 
@@ -212,6 +256,30 @@
       allocate ( SOURCES(ng) % TsrcG(Nsrc(ng),N(ng),2,NT(ng)) )
 # endif
 #endif
+
+#ifdef ICEPLUME
+      allocate ( SOURCES(ng) % SGtra(Nsrc(ng)) )
+# ifdef ONE_TRACER_SOURCE
+      allocate ( SOURCES(ng) % SGtrc(NT(ng)) )
+# else
+      allocate ( SOURCES(ng) % SGtrc(Nsrc(ng),NT(ng)) )
+# endif
+# ifndef ANA_PSOURCE
+      allocate ( SOURCES(ng) % SGtraG(Nsrc(ng),2) )
+#  ifdef ONE_TRACER_SOURCE
+      allocate ( SOURCES(ng) % SGtrcG(2,NT(ng)) )
+#  else
+      allocate ( SOURCES(ng) % SGtrcG(Nsrc(ng),2,NT(ng)) )
+#  endif
+# endif
+      allocate ( SOURCES(ng) % SGdep(Nsrc(ng)) )
+      allocate ( SOURCES(ng) % SGtyp(Nsrc(ng)) )
+      allocate ( SOURCES(ng) % SGlen(Nsrc(ng)) )
+# ifdef ICEPLUME_SPREAD
+      allocate ( SOURCES(ng) % SGgid(Nsrc(ng)) )
+# endif
+#endif
+
 !
 !-----------------------------------------------------------------------
 !  Initialize module variables.
@@ -263,6 +331,45 @@
         END DO
 #endif
       END DO
+
+#ifdef ICEPLUME
+      DO is=1,Nsrc(ng)
+        SOURCES(ng) % SGtra(is) = IniVal
+        SOURCES(ng) % SGdep(is) = IniVal
+        SOURCES(ng) % SGtyp(is) = IniVal
+        SOURCES(ng) % SGlen(is) = IniVal
+# ifdef ICEPLUME_SPREAD
+        SOURCES(ng) % SGgid(is) = IniVal
+# endif
+      END DO
+      DO itrc=1,NT(ng)
+# ifdef ONE_TRACER_SOURCE
+        SOURCES(ng) % SGtrc(itrc) = IniVal
+# else
+        DO is=1,Nsrc(ng)
+          SOURCES(ng) % SGtrc(is,itrc) = IniVal
+        END DO
+# endif
+      END DO
+# ifndef ANA_PSOURCE
+      DO is=1,Nsrc(ng)
+        SOURCES(ng) % SGtraG(is,1) = IniVal
+        SOURCES(ng) % SGtraG(is,2) = IniVal
+      END DO
+      DO itrc=1,NT(ng)
+#  ifdef ONE_TRACER_SOURCE
+        SOURCES(ng) % SGtrcG(1,itrc) = IniVal
+        SOURCES(ng) % SGtrcG(2,itrc) = IniVal
+#  else
+        DO is=1,Nsrc(ng)
+          SOURCES(ng) % SGtrcG(is,1,itrc) = IniVal
+          SOURCES(ng) % SGtrcG(is,2,itrc) = IniVal
+        END DO
+#  endif
+      END DO
+# endif
+#endif
+
 #ifdef BIO_GOANPZ
 !     River runoff has low nutrient, high iron
 # ifdef ONE_TRACER_SOURCE
