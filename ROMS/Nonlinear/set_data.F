@@ -1173,8 +1173,8 @@
         IF (LuvSrc(ng).or.LwSrc(ng)) THEN
           CALL set_ngfld (ng, iNLM, idSGtra, 1, Nsrc(ng), 1,            &
      &                    1, Nsrc(ng), 1,                               &
-     &                    SOURCES(ng) % SGtraG,                         &
-     &                    SOURCES(ng) % SGtra,                          &
+     &                    SOURCES(ng) % SGbarG,                         &
+     &                    SOURCES(ng) % SGbar,                          &
      &                    update)
           IF (FoundError(exit_flag, NoError, __LINE__,                  &
      &                   __FILE__)) RETURN

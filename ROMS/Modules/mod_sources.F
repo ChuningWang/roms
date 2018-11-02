@@ -41,8 +41,8 @@
 !               point Sources/Sinks.                                   !
 !                                                                      !
 #if defined SOLVE3D && defined ICEPLUME
-!  SGtra      Mass transport (m3/s) of subglacial Sources/Sinks.       !
-!  SGtraG     Latest two-time snapshots of mass transport of           !
+!  SGbar      Mass transport (m3/s) of subglacial Sources/Sinks.       !
+!  SGbarG     Latest two-time snapshots of mass transport of           !
 !                subglacial Sources/Sinks.                             !
 !  SGtrc      Tracer (tracer units) of subglacial Sources/Sinks.       !
 !  SGtrcG     Latest two-time snapshots of tracer (tracer units) of    !
@@ -103,14 +103,14 @@
 #endif
 
 #ifdef ICEPLUME
-          real(r8), pointer :: SGtra(:)
+          real(r8), pointer :: SGbar(:)
 # ifdef ONE_TRACER_SOURCE
           real(r8), pointer :: SGtrc(:)
 # else
           real(r8), pointer :: SGtrc(:,:)
 # endif
 # ifndef ANA_PSOURCE
-          real(r8), pointer :: SGtraG(:,:)
+          real(r8), pointer :: SGbarG(:,:)
 #  ifdef ONE_TRACER_SOURCE
           real(r8), pointer :: SGtrcG(:,:)
 #  else
@@ -258,14 +258,14 @@
 #endif
 
 #ifdef ICEPLUME
-      allocate ( SOURCES(ng) % SGtra(Nsrc(ng)) )
+      allocate ( SOURCES(ng) % SGbar(Nsrc(ng)) )
 # ifdef ONE_TRACER_SOURCE
       allocate ( SOURCES(ng) % SGtrc(NT(ng)) )
 # else
       allocate ( SOURCES(ng) % SGtrc(Nsrc(ng),NT(ng)) )
 # endif
 # ifndef ANA_PSOURCE
-      allocate ( SOURCES(ng) % SGtraG(Nsrc(ng),2) )
+      allocate ( SOURCES(ng) % SGbarG(Nsrc(ng),2) )
 #  ifdef ONE_TRACER_SOURCE
       allocate ( SOURCES(ng) % SGtrcG(2,NT(ng)) )
 #  else
@@ -334,7 +334,7 @@
 
 #ifdef ICEPLUME
       DO is=1,Nsrc(ng)
-        SOURCES(ng) % SGtra(is) = IniVal
+        SOURCES(ng) % SGbar(is) = IniVal
         SOURCES(ng) % SGdep(is) = IniVal
         SOURCES(ng) % SGtyp(is) = IniVal
         SOURCES(ng) % SGlen(is) = IniVal
@@ -353,8 +353,8 @@
       END DO
 # ifndef ANA_PSOURCE
       DO is=1,Nsrc(ng)
-        SOURCES(ng) % SGtraG(is,1) = IniVal
-        SOURCES(ng) % SGtraG(is,2) = IniVal
+        SOURCES(ng) % SGbarG(is,1) = IniVal
+        SOURCES(ng) % SGbarG(is,2) = IniVal
       END DO
       DO itrc=1,NT(ng)
 #  ifdef ONE_TRACER_SOURCE

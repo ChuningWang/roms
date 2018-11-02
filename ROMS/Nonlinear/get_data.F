@@ -133,7 +133,7 @@
         CALL get_ngfld (ng, iNLM, idSGtra, ncSSFid(idSGtra,ng),         &
      &                  nSSFfiles(ng), SSF(1,ng), update(1),            &
      &                  1, Nsrc(ng), 1, 2, 1, Nsrc(ng), 1,              &
-     &                  SOURCES(ng) % SGtraG)
+     &                  SOURCES(ng) % SGbarG)
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN
       END IF

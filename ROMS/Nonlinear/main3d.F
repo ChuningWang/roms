@@ -152,6 +152,9 @@
       USE wvelocity_mod,        ONLY : wvelocity
 # ifdef ICEPLUME
       USE iceplume_mod,         ONLY : iceplume
+#  ifdef ICEPLUME_SPREAD
+      USE iceplume_spread_mod,         ONLY : iceplume_spread
+#  endif
 # endif
 !
       implicit none
@@ -250,6 +253,9 @@
                 CALL set_data (ng, tile)
 # ifdef ICEPLUME
                 CALL iceplume (ng, tile)
+#  ifdef ICEPLUME_SPREAD
+                CALL iceplume_spread (ng, tile)
+#  endif
 # endif
               END DO
 !$OMP BARRIER

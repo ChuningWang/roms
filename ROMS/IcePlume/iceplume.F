@@ -164,7 +164,7 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 !
 ! Get initial condition for iceplume model
 !
-        fIni = ABS(SOURCES(ng) % SGtra(is))
+        fIni = ABS(SOURCES(ng) % SGbar(is))
         tIni = &
 # ifdef ONE_TRACER_SOURCE
           & SOURCES(ng) % SGtrc(itemp)
@@ -200,8 +200,8 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
             & (ABS(PLUME(ng) % zW(is, K))*rho_ref*g)*1.d-4  ! [dbar]
           CALL SW_TEMP(PLUME(ng) % sAm(is, K),  &
                      & PLUME(ng) % tpAm(is, K), &
-                     & pr,                     &
-                     & prRef,                  &
+                     & pr,                      &
+                     & prRef,                   &
                      & PLUME(ng) % tAm(is, K))
 !
 ! tracers
@@ -214,21 +214,21 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 ! u/v, w
 !
           IF (Dsrc .EQ. 0) THEN
-            PLUME(ng) % vAm(is, K) =     &
-              & 0.5d0 * (               &
+            PLUME(ng) % vAm(is, K) =        &
+              & 0.5d0 * (                   &
               & v(Isrc  , Jsrc, K, nrhs) +  &
               & v(Isrc+1, Jsrc, K, nrhs)    &
               & )
           ELSEIF (Dsrc .EQ. 1) THEN
-            PLUME(ng) % vAm(is, K) =     &
-              & 0.5d0 * (               &
+            PLUME(ng) % vAm(is, K) =        &
+              & 0.5d0 * (                   &
               & u(Isrc, Jsrc  , K, nrhs) +  &
               & u(Isrc, Jsrc+1, K, nrhs)    &
               & )
           ENDIF
 !
-          PLUME(ng) % wAm(is, K) =       &
-            & 0.5d0 * (                 &
+          PLUME(ng) % wAm(is, K) =          &
+            & 0.5d0 * (                     &
             & wvel(Isrc, Jsrc, K-1) +       &
             & wvel(Isrc, Jsrc, K)           &
             & )
@@ -255,29 +255,19 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 !
         CALL iceplume_calc(ng, is, dx, dy, &
                          & fIni, tIni, sIni)
+!
+! ==================================================================
+!
+!        cff = 0
+!        DO K = 1, N(ng)
+!                      cff = cff +                                       &
+!     &                  PLUME(ng)%det(is,k)*PLUME(ng)%trc(is,3)+        &
+!     &                  PLUME(ng)%ent(is,k)*PLUME(ng)%trcAm(is,K,3)
+!        ENDDO
+!        write(*, *)  cff
       ENDIF
     ENDDO
   ENDIF
 END SUBROUTINE iceplume_tile
-!
-!***********************************************************************
-SUBROUTINE iceplume_spread (ng, tile)
-!***********************************************************************
-!
-! Imported variable declarations.
-!
-  integer, intent(in) :: ng, tile
-!
-! Local variable declarations.
-!
-# include "tile.h"
-!
-  CALL iceplume_spread_tile (ng, tile,                             &
-    &                        LBi, UBi, LBj, UBj,                   &
-    &                        IminS, ImaxS, JminS, JmaxS)
-  RETURN
-END SUBROUTINE iceplume
-!
-
 #endif
 END MODULE iceplume_mod
