@@ -114,6 +114,11 @@ MODULE mod_iceplume
 !
 ! ====================================================================!
 !                                                                     !
+! Variables                                                           !
+!                                                                     !
+! dir           - direction of plume. +1 for positve direction and    !
+!                 -1 for negative direction. 0 for other situation.   !
+!                                                                     !
 ! Profiles                                                            !
 !                                                                     !
 ! zR            - depth at Rho points [m]                             !
@@ -155,6 +160,10 @@ MODULE mod_iceplume
 ! ====================================================================!
 !
   TYPE T_PLUME
+!
+! Variables.
+!
+    real(r8), pointer :: dir(:)
 !
 ! Grid, ambient state.
 !
@@ -217,6 +226,8 @@ MODULE mod_iceplume
       IF (ng .EQ. 1) allocate( PLUME(Ngrids) )
 !
 ! Allocate profiles
+!
+        allocate( PLUME(ng) % dir(Nsrc(ng)) )
 !
         allocate( PLUME(ng) % zR(Nsrc(ng), N(ng)) )
         allocate( PLUME(ng) % tAm(Nsrc(ng), N(ng)) )

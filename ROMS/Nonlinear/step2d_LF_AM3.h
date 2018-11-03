@@ -200,6 +200,9 @@
       USE mod_sediment
 # endif
       USE mod_sources
+# ifdef ICEPLUME
+      USE mod_iceplume, ONLY : PLUME
+# endif
 !
       USE exchange_2d_mod
 # ifdef DISTRIBUTE
@@ -933,12 +936,13 @@
           IF (((IstrR.le.i).and.(i.le.IendR)).and.                      &
      &        ((JstrR.le.j).and.(j.le.JendR))) THEN
             zeta(i,j,knew)=zeta(i,j,knew)+                              &
-#  ifdef ICEPLUME
-     &                     (SOURCES(ng)%Qbar(is)+                       &
-     &                      SOURCES(ng)%SGbar(is))*                     &
-#  else
+# ifdef ICEPLUME
+                          (SOURCES(ng)%Qbar(is)+                        &
+     &                     ABS(SOURCES(ng)%SGbar(is))*                  &
+     &                     PLUME(ng)%dir(is))*                          &
+# else
      &                     SOURCES(ng)%Qbar(is)*                        &
-#  endif
+# endif
      &                     pm(i,j)*pn(i,j)*dtfast(ng)
           END IF
         END DO
@@ -2545,20 +2549,22 @@
      &        ((JstrR.le.j).and.(j.le.JendR))) THEN
             IF (INT(SOURCES(ng)%Dsrc(is)).eq.0) THEN
               cff=1.0_r8/(on_u(i,j)*0.5_r8*(Dnew(i-1,j)+Dnew(i,j)))
-#  ifdef ICEPLUME
+# ifdef ICEPLUME
               ubar(i,j,knew)=                                           &
-     &          (SOURCES(ng)%Qbar(is)+SOURCES(ng)%SGbar(is))*cff
-#  else
+     &          (SOURCES(ng)%Qbar(is)+                                  &
+     &           ABS(SOURCES(ng)%SGbar(is))*PLUME(ng)%dir(is))*cff
+# else
               ubar(i,j,knew)=SOURCES(ng)%Qbar(is)*cff
-#  endif
+# endif
             ELSE
               cff=1.0_r8/(om_v(i,j)*0.5_r8*(Dnew(i,j-1)+Dnew(i,j)))
-#  ifdef ICEPLUME
+# ifdef ICEPLUME
               vbar(i,j,knew)=                                           &
-     &          (SOURCES(ng)%Qbar(is)+SOURCES(ng)%SGbar(is))*cff
-#  else
+     &          (SOURCES(ng)%Qbar(is)+                                  &
+     &           ABS(SOURCES(ng)%SGbar(is))*PLUME(ng)%dir(is))*cff
+# else
               vbar(i,j,knew)=SOURCES(ng)%Qbar(is)*cff
-#  endif
+# endif
             END IF
           END IF
         END DO

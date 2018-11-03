@@ -1386,12 +1386,6 @@
      &   'Ice Plume model for subglacial discharge.'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+10)=' ICEPLUME,'
-# ifdef ICEPLUME_SHEETPLUME
-      IF (Master) WRITE (stdout,20) 'ICEPLUME_SHEETPLUME',              &
-     &   'JENKINS Sheet Plume model for subglacial discharge.'
-      is=LEN_TRIM(Coptions)+1
-      Coptions(is:is+10)=' ICEPLUME_SHEETPLUME,'
-# endif
 !
 # ifdef ICEPLUME_TRACER
       IF (Master) WRITE (stdout,20) 'ICEPLUME_TRACER',             &

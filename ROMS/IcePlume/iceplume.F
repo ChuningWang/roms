@@ -34,7 +34,7 @@ SUBROUTINE iceplume (ng, tile)
   CALL iceplume_tile (ng, tile,                                    &
     &                 LBi, UBi, LBj, UBj,                          &
     &                 IminS, ImaxS, JminS, JmaxS,                  &
-    &                 nrhs(ng),                                    &
+    &                 nstp(ng),                                    &
     &                 GRID(ng) % rmask,                            &
     &                 GRID(ng) % om_r,                             &
     &                 GRID(ng) % on_r,                             &
@@ -52,7 +52,7 @@ END SUBROUTINE iceplume
 SUBROUTINE iceplume_tile(ng, tile,                                 &
     &                    LBi, UBi, LBj, UBj,                       &
     &                    IminS, ImaxS, JminS, JmaxS,               &
-    &                    nrhs,                                     &
+    &                    nstp,                                     &
     &                    rmask,                                    &
     &                    om_r,                                     &
     &                    on_r,                                     &
@@ -78,7 +78,7 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
   integer, intent(in) :: ng, tile
   integer, intent(in) :: LBi, UBi, LBj, UBj
   integer, intent(in) :: IminS, ImaxS, JminS, JmaxS
-  integer, intent(in) :: nrhs
+  integer, intent(in) :: nstp
 !
 # ifdef ASSUMED_SHAPE
   real(r8), intent(in) :: rmask(LBi:,LBj:)
@@ -105,7 +105,7 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 ! Local variable declarations.
 !
   integer :: is, Isrc, Jsrc, Dsrc, D2src
-  integer :: K, iTracer
+  integer :: K, itrc
   real(r8) :: pr, prRef
   real(r8) :: dx, dy
   real(r8) :: fIni, tIni, sIni
@@ -124,7 +124,9 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
         &  ((JstrR .LE. Jsrc) .AND. (Jsrc .LE. JendR)) ) THEN
 !
 ! ==================================================================!
+!                                                                   !
 ! Find the right Rho coordinates                                    !
+!                                                                   !
 ! ==================================================================!
 !
         Dsrc = INT(SOURCES(ng) % Dsrc(is))
@@ -151,6 +153,7 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
             D2src = 0
           ENDIF
         ENDIF
+        PLUME(ng) % dir = real(D2src)
 !
 ! Get grid dimensions
 !
@@ -165,21 +168,13 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 ! Get initial condition for iceplume model
 !
         fIni = ABS(SOURCES(ng) % SGbar(is))
-        tIni = &
-# ifdef ONE_TRACER_SOURCE
-          & SOURCES(ng) % SGtrc(itemp)
-# else
-          & SOURCES(ng) % SGtrc(is, itemp)
-# endif
-        sIni = &
-# ifdef ONE_TRACER_SOURCE
-          & SOURCES(ng) % SGtrc(isalt)
-# else
-          & SOURCES(ng) % SGtsrc(is, isalt)
-# endif
+        tIni = SOURCES(ng) % SGtrc(is, itemp)
+        sIni = SOURCES(ng) % SGtrc(is, isalt)
 !
 ! ==================================================================!
+!                                                                   !
 ! Read in profiles from OCEAN.                                      !
+!                                                                   !
 ! ==================================================================!
 !
         DO K = 0, N(ng)
@@ -190,8 +185,8 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 !
 ! temp and salt
 !
-          PLUME(ng) % sAm(is, K) = t(Isrc, Jsrc, K, nrhs, isalt)
-          PLUME(ng) % tpAm(is, K) = t(Isrc, Jsrc, K, nrhs, itemp)
+          PLUME(ng) % sAm(is, K) = t(Isrc, Jsrc, K, nstp, isalt)
+          PLUME(ng) % tpAm(is, K) = t(Isrc, Jsrc, K, nstp, itemp)
 !
 ! convert potential temp to in-situ temp
 !
@@ -206,9 +201,9 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 !
 ! tracers
 !
-          DO iTracer = 1, NT(ng)
-            PLUME(ng) % trcAm(is, K, iTracer) = &
-              & t(Isrc, Jsrc, K, nrhs, iTracer)
+          DO itrc = 1, NT(ng)
+            PLUME(ng) % trcAm(is, K, itrc) = &
+              & t(Isrc, Jsrc, K, nstp, itrc)
           ENDDO
 !
 ! u/v, w
@@ -216,14 +211,14 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
           IF (Dsrc .EQ. 0) THEN
             PLUME(ng) % vAm(is, K) =        &
               & 0.5d0 * (                   &
-              & v(Isrc  , Jsrc, K, nrhs) +  &
-              & v(Isrc+1, Jsrc, K, nrhs)    &
+              & v(Isrc  , Jsrc, K, nstp) +  &
+              & v(Isrc+1, Jsrc, K, nstp)    &
               & )
           ELSEIF (Dsrc .EQ. 1) THEN
             PLUME(ng) % vAm(is, K) =        &
               & 0.5d0 * (                   &
-              & u(Isrc, Jsrc  , K, nrhs) +  &
-              & u(Isrc, Jsrc+1, K, nrhs)    &
+              & u(Isrc, Jsrc  , K, nstp) +  &
+              & u(Isrc, Jsrc+1, K, nstp)    &
               & )
           ENDIF
 !
@@ -237,34 +232,100 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 ! Discharge tracer concentration
 !
         IF (useTracers .and. useInputTracers) THEN
-          DO iTracer = 3, NT(ng)
-            PLUME(ng) % trcIni(is, iTracer) = &
-# ifdef ONE_TRACER_SOURCE
-              & SOURCES(ng) % SGtrc(iTracer)
-# else
-              & SOURCES(ng) % SGtrc(is, iTracer)
-# endif
+          DO itrc = 3, NT(ng)
+            PLUME(ng) % trcIni(is, itrc) = &
+              & SOURCES(ng) % SGtrc(is, itrc)
           ENDDO
         ELSE
-          DO iTracer = 3, NT(ng)
-            PLUME(ng) % trcIni(is, iTracer) = 0.d0
+          DO itrc = 3, NT(ng)
+            PLUME(ng) % trcIni(is, itrc) = 0.d0
           ENDDO
         ENDIF
 !
-! ==================================================================
+! ==================================================================!
+!                                                                   !
+! Call the main function here.                                      !
+!                                                                   !
+! ==================================================================!
 !
         CALL iceplume_calc(ng, is, dx, dy, &
                          & fIni, tIni, sIni)
 !
-! ==================================================================
+! ==================================================================!
+!                                                                   !
+! Update SOURCES and OCEAN.                                         !
+!                                                                   !
+! ==================================================================!
 !
-!        cff = 0
 !        DO K = 1, N(ng)
-!                      cff = cff +                                       &
-!     &                  PLUME(ng)%det(is,k)*PLUME(ng)%trc(is,3)+        &
-!     &                  PLUME(ng)%ent(is,k)*PLUME(ng)%trcAm(is,K,3)
+!          Qsrc = (PLUME(ng) % det(is, K) +         &
+!            &     PLUME(ng) % ent(is, K) +         &
+!            &     ABS(SOURCES(ng) % Qsrc(is, K)))
+!!
+!! T, S, Tracer concentration
+!!
+!          IF (Qsrc .NE. 0.0d0) THEN
+!            DO itrc = 1, NT(ng)
+!              SOURCES(ng) % Tsrc(is,K,itrc) =                   &
+!                &  (PLUME(ng) % det(is, K) *                    &
+!                &   PLUME(ng) % trc(is, itrc) +                 &
+!                &   PLUME(ng) % ent(is, K) *                    &
+!                &   PLUME(ng) % trcAm(is, K, itrc) +            &
+!                &   ABS(SOURCES(ng) % Qsrc(is, K)) *            &
+!                &   SOURCES(ng) % Tsrc(is,K,itrc)               &
+!                &  ) / Qsrc
+!            ENDDO
+!          ELSE
+!            DO itrc = 1, NT(ng)
+!              SOURCES(ng) % Tsrc(is, K, itrc) = 0.d0
+!            ENDDO
+!          ENDIF
+!!
+!! Qsrc
+!!
+!          IF (D2src .GT. 0) THEN
+!            SOURCES(ng) % Qsrc(is, K) = Qsrc
+!          ELSEIF (D2src .LT. 0) THEN
+!            SOURCES(ng) % Qsrc(is, K) = -Qsrc
+!          ELSE
+!            SOURCES(ng) % Qsrc(is, K) = 0.d0
+!          ENDIF
 !        ENDDO
-!        write(*, *)  cff
+!!
+!! Use the tendency terms to update T, S & tracers in OCEAN
+!!
+!        IF (useBkgMelt) THEN
+!          DO K = 1, N(ng)
+!          cff1 = dx*dy*PLUME(ng) % dz(is, K)
+!          cff2 = dt(ng)*PLUME(ng) % mAm(is, K)
+!            t(Isrc, Jsrc, K, nstp, isalt) =               &
+!              &  (cff1*t(Isrc, Jsrc, K, nstp, isalt) +    &
+!              &   cff2*PLUME(ng) % sB(is, K)) /           &
+!              &  (cff1 + cff2)
+!            t(Isrc, Jsrc, K, nstp, itemp) =               &
+!              &  (cff1*t(Isrc, Jsrc, K, nstp, itemp) +    &
+!              &   cff2*PLUME(ng) % tB(is, K)) /           &
+!              &  (cff1 + cff2)
+!            DO itrc = 3, NT(ng)
+!              t(Isrc, Jsrc, K, nstp, itrc) =                &
+!                &  (cff1*t(Isrc, Jsrc, K, nstp, itrc)) /    &
+!                &  (cff1 + cff2)
+!            ENDDO
+!            IF (useMeltTracers) THEN
+!              SOURCES(ng) % Tsrc(is, K, NT(ng)) = 0.d0
+!              t(Isrc, Jsrc, K, nstp, NT(ng)) =              &
+!                &  (cff1*t(Isrc, Jsrc, K, nstp, NT(ng)) +   &
+!                &   cff2*PLUME(ng) % trc(is, NT(ng))) /     &
+!                &  (cff1 + cff2)
+!!
+!! Hard code meltwater concentration to at least 0.
+!!
+!              t(Isrc, Jsrc, K, nstp, NT(ng)) = &
+!                MAX(t(Isrc, Jsrc, K, nstp, NT(ng)), 0.0d0)
+!            ENDIF
+!          ENDDO
+!        ENDIF
+!
       ENDIF
     ENDDO
   ENDIF
