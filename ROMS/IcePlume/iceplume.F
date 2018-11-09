@@ -1,5 +1,4 @@
 #include "cppdefs.h"
-MODULE iceplume_mod
 #ifdef ICEPLUME
 !
 !=======================================================================
@@ -8,69 +7,44 @@ MODULE iceplume_mod
 !                                                                      !
 !=======================================================================
 !
-implicit none
-!
-PRIVATE
-PUBLIC :: iceplume
-!
-CONTAINS
-!
 !***********************************************************************
 SUBROUTINE iceplume (ng, tile)
 !***********************************************************************
 !
-  USE mod_grid
-  USE mod_ocean
-  USE mod_stepping
+  USE mod_param
 !
-! Imported variable declarations.
+!  Imported variable declarations.
 !
   integer, intent(in) :: ng, tile
 !
-! Local variable declarations.
+!  Local variable declarations.
 !
 # include "tile.h"
 !
-  CALL iceplume_tile (ng, tile,                                    &
-    &                 LBi, UBi, LBj, UBj,                          &
-    &                 IminS, ImaxS, JminS, JmaxS,                  &
-    &                 nstp(ng),                                    &
-    &                 GRID(ng) % rmask,                            &
-    &                 GRID(ng) % om_r,                             &
-    &                 GRID(ng) % on_r,                             &
-    &                 GRID(ng) % h,                                &
-    &                 GRID(ng) % z_w,                              &
-    &                 OCEAN(ng) % u,                               &
-    &                 OCEAN(ng) % v,                               &
-    &                 OCEAN(ng) % wvel,                            &
-    &                 OCEAN(ng) % t)
-!
+# ifdef PROFILE
+      CALL wclock_on (ng, iNLM, 4, __LINE__, __FILE__)
+# endif
+  CALL iceplume_tile (ng, tile,                                         &
+     &                LBi, UBi, LBj, UBj,                               &
+     &                IminS, ImaxS, JminS, JmaxS)
+# ifdef PROFILE
+      CALL wclock_off (ng, iNLM, 4, __LINE__, __FILE__)
+# endif
+
   RETURN
 END SUBROUTINE iceplume
 !
 !***********************************************************************
-SUBROUTINE iceplume_tile(ng, tile,                                 &
-    &                    LBi, UBi, LBj, UBj,                       &
-    &                    IminS, ImaxS, JminS, JmaxS,               &
-    &                    nstp,                                     &
-    &                    rmask,                                    &
-    &                    om_r,                                     &
-    &                    on_r,                                     &
-    &                    h,                                        &
-    &                    z_w,                                      &
-    &                    u,                                        &
-    &                    v,                                        &
-    &                    wvel,                                     &
-    &                    t)
+SUBROUTINE iceplume_tile (ng, tile,                                     &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    IminS, ImaxS, JminS, JmaxS)
 !***********************************************************************
 !
-! Load public modules
-!
+  USE mod_grid, ONLY : GRID
+  USE mod_ocean, ONLY : OCEAN
+  USE mod_stepping, ONLY : nstp
   USE mod_scalars, ONLY : dt, LuvSrc
   USE mod_sources
-!
-! Load private module
-!
   USE mod_iceplume
 !
 !  Imported variable declarations.
@@ -78,43 +52,16 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
   integer, intent(in) :: ng, tile
   integer, intent(in) :: LBi, UBi, LBj, UBj
   integer, intent(in) :: IminS, ImaxS, JminS, JmaxS
-  integer, intent(in) :: nstp
 !
-# ifdef ASSUMED_SHAPE
-  real(r8), intent(in) :: rmask(LBi:,LBj:)
-  real(r8), intent(in) :: om_r(LBi:,LBj:)
-  real(r8), intent(in) :: on_r(LBi:,LBj:)
-  real(r8), intent(in) :: h(LBi:,LBj:)
-  real(r8), intent(in) :: z_w(LBi:,LBj:,0:)
-  real(r8), intent(in) :: u(LBi:,LBj:,:,:)
-  real(r8), intent(in) :: v(LBi:,LBj:,:,:)
-  real(r8), intent(in) :: wvel(LBi:,LBj:,0:)
-  real(r8), intent(inout) :: t(LBi:,LBj:,:,:,:)
-# else
-  real(r8), intent(in) :: rmask(LBi:UBi,LBj:UBj)
-  real(r8), intent(in) :: om_r(LBi:UBi,LBj:UBj)
-  real(r8), intent(in) :: on_r(LBi:UBi,LBj:UBj)
-  real(r8), intent(in) :: h(LBi:UBi,LBj:UBj)
-  real(r8), intent(in) :: z_w(LBi:UBi,LBj:UBj,0:N(ng))
-  real(r8), intent(in) :: u(LBi:UBi,LBj:UBj,N(ng),2)
-  real(r8), intent(in) :: v(LBi:UBi,LBj:UBj,N(ng),2)
-  real(r8), intent(in) :: wvel(LBi:UBi,LBj:UBj,0:N(ng))
-  real(r8), intent(inout) :: t(LBi:UBi,LBj:UBj,N(ng),3,NT(ng))
-# endif
-!
-! Local variable declarations.
+!  Local variable declarations.
 !
   integer :: is, Isrc, Jsrc, Dsrc, D2src
   integer :: K, itrc
   real(r8) :: pr, prRef
   real(r8) :: dx, dy
-  real(r8) :: fIni, tIni, sIni
-  real(r8) :: Qsrc
   real(r8) :: cff, cff1, cff2, cff3, cff4
 !
 # include "set_bounds.h"
-!
-! ==================================================================
 !
   IF (LuvSrc(ng)) THEN
     DO is=1,Nsrc(ng)
@@ -131,45 +78,39 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 !
         Dsrc = INT(SOURCES(ng) % Dsrc(is))
         IF (Dsrc .EQ. 0) THEN
-          IF ( (rmask(Isrc  , Jsrc) .EQ. 0) .AND. &
-            &  (rmask(Isrc-1, Jsrc) .EQ. 1) ) THEN
+          IF ( (GRID(ng) % rmask(Isrc  , Jsrc) .EQ. 0) .AND.      &
+            &  (GRID(ng) % rmask(Isrc-1, Jsrc) .EQ. 1) ) THEN
             Isrc = Isrc-1
             D2src = -1
-          ELSEIF ( (rmask(Isrc  , Jsrc) .EQ. 1) .AND. &
-                &  (rmask(Isrc-1, Jsrc) .EQ. 0) ) THEN
+          ELSEIF ( (GRID(ng) % rmask(Isrc  , Jsrc) .EQ. 1) .AND.  &
+                &  (GRID(ng) % rmask(Isrc-1, Jsrc) .EQ. 0) ) THEN
             D2src = 1
           ELSE
             D2src = 0
           ENDIF
         ELSEIF (Dsrc .EQ. 1) THEN
-          IF ((rmask(Isrc, Jsrc  ) .EQ. 0) .AND. &
-            & (rmask(Isrc, Jsrc-1) .EQ. 1)) THEN
+          IF ( (GRID(ng) % rmask(Isrc, Jsrc  ) .EQ. 0) .AND.      &
+            &  (GRID(ng) % rmask(Isrc, Jsrc-1) .EQ. 1)) THEN
             Jsrc = Jsrc-1
             D2src = -1
-          ELSEIF ((rmask(Isrc, Jsrc  ) .EQ. 1) .AND. &
-                & (rmask(Isrc, Jsrc-1) .EQ. 0)) THEN
+          ELSEIF ((GRID(ng) % rmask(Isrc, Jsrc  ) .EQ. 1) .AND.   &
+                & (GRID(ng) % rmask(Isrc, Jsrc-1) .EQ. 0)) THEN
             D2src = 1
           ELSE
             D2src = 0
           ENDIF
         ENDIF
-        PLUME(ng) % dir(is) = real(D2src)
+        PLUME(ng) % dir(is) = REAL(D2src)
 !
 ! Get grid dimensions
 !
         IF (Dsrc .EQ. 0) THEN
-          dx = ABS(om_r(Isrc, Jsrc))
-          dy = ABS(on_r(Isrc, Jsrc))
+          dx = ABS(GRID(ng) % om_r(Isrc, Jsrc))
+          dy = ABS(GRID(ng) % on_r(Isrc, Jsrc))
         ELSE
-          dx = ABS(on_r(Isrc, Jsrc))
-          dy = ABS(om_r(Isrc, Jsrc))
+          dx = ABS(GRID(ng) % on_r(Isrc, Jsrc))
+          dy = ABS(GRID(ng) % om_r(Isrc, Jsrc))
         ENDIF
-!
-! Get initial condition for iceplume model
-!
-        fIni = ABS(SOURCES(ng) % SGbar(is))
-        tIni = SOURCES(ng) % SGtrc(is, itemp)
-        sIni = SOURCES(ng) % SGtrc(is, isalt)
 !
 ! ==================================================================!
 !                                                                   !
@@ -178,15 +119,17 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 ! ==================================================================!
 !
         DO K = 0, N(ng)
-          PLUME(ng) % zW(is, K) = z_w(Isrc, Jsrc, K)
+          PLUME(ng) % zW(is, K) = GRID(ng) % z_w(Isrc, Jsrc, K)
         ENDDO
 !
         DO K = 1, N(ng)
 !
 ! temp and salt
 !
-          PLUME(ng) % sAm(is, K) = t(Isrc, Jsrc, K, nstp, isalt)
-          PLUME(ng) % tpAm(is, K) = t(Isrc, Jsrc, K, nstp, itemp)
+          PLUME(ng) % sAm(is, K) = &
+            & OCEAN(ng) % t(Isrc, Jsrc, K, nstp(ng), isalt)
+          PLUME(ng) % tpAm(is, K) = &
+            & OCEAN(ng) % t(Isrc, Jsrc, K, nstp(ng), itemp)
 !
 ! convert potential temp to in-situ temp
 !
@@ -203,30 +146,23 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 !
           DO itrc = 1, NT(ng)
             PLUME(ng) % trcAm(is, K, itrc) = &
-              & t(Isrc, Jsrc, K, nstp, itrc)
+              & OCEAN(ng) % t(Isrc, Jsrc, K, nstp(ng), itrc)
           ENDDO
 !
 ! u/v, w
 !
           IF (Dsrc .EQ. 0) THEN
-            PLUME(ng) % vAm(is, K) =        &
-              & 0.5d0 * (                   &
-              & v(Isrc  , Jsrc, K, nstp) +  &
-              & v(Isrc+1, Jsrc, K, nstp)    &
-              & )
+            PLUME(ng) % vAm(is, K) = 0.5d0 * (              &
+              & OCEAN(ng) % v(Isrc  , Jsrc, K, nstp(ng)) +  &
+              & OCEAN(ng) % v(Isrc+1, Jsrc, K, nstp(ng)) )
           ELSEIF (Dsrc .EQ. 1) THEN
-            PLUME(ng) % vAm(is, K) =        &
-              & 0.5d0 * (                   &
-              & u(Isrc, Jsrc  , K, nstp) +  &
-              & u(Isrc, Jsrc+1, K, nstp)    &
-              & )
+            PLUME(ng) % vAm(is, K) = 0.5d0 * (              &
+              & OCEAN(ng) % u(Isrc, Jsrc  , K, nstp(ng)) +  &
+              & OCEAN(ng) % u(Isrc, Jsrc+1, K, nstp(ng)) )
           ENDIF
-!
-          PLUME(ng) % wAm(is, K) =          &
-            & 0.5d0 * (                     &
-            & wvel(Isrc, Jsrc, K-1) +       &
-            & wvel(Isrc, Jsrc, K)           &
-            & )
+          PLUME(ng) % wAm(is, K) = 0.5d0 * (                &
+            & OCEAN(ng) % wvel(Isrc, Jsrc, K-1) +           &
+            & OCEAN(ng) % wvel(Isrc, Jsrc, K  ) )
         ENDDO
 !
 ! Discharge tracer concentration
@@ -234,7 +170,11 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
         IF (useTracers .and. useInputTracers) THEN
           DO itrc = 3, NT(ng)
             PLUME(ng) % trcIni(is, itrc) = &
+# ifdef ONE_TRACER_SOURCE
+              & SOURCES(ng) % SGtrc(itrc)
+# else
               & SOURCES(ng) % SGtrc(is, itrc)
+# endif
           ENDDO
         ELSE
           DO itrc = 3, NT(ng)
@@ -248,87 +188,48 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
 !                                                                   !
 ! ==================================================================!
 !
-        CALL iceplume_calc(ng, is, dx, dy, &
-                         & fIni, tIni, sIni)
+        IF (INT(SOURCES(ng) % SGtyp(is)) .NE. 1) THEN
+          CALL iceplume_calc(ng, is, dx, dy,                  &
+                           & ABS(SOURCES(ng) % SGbar(is)),    &
+# ifdef ONE_TRACER_SOURCE
+                           & SOURCES(ng) % SGtrc(itemp),      &
+                           & SOURCES(ng) % SGtrc(isalt),      &
+# else
+                           & SOURCES(ng) % SGtrc(is, itemp),  &
+                           & SOURCES(ng) % SGtrc(is, isalt),  &
+# endif
+                           & INT(SOURCES(ng) % SGtyp(is)),    &
+                           & SOURCES(ng) % SGdep(is),         &
+                           & SOURCES(ng) % SGlen(is))
+        ENDIF
+# ifdef ICEPLUME_VIRTUAL_MIX
 !
 ! ==================================================================!
 !                                                                   !
-! Update SOURCES and OCEAN.                                         !
+! Calculate virtual vertical mixing.                                !
 !                                                                   !
 ! ==================================================================!
 !
-!        DO K = 1, N(ng)
-!          Qsrc = (PLUME(ng) % det(is, K) +         &
-!            &     PLUME(ng) % ent(is, K) +         &
-!            &     ABS(SOURCES(ng) % Qsrc(is, K)))
-!!
-!! T, S, Tracer concentration
-!!
-!          IF (Qsrc .NE. 0.0d0) THEN
-!            DO itrc = 1, NT(ng)
-!              SOURCES(ng) % Tsrc(is,K,itrc) =                   &
-!                &  (PLUME(ng) % det(is, K) *                    &
-!                &   PLUME(ng) % trc(is, itrc) +                 &
-!                &   PLUME(ng) % ent(is, K) *                    &
-!                &   PLUME(ng) % trcAm(is, K, itrc) +            &
-!                &   ABS(SOURCES(ng) % Qsrc(is, K)) *            &
-!                &   SOURCES(ng) % Tsrc(is,K,itrc)               &
-!                &  ) / Qsrc
-!            ENDDO
-!          ELSE
-!            DO itrc = 1, NT(ng)
-!              SOURCES(ng) % Tsrc(is, K, itrc) = 0.d0
-!            ENDDO
-!          ENDIF
-!!
-!! Qsrc
-!!
-!          IF (D2src .GT. 0) THEN
-!            SOURCES(ng) % Qsrc(is, K) = Qsrc
-!          ELSEIF (D2src .LT. 0) THEN
-!            SOURCES(ng) % Qsrc(is, K) = -Qsrc
-!          ELSE
-!            SOURCES(ng) % Qsrc(is, K) = 0.d0
-!          ENDIF
-!        ENDDO
-!!
-!! Use the tendency terms to update T, S & tracers in OCEAN
-!!
-!        IF (useBkgMelt) THEN
-!          DO K = 1, N(ng)
-!          cff1 = dx*dy*PLUME(ng) % dz(is, K)
-!          cff2 = dt(ng)*PLUME(ng) % mAm(is, K)
-!            t(Isrc, Jsrc, K, nstp, isalt) =               &
-!              &  (cff1*t(Isrc, Jsrc, K, nstp, isalt) +    &
-!              &   cff2*PLUME(ng) % sB(is, K)) /           &
-!              &  (cff1 + cff2)
-!            t(Isrc, Jsrc, K, nstp, itemp) =               &
-!              &  (cff1*t(Isrc, Jsrc, K, nstp, itemp) +    &
-!              &   cff2*PLUME(ng) % tB(is, K)) /           &
-!              &  (cff1 + cff2)
-!            DO itrc = 3, NT(ng)
-!              t(Isrc, Jsrc, K, nstp, itrc) =                &
-!                &  (cff1*t(Isrc, Jsrc, K, nstp, itrc)) /    &
-!                &  (cff1 + cff2)
-!            ENDDO
-!            IF (useMeltTracers) THEN
-!              SOURCES(ng) % Tsrc(is, K, NT(ng)) = 0.d0
-!              t(Isrc, Jsrc, K, nstp, NT(ng)) =              &
-!                &  (cff1*t(Isrc, Jsrc, K, nstp, NT(ng)) +   &
-!                &   cff2*PLUME(ng) % trc(is, NT(ng))) /     &
-!                &  (cff1 + cff2)
-!!
-!! Hard code meltwater concentration to at least 0.
-!!
-!              t(Isrc, Jsrc, K, nstp, NT(ng)) = &
-!                MAX(t(Isrc, Jsrc, K, nstp, NT(ng)), 0.0d0)
-!            ENDIF
-!          ENDDO
-!        ENDIF
+      PLUME(ng) % fW(is, 0) = 0.0d0
+      DO K = 1, N(ng)
+        PLUME(ng) % fW(is, K) = SUM( &
+          & PLUME(ng) % det(is, 1:K) + PLUME(ng) % ent(is, 1:K)+ &
+          & PLUME(ng) % mAm(is, 1:K))
+      ENDDO
 !
+! Subtract the vertical velocities of the moving S-coordinates.
+!
+      cff1 = PLUME(ng) % fW(is, N(ng))/ &
+        & (PLUME(ng) % zW(is, N(ng))-PLUME(ng) % zW(is, 0))
+      DO K = 1, N(ng)
+        PLUME(ng) % fW(is, K) = PLUME(ng) % fW(is, K) - &
+          & cff1*(PLUME(ng) % zW(is, K)-PLUME(ng) % zW(is, 0))
+      ENDDO
+      if (is.eq.2) write(cff1)
+# endif
       ENDIF
     ENDDO
   ENDIF
+  RETURN
 END SUBROUTINE iceplume_tile
 #endif
-END MODULE iceplume_mod

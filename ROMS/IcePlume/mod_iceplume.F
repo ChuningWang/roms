@@ -109,9 +109,6 @@ MODULE mod_iceplume
 !
   real(r8), parameter :: RiBMin     = 1.0d0
 !
-  real(r8) :: iceDepth              = 1.d0
-  real(r8) :: L0                    = 100.d0
-!
 ! ====================================================================!
 !                                                                     !
 ! Variables                                                           !
@@ -148,14 +145,19 @@ MODULE mod_iceplume
 ! mAm           - background melt rate [m^3 s^-1]                     !
 !                                                                     !
 ! dz            - RHO layer thickness [m]                             !
-! tB            - ice/water boundary temperature [degC]               !
-! sB            - ice/water boundary salinity [PSU]                   !
 !                                                                     !
-! PASSIVE TRACERS                                                     !
+! Passive tracers                                                     !
 ! trc           - passive tracer concentration                        !
 ! trcAm         - ambient passive tracer concentration                !
+! trcB          - meltwater passive tracer concentration              !
 ! trcCum        - accumulative passive tracer concentration           !
 ! trcIni        - initial passive tracer concentration in discharge   !
+# ifdef ICEPLUME_VIRTUAL_MIX
+!                                                                     !
+! For calculation of virtual tracer flux                              !
+! fW            - vertical volume flux through omega surface          !
+! newTrc        - updated tracer concentration                        !
+# endif
 !                                                                     !
 ! ====================================================================!
 !
@@ -205,15 +207,21 @@ MODULE mod_iceplume
 ! Other profiles.
 !
     real(r8), pointer :: dz(:, :)
-    real(r8), pointer :: tB(:, :)
-    real(r8), pointer :: sB(:, :)
 !
 ! Passive tracer concentration.
 !
     real(r8), pointer :: trcAm(:, :, :)
+    real(r8), pointer :: trcB(:, :, :)
     real(r8), pointer :: trc(:, :)
     real(r8), pointer :: trcCum(:, :)
     real(r8), pointer :: trcIni(:, :)
+# ifdef ICEPLUME_VIRTUAL_MIX
+!
+! For calculation of virtual tracer flux.
+!
+    real(r8), pointer :: fW(:, :)
+    real(r8), pointer :: newTrc(:, :, :)
+# endif
   END TYPE T_PLUME
 !
   TYPE (T_PLUME), allocatable :: PLUME(:)
@@ -227,43 +235,47 @@ MODULE mod_iceplume
 !
 ! Allocate profiles
 !
-        allocate( PLUME(ng) % dir(Nsrc(ng)) )
+        allocate( PLUME(ng) % dir(1:Nsrc(ng)) )
 !
-        allocate( PLUME(ng) % zR(Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % tAm(Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % sAm(Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % vAm(Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % wAm(Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % tpAm(Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % rhoAm(Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % zR    (Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % tAm   (Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % sAm   (Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % vAm   (Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % wAm   (Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % tpAm  (Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % rhoAm (Nsrc(ng), N(ng)) )
 !
-        allocate( PLUME(ng) % zW(Nsrc(ng), 0:N(ng)) )
-        allocate( PLUME(ng) % f(Nsrc(ng), 0:N(ng)) )
-        allocate( PLUME(ng) % w(Nsrc(ng), 0:N(ng)) )
-        allocate( PLUME(ng) % t(Nsrc(ng), 0:N(ng)) )
-        allocate( PLUME(ng) % s(Nsrc(ng), 0:N(ng)) )
-        allocate( PLUME(ng) % a(Nsrc(ng), 0:N(ng)) )
-        allocate( PLUME(ng) % mInt(Nsrc(ng), 0:N(ng)) )
-        allocate( PLUME(ng) % rho(Nsrc(ng), 0:N(ng)) )
+        allocate( PLUME(ng) % zW   (Nsrc(ng), 0:N(ng)) )
+        allocate( PLUME(ng) % f    (Nsrc(ng), 0:N(ng)) )
+        allocate( PLUME(ng) % w    (Nsrc(ng), 0:N(ng)) )
+        allocate( PLUME(ng) % t    (Nsrc(ng), 0:N(ng)) )
+        allocate( PLUME(ng) % s    (Nsrc(ng), 0:N(ng)) )
+        allocate( PLUME(ng) % a    (Nsrc(ng), 0:N(ng)) )
+        allocate( PLUME(ng) % mInt (Nsrc(ng), 0:N(ng)) )
+        allocate( PLUME(ng) % rho  (Nsrc(ng), 0:N(ng)) )
 !
-        allocate( PLUME(ng) % lm(Nsrc(ng), 0:N(ng)) )
-        allocate( PLUME(ng) % lc(Nsrc(ng), 0:N(ng)) )
+        allocate( PLUME(ng) % lm (Nsrc(ng), 0:N(ng)) )
+        allocate( PLUME(ng) % lc (Nsrc(ng), 0:N(ng)) )
 !
-        allocate( PLUME(ng) % ent(Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % det(Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % detI(Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % ent  (Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % det  (Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % detI (Nsrc(ng), N(ng)) )
 !
-        allocate( PLUME(ng) % m(Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % mAm(Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % m   (Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % mAm (Nsrc(ng), N(ng)) )
 !
-        allocate( PLUME(ng) % dz(Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % tB(Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % sB(Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % dz (Nsrc(ng), N(ng)) )
 !
-        allocate( PLUME(ng) % trcAm(Nsrc(ng), N(ng), NT(ng)) )
-        allocate( PLUME(ng) % trc(Nsrc(ng), NT(ng)) )
-        allocate( PLUME(ng) % trcCum(Nsrc(ng), NT(ng)) )
-        allocate( PLUME(ng) % trcIni(Nsrc(ng), NT(ng)) )
+        allocate( PLUME(ng) % trcAm  (Nsrc(ng), N(ng), NT(ng)) )
+        allocate( PLUME(ng) % trcB   (Nsrc(ng), N(ng), NT(ng)) )
+        allocate( PLUME(ng) % trc    (Nsrc(ng), NT(ng)) )
+        allocate( PLUME(ng) % trcCum (Nsrc(ng), NT(ng)) )
+        allocate( PLUME(ng) % trcIni (Nsrc(ng), NT(ng)) )
+# ifdef ICEPLUME_VIRTUAL_MIX
+!
+        allocate( PLUME(ng) % fW   (Nsrc(ng), 0:N(ng)) )
+        allocate( PLUME(ng) % newTrc (Nsrc(ng), NT(ng), N(ng)) )
+# endif
     END SUBROUTINE allocate_iceplume
 #endif
 END

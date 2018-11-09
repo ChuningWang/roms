@@ -1,19 +1,11 @@
 #include "cppdefs.h"
-MODULE iceplume_spread_mod
-#ifdef ICEPLUME_spread
+#ifdef ICEPLUME_SPREAD
 !
 !=======================================================================
 !                                                                      !
 !  This subroutine spreads the iceplume detrainment in several grids.  !
 !                                                                      !
 !=======================================================================
-!
-implicit none
-!
-PRIVATE
-PUBLIC :: iceplume_spread
-!
-CONTAINS
 !
 !***********************************************************************
 SUBROUTINE iceplume_spread (ng, tile)
@@ -105,4 +97,3 @@ SUBROUTINE iceplume_spread_tile(ng, tile)
   ENDIF
 END SUBROUTINE iceplume_spread_tile
 #endif
-END MODULE iceplume_spread_mod

@@ -7,11 +7,29 @@
 !                                                                   !
 ! ==================================================================!
 !
-SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, fIni, tIni, sIni)
+SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
+                       & fIni, tIni, sIni,    &
+                       & sgTyp, sgDep, sgLen)
 !
   USE mod_iceplume
   implicit none
 !
+! ==================================================================!
+!                                                                   !
+! Input variables:                                                  !
+!                                                                   !
+! ==================================================================!
+!                                                                   !
+! ng      - grid identifier                                         !
+! I       - point source index identifier                           !
+! dx, dy  - grid length [m]                                         !
+! fIni    - subglacial runoff volume flux [m^3 s^-1]                !
+! tIni    - subglacial runoff temperature [degC]                    !
+! sIni    - subglacial runoff salinity [PSU]                        !
+! sgTyp   - subglacial runoff type identifier                       !
+! sgDep   - subglacial runoff inject depth [m]                      !
+! sgLen   - subglacial runoff discharge length [m]                  !
+!                                                                   !
 ! ==================================================================!
 !                                                                   !
 ! Local variables:                                                  !
@@ -35,7 +53,9 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, fIni, tIni, sIni)
 !
   integer, intent(in) :: ng, I
   real(r8), intent(in) :: dx, dy
-  real(r8) :: fIni, tIni, sIni
+  real(r8), intent(inout) :: fIni, tIni, sIni
+  integer, intent(in) :: sgTyp
+  real(r8), intent(in) :: sgDep, sgLen
   integer :: iceDepthK, plumeDepthK
   integer :: K, iTracer
   real(r8) :: RHO
@@ -73,11 +93,11 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, fIni, tIni, sIni)
 ! ==================================================================!
 !
   iceDepthK = -1
-  IF (iceDepth .GE. 0) THEN
+  IF (sgDep .GE. 0) THEN
     iceDepthK = 0
   ELSE
     DO K = 0, N(ng)
-      IF (PLUME(ng) % zW(I, K) .GE. iceDepth) THEN
+      IF (PLUME(ng) % zW(I, K) .GE. sgDep) THEN
         iceDepthK = K
         EXIT
       ENDIF
@@ -94,7 +114,9 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, fIni, tIni, sIni)
 !
 ! Run the plume model
 !
-    CALL ICEPLUME_PLUME_MODEL(ng, I, iceDepthK, fIni, tIni, sIni)
+    CALL ICEPLUME_PLUME_MODEL(ng, I, iceDepthK,     &
+                            & fIni, tIni, sIni,     &
+                            & sgTyp, sgLen)
 !
 ! Calculate volume flux differential to give entrainment / extrainment
 ! First clear ent / det
@@ -224,6 +246,14 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, fIni, tIni, sIni)
 !                                                                   !
 ! ==================================================================!
 !
+! Initiate
+!
+  DO K = 1, N(ng)
+    DO iTracer = 1, NT(ng)
+      PLUME(ng) % trcB(I, K, iTracer) = 0.0d0
+    ENDDO
+  ENDDO
+!
   DO K = 1, N(ng)
 !
 ! Check if we are above glacier grounding depth
@@ -275,13 +305,13 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, fIni, tIni, sIni)
         meanVel = SQRT((PLUME(ng) % vAm(I, K))**2 + &
           &            (PLUME(ng) % wAm(I, K))**2)
         depth = 0.5d0*(PLUME(ng) % zW(I, K-1) + PLUME(ng) % zW(I, K))
-        CALL ICEPLUME_MELTRATE(PLUME(ng) % tAm(I, K), &
-          &                    PLUME(ng) % sAm(I, K), &
-          &                    meanVel,               &
-          &                    PLUME(ng) % zR(I, K),  &
-          &                    mAm,                   &
-          &                    PLUME(ng) % sB(I, K),  &
-          &                    PLUME(ng) % tB(I, K))
+        CALL ICEPLUME_MELTRATE(PLUME(ng) % tAm(I, K),           &
+          &                    PLUME(ng) % sAm(I, K),           &
+          &                    meanVel,                         &
+          &                    PLUME(ng) % zR(I, K),            &
+          &                    mAm,                             &
+          &                    PLUME(ng) % trcB(I, K, isalt),   &
+          &                    PLUME(ng) % trcB(I, K, itemp))
         PLUME(ng) % mAm(I, K) = mAm*plumeAreaOutCell
       ELSE
         PLUME(ng) % mAm(I, K) = 0.d0
@@ -332,6 +362,9 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, fIni, tIni, sIni)
             & PLUME(ng) % trcCum(I, iTracer) +      &
             & PLUME(ng) % trcIni(I, iTracer) * fIni
         ENDDO
+        IF (useBkgMelt .AND. useMeltTracers) THEN
+          PLUME(ng) % trcCum(I, NT(ng)) = 0.0d0
+        ENDIF
       ENDIF
 !
 ! Add up total sum of each tracer in plume
@@ -354,7 +387,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, fIni, tIni, sIni)
           & PLUME(ng) % trcCum(I, iTracer) / detr
       ENDDO
 !
-! If use melt water tracer, calculate tracer concentration
+! If use melt water tracer, rewrite tracer concentration
 !
       IF (useMeltTracers) THEN
         PLUME(ng) % trcCum(I, NT(ng)-1) = 0.0d0
@@ -375,7 +408,9 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy, fIni, tIni, sIni)
 ! If use background melt tracer, rewrite tracer concentration
 !
   IF (useBkgMelt .AND. useTracers .AND. useMeltTracers) THEN
-    PLUME(ng) % trc(I, NT(ng)) = PLUME(ng) % trcIni(I, NT(ng))
+    DO K = iceDepthK+1, N(ng)
+      PLUME(ng) % trcB(I, K, NT(ng)) = PLUME(ng) % trcIni(I, NT(ng))
+    ENDDO
   ENDIF
 END SUBROUTINE ICEPLUME_CALC
 !
