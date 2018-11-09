@@ -146,14 +146,14 @@ SUBROUTINE iceplume_tile(ng, tile,                                 &
             & (rmask(Isrc, Jsrc-1) .EQ. 1)) THEN
             Jsrc = Jsrc-1
             D2src = -1
-          ELSEIF ((rmask(Isrc, Jsrc  ) .EQ. 0) .AND. &
-                & (rmask(Isrc, Jsrc-1) .EQ. 1)) THEN
+          ELSEIF ((rmask(Isrc, Jsrc  ) .EQ. 1) .AND. &
+                & (rmask(Isrc, Jsrc-1) .EQ. 0)) THEN
             D2src = 1
           ELSE
             D2src = 0
           ENDIF
         ENDIF
-        PLUME(ng) % dir = real(D2src)
+        PLUME(ng) % dir(is) = real(D2src)
 !
 ! Get grid dimensions
 !
