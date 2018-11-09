@@ -210,22 +210,71 @@ SUBROUTINE iceplume_tile (ng, tile,                                     &
 !                                                                   !
 ! ==================================================================!
 !
-      PLUME(ng) % fW(is, 0) = 0.0d0
-      DO K = 1, N(ng)
-        PLUME(ng) % fW(is, K) = SUM( &
-          & PLUME(ng) % det(is, 1:K) + PLUME(ng) % ent(is, 1:K)+ &
-          & PLUME(ng) % mAm(is, 1:K))
-      ENDDO
+        PLUME(ng) % fW(is, 0) = 0.0d0
+        DO itrc = 1, NT(ng)
+          PLUME(ng) % fC(is, 0    , itrc) = 0.0d0
+          PLUME(ng) % fC(is, N(ng), itrc) = 0.0d0
+        ENDDO
+        PLUME(ng) % zWNew(is, 0) = PLUME(ng) % zW(is, 0)
 !
-! Subtract the vertical velocities of the moving S-coordinates.
+        DO K = 1, N(ng)
+          PLUME(ng) % fW(is, K) = SUM( &
+            & PLUME(ng) % det(is, 1:K) + PLUME(ng) % ent(is, 1:K) +   &
+            & PLUME(ng) % mAm(is, 1:K))
+        ENDDO
 !
-      cff1 = PLUME(ng) % fW(is, N(ng))/ &
-        & (PLUME(ng) % zW(is, N(ng))-PLUME(ng) % zW(is, 0))
-      DO K = 1, N(ng)
-        PLUME(ng) % fW(is, K) = PLUME(ng) % fW(is, K) - &
-          & cff1*(PLUME(ng) % zW(is, K)-PLUME(ng) % zW(is, 0))
-      ENDDO
-      if (is.eq.2) write(cff1)
+! Calculate tracer flux through omega surface.
+!
+        DO K = 1, N(ng)-1
+          DO itrc = 1, NT(ng)
+          PLUME(ng) % fC(is, K, itrc) =               &
+            &   (MAX(PLUME(ng) % fW(is, K), 0.0d0)*   &
+            &    PLUME(ng) % trcAm(is, K  , itrc))+   &
+            &   (MIN(PLUME(ng) % fW(is, K), 0.0d0)*   &
+            &    PLUME(ng) % trcAm(is, K+1, itrc))
+          ENDDO
+        ENDDO
+!
+! Calculate tracer concentration.
+!
+        DO K = 1, N(ng)
+          cff  = dx*dy*PLUME(ng) % dz(is, K)
+          cff1 = (PLUME(ng) % fW(is, K) - PLUME(ng) % fW(is, K-1))* &
+            &    dt(ng)
+          DO itrc = 1, NT(ng)
+            cff2 = ((PLUME(ng) % fC(is, K-1, itrc)-         &
+              &      PLUME(ng) % fC(is, K  , itrc))+        &
+              &     (PLUME(ng) % det(is, K)*                &
+              &      PLUME(ng) % trc(is, itrc)+             &
+              &      PLUME(ng) % ent(is, K)*                &
+              &      PLUME(ng) % trcAm(is, K, itrc)+        &
+              &      PLUME(ng) % mAm(is, K)*                &
+              &      PLUME(ng) % trcB(is, K, itrc)))*dt(ng)
+            PLUME(ng) % dzNew(is, K) = PLUME(ng) % dz(is, K) +  &
+              &                        cff1/(dx*dy)
+            PLUME(ng) % trcNew(is, K, itrc) =                   &
+              & (PLUME(ng) % trcAm(is, K, itrc)*cff + cff2) /   &
+              & (cff + cff1)
+          ENDDO
+        ENDDO
+        if ((is.eq.2)) then
+          write(*, *) PLUME(ng) % dz(is, :)
+          write(*, *) PLUME(ng) % dzNew(is, :)
+          write(*, *) PLUME(ng) % trcNew(is, :, 3)
+        endif
+!
+! Correction for grid streching.
+!
+        DO K = 1, N(ng)
+          cff = PLUME(ng) % zW(is, N(ng))-PLUME(ng) % zW(is, 0)
+          cff1 = PLUME(ng)
+        ENDDO
+! NOTE:
+! Dont forget to ubtract the vertical velocities of the moving
+! S-coordinates.
+!        cff1 = 1.0d0/(PLUME(ng) % zW(is, N(ng))-PLUME(ng) % zW(is, 0))
+!          PLUME(ng) % fW(is, K) = PLUME(ng) % fW(is, K)*              &
+!            & (1-(PLUME(ng) % zW(is, K)-PLUME(ng) % zW(is, 0))*cff1)
 # endif
       ENDIF
     ENDDO
