@@ -82,6 +82,9 @@
       USE mod_param
       USE mod_scalars
       USE mod_sources
+!# ifdef ICEPLUME
+!      USE mod_iceplume, ONLY : PLUME
+!# endif
 !
       USE bc_3d_mod, ONLY : bc_w3d_tile
 # ifdef DISTRIBUTE
@@ -173,6 +176,25 @@
             END IF
           END DO
         END IF
+!# if defined ICEPLUME && defined ICEPLUME_VIRTUAL_MIX
+!!----- iceplume model here (Chuning Wang) ------------------------------
+!        DO i=Istr,Iend
+!          DO is=1,Nsrc(ng)
+!            ii=SOURCES(ng)%Isrc(is)
+!            jj=SOURCES(ng)%Jsrc(is)
+!            IF (((IstrR.le.ii).and.(ii.le.IendR)).and.                  &
+!     &          ((JstrR.le.jj).and.(jj.le.JendR)).and.                  &
+!     &          (j.eq.jj).and.(i.eq.ii)) THEN
+!              DO k=1,N(ng)
+!                W(ii,jj,k)=W(ii,jj,k)+                                  &
+!     &            SUM(PLUME(ng)%mAm(is,1:k)+                            &
+!     &                PLUME(ng)%det(is,1:k)+PLUME(ng)%ent(is,1:k))
+!              END DO
+!            END IF
+!          END DO
+!        END DO
+!!-----------------------------------------------------------------------
+!# endif
 !
         DO i=Istr,Iend
           wrk(i)=W(i,j,N(ng))/(z_w(i,j,N(ng))-z_w(i,j,0))

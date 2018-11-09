@@ -150,12 +150,6 @@
 # endif
       USE strings_mod,          ONLY : FoundError
       USE wvelocity_mod,        ONLY : wvelocity
-# ifdef ICEPLUME
-      USE iceplume_mod,         ONLY : iceplume
-#  ifdef ICEPLUME_SPREAD
-      USE iceplume_spread_mod,         ONLY : iceplume_spread
-#  endif
-# endif
 !
       implicit none
 !
@@ -251,13 +245,11 @@
               ng=GridNumber(ig,nl)
               DO tile=first_tile(ng),last_tile(ng),+1
                 CALL set_data (ng, tile)
-# ifdef ICEPLUME
+# if defined SOLVE3D && defined ICEPLUME
                 CALL iceplume (ng, tile)
-#  ifdef ICEPLUME_SPREAD
-                CALL iceplume_spread (ng, tile)
-#  endif
 # endif
               END DO
+
 !$OMP BARRIER
             END DO
             IF (FoundError(exit_flag, NoError, __LINE__,                &

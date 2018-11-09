@@ -311,7 +311,7 @@
 # endif
       real(r8), parameter :: eps = 1.0E-16_r8
 
-      real(r8) :: cff, cff1, cff2, cff3, cff4     ,    cff5, cff6
+      real(r8) :: cff, cff1, cff2, cff3, cff4
 
       real(r8), dimension(IminS:ImaxS,0:N(ng)) :: CF
       real(r8), dimension(IminS:ImaxS,0:N(ng)) :: DC
@@ -563,38 +563,28 @@
 !
           IF (LuvSrc(ng).and.ANY(LtracerSrc(:,ng))) THEN
             DO is=1,Nsrc(ng)
+# ifdef ICEPLUME
+            IF (INT(PLUME(ng)%dir(is)).ne.0) THEN
+# endif
               Isrc=SOURCES(ng)%Isrc(is)
               Jsrc=SOURCES(ng)%Jsrc(is)
               IF (LtracerSrc(itrc,ng).and.                              &
      &            ((Istr.le.Isrc).and.(Isrc.le.Iend+1)).and.            &
      &            ((Jstr.le.Jsrc).and.(Jsrc.le.Jend+1))) THEN
                 IF (INT(SOURCES(ng)%Dsrc(is)).eq.0) THEN
-#  ifdef ICEPLUME
+#  if defined ICEPLUME && !defined ICEPLUME_VIRTUAL_MIX
 !----- iceplume model here (Chuning Wang) ------------------------------
-#  ifdef ICEPLUME_MELT
-                    IF (itrc.eq.itemp) THEN
-                      cff1 = PLUME(ng)%mAm(is,k)*PLUME(ng)%tB(is,k)
-                    ELSEIF (itrc.eq.isalt) THEN
-                      cff1 = PLUME(ng)%mAm(is,k)*PLUME(ng)%sB(is,k)
-                    ELSE
-                      cff1 = 0.0_r8
-                    END IF
-#  else
-                    cff1 = 0.0_r8
-#  endif
                     FX(Isrc,Jsrc)=SOURCES(ng)%Qsrc(is,k)*               &
+#  ifdef ONE_TRACER_SOURCE
+     &                SOURCES(ng)%Tsrc(     itrc)+PLUME(ng)%dir(is)*    &
+#  elif defined TWO_D_TRACER_SOURCE
+     &                SOURCES(ng)%Tsrc(is,  itrc)+PLUME(ng)%dir(is)*    &
+#  else
      &                SOURCES(ng)%Tsrc(is,k,itrc)+PLUME(ng)%dir(is)*    &
+#  endif
                      (PLUME(ng)%det(is,k)*PLUME(ng)%trc(is,itrc)+       &
      &                PLUME(ng)%ent(is,k)*PLUME(ng)%trcAm(is,k,itrc)+   &
-     &                cff1)
-#  ifdef ICEPLUME_TRACER
-#   if defined ICEPLUME_MELT && defined ICEPLUME_MELT_TRACER
-                    IF (itrc.eq.NT(ng)) THEN
-                      FX(Isrc,Jsrc)=PLUME(ng)%dir(is)*                  &
-     &                  PLUME(ng)%mAm(is,k)*PLUME(ng)%trc(is,itrc)
-                    END IF
-#   endif
-#  endif
+     &                PLUME(ng)%mAm(is,k)*PLUME(ng)%trcB(is,k,itrc))
 !-----------------------------------------------------------------------
 #  else
                   FX(Isrc,Jsrc)=Huon(Isrc,Jsrc,k)*                      &
@@ -607,32 +597,19 @@
 #  endif
 #  endif
                 ELSE
-#  ifdef ICEPLUME
+#  if defined ICEPLUME && !defined ICEPLUME_VIRTUAL_MIX
 !----- iceplume model here (Chuning Wang) ------------------------------
-#  ifdef ICEPLUME_MELT
-                    IF (itrc.eq.itemp) THEN
-                      cff1 = PLUME(ng)%mAm(is,k)*PLUME(ng)%tB(is,k)
-                    ELSEIF (itrc.eq.isalt) THEN
-                      cff1 = PLUME(ng)%mAm(is,k)*PLUME(ng)%sB(is,k)
-                    ELSE
-                      cff1 = 0.0_r8
-                    END IF
-#  else
-                    cff1 = 0.0_r8
-#  endif
                     FE(Isrc,Jsrc)=SOURCES(ng)%Qsrc(is,k)*               &
+#  ifdef ONE_TRACER_SOURCE
+     &                SOURCES(ng)%Tsrc(     itrc)+PLUME(ng)%dir(is)*    &
+#  elif defined TWO_D_TRACER_SOURCE
+     &                SOURCES(ng)%Tsrc(is,  itrc)+PLUME(ng)%dir(is)*    &
+#  else
      &                SOURCES(ng)%Tsrc(is,k,itrc)+PLUME(ng)%dir(is)*    &
+#  endif
                      (PLUME(ng)%det(is,k)*PLUME(ng)%trc(is,itrc)+       &
      &                PLUME(ng)%ent(is,k)*PLUME(ng)%trcAm(is,k,itrc)+   &
-     &                cff1)
-#  ifdef ICEPLUME_TRACER
-#   if defined ICEPLUME_MELT && defined ICEPLUME_MELT_TRACER
-                    IF (itrc.eq.NT(ng)) THEN
-                      FE(Isrc,Jsrc)=PLUME(ng)%dir(is)*                  &
-     &                  PLUME(ng)%mAm(is,k)*PLUME(ng)%trc(is,itrc)
-                    END IF
-#   endif
-#  endif
+     &                PLUME(ng)%mAm(is,k)*PLUME(ng)%trcB(is,k,itrc))
 !-----------------------------------------------------------------------
 #  else
                   FE(Isrc,Jsrc)=Hvom(Isrc,Jsrc,k)*                      &
@@ -646,6 +623,9 @@
 #  endif
                 END IF
               END IF
+# ifdef ICEPLUME
+            END IF
+# endif
             END DO
           END IF
 !
@@ -898,12 +878,13 @@
 !  (Notice the j-loop is pipelined above).
 !
           IF (LwSrc(ng).and.ANY(LtracerSrc(:,ng))) THEN
+          DO i=Istr,Iend
             DO is=1,Nsrc(ng)
               Isrc=SOURCES(ng)%Isrc(is)
               Jsrc=SOURCES(ng)%Jsrc(is)
               IF (LtracerSrc(itrc,ng).and.                              &
      &            ((Istr.le.Isrc).and.(Isrc.le.Iend+1)).and.            &
-     &            (j.eq.Jsrc)) THEN
+     &            ((j.eq.Jsrc).and.(i.eq.Isrc))) THEN
                 DO k=1,N(ng)-1
                   FC(Isrc,k)=FC(Isrc,k)+0.5_r8*                         &
 #  ifdef ONE_TRACER_SOURCE
@@ -925,7 +906,52 @@
                 END DO
               END IF
             END DO
+          END DO
           END IF
+!# if defined ICEPLUME && defined ICEPLUME_VIRTUAL_MIX
+!!----- iceplume model here (Chuning Wang) ------------------------------
+!          DO i=Istr,Iend
+!            DO is=1,Nsrc(ng)
+!              Isrc=SOURCES(ng)%Isrc(is)
+!              Jsrc=SOURCES(ng)%Jsrc(is)
+!              IF (LtracerSrc(itrc,ng).and.                              &
+!     &            ((IstrR.le.Isrc).and.(Isrc.le.IendR)).and.            &
+!     &            ((j.eq.Jsrc).and.(i.eq.Isrc))) THEN
+!                DO k=1,N(ng)
+!                  FP(i,k) = 0.0_r8
+!#  ifdef ICEPLUME_MELT
+!                  IF (itrc.eq.itemp) THEN
+!                    cff1 = PLUME(ng)%mAm(is,k)*PLUME(ng)%tB(is,k)
+!                  ELSEIF (itrc.eq.isalt) THEN
+!                    cff1 = PLUME(ng)%mAm(is,k)*PLUME(ng)%sB(is,k)
+!                  ELSE
+!                    cff1 = 0.0_r8
+!                  END IF
+!#  else
+!                  cff1 = 0.0_r8
+!#  endif
+!                  FC2(i,k)=                                             &
+!     &        (PLUME(ng)%det(is,k)*PLUME(ng)%trc(is,itrc)+              &
+!     &         PLUME(ng)%ent(is,k)*PLUME(ng)%trcAm(is,k,itrc)+          &
+!     &         cff1)
+!#  ifdef ICEPLUME_TRACER
+!#   if defined ICEPLUME_MELT && defined ICEPLUME_MELT_TRACER
+!                  IF (itrc.eq.NT(ng)) THEN
+!                    FC2(i,k)=                                           &
+!     &                (PLUME(ng)%mAm(is,k)*PLUME(ng)*trc(is,itrc))
+!                  ENDIF
+!#   endif
+!#  endif
+!                  IF ((is.eq.2).and.(itrc.eq.3)) THEN
+!                    write(*, *)  i,j,FC2(i,k),FC(i,k), &
+!                      & PLUME(ng)%ent(is,k),W(i,j,k)
+!                  ENDIF
+!                END DO
+!              END IF
+!            END DO
+!          END DO
+!!-----------------------------------------------------------------------
+!# endif
 !
 ! Time-step vertical advection of tracers (Tunits).
 !

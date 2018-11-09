@@ -1199,10 +1199,10 @@
      &                     __FILE__)) RETURN
           END IF
         END DO
-
 #  endif
 
       END IF
+
 # endif
 
 # ifdef HYPOXIA_SRM

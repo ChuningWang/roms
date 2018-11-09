@@ -929,6 +929,20 @@
 !
 !  Apply mass point sources (volume vertical influx), if any.
 !
+# if defined ICEPLUME && defined ICEPLUME_VIRTUAL_MIX
+!----- iceplume model here (Chuning Wang) ------------------------------
+      DO is=1,Nsrc(ng)
+        i=SOURCES(ng)%Isrc(is)
+        j=SOURCES(ng)%Jsrc(is)
+        IF (((IstrR.le.i).and.(i.le.IendR)).and.                        &
+     &      ((JstrR.le.j).and.(j.le.JendR))) THEN
+          zeta(i,j,knew)=zeta(i,j,knew)+                                &
+     &                   ABS(SOURCES(ng)%SGbar(is))*                    &
+     &                   pm(i,j)*pn(i,j)*dtfast(ng)
+        END IF
+      END DO
+!-----------------------------------------------------------------------
+# endif
       IF (LwSrc(ng)) THEN
         DO is=1,Nsrc(ng)
           i=SOURCES(ng)%Isrc(is)
@@ -936,13 +950,7 @@
           IF (((IstrR.le.i).and.(i.le.IendR)).and.                      &
      &        ((JstrR.le.j).and.(j.le.JendR))) THEN
             zeta(i,j,knew)=zeta(i,j,knew)+                              &
-# ifdef ICEPLUME
-                          (SOURCES(ng)%Qbar(is)+                        &
-     &                     ABS(SOURCES(ng)%SGbar(is))*                  &
-     &                     PLUME(ng)%dir(is))*                          &
-# else
      &                     SOURCES(ng)%Qbar(is)*                        &
-# endif
      &                     pm(i,j)*pn(i,j)*dtfast(ng)
           END IF
         END DO
@@ -2543,30 +2551,40 @@
       END DO
       IF (LuvSrc(ng)) THEN
         DO is=1,Nsrc(ng)
+# ifdef ICEPLUME
+        IF (INT(PLUME(ng)%dir(is)).ne.0) THEN
+# endif
           i=SOURCES(ng)%Isrc(is)
           j=SOURCES(ng)%Jsrc(is)
           IF (((IstrR.le.i).and.(i.le.IendR)).and.                      &
      &        ((JstrR.le.j).and.(j.le.JendR))) THEN
             IF (INT(SOURCES(ng)%Dsrc(is)).eq.0) THEN
               cff=1.0_r8/(on_u(i,j)*0.5_r8*(Dnew(i-1,j)+Dnew(i,j)))
-# ifdef ICEPLUME
+# if defined ICEPLUME && !defined ICEPLUME_VIRTUAL_MIX
+!----- iceplume model here (Chuning Wang) ------------------------------
               ubar(i,j,knew)=                                           &
      &          (SOURCES(ng)%Qbar(is)+                                  &
      &           ABS(SOURCES(ng)%SGbar(is))*PLUME(ng)%dir(is))*cff
+!-----------------------------------------------------------------------
 # else
               ubar(i,j,knew)=SOURCES(ng)%Qbar(is)*cff
 # endif
             ELSE
               cff=1.0_r8/(om_v(i,j)*0.5_r8*(Dnew(i,j-1)+Dnew(i,j)))
-# ifdef ICEPLUME
+# if defined ICEPLUME && !defined ICEPLUME_VIRTUAL_MIX
+!----- iceplume model here (Chuning Wang) ------------------------------
               vbar(i,j,knew)=                                           &
      &          (SOURCES(ng)%Qbar(is)+                                  &
      &           ABS(SOURCES(ng)%SGbar(is))*PLUME(ng)%dir(is))*cff
+!-----------------------------------------------------------------------
 # else
               vbar(i,j,knew)=SOURCES(ng)%Qbar(is)*cff
 # endif
             END IF
           END IF
+# ifdef ICEPLUME
+        END IF
+# endif
         END DO
       END IF
 !
