@@ -572,7 +572,7 @@
      &            ((Istr.le.Isrc).and.(Isrc.le.Iend+1)).and.            &
      &            ((Jstr.le.Jsrc).and.(Jsrc.le.Jend+1))) THEN
                 IF (INT(SOURCES(ng)%Dsrc(is)).eq.0) THEN
-#  if defined ICEPLUME && !defined ICEPLUME_VIRTUAL_MIX
+#  ifdef ICEPLUME
 !----- iceplume model here (Chuning Wang) ------------------------------
                     FX(Isrc,Jsrc)=SOURCES(ng)%Qsrc(is,k)*               &
 #  ifdef ONE_TRACER_SOURCE
@@ -597,7 +597,7 @@
 #  endif
 #  endif
                 ELSE
-#  if defined ICEPLUME && !defined ICEPLUME_VIRTUAL_MIX
+#  ifdef ICEPLUME
 !----- iceplume model here (Chuning Wang) ------------------------------
                     FE(Isrc,Jsrc)=SOURCES(ng)%Qsrc(is,k)*               &
 #  ifdef ONE_TRACER_SOURCE

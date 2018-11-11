@@ -932,13 +932,15 @@
 # if defined ICEPLUME && defined ICEPLUME_VIRTUAL_MIX
 !----- iceplume model here (Chuning Wang) ------------------------------
       DO is=1,Nsrc(ng)
-        i=SOURCES(ng)%Isrc(is)
-        j=SOURCES(ng)%Jsrc(is)
-        IF (((IstrR.le.i).and.(i.le.IendR)).and.                        &
-     &      ((JstrR.le.j).and.(j.le.JendR))) THEN
-          zeta(i,j,knew)=zeta(i,j,knew)+                                &
-     &                   ABS(SOURCES(ng)%SGbar(is))*                    &
-     &                   pm(i,j)*pn(i,j)*dtfast(ng)
+        IF (INT(PLUME(ng)%dir(is)).eq.0) THEN
+          i=SOURCES(ng)%Isrc(is)
+          j=SOURCES(ng)%Jsrc(is)
+          IF (((IstrR.le.i).and.(i.le.IendR)).and.                      &
+     &        ((JstrR.le.j).and.(j.le.JendR))) THEN
+            zeta(i,j,knew)=zeta(i,j,knew)+                              &
+     &                     ABS(SOURCES(ng)%SGbar(is))*                  &
+     &                     pm(i,j)*pn(i,j)*dtfast(ng)
+          END IF
         END IF
       END DO
 !-----------------------------------------------------------------------
@@ -2560,7 +2562,7 @@
      &        ((JstrR.le.j).and.(j.le.JendR))) THEN
             IF (INT(SOURCES(ng)%Dsrc(is)).eq.0) THEN
               cff=1.0_r8/(on_u(i,j)*0.5_r8*(Dnew(i-1,j)+Dnew(i,j)))
-# if defined ICEPLUME && !defined ICEPLUME_VIRTUAL_MIX
+# ifdef ICEPLUME
 !----- iceplume model here (Chuning Wang) ------------------------------
               ubar(i,j,knew)=                                           &
      &          (SOURCES(ng)%Qbar(is)+                                  &
@@ -2571,7 +2573,7 @@
 # endif
             ELSE
               cff=1.0_r8/(om_v(i,j)*0.5_r8*(Dnew(i,j-1)+Dnew(i,j)))
-# if defined ICEPLUME && !defined ICEPLUME_VIRTUAL_MIX
+# ifdef ICEPLUME
 !----- iceplume model here (Chuning Wang) ------------------------------
               vbar(i,j,knew)=                                           &
      &          (SOURCES(ng)%Qbar(is)+                                  &
