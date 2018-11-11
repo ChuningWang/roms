@@ -60,6 +60,9 @@ SUBROUTINE iceplume_tile (ng, tile,                                     &
   real(r8) :: pr, prRef
   real(r8) :: dx, dy
   real(r8) :: cff, cff1, cff2, cff3, cff4
+# ifdef ICEPLUME_VIRTUAL_MIX
+  real(r8), dimension(0:N(ng)) :: dzNew, zWNew, zLNew
+# endif
 !
 # include "set_bounds.h"
 !
@@ -210,71 +213,83 @@ SUBROUTINE iceplume_tile (ng, tile,                                     &
 !                                                                   !
 ! ==================================================================!
 !
-        PLUME(ng) % fW(is, 0) = 0.0d0
-        DO itrc = 1, NT(ng)
-          PLUME(ng) % fC(is, 0    , itrc) = 0.0d0
-          PLUME(ng) % fC(is, N(ng), itrc) = 0.0d0
-        ENDDO
-        PLUME(ng) % zWNew(is, 0) = PLUME(ng) % zW(is, 0)
+! Calculate new box vertical boundary.
 !
+        zLNew(0) = PLUME(ng) % zW(is, 0)
         DO K = 1, N(ng)
-          PLUME(ng) % fW(is, K) = SUM( &
-            & PLUME(ng) % det(is, 1:K) + PLUME(ng) % ent(is, 1:K) +   &
-            & PLUME(ng) % mAm(is, 1:K))
-        ENDDO
-!
-! Calculate tracer flux through omega surface.
-!
-        DO K = 1, N(ng)-1
-          DO itrc = 1, NT(ng)
-          PLUME(ng) % fC(is, K, itrc) =               &
-            &   (MAX(PLUME(ng) % fW(is, K), 0.0d0)*   &
-            &    PLUME(ng) % trcAm(is, K  , itrc))+   &
-            &   (MIN(PLUME(ng) % fW(is, K), 0.0d0)*   &
-            &    PLUME(ng) % trcAm(is, K+1, itrc))
-          ENDDO
+          dzNew(K) = PLUME(ng) % dz(is, K) +                &
+            &        (PLUME(ng) % det(is, K) +              &
+            &         PLUME(ng) % ent(is, K) +              &
+            &         PLUME(ng) % mAm(is, K))*dt(ng)/(dx*dy)
+          zLNew(K) = zLNew(K-1) + dzNew(K)
         ENDDO
 !
 ! Calculate tracer concentration.
 !
         DO K = 1, N(ng)
           cff  = dx*dy*PLUME(ng) % dz(is, K)
-          cff1 = (PLUME(ng) % fW(is, K) - PLUME(ng) % fW(is, K-1))* &
-            &    dt(ng)
+          cff1 = (PLUME(ng) % det(is, K) + PLUME(ng) % ent(is, K) + &
+            &     PLUME(ng) % mAm(is, K))*dt(ng)
           DO itrc = 1, NT(ng)
-            cff2 = ((PLUME(ng) % fC(is, K-1, itrc)-         &
-              &      PLUME(ng) % fC(is, K  , itrc))+        &
-              &     (PLUME(ng) % det(is, K)*                &
-              &      PLUME(ng) % trc(is, itrc)+             &
-              &      PLUME(ng) % ent(is, K)*                &
-              &      PLUME(ng) % trcAm(is, K, itrc)+        &
-              &      PLUME(ng) % mAm(is, K)*                &
-              &      PLUME(ng) % trcB(is, K, itrc)))*dt(ng)
-            PLUME(ng) % dzNew(is, K) = PLUME(ng) % dz(is, K) +  &
-              &                        cff1/(dx*dy)
+            cff2 = (PLUME(ng) % det(is, K)*                 &
+              &     PLUME(ng) % trc(is, itrc)+              &
+              &     PLUME(ng) % ent(is, K)*                 &
+              &     PLUME(ng) % trcAm(is, K, itrc)+         &
+              &     PLUME(ng) % mAm(is, K)*                 &
+              &     PLUME(ng) % trcB(is, K, itrc))*dt(ng)
             PLUME(ng) % trcNew(is, K, itrc) =                   &
               & (PLUME(ng) % trcAm(is, K, itrc)*cff + cff2) /   &
               & (cff + cff1)
           ENDDO
         ENDDO
-        if ((is.eq.2)) then
-          write(*, *) PLUME(ng) % dz(is, :)
-          write(*, *) PLUME(ng) % dzNew(is, :)
-          write(*, *) PLUME(ng) % trcNew(is, :, 3)
-        endif
 !
-! Correction for grid streching.
+! Correction for grid stretching.
+!
+        cff1 = PLUME(ng) % zW(is, N(ng)) - PLUME(ng) % zW(is, 0)
+        cff2 = zLNew(N(ng))              - PLUME(ng) % zW(is, 0)
+        DO K = 0, N(ng)
+          zWNew(K) = &
+            & (PLUME(ng) % zW(is, K)-zWNew(0))*cff2/cff1+zWNew(0)
+        ENDDO
+!
+        cff  = zWNew(1) - zWNew(0)
+        cff1 = MAX(zWNew(1) - zLNew(1), 0.0d0)
+        cff3 = cff - cff1
+        DO itrc = 1, NT(ng)
+          PLUME(ng) % trcNew(is, 1, itrc) =                  &
+            & (PLUME(ng) % trcNew(is, 1, itrc)*cff3 +        &
+            &  PLUME(ng) % trcNew(is, 2, itrc)*cff1) / cff
+        ENDDO
+!
+        cff  = zWNew(N(ng)) - zWNew(N(ng)-1)
+        cff2 = -MIN(zWNew(N(ng)-1)-zLNew(N(ng)-1), 0.0d0)
+        cff3 = cff - cff2
+        DO itrc = 1, NT(ng)
+          PLUME(ng) % trcNew(is, N(ng), itrc) =                   &
+            & (PLUME(ng) % trcNew(is, N(ng)  , itrc)*cff3 +       &
+            &  PLUME(ng) % trcNew(is, N(ng)-1, itrc)*cff2) / cff
+        ENDDO
+!
+        DO K = 2, N(ng)-1
+          cff  = zWNew(K) - zWNew(K-1)
+          cff1 = MAX(zWNew(K) - zLNew(K), 0.0d0)
+          cff2 = -MIN(zWNew(K-1)-zLNew(K-1), 0.0d0)
+          cff3 = cff - cff1 - cff2
+          DO itrc = 1, NT(ng)
+            PLUME(ng) % trcNew(is, K, itrc) =               &
+              & (PLUME(ng) % trcNew(is, K+1, itrc)*cff1 +   &
+              &  PLUME(ng) % trcNew(is, K-1, itrc)*cff2 +   &
+              &  PLUME(ng) % trcNew(is, K  , itrc)*cff3)/   &
+              & cff
+          ENDDO
+        ENDDO
 !
         DO K = 1, N(ng)
-          cff = PLUME(ng) % zW(is, N(ng))-PLUME(ng) % zW(is, 0)
-          cff1 = PLUME(ng)
+          DO itrc = 1, NT(ng)
+            OCEAN(ng) % t(Isrc, Jsrc, K, nstp(ng), itrc) =  &
+              & PLUME(ng) % trcNew(is, K, itrc)
+          ENDDO
         ENDDO
-! NOTE:
-! Dont forget to ubtract the vertical velocities of the moving
-! S-coordinates.
-!        cff1 = 1.0d0/(PLUME(ng) % zW(is, N(ng))-PLUME(ng) % zW(is, 0))
-!          PLUME(ng) % fW(is, K) = PLUME(ng) % fW(is, K)*              &
-!            & (1-(PLUME(ng) % zW(is, K)-PLUME(ng) % zW(is, 0))*cff1)
 # endif
       ENDIF
     ENDDO

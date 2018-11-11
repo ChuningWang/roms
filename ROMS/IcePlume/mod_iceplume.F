@@ -222,11 +222,11 @@ MODULE mod_iceplume
 !
 ! For calculation of virtual tracer flux.
 !
-    real(r8), pointer :: fW(:, :)
-    real(r8), pointer :: fC(:, :, :)
+!    real(r8), pointer :: fW(:, :)
+!    real(r8), pointer :: fC(:, :, :)
     real(r8), pointer :: trcNew(:, :, :)
-    real(r8), pointer :: dzNew(:, :)
-    real(r8), pointer :: zWNew(:, :)
+!    real(r8), pointer :: dzNew(:, :)
+!    real(r8), pointer :: zWNew(:, :)
 # endif
   END TYPE T_PLUME
 !
@@ -279,11 +279,11 @@ MODULE mod_iceplume
         allocate( PLUME(ng) % trcIni (Nsrc(ng), NT(ng)) )
 # ifdef ICEPLUME_VIRTUAL_MIX
 !
-        allocate( PLUME(ng) % fW     (Nsrc(ng), 0:N(ng)) )
-        allocate( PLUME(ng) % fC     (Nsrc(ng), 0:N(ng), NT(ng)) )
+!        allocate( PLUME(ng) % fW     (Nsrc(ng), 0:N(ng)) )
+!        allocate( PLUME(ng) % fC     (Nsrc(ng), 0:N(ng), NT(ng)) )
         allocate( PLUME(ng) % trcNew (Nsrc(ng), N(ng), NT(ng)) )
-        allocate( PLUME(ng) % dzNew  (Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % zWNew  (Nsrc(ng), 0:N(ng)) )
+!        allocate( PLUME(ng) % dzNew  (Nsrc(ng), N(ng)) )
+!        allocate( PLUME(ng) % zWNew  (Nsrc(ng), 0:N(ng)) )
 # endif
     END SUBROUTINE allocate_iceplume
 #endif

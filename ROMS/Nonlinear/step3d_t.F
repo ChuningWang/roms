@@ -1067,50 +1067,6 @@
             END DO
           END DO
           END IF
-!# if defined ICEPLUME && defined ICEPLUME_VIRTUAL_MIX
-!!----- iceplume model here (Chuning Wang) ------------------------------
-!          DO i=I_RANGE
-!            DO is=1,Nsrc(ng)
-!              Isrc=SOURCES(ng)%Isrc(is)
-!              Jsrc=SOURCES(ng)%Jsrc(is)
-!              IF (LtracerSrc(itrc,ng).and.                              &
-!#  ifdef TS_MPDATA
-!     &            ((IstrUm2.le.Isrc).and.(Isrc.le.Iendp2i)).and.        &
-!#  else
-!     &            ((IstrR.le.Isrc).and.(Isrc.le.IendR)).and.            &
-!#  endif
-!     &            ((j.eq.Jsrc).and.(i.eq.Isrc))) THEN
-!                DO k=1,N(ng)
-!                  FC2(i,k) = 0.0_r8
-!#  ifdef ICEPLUME_MELT
-!                  IF (itrc.eq.itemp) THEN
-!                    cff1 = PLUME(ng)%mAm(is,k)*PLUME(ng)%tB(is,k)
-!                  ELSEIF (itrc.eq.isalt) THEN
-!                    cff1 = PLUME(ng)%mAm(is,k)*PLUME(ng)%sB(is,k)
-!                  ELSE
-!                    cff1 = 0.0_r8
-!                  END IF
-!#  else
-!                  cff1 = 0.0_r8
-!#  endif
-!                  FC2(i,k)=                                             &
-!     &        (PLUME(ng)%det(is,k)*PLUME(ng)%trc(is,itrc)+              &
-!     &         PLUME(ng)%ent(is,k)*PLUME(ng)%trcAm(is,k,itrc)+          &
-!     &         cff1)
-!#  ifdef ICEPLUME_TRACER
-!#   if defined ICEPLUME_MELT && defined ICEPLUME_MELT_TRACER
-!                  IF (itrc.eq.NT(ng)) THEN
-!                    FC2(i,k)=                                           &
-!     &                (PLUME(ng)%mAm(is,k)*PLUME(ng)*trc(is,itrc))
-!                  ENDIF
-!#   endif
-!#  endif
-!                END DO
-!              END IF
-!            END DO
-!          END DO
-!!-----------------------------------------------------------------------
-!# endif
 !
           DO k=1,N(ng)
             DO i=I_RANGE
