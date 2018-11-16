@@ -75,17 +75,17 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, I, iceDepthK,     &
 ! Initial conditions                                                !
 ! ==================================================================!
 !
-  Y(1) = fIni  ! initial plume volume flux
-  Y(2) = wIni  ! initial vertical velocity
-  Y(3) = tIni  ! initial temperature
-  Y(4) = sIni  ! initial salinity
-  Y(5) = 0.0   ! integrated contact area
-  Y(6) = 0.0   ! integrated melt rate
+  Y(1)  = fIni  ! initial plume volume flux
+  Y(2)  = wIni  ! initial vertical velocity
+  Y(3)  = tIni  ! initial temperature
+  Y(4)  = sIni  ! initial salinity
+  Y(5)  = 0.0   ! integrated contact area
+  Y(6)  = 0.0   ! integrated melt rate
 !
-  Y(7) = REAL(ng)     ! fake variable to pass in ng
-  Y(8) = REAL(I)      ! fake variable to pass in I
-  Y(9) = REAL(sgTyp)  ! fake variable to pass in sgTyp
-  Y(9) = sgLen        ! fake variable to pass in sgTyp
+  Y(7)  = REAL(ng)     ! fake variable to pass in ng
+  Y(8)  = REAL(I)      ! fake variable to pass in I
+  Y(9)  = REAL(sgTyp)  ! fake variable to pass in sgTyp
+  Y(10) = sgLen        ! fake variable to pass in sgLen
 !
 ! Prepare profiles
 !
@@ -118,28 +118,10 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, I, iceDepthK,     &
   PLUME(ng) % a(I, iceDepthK) = Y(5)
   PLUME(ng) % mInt(I, iceDepthK) = Y(6)
   PLUME(ng) % rho(I, iceDepthK) = RHO(Y(3), Y(4), zIn)
-  SELECT CASE (sgTyp)
-    CASE (2)
-      CALL HALFCONE (Y(1)/Y(2),                       &
-        &            PLUME(ng) % lm(I, iceDepthK),    &
-        &            PLUME(ng) % lc(I, iceDepthK))
-    CASE (3)
-      CALL FINITE_LINE (Y(1)/Y(2), sgLen,             &
-        &               PLUME(ng) % lm(I, iceDepthK), &
-        &               PLUME(ng) % lc(I, iceDepthK))
-    CASE (4)
-      CALL SHEET (sgLen,                              &
-        &         PLUME(ng) % lm(I, iceDepthK),       &
-        &         PLUME(ng) % lc(I, iceDepthK))
-    CASE (5)
-      CALL FULLCONE (Y(1)/Y(2),                       &
-        &            PLUME(ng) % lm(I, iceDepthK),    &
-        &            PLUME(ng) % lc(I, iceDepthK))
-    CASE DEFAULT
-      CALL HALFCONE (Y(1)/Y(2),                       &
-        &            PLUME(ng) % lm(I, iceDepthK),    &
-        &            PLUME(ng) % lc(I, iceDepthK))
-  END SELECT
+!
+  CALL PLUME_METRICS (sgTyp, Y(1)/Y(2), sgLen,        &
+    &                 PLUME(ng) % lm(I, iceDepthK),   &
+    &                 PLUME(ng) % lc(I, iceDepthK))
 !
 ! ==================================================================!
 ! Move up through water column from lowest layer                    !
@@ -161,28 +143,9 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, I, iceDepthK,     &
                  & ISTATE, IOPT, RWORK, LRW, IWORK, &
                  & LIW, JEX, MF)
 !
-      SELECT CASE (sgTyp)
-        CASE (2)
-          CALL HALFCONE (Y(1)/Y(2),               &
-            &            PLUME(ng) % lm(I, K),    &
-            &            PLUME(ng) % lc(I, K))
-        CASE (3)
-          CALL FINITE_LINE (Y(1)/Y(2), sgLen,     &
-            &               PLUME(ng) % lm(I, K), &
-            &               PLUME(ng) % lc(I, K))
-        CASE (4)
-          CALL SHEET (sgLen,                      &
-            &         PLUME(ng) % lm(I, K),       &
-            &         PLUME(ng) % lc(I, K))
-        CASE (5)
-          CALL FULLCONE (Y(1)/Y(2),               &
-            &            PLUME(ng) % lm(I, K),    &
-            &            PLUME(ng) % lc(I, K))
-        CASE DEFAULT
-          CALL HALFCONE (Y(1)/Y(2),               &
-            &            PLUME(ng) % lm(I, K),    &
-            &            PLUME(ng) % lc(I, K))
-      END SELECT
+      CALL PLUME_METRICS (sgTyp, Y(1)/Y(2), sgLen,  &
+            &             PLUME(ng) % lm(I, K),     &
+            &             PLUME(ng) % lc(I, K))
 !
 ! ==================================================================!
 ! Test to see if neutral buoyancy has now been reached. If solver   !
@@ -318,18 +281,7 @@ SUBROUTINE GENERAL_PLUME_MODEL (NEQ, T, Y, YDOT)
 !
 ! Calculate plume metrics
 !
-SELECT CASE (sgTyp)
-  CASE (2)
-    CALL HALFCONE (Y(1)/Y(2), Lm, Lc)
-  CASE (3)
-    CALL FINITE_LINE (Y(1)/Y(2), sgLen, Lm, Lc)
-  CASE (4)
-    CALL SHEET (sgLen, Lm, Lc)
-  CASE (5)
-    CALL FULLCONE (Y(1)/Y(2), Lm, Lc)
-  CASE DEFAULT
-    CALL HALFCONE (Y(1)/Y(2), Lm, Lc)
-END SELECT
+  CALL PLUME_METRICS (sgTyp, Y(1)/Y(2), sgLen, Lm, Lc)
 !
 ! Equations for sB, tB and mdot
 !
@@ -374,74 +326,62 @@ END SUBROUTINE GENERAL_PLUME_MODEL
 !
 ! =========================================================================
 !
-SUBROUTINE HALFCONE (area, Lm, Lc)
+SUBROUTINE PLUME_METRICS (sgTyp, area, Ls, Lm, Lc)
 !
 ! Calculate Lm (plume contact length with ice) and C (plume contact length
-! with water), based on initial plume area
+! with water), based on various of plume metrics.
+!
+! For each method, refer to the manual for details.
+!
+! If you wish to add new plume metrics, assign a new sgTyp number and code
+! it to a new CASE.
 !
   USE mod_iceplume
   implicit none
 !
-  real(r8), intent(in) :: area
-  real(r8), intent(out) :: Lm, Lc
-!
-  Lc = SQRT(2.*pi*area)
-  Lm = 2./pi*Lc
-!
-END SUBROUTINE HALFCONE
-!
-! =========================================================================
-!
-SUBROUTINE FINITE_LINE (area, Ls, Lm, Lc)
-!
-! Calculate Lm (plume contact length with ice) and C (plume contact length
-! with water), based on initial plume area and finite line source length Ls
-!
-  USE mod_iceplume
-  implicit none
-!
+  integer, intent(in) :: sgTyp
   real(r8), intent(in) :: area, Ls
   real(r8), intent(out) :: Lm, Lc
 !
-  Lc = SQRT(Ls**2 + 2.*pi*area)
-  Lm = Ls + 2./pi*(Lc - Ls)
+  SELECT CASE (sgTyp)
+    CASE (2)
 !
-END SUBROUTINE FINITE_LINE
+! Halfcone (Cowton)
 !
-! =========================================================================
+      Lc = SQRT(2.*pi*area)
+      Lm = 2./pi*Lc
 !
-SUBROUTINE SHEET (Ls, Lm, Lc)
+    CASE (3)
 !
-! Calculate Lm (plume contact length with ice) and C (plume contact length
-! with water), based on line source length Ls
+! Finite line source
 !
-  USE mod_iceplume
-  implicit none
+      Lc = SQRT(Ls**2 + 2.*pi*area)
+      Lm = Ls + 2./pi*(Lc - Ls)
 !
-  real(r8), intent(in) :: Ls
-  real(r8), intent(out) :: Lm, Lc
+    CASE (4)
 !
-  Lc = Ls
-  Lm = Ls
+! Sheet (Jenkins)
 !
-END SUBROUTINE SHEET
+      Lc = Ls
+      Lm = Ls
 !
-! =========================================================================
+    CASE (5)
 !
-SUBROUTINE FULLCONE (area, Lm, Lc)
+! Fullcone
 !
-! Calculate Lm (plume contact length with ice) and C (plume contact length
-! with water), based on initial plume area
+      Lc = 2.*SQRT(2.*pi*area)
+      Lm = 0.
 !
-  USE mod_iceplume
-  implicit none
+    CASE DEFAULT
 !
-  real(r8), intent(in) :: area
-  real(r8), intent(out) :: Lm, Lc
+! Halfcone (Cowton)
 !
-  Lc = 2.*SQRT(2.*pi*area)
-  Lm = 0.
-END SUBROUTINE FULLCONE
+      Lc = SQRT(2.*pi*area)
+      Lm = 2./pi*Lc
+!
+  END SELECT
+!
+END SUBROUTINE PLUME_METRICS
 !
 ! =========================================================================
 !
