@@ -102,7 +102,7 @@ ifdef USE_MCT
 endif
 
 ifdef USE_MPI
-           FFLAGS += -I/usr/include
+           FFLAGS += -I/opt/local/include
 endif
 
 ifdef USE_ESMF

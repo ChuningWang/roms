@@ -47,7 +47,7 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, I, iceDepthK,     &
 ! ==================================================================!
 !
   real(r8) :: RHO
-  real(r8) :: rhoA, tA, sA, sB, tB
+  real(r8) :: rhoA, tA, sA
   real(r8) :: zIn, zOut
   integer :: K
 !

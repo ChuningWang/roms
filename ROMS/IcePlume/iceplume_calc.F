@@ -480,8 +480,7 @@ SUBROUTINE ICEPLUME_CURVE_DET(ng, I,                  &
 ! For checkCFL & checkRiB
 !
   real(r8) :: maxVel, minDetrDz, minDetrDz2
-  real(r8) :: rho0, rhoP, rhoUp, rhoDown, RiB, N2, N2A, N2P
-  real(r8) :: RHO
+  real(r8) :: rho0, rhoP, rhoUp, rhoDown, N2, N2A, N2P
 !
 ! For detrainment weight function
 !
