@@ -19,14 +19,10 @@ SUBROUTINE iceplume (ng, tile)
 !
 !  Local variable declarations.
 !
-# include "tile.h"
-!
 # ifdef PROFILE
       CALL wclock_on (ng, iNLM, 4, __LINE__, __FILE__)
 # endif
-  CALL iceplume_tile (ng, tile,                                         &
-     &                LBi, UBi, LBj, UBj,                               &
-     &                IminS, ImaxS, JminS, JmaxS)
+  CALL iceplume_tile (ng, tile)
 # ifdef PROFILE
       CALL wclock_off (ng, iNLM, 4, __LINE__, __FILE__)
 # endif
@@ -35,9 +31,7 @@ SUBROUTINE iceplume (ng, tile)
 END SUBROUTINE iceplume
 !
 !***********************************************************************
-SUBROUTINE iceplume_tile (ng, tile,                                     &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    IminS, ImaxS, JminS, JmaxS)
+SUBROUTINE iceplume_tile (ng, tile)
 !***********************************************************************
 !
   USE mod_grid, ONLY : GRID
@@ -50,8 +44,6 @@ SUBROUTINE iceplume_tile (ng, tile,                                     &
 !  Imported variable declarations.
 !
   integer, intent(in) :: ng, tile
-  integer, intent(in) :: LBi, UBi, LBj, UBj
-  integer, intent(in) :: IminS, ImaxS, JminS, JmaxS
 !
 !  Local variable declarations.
 !

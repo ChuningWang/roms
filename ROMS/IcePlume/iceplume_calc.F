@@ -849,26 +849,4 @@ SUBROUTINE SW_ADTG  (S,T,P, rv)
   &     + (  e0 + (e1 + e2*T)*T )*P*P
 !
 END
-!
-! =========================================================================
-! Obsolete subroutines
-! =========================================================================
-!
-! SUBROUTINE RHO_TO_W(profn, profr, profw)
-! 
-!     ! A quick program to extrapolate profiles from rho-points to w-points
-!     implicit none
-!     USE kinds
-!     integer, intent(in) :: profn
-!     real(r8) :: profr(profn), profw(profn+1)
-! 
-!     integer :: K
-! 
-!     profw(1) = profr(1)
-!     profw(profn+1) = profr(profn)
-!     DO K = 2, profn
-!         profw(K) = 0.5d0*(profr(K-1)+profr(K))
-!     ENDDO
-! 
-! END SUBROUTINE RHO_TO_W
 #endif
