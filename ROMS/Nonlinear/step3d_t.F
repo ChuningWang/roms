@@ -1031,7 +1031,6 @@
 !  Apply mass point sources (volume vertical influx), if any.
 !
           IF (LwSrc(ng).and.ANY(LtracerSrc(:,ng))) THEN
-          DO i=I_RANGE
             DO is=1,Nsrc(ng)
               Isrc=SOURCES(ng)%Isrc(is)
               Jsrc=SOURCES(ng)%Jsrc(is)
@@ -1041,7 +1040,7 @@
 # else
      &            ((IstrR.le.Isrc).and.(Isrc.le.IendR)).and.            &
 # endif
-     &            ((j.eq.Jsrc).and.(i.eq.Isrc))) THEN
+     &            (j.eq.Jsrc)) THEN
                 DO k=1,N(ng)-1
 #  ifdef ONE_TRACER_SOURCE
                   FC(i,k)=FC(i,k)+0.5_r8*                               &
@@ -1065,7 +1064,6 @@
                 END DO
               END IF
             END DO
-          END DO
           END IF
 !
           DO k=1,N(ng)
