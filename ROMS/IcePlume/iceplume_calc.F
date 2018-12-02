@@ -312,6 +312,15 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
           &                    mAm,                             &
           &                    PLUME(ng) % trcB(I, K, isalt),   &
           &                    PLUME(ng) % trcB(I, K, itemp))
+!
+! Correct temperature for latent heat loss during melting.
+!
+        PLUME(ng) % trcB(I, K, itemp) =     &
+          & PLUME(ng) % trcB(I, K, itemp) - &
+          & (L + cI*(PLUME(ng) % trcB(I, K, itemp)-tIce))/cW
+!
+! Calculate integrated melt rate [m3 s-1]
+!
         PLUME(ng) % mAm(I, K) = mAm*plumeAreaOutCell
       ELSE
         PLUME(ng) % mAm(I, K) = 0.d0
@@ -444,11 +453,11 @@ SUBROUTINE ICEPLUME_MELTRATE(temperature, salinity, &
 ! models)
 ! Equations for Sb, Tb and mdot
 !
-  a = lambda1*(GamT*c_w - GamS*c_i)
-  b = GamS*c_i*(lambda1*salinity - lambda2 - lambda3*depth +  &
-    &           iceTemp - (L/c_i)) -                          &
-    & GamT*c_w*(temperature - lambda2 - lambda3*depth)
-  c = GamS*salinity*(c_i*(lambda2 + lambda3*depth - iceTemp) + L)
+  a = lambda1*(GamT*cW - GamS*cI)
+  b = GamS*cI*(lambda1*salinity - lambda2 - lambda3*depth +  &
+    &           tIce - (L/cI)) -                             &
+    & GamT*cW*(temperature - lambda2 - lambda3*depth)
+  c = GamS*salinity*(cI*(lambda2 + lambda3*depth - tIce) + L)
 !
   sB   = (1./(2.*a))*(-b - SQRT(b**2. - 4.*a*c))
   tB   = lambda1*sB + lambda2 + lambda3*depth

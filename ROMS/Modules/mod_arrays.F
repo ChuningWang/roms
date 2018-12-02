@@ -168,14 +168,14 @@
 #endif
           IF (LuvSrc(ng).or.LwSrc(ng).or.ANY(LtracerSrc(:,ng))) THEN
             CALL allocate_sources (ng)
+# if defined SOLVE3D && defined ICEPLUME
+!----- iceplume model here (Chuning Wang) ------------------------------
+            CALL allocate_iceplume(ng)
+!-----------------------------------------------------------------------
+# endif
           END IF
 #if defined TRC_PSOURCE
           CALL allocate_trc_sources (ng)
-#endif
-#if defined SOLVE3D && defined ICEPLUME
-!----- iceplume model here (Chuning Wang) ------------------------------
-          CALL allocate_iceplume(ng)
-!-----------------------------------------------------------------------
 #endif
 !$OMP END MASTER
 !$OMP BARRIER

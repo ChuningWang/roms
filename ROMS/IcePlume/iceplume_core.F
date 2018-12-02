@@ -60,15 +60,15 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, I, iceDepthK,     &
 ! Cowton et al. 2015.                                               !
 ! ==================================================================!
 !
-  NEQ = 6
-  LRW = 116
-  LIW = 116
+  NEQ      = 6
+  LRW      = 116
+  LIW      = 116
 !
-  ITOL = 1
-  ITASK = 1
-  ISTATE = 1
-  IOPT = 0
-  MF = 10
+  ITOL     = 1
+  ITASK    = 1
+  ISTATE   = 1
+  IOPT     = 0
+  MF       = 10
   IWORK(7) = 2  ! To limit # of repeat error messages are printed
 !
 ! ==================================================================!
@@ -90,15 +90,15 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, I, iceDepthK,     &
 ! Prepare profiles
 !
   DO K = 0, N(ng)
-    PLUME(ng) % f(I, K) = 0.0
-    PLUME(ng) % w(I, K) = 0.0
-    PLUME(ng) % t(I, K) = 0.0
-    PLUME(ng) % s(I, K) = 0.0
-    PLUME(ng) % a(I, K) = 0.0
+    PLUME(ng) % f(I, K)    = 0.0
+    PLUME(ng) % w(I, K)    = 0.0
+    PLUME(ng) % t(I, K)    = 0.0
+    PLUME(ng) % s(I, K)    = 0.0
+    PLUME(ng) % a(I, K)    = 0.0
     PLUME(ng) % mInt(I, K) = 0.0
-    PLUME(ng) % rho(I, K) = 0.0
-    PLUME(ng) % lm(I, K) = 0.0
-    PLUME(ng) % lc(I, K) = 0.0
+    PLUME(ng) % rho(I, K)  = 0.0
+    PLUME(ng) % lm(I, K)   = 0.0
+    PLUME(ng) % lc(I, K)   = 0.0
   ENDDO
 !
 ! Start at bottom of ice face
@@ -111,13 +111,13 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, I, iceDepthK,     &
 !
 ! Set initial conditions
 !
-  PLUME(ng) % f(I, iceDepthK) = Y(1)
-  PLUME(ng) % w(I, iceDepthK) = Y(2)
-  PLUME(ng) % t(I, iceDepthK) = Y(3)
-  PLUME(ng) % s(I, iceDepthK) = Y(4)
-  PLUME(ng) % a(I, iceDepthK) = Y(5)
+  PLUME(ng) % f(I, iceDepthK)    = Y(1)
+  PLUME(ng) % w(I, iceDepthK)    = Y(2)
+  PLUME(ng) % t(I, iceDepthK)    = Y(3)
+  PLUME(ng) % s(I, iceDepthK)    = Y(4)
+  PLUME(ng) % a(I, iceDepthK)    = Y(5)
   PLUME(ng) % mInt(I, iceDepthK) = Y(6)
-  PLUME(ng) % rho(I, iceDepthK) = RHO(Y(3), Y(4), zIn)
+  PLUME(ng) % rho(I, iceDepthK)  = RHO(Y(3), Y(4), zIn)
 !
   CALL PLUME_METRICS (sgTyp, Y(1)/Y(2), sgLen,        &
     &                 PLUME(ng) % lm(I, iceDepthK),   &
@@ -285,11 +285,11 @@ SUBROUTINE GENERAL_PLUME_MODEL (NEQ, T, Y, YDOT)
 !
 ! Equations for sB, tB and mdot
 !
-  a = lambda1*(GamT*c_w - GamS*c_i)
-  b = GamS*c_i*(lambda1*Y(4) - lambda2 - lambda3*T +  &
-      &         iceTemp - (L/c_i)) -                  &
-      &         GamT*c_w*(Y(3) - lambda2 - lambda3*T)
-  c = GamS*Y(4)*(c_i*(lambda2 + lambda3*T - iceTemp) + L)
+  a = lambda1*(GamT*cW - GamS*cI)
+  b = GamS*cI*(lambda1*Y(4) - lambda2 - lambda3*T +  &
+      &         tIce - (L/cI)) -                     &
+      &         GamT*cW*(Y(3) - lambda2 - lambda3*T)
+  c = GamS*Y(4)*(cI*(lambda2 + lambda3*T - tIce) + L)
 !
   sB   = (1./(2.*a))*(-b - SQRT(b**2. - 4.*a*c))
   tB   = lambda1*sB + lambda2 + lambda3*T
@@ -308,7 +308,8 @@ SUBROUTINE GENERAL_PLUME_MODEL (NEQ, T, Y, YDOT)
 !
   YDOT(3) = (1./Y(1))*(-Y(3)*YDOT(1) + alpha*Lc*Ta*Y(2) + &
     &                  Lm*mdot*tB -                       &
-    &                  SQRT(Cd)*GamT*Lm*Y(2)*(Y(3)-tB))
+    &                  SQRT(Cd)*GamT*Lm*Y(2)*(Y(3)-tB) -  &
+    &                  (L+cI*(tB-tIce))*Lm*mdot/cW)
 !
 ! Plume salinity
 !

@@ -49,13 +49,13 @@ MODULE mod_iceplume
 ! Model parameters                                                    !
 !                                                                     !
 ! alpha     - entrainment rate                                        !
-! iceTemp   - ice temperature [degC]                                  !
+! tIce      - ice temperature [degC]                                  !
 ! rho_ref   - reference density [kg m^-3]                             !
 ! rho_fresh - reference density [kg m^-3]                             !
 ! rho_ice   - ice density [kg m^-3]                                   !
 ! g         - gravity acceleration [m s^-2]                           !
-! c_w       - heat capacity of water [J kg^-1 degC^-1]                !
-! c_i       - heat capacity of ice [J kg^-1 degC^-1]                  !
+! cW        - heat capacity of water [J kg^-1 degC^-1]                !
+! cI        - heat capacity of ice [J kg^-1 degC^-1]                  !
 ! L         - latent heat of melting [J kg^-1]                        !
 ! lambda1   - freezing point slope [degC PSU^-1]                      !
 ! lambda2   - freezing point offset [degC]                            !
@@ -83,13 +83,13 @@ MODULE mod_iceplume
   real(r8), parameter :: pi = 4.0d0*ATAN(1.0d0)    ! Pi
 !
   real(r8), parameter :: alpha      = 1.d-1
-  real(r8), parameter :: iceTemp    = -1.d1
+  real(r8), parameter :: tIce       = -1.d1
   real(r8), parameter :: rho_ref    = 1.020d3
   real(r8), parameter :: rho_fresh  = 1.000d3
   real(r8), parameter :: rho_ice    = 0.9167d3
   real(r8), parameter :: g          = 9.81d0
-  real(r8), parameter :: c_w        = 3.974d3
-  real(r8), parameter :: c_i        = 2.d3
+  real(r8), parameter :: cW         = 3.974d3
+  real(r8), parameter :: cI         = 2.d3
   real(r8), parameter :: L          = 3.35d5
   real(r8), parameter :: lambda1    = -5.73d-2
   real(r8), parameter :: lambda2    = 8.32d-2
@@ -158,8 +158,6 @@ MODULE mod_iceplume
 ! fW            - volume flux through omega surface [m^3 s^-1]        !
 ! fC            - tracer flux through omega surface [m^3 s^-1]        !
 ! trcNew        - updated tracer concentration                        !
-! dzNew         - updated layer thickness [m]                         !
-! zWNew         - updated depth at omega points [m]                   !
 # endif
 !                                                                     !
 ! ====================================================================!
@@ -225,8 +223,6 @@ MODULE mod_iceplume
     real(r8), pointer :: fW(:, :)
     real(r8), pointer :: fC(:, :, :)
     real(r8), pointer :: trcNew(:, :, :)
-!    real(r8), pointer :: dzNew(:, :)
-!    real(r8), pointer :: zWNew(:, :)
 # endif
   END TYPE T_PLUME
 !
@@ -282,8 +278,6 @@ MODULE mod_iceplume
         allocate( PLUME(ng) % fW     (Nsrc(ng), 0:N(ng)) )
         allocate( PLUME(ng) % fC     (Nsrc(ng), 0:N(ng), NT(ng)) )
         allocate( PLUME(ng) % trcNew (Nsrc(ng), N(ng), NT(ng)) )
-!        allocate( PLUME(ng) % dzNew  (Nsrc(ng), N(ng)) )
-!        allocate( PLUME(ng) % zWNew  (Nsrc(ng), 0:N(ng)) )
 # endif
     END SUBROUTINE allocate_iceplume
 #endif
