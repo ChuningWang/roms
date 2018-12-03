@@ -654,6 +654,9 @@
                      (PLUME(ng)%det(is,k)*PLUME(ng)%trc(is,itrc)+       &
      &                PLUME(ng)%ent(is,k)*PLUME(ng)%trcAm(is,k,itrc)+   &
      &                PLUME(ng)%mAm(is,k)*PLUME(ng)%trcB(is,k,itrc))
+                    IF (itrc .eq. itemp) THEN
+                      FX(Isrc,Jsrc)=FX(Isrc,Jsrc)+PLUME(ng)%tFlux(is,k)
+                    ENDIF
 !-----------------------------------------------------------------------
 # else
                     FX(Isrc,Jsrc)=Huon(Isrc,Jsrc,k)*                    &
@@ -701,6 +704,9 @@
                      (PLUME(ng)%det(is,k)*PLUME(ng)%trc(is,itrc)+       &
      &                PLUME(ng)%ent(is,k)*PLUME(ng)%trcAm(is,k,itrc)+   &
      &                PLUME(ng)%mAm(is,k)*PLUME(ng)%trcB(is,k,itrc))
+                    IF (itrc .eq. itemp) THEN
+                      FE(Isrc,Jsrc)=FE(Isrc,Jsrc)+PLUME(ng)%tFlux(is,k)
+                    ENDIF
 !-----------------------------------------------------------------------
 # else
 

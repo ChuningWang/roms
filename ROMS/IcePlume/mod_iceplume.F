@@ -106,7 +106,6 @@ MODULE mod_iceplume
   real(r8), parameter :: wIni       = 1.d0
 !
   real(r8), parameter :: CuMax      = 0.5d0
-!
   real(r8), parameter :: RiBMin     = 1.0d0
 !
 ! ====================================================================!
@@ -143,6 +142,8 @@ MODULE mod_iceplume
 !                                                                     !
 ! m             - plume melt rate [m^3 s^-1]                          !
 ! mAm           - background melt rate [m^3 s^-1]                     !
+! tFlux         - temperature flux rate associated with background    !
+!               - heat loss [degC s^-1]                               !
 !                                                                     !
 ! dz            - RHO layer thickness [m]                             !
 !                                                                     !
@@ -204,6 +205,7 @@ MODULE mod_iceplume
 !
     real(r8), pointer :: m(:, :)
     real(r8), pointer :: mAm(:, :)
+    real(r8), pointer :: tFlux(:, :)
 !
 ! Other profiles.
 !
@@ -263,8 +265,9 @@ MODULE mod_iceplume
         allocate( PLUME(ng) % det  (Nsrc(ng), N(ng)) )
         allocate( PLUME(ng) % detI (Nsrc(ng), N(ng)) )
 !
-        allocate( PLUME(ng) % m   (Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % mAm (Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % m     (Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % mAm   (Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % tFlux (Nsrc(ng), N(ng)) )
 !
         allocate( PLUME(ng) % dz (Nsrc(ng), N(ng)) )
 !

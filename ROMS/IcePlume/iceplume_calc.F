@@ -262,8 +262,9 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !
 ! If not then there is no melting
 !
-      PLUME(ng) % m(I, K)   = 0.d0
-      PLUME(ng) % mAm(I, K) = 0.d0
+      PLUME(ng) % m(I, K)     = 0.d0
+      PLUME(ng) % mAm(I, K)   = 0.d0
+      PLUME(ng) % tFlux(I, K) = 0.d0
 !
     ELSE
 !
@@ -313,15 +314,16 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
           &                    PLUME(ng) % trcB(I, K, isalt),   &
           &                    PLUME(ng) % trcB(I, K, itemp))
 !
-! Correct temperature for latent heat loss during melting.
-!
-        PLUME(ng) % trcB(I, K, itemp) =     &
-          & PLUME(ng) % trcB(I, K, itemp) - &
-          & (L + cI*(PLUME(ng) % trcB(I, K, itemp)-tIce))/cW
-!
 ! Calculate integrated melt rate [m3 s-1]
 !
         PLUME(ng) % mAm(I, K) = mAm*plumeAreaOutCell
+!
+! Calculate equavilent temperature flux [degC s^01] for background
+! melting.
+!
+        PLUME(ng) % tFlux(I, K) = -PLUME(ng) % mAm(I, K) *    &
+          & (L + cI*(PLUME(ng) % trcB(I, K, itemp)-tIce))/cW
+!
       ELSE
         PLUME(ng) % mAm(I, K) = 0.d0
       ENDIF
