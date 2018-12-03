@@ -277,7 +277,7 @@ SUBROUTINE GENERAL_PLUME_MODEL (NEQ, T, Y, YDOT)
 !
   rhoP = RHO(Y(3), Y(4), T)
   rhoA = RHO(tA, sA, T)
-  gRed  = g*(rhoA-rhoP)/rho_ref
+  gRed  = g*(rhoA-rhoP)/rhoRef
 !
 ! Calculate plume metrics
 !

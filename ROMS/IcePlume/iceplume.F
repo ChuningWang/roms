@@ -130,7 +130,7 @@ SUBROUTINE iceplume_tile (ng, tile)
 !
           prRef = 101.d3*1.d-4
           pr = prRef + &
-            & (ABS(PLUME(ng) % zW(is, K))*rho_ref*g)*1.d-4  ! [dbar]
+            & (ABS(PLUME(ng) % zW(is, K))*rhoRef*g)*1.d-4  ! [dbar]
           CALL SW_TEMP(PLUME(ng) % sAm(is, K),  &
                      & PLUME(ng) % tpAm(is, K), &
                      & pr,                      &
