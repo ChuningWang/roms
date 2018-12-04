@@ -286,10 +286,11 @@ SUBROUTINE GENERAL_PLUME_MODEL (NEQ, T, Y, YDOT)
 ! Equations for sB, tB and mdot
 !
   a = lambda1*(GamT*cW - GamS*cI)
-  b = GamS*cI*(lambda1*Y(4) - lambda2 - lambda3*T +  &
-      &         tIce - (L/cI)) -                     &
-      &         GamT*cW*(Y(3) - lambda2 - lambda3*T)
-  c = GamS*Y(4)*(cI*(lambda2 + lambda3*T - tIce) + L)
+  b = GamS*cI*(lambda1*Y(4) - lambda2 - lambda3*T +         &
+      &        tIce - (L/cI)) -                             &
+      &        GamT*cW*(Y(3) - lambda2 - lambda3*T + sIce)
+  c = GamS*Y(4)*(cI*(lambda2 + lambda3*T - tIce) + L) +     &
+    & GamT*sIce*cW*(Y(3) - lambda2 - lambda3*depth)
 !
   sB   = (1./(2.*a))*(-b - SQRT(b**2. - 4.*a*c))
   tB   = lambda1*sB + lambda2 + lambda3*T
@@ -308,15 +309,13 @@ SUBROUTINE GENERAL_PLUME_MODEL (NEQ, T, Y, YDOT)
 !
   YDOT(3) = (1./Y(1))*(-Y(3)*YDOT(1) + alpha*Lc*Ta*Y(2) + &
     &                  Lm*mdot*tB -                       &
-    &                  SQRT(Cd)*GamT*Lm*Y(2)*(Y(3)-tB) -  &
-    &                  (L+cI*(tB-tIce))*Lm*mdot/cW)
+    &                  SQRT(Cd)*GamT*Lm*Y(2)*(Y(3)-tB))
 !
 ! Plume salinity
 !
   YDOT(4) = (1./Y(1))*(-Y(4)*YDOT(1) + alpha*Lc*Sa*Y(2) + &
     &                  Lm*mdot*sB -                       &
     &                  SQRT(Cd)*GamS*Lm*Y(2)*(Y(4)-sB))
-!
 !
 ! Along-plume integrated contact area and melt rate
 !
@@ -325,17 +324,17 @@ SUBROUTINE GENERAL_PLUME_MODEL (NEQ, T, Y, YDOT)
 !
 END SUBROUTINE GENERAL_PLUME_MODEL
 !
-! =========================================================================
+! ==================================================================!
 !
 SUBROUTINE PLUME_METRICS (sgTyp, area, Ls, Lm, Lc)
 !
-! Calculate Lm (plume contact length with ice) and C (plume contact length
-! with water), based on various of plume metrics.
+! Calculate Lm (plume contact length with ice) and C (plume contact
+! length with water), based on various of plume metrics.
 !
 ! For each method, refer to the manual for details.
 !
-! If you wish to add new plume metrics, assign a new sgTyp number and code
-! it to a new CASE.
+! If you wish to add new plume metrics, assign a new sgTyp number
+! and code it to a new CASE.
 !
   USE mod_iceplume
   implicit none
@@ -384,7 +383,7 @@ SUBROUTINE PLUME_METRICS (sgTyp, area, Ls, Lm, Lc)
 !
 END SUBROUTINE PLUME_METRICS
 !
-! =========================================================================
+! ==================================================================!
 !
 DOUBLE PRECISION FUNCTION RHO(T,S,z)
 !
@@ -431,7 +430,7 @@ DOUBLE PRECISION FUNCTION RHO(T,S,z)
 !
 END
 !
-! =========================================================================
+! ==================================================================!
 !
 SUBROUTINE LININT(nx,xtab,ytab,x,y)
 !
@@ -465,9 +464,10 @@ SUBROUTINE LININT(nx,xtab,ytab,x,y)
 !
 END
 !
-! =========================================================================
+! ==================================================================!
 !
-! Dummy routine for ODEPACK. Necessary for Jacobian matrix if stiff ODEs.
+! Dummy routine for ODEPACK. Necessary for Jacobian matrix if
+! stiff ODEs.
 !
 SUBROUTINE jex()
   RETURN

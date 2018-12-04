@@ -50,6 +50,7 @@ MODULE mod_iceplume
 !                                                                     !
 ! alpha     - entrainment rate                                        !
 ! tIce      - ice temperature [degC]                                  !
+! sIce      - ice salinity [PSU]                                      !
 ! rhoRef    - reference density [kg m^-3]                             !
 ! rho_fresh - reference density [kg m^-3]                             !
 ! rho_ice   - ice density [kg m^-3]                                   !
@@ -84,6 +85,7 @@ MODULE mod_iceplume
 !
   real(r8), parameter :: alpha      = 1.d-1
   real(r8), parameter :: tIce       = -1.d1
+  real(r8), parameter :: sIce       = 0.d1
   real(r8), parameter :: rhoRef     = 1.020d3
 !  real(r8), parameter :: rho_fresh  = 1.000d3
 !  real(r8), parameter :: rho_ice    = 0.9167d3

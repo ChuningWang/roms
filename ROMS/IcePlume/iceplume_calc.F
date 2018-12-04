@@ -431,14 +431,14 @@ END SUBROUTINE ICEPLUME_CALC
 !                                                                   !
 ! ==================================================================!
 !
-SUBROUTINE ICEPLUME_MELTRATE(temperature, salinity, &
-                           & velocity, depth, &
+SUBROUTINE ICEPLUME_MELTRATE(temp, salt,    &
+                           & vel, depth,    &
                            & mdot, sB, tB)
 !
   USE mod_iceplume
   implicit none
 !
-  real(r8) :: temperature, salinity, velocity
+  real(r8) :: temp, salt, vel
   real(r8) :: depth, absVelocity
   real(r8) :: a, b, c
   real(r8), intent(inout) :: mdot, sB, tB
@@ -447,23 +447,22 @@ SUBROUTINE ICEPLUME_MELTRATE(temperature, salinity, &
 ! Unlikely to occur anyway with currents, waves, convection etc.
 ! This isn't very physical, but will do for now.
 !
-  IF ( velocity .LT. velBkg ) velocity = velBkg
-!
-  absVelocity = ABS(velocity)
+  IF ( ABS(vel) .LT. velBkg ) vel = velBkg
 !
 ! Calculate melt rate from 3 equation formualtion (as for plume
 ! models)
 ! Equations for Sb, Tb and mdot
 !
   a = lambda1*(GamT*cW - GamS*cI)
-  b = GamS*cI*(lambda1*salinity - lambda2 - lambda3*depth +  &
-    &           tIce - (L/cI)) -                             &
-    & GamT*cW*(temperature - lambda2 - lambda3*depth)
-  c = GamS*salinity*(cI*(lambda2 + lambda3*depth - tIce) + L)
+  b = GamS*cI*(lambda1*salt - lambda2 - lambda3*depth +         &
+    &          tIce - (L/cI)) -                                 &
+    &          GamT*cW*(temp - lambda2 - lambda3*depth + sIce)
+  c = GamS*salt*(cI*(lambda2 + lambda3*depth - tIce) + L) +     &
+    & GamT*sIce*cW*(temp - lambda2 - lambda3*depth)
 !
   sB   = (1./(2.*a))*(-b - SQRT(b**2. - 4.*a*c))
   tB   = lambda1*sB + lambda2 + lambda3*depth
-  mdot = GamS*SQRT(CdBkg)*absVelocity*(salinity - sB)/sB
+  mdot = GamS*SQRT(CdBkg)*ABS(vel)*(salt - sB)/sB
 !
 END SUBROUTINE ICEPLUME_MELTRATE
 !
