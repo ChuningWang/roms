@@ -290,7 +290,7 @@ SUBROUTINE GENERAL_PLUME_MODEL (NEQ, T, Y, YDOT)
       &        tIce - (L/cI)) -                             &
       &        GamT*cW*(Y(3) - lambda2 - lambda3*T + sIce)
   c = GamS*Y(4)*(cI*(lambda2 + lambda3*T - tIce) + L) +     &
-    & GamT*sIce*cW*(Y(3) - lambda2 - lambda3*depth)
+    & GamT*sIce*cW*(Y(3) - lambda2 - lambda3*T)
 !
   sB   = (1./(2.*a))*(-b - SQRT(b**2. - 4.*a*c))
   tB   = lambda1*sB + lambda2 + lambda3*T

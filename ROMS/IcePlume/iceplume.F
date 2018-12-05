@@ -20,11 +20,11 @@ SUBROUTINE iceplume (ng, tile)
 !  Local variable declarations.
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 4, __LINE__, __FILE__)
+  CALL wclock_on (ng, iNLM, 4, __LINE__, __FILE__)
 # endif
   CALL iceplume_tile (ng, tile)
 # ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 4, __LINE__, __FILE__)
+  CALL wclock_off (ng, iNLM, 4, __LINE__, __FILE__)
 # endif
 
   RETURN
@@ -211,10 +211,9 @@ SUBROUTINE iceplume_tile (ng, tile)
 !
           zLNew(0) = PLUME(ng) % zW(is, 0)
           DO K = 1, N(ng)
-            dzNew(K) = PLUME(ng) % dz(is, K) +                  &
-              &        (PLUME(ng) % det(is, K) +                &
-              &         PLUME(ng) % ent(is, K) +                &
-              &         PLUME(ng) % mAm(is, K))*dt(ng)/(dx*dy)
+            dzNew(K) = PLUME(ng) % dz(is, K) +                    &
+              &        (PLUME(ng) % det(is, K) +                  &
+              &         PLUME(ng) % ent(is, K))*dt(ng)/(dx*dy)
             zLNew(K) = zLNew(K-1) + dzNew(K)
           ENDDO
 !
@@ -222,16 +221,13 @@ SUBROUTINE iceplume_tile (ng, tile)
 !
           DO K = 1, N(ng)
             cff  = dx*dy*PLUME(ng) % dz(is, K)
-            cff1 = (PLUME(ng) % det(is, K) +        &
-              &     PLUME(ng) % ent(is, K) +        &
-              &     PLUME(ng) % mAm(is, K))*dt(ng)
+            cff1 = (PLUME(ng) % det(is, K) +                      &
+              &     PLUME(ng) % ent(is, K))*dt(ng)
             DO itrc = 1, NT(ng)
-              cff2 = (PLUME(ng) % det(is, K)*                 &
-                &     PLUME(ng) % trc(is, itrc)+              &
-                &     PLUME(ng) % ent(is, K)*                 &
-                &     PLUME(ng) % trcAm(is, K, itrc)+         &
-                &     PLUME(ng) % mAm(is, K)*                 &
-                &     PLUME(ng) % trcB(is, K, itrc))*dt(ng)
+              cff2 = (PLUME(ng) % det(is, K)*                     &
+                &     PLUME(ng) % trc(is, itrc)+                  &
+                &     PLUME(ng) % ent(is, K)*                     &
+                &     PLUME(ng) % trcAm(is, K, itrc))*dt(ng)
               PLUME(ng) % trcNew(is, K, itrc) =                   &
                 & (PLUME(ng) % trcAm(is, K, itrc)*cff + cff2) /   &
                 & (cff + cff1)

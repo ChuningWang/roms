@@ -1035,7 +1035,7 @@
                 u(i,j,k,nnew)=                                          &
      &            (SOURCES(ng)%Qsrc(is,k)+PLUME(ng)%dir(is)*            &
      &             (PLUME(ng)%det(is,k)+PLUME(ng)%ent(is,k)+            &
-     &              PLUME(ng)%mAm(is,k)))*cff1
+     &              PLUME(ng)%mB(is,k)))*cff1
 !-----------------------------------------------------------------------
 # else
                 u(i,j,k,nnew)=SOURCES(ng)%Qsrc(is,k)*cff1
@@ -1051,7 +1051,7 @@
                 v(i,j,k,nnew)=                                          &
      &            (SOURCES(ng)%Qsrc(is,k)+PLUME(ng)%dir(is)*            &
      &             (PLUME(ng)%det(is,k)+PLUME(ng)%ent(is,k)+            &
-     &              PLUME(ng)%mAm(is,k)))*cff1
+     &              PLUME(ng)%mB(is,k)))*cff1
 !-----------------------------------------------------------------------
 # else
                 v(i,j,k,nnew)=SOURCES(ng)%Qsrc(is,k)*cff1

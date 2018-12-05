@@ -584,7 +584,8 @@
 #  endif
                      (PLUME(ng)%det(is,k)*PLUME(ng)%trc(is,itrc)+       &
      &                PLUME(ng)%ent(is,k)*PLUME(ng)%trcAm(is,k,itrc)+   &
-     &                PLUME(ng)%mAm(is,k)*PLUME(ng)%trcB(is,k,itrc))
+     &                PLUME(ng)%mB(is,k)*PLUME(ng)%trcB(is,k,itrc)+     &
+     &                PLUME(ng)%trcAmToB(is,k,itrc))
 !-----------------------------------------------------------------------
 #  else
                   FX(Isrc,Jsrc)=Huon(Isrc,Jsrc,k)*                      &
@@ -609,7 +610,8 @@
 #  endif
                      (PLUME(ng)%det(is,k)*PLUME(ng)%trc(is,itrc)+       &
      &                PLUME(ng)%ent(is,k)*PLUME(ng)%trcAm(is,k,itrc)+   &
-     &                PLUME(ng)%mAm(is,k)*PLUME(ng)%trcB(is,k,itrc))
+     &                PLUME(ng)%mB(is,k)*PLUME(ng)%trcB(is,k,itrc)+     &
+     &                PLUME(ng)%trcAmToB(is,k,itrc))
 !-----------------------------------------------------------------------
 #  else
                   FE(Isrc,Jsrc)=Hvom(Isrc,Jsrc,k)*                      &

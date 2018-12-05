@@ -1,5 +1,6 @@
 #include "cppdefs.h"
 #ifdef ICEPLUME
+!
 ! ==================================================================!
 !                                                                   !
 ! This subroutine call the iceplume core functions to calcualte     !
@@ -36,9 +37,9 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !                                                                   !
 ! ==================================================================!
 !                                                                   !
-! plumeAreaInCell  - surface area of plume in contact with ice in   !
+! areaP            - surface area of plume in contact with ice in   !
 !                   that cell [m^2]                                 !
-! plumeAreaOutCell - surface area of plume in contact with ice out  !
+! areaB            - surface area of plume in contact with ice out  !
 !                   that cell [m^2]                                 !
 ! negSum, posSum   - sum of negative and positive contributions to  !
 !                   the plume volume [m^3 s^-1]                     !
@@ -47,7 +48,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 ! depth            - calculated depth [m]                           !
 ! detr             - total detrainment volume [m^3 s^-1]            !
 ! detrDz           - detrainment layer thickness [m]                !
-! mAm              - background meltrate [m s^-1]                   !
+! mB               - background meltrate [m s^-1]                   !
 !                                                                   !
 ! ==================================================================!
 !
@@ -60,11 +61,11 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
   integer :: K, iTracer
   real(r8) :: RHO
 !
-  real(r8) :: plumeAreaInCell, plumeAreaOutCell
+  real(r8) :: areaP, areaB
   real(r8) :: negSum, posSum, posNegRatio
   real(r8) :: meanVel, depth
   real(r8) :: detr, detrDz
-  real(r8) :: mAm
+  real(r8) :: mB
 !
 ! Calculate rho-layer depth, thickness, and ambient density
 !
@@ -250,7 +251,8 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !
   DO K = 1, N(ng)
     DO iTracer = 1, NT(ng)
-      PLUME(ng) % trcB(I, K, iTracer) = 0.0d0
+      PLUME(ng) % trcB(I, K, iTracer)     = 0.d0
+      PLUME(ng) % trcAmToB(I, K, iTracer) = 0.d0
     ENDDO
   ENDDO
 !
@@ -262,9 +264,8 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !
 ! If not then there is no melting
 !
-      PLUME(ng) % m(I, K)     = 0.d0
-      PLUME(ng) % mAm(I, K)   = 0.d0
-      PLUME(ng) % tFlux(I, K) = 0.d0
+      PLUME(ng) % m(I, K)  = 0.d0
+      PLUME(ng) % mB(I, K) = 0.d0
 !
     ELSE
 !
@@ -278,12 +279,12 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !                                                                   !
 ! ==================================================================!
 !
-      plumeAreaInCell = PLUME(ng) % a(I, K) - PLUME(ng) % a(I, K-1)
-      plumeAreaInCell = MAX(plumeAreaInCell, 0.d0)
-      plumeAreaOutCell = PLUME(ng) % dz(I, K)*dy - plumeAreaInCell
-      plumeAreaOutCell = MAX(plumeAreaOutCell, 0.d0)
+      areaP = PLUME(ng) % a(I, K) - PLUME(ng) % a(I, K-1)
+      areaP = MAX(areaP, 0.d0)
+      areaB = PLUME(ng) % dz(I, K)*dy - areaP
+      areaB = MAX(areaB, 0.d0)
 !
-      IF (plumeAreaInCell .GT. 0.0) THEN
+      IF (areaP .GT. 0.0) THEN
         PLUME(ng) % m(I, K) = PLUME(ng) % mInt(I, K) - &
           &                   PLUME(ng) % mInt(I, K-1)
       ELSE
@@ -301,31 +302,41 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !                                                                   !
 ! ==================================================================!
 !
-      IF ((useBkgMelt) .AND. (plumeAreaOutCell .GT. 0))THEN
+      IF ((useBkgMelt) .AND. (areaB .GT. 0))THEN
 !
         meanVel = SQRT((PLUME(ng) % vAm(I, K))**2 + &
           &            (PLUME(ng) % wAm(I, K))**2)
-        depth = 0.5d0*(PLUME(ng) % zW(I, K-1) + PLUME(ng) % zW(I, K))
         CALL ICEPLUME_MELTRATE(PLUME(ng) % tAm(I, K),           &
           &                    PLUME(ng) % sAm(I, K),           &
           &                    meanVel,                         &
           &                    PLUME(ng) % zR(I, K),            &
-          &                    mAm,                             &
+          &                    mB,                              &
           &                    PLUME(ng) % trcB(I, K, isalt),   &
           &                    PLUME(ng) % trcB(I, K, itemp))
 !
-! Calculate integrated melt rate [m3 s-1]
+! Calculate integrated background melt rate [m3 s-1]
 !
-        PLUME(ng) % mAm(I, K) = mAm*plumeAreaOutCell
+        PLUME(ng) % mB(I, K) = mB*areaB
 !
-! Calculate equavilent temperature flux [degC s^01] for background
-! melting.
+! Calculate equavilent temperature/salt/tracer turbulent flux
+! [unit m^3 s^01] for background melting.
 !
-        PLUME(ng) % tFlux(I, K) = -PLUME(ng) % mAm(I, K) *    &
+        PLUME(ng) % trcAmToB(I, K, itemp) =                   &
+          & -PLUME(ng) % mB(I, K) *                           &
           & (L + cI*(PLUME(ng) % trcB(I, K, itemp)-tIce))/cW
+        PLUME(ng) % trcAmToB(I, K, isalt) =                   &
+          & -PLUME(ng) % mB(I, K) *                           &
+          & (PLUME(ng) % trcB(I, K, isalt)-sIce)
+        IF (useTracers) THEN
+          DO iTracer = 3, NT(ng)
+            PLUME(ng) % trcAmToB(I, K, iTracer) =             &
+              & -GamS * SQRT(CdBkg) * meanVel * areaB *       &
+              & PLUME(ng) % trcAm(I, K, iTracer)
+          ENDDO
+        ENDIF
 !
       ELSE
-        PLUME(ng) % mAm(I, K) = 0.d0
+        PLUME(ng) % mB(I, K) = 0.d0
       ENDIF
     ENDIF  ! above or below sea bed
   ENDDO
@@ -373,9 +384,6 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
             & PLUME(ng) % trcCum(I, iTracer) +      &
             & PLUME(ng) % trcIni(I, iTracer) * fIni
         ENDDO
-        IF (useBkgMelt .AND. useMeltTracers) THEN
-          PLUME(ng) % trcCum(I, NT(ng)) = 0.0d0
-        ENDIF
       ENDIF
 !
 ! Add up total sum of each tracer in plume
@@ -418,10 +426,25 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !
 ! If use background melt tracer, rewrite tracer concentration
 !
-  IF (useBkgMelt .AND. useTracers .AND. useMeltTracers) THEN
-    DO K = iceDepthK+1, N(ng)
-      PLUME(ng) % trcB(I, K, NT(ng)) = PLUME(ng) % trcIni(I, NT(ng))
+  IF ((useBkgMelt) .AND. (useTracers)) THEN
+!
+! Calculate tracer concentration in background melt boundary layer
+!
+    DO iTracer = 3, NT(ng)
+      DO K = 1, N(ng)
+        PLUME(ng) % trcB(I, K, iTracer) =           &
+          & -PLUME(ng) % trcAmToB(I, K, iTracer) /  &
+          & PLUME(ng) % mB(I, K)
+      ENDDO
     ENDDO
+      IF (useMeltTracers) THEN
+        PLUME(ng) % trc(I, NT(ng)) = 0.0d0
+        DO K = 1, N(ng)
+          PLUME(ng) % trcB(I, K, NT(ng)) =          &
+            & PLUME(ng) % trcB(I, K, NT(ng)) +      &
+            & PLUME(ng) % trcIni(I, NT(ng))
+        ENDDO
+      ENDIF
   ENDIF
 END SUBROUTINE ICEPLUME_CALC
 !
@@ -431,9 +454,7 @@ END SUBROUTINE ICEPLUME_CALC
 !                                                                   !
 ! ==================================================================!
 !
-SUBROUTINE ICEPLUME_MELTRATE(temp, salt,    &
-                           & vel, depth,    &
-                           & mdot, sB, tB)
+SUBROUTINE ICEPLUME_MELTRATE(temp, salt, vel, depth, mdot, sB, tB)
 !
   USE mod_iceplume
   implicit none
@@ -666,9 +687,10 @@ SUBROUTINE ICEPLUME_CURVE_DET(ng, I,                  &
 !
 ! First, calculate weight using Gaussian function.
 !
-        detrWeight = &
-          & EXP(-1.0 * &
-          & (2 * (real(K)-real(plumeDepthK)) / real(detrN))**2)
+        detrWeight = EXP(-1.0 * (2 *            &
+          & (PLUME(ng) % zR(I, K)-              &
+          &  PLUME(ng) % zR(I, plumeDepthK)) /  &
+          & detrDz)**2)
         PLUME(ng) % det(I, K) = detrWeight * detrVel * dy * &
           & PLUME(ng) % dz(I, K)
       ENDIF

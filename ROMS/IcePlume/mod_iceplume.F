@@ -85,7 +85,7 @@ MODULE mod_iceplume
 !
   real(r8), parameter :: alpha      = 1.d-1
   real(r8), parameter :: tIce       = -1.d1
-  real(r8), parameter :: sIce       = 0.d1
+  real(r8), parameter :: sIce       = 0.d0
   real(r8), parameter :: rhoRef     = 1.020d3
 !  real(r8), parameter :: rho_fresh  = 1.000d3
 !  real(r8), parameter :: rho_ice    = 0.9167d3
@@ -132,7 +132,7 @@ MODULE mod_iceplume
 ! w             - plume vertical velocity [m s^-1]                    !
 ! t             - plume temperature [degC]                            !
 ! s             - plume salinity [PSU]                                !
-! a             - plume area [m^2]                                    !
+! a             - plume area integrated [m^2]                         !
 ! mInt          - plume area integrated melt [m^3 s^-1]               !
 !                                                                     !
 ! lm            - plume/glacier contact length [m]                    !
@@ -143,9 +143,7 @@ MODULE mod_iceplume
 ! detI          - detrainment flag                                    !
 !                                                                     !
 ! m             - plume melt rate [m^3 s^-1]                          !
-! mAm           - background melt rate [m^3 s^-1]                     !
-! tFlux         - temperature flux rate associated with background    !
-!               - heat loss [degC s^-1]                               !
+! mB            - background melt rate [m^3 s^-1]                     !
 !                                                                     !
 ! dz            - RHO layer thickness [m]                             !
 !                                                                     !
@@ -155,6 +153,9 @@ MODULE mod_iceplume
 ! trcB          - meltwater passive tracer concentration              !
 ! trcCum        - accumulative passive tracer concentration           !
 ! trcIni        - initial passive tracer concentration in discharge   !
+!                                                                     !
+! trcAmToB      - tracer flux rate associated with background         !
+!               - melt [unit m^3 s^-1]                                !
 # ifdef ICEPLUME_VIRTUAL_MIX
 !                                                                     !
 ! For calculation of virtual tracer flux                              !
@@ -206,8 +207,8 @@ MODULE mod_iceplume
 ! Melt rate, freshwater and heat fluxes.
 !
     real(r8), pointer :: m(:, :)
-    real(r8), pointer :: mAm(:, :)
-    real(r8), pointer :: tFlux(:, :)
+    real(r8), pointer :: mB(:, :)
+    real(r8), pointer :: trcAmToB(:, :, :)
 !
 ! Other profiles.
 !
@@ -267,9 +268,9 @@ MODULE mod_iceplume
         allocate( PLUME(ng) % det  (Nsrc(ng), N(ng)) )
         allocate( PLUME(ng) % detI (Nsrc(ng), N(ng)) )
 !
-        allocate( PLUME(ng) % m     (Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % mAm   (Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % tFlux (Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % m        (Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % mB       (Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % trcAmToB (Nsrc(ng), N(ng), NT(ng)) )
 !
         allocate( PLUME(ng) % dz (Nsrc(ng), N(ng)) )
 !
