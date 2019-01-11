@@ -426,7 +426,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !
 ! If use background melt tracer, rewrite tracer concentration
 !
-  IF ((useBkgMelt) .AND. (useTracers)) THEN
+  IF ((useBkgMelt) .AND. (useTracers) .AND. (useMeltTracers)) THEN
 !
 ! Calculate tracer concentration in background melt boundary layer
 !
