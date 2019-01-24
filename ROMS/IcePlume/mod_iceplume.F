@@ -155,7 +155,7 @@ MODULE mod_iceplume
 ! trcIni        - initial passive tracer concentration in discharge   !
 !                                                                     !
 ! trcAmToB      - tracer flux rate associated with background         !
-!               - melt [unit m^3 s^-1]                                !
+!               - melt [unit s^-1]                                    !
 # ifdef ICEPLUME_VIRTUAL_MIX
 !                                                                     !
 ! For calculation of virtual tracer flux                              !

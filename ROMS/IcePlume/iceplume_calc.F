@@ -410,6 +410,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !
       IF (useMeltTracers) THEN
         PLUME(ng) % trcCum(I, NT(ng)-1) = 0.0d0
+        PLUME(ng) % trcCum(I, NT(ng)  ) = 0.0d0
         DO K = iceDepthK+1, plumeDepthK
           PLUME(ng) % trcCum(I, NT(ng)-1) =           &
             & PLUME(ng) % trcCum(I, NT(ng)-1) +       &
@@ -417,16 +418,22 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
             &   PLUME(ng) % trcAm(I, K, NT(ng)-1)) +  &
             & PLUME(ng) % m(I, K) *                   &
             & PLUME(ng) % trcIni(I, NT(ng)-1)
+          PLUME(ng) % trcCum(I, NT(ng)  ) =           &
+            & PLUME(ng) % trcCum(I, NT(ng)  ) +       &
+            & (-PLUME(ng) % ent(I, K) *               &
+            &   PLUME(ng) % trcAm(I, K, NT(ng))  )
         ENDDO
-        PLUME(ng) % trc(I, NT(ng)-1) = &
+        PLUME(ng) % trc(I, NT(ng)-1) =  &
           & PLUME(ng) % trcCum(I, NT(ng)-1) / detr
+        PLUME(ng) % trc(I, NT(ng)  ) =  &
+          & PLUME(ng) % trcCum(I, NT(ng)  ) / detr
       ENDIF
     ENDIF
   ENDIF
 !
 ! If use background melt tracer, rewrite tracer concentration
 !
-  IF ((useBkgMelt) .AND. (useTracers) .AND. (useMeltTracers)) THEN
+  IF ((useBkgMelt) .AND. (useTracers)) THEN
 !
 ! Calculate tracer concentration in background melt boundary layer
 !
@@ -437,14 +444,13 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
           & PLUME(ng) % mB(I, K)
       ENDDO
     ENDDO
-      IF (useMeltTracers) THEN
-        PLUME(ng) % trc(I, NT(ng)) = 0.0d0
-        DO K = 1, N(ng)
-          PLUME(ng) % trcB(I, K, NT(ng)) =          &
-            & PLUME(ng) % trcB(I, K, NT(ng)) +      &
-            & PLUME(ng) % trcIni(I, NT(ng))
-        ENDDO
-      ENDIF
+    IF (useMeltTracers) THEN
+      DO K = 1, N(ng)
+        PLUME(ng) % trcB(I, K, NT(ng)) =            &
+          & PLUME(ng) % trcB(I, K, NT(ng)) +        &
+          & PLUME(ng) % trcIni(I, NT(ng))
+      ENDDO
+    ENDIF
   ENDIF
 END SUBROUTINE ICEPLUME_CALC
 !
