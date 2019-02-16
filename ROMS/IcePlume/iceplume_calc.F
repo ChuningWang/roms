@@ -70,14 +70,14 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 ! Calculate rho-layer depth, thickness, and ambient density
 !
   DO K = 1, N(ng)
-      PLUME(ng) % zR(I, K) = &
-        & 0.5d0 * (PLUME(ng) % zW(I, K-1) + PLUME(ng) % zW(I, K))
-      PLUME(ng) % dz(I, K) = &
-        & PLUME(ng) % zW(I, K) - PLUME(ng) % zW(I, K-1)
-      PLUME(ng) % rhoAm(I, K) = &
-        & RHO(PLUME(ng) % tAm(I, K), &
-        &     PLUME(ng) % sAm(I, K), &
-        &     PLUME(ng) % zR(I, K))
+    PLUME(ng) % zR(I, K) = &
+      & 0.5d0 * (PLUME(ng) % zW(I, K-1) + PLUME(ng) % zW(I, K))
+    PLUME(ng) % dz(I, K) = &
+      & PLUME(ng) % zW(I, K) - PLUME(ng) % zW(I, K-1)
+    PLUME(ng) % rhoAm(I, K) = &
+      & RHO(PLUME(ng) % tAm(I, K), &
+      &     PLUME(ng) % sAm(I, K), &
+      &     PLUME(ng) % zR(I, K))
   ENDDO
 !
 ! If discharge input salinity is less or equal than zero, set it to
@@ -128,8 +128,9 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
     ENDDO
 !
     DO K = iceDepthK+1, N(ng)
-      PLUME(ng) % ent(I, K) = &
-        & -(PLUME(ng) % f(I, K) - PLUME(ng) % f(I, K-1))
+      PLUME(ng) % ent(I, K) =                                   &
+        & -(PLUME(ng) % f(I, K) - PLUME(ng) % f(I, K-1))        &
+        & -(PLUME(ng) % mInt(I, K) - PLUME(ng) % mInt(I, K-1))
     ENDDO
 !
     IF (conserveMass) THEN
@@ -409,6 +410,9 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 ! If use melt water tracer, rewrite tracer concentration
 !
       IF (useMeltTracers) THEN
+!
+! Calculate accumulated trcer amount from base to detrain depth
+!
         PLUME(ng) % trcCum(I, NT(ng)-1) = 0.0d0
         PLUME(ng) % trcCum(I, NT(ng)  ) = 0.0d0
         DO K = iceDepthK+1, plumeDepthK
@@ -423,6 +427,9 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
             & (-PLUME(ng) % ent(I, K) *               &
             &   PLUME(ng) % trcAm(I, K, NT(ng))  )
         ENDDO
+!
+! Calculate tracer concentration
+!
         PLUME(ng) % trc(I, NT(ng)-1) =  &
           & PLUME(ng) % trcCum(I, NT(ng)-1) / detr
         PLUME(ng) % trc(I, NT(ng)  ) =  &
