@@ -115,9 +115,9 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !
 ! Run the plume model
 !
-    CALL ICEPLUME_PLUME_MODEL(ng, I, iceDepthK,     &
-                            & fIni, tIni, sIni,     &
-                            & sgTyp, sgLen)
+    CALL ICEPLUME_ENTRAIN(ng, I, iceDepthK, &
+                        & fIni, tIni, sIni, &
+                        & sgTyp, sgLen)
 !
 ! Calculate volume flux differential to give entrainment / extrainment
 ! First clear ent / det
@@ -128,9 +128,10 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
     ENDDO
 !
     DO K = iceDepthK+1, N(ng)
-      PLUME(ng) % ent(I, K) =                                   &
-        & -(PLUME(ng) % f(I, K) - PLUME(ng) % f(I, K-1))        &
-        & -(PLUME(ng) % mInt(I, K) - PLUME(ng) % mInt(I, K-1))
+      PLUME(ng) % ent(I, K) =                                     &
+        & -(PLUME(ng) % f(I, K) - PLUME(ng) % f(I, K-1))          &
+        & -MAX(PLUME(ng) % mInt(I, K) - PLUME(ng) % mInt(I, K-1), &
+        &      0.0d0)
     ENDDO
 !
     IF (conserveMass) THEN
@@ -173,6 +174,12 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !
 ! If no subglacial discharge, then there is no plume
 !
+    PLUME(ng) % f(I, 0) = 0.d0
+    PLUME(ng) % w(I, 0) = 0.d0
+    PLUME(ng) % t(I, 0) = 0.d0
+    PLUME(ng) % s(I, 0) = 0.d0
+    PLUME(ng) % a(I, 0) = 0.d0
+    PLUME(ng) % mInt(I, 0) = 0.d0
     DO k = 1, N(ng)
       PLUME(ng) % f(I, K) = 0.d0
       PLUME(ng) % w(I, K) = 0.d0

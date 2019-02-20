@@ -1,8 +1,9 @@
 #include "cppdefs.h"
 #ifdef ICEPLUME
+!
 ! ==================================================================!
 !                                                                   !
-! These are the core functions of ICEPLUME model.                   !
+! These are the core functions of ICEPLUME entrainment model.       !
 !                                                                   !
 ! ==================================================================!
 !
@@ -10,9 +11,9 @@
 ! Program to calculate the plume shape, S, T, V etc.                !
 ! ==================================================================!
 !
-SUBROUTINE ICEPLUME_PLUME_MODEL(ng, I, iceDepthK,     &
-                              & fIni, tIni, sIni,     &
-                              & sgTyp, sgLen)
+SUBROUTINE ICEPLUME_ENTRAIN(ng, I, iceDepthK, &
+                          & fIni, tIni, sIni, &
+                          & sgTyp, sgLen)
 !
   USE mod_iceplume
   implicit none
@@ -53,7 +54,7 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, I, iceDepthK,     &
 !
 ! Plume models
 !
-  external GENERAL_PLUME_MODEL, JEX
+  external GENERAL_ENTRAIN_MODEL, JEX
 !
 ! ==================================================================!
 ! For ODEPACK solver. See ODEPACK documentation and source code in  !
@@ -137,7 +138,7 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, I, iceDepthK,     &
 ! layer
 !
     IF (ISTATE .GT. -1) THEN
-      CALL DLSODE (GENERAL_PLUME_MODEL,             &
+      CALL DLSODE (GENERAL_ENTRAIN_MODEL,           &
                  & NEQ, Y, zIn, zOut,               &
                  & ITOL, RTOL, ATOL, ITASK,         &
                  & ISTATE, IOPT, RWORK, LRW, IWORK, &
@@ -230,7 +231,7 @@ SUBROUTINE ICEPLUME_PLUME_MODEL(ng, I, iceDepthK,     &
 !
   ENDDO
   RETURN
-END SUBROUTINE ICEPLUME_PLUME_MODEL
+END SUBROUTINE ICEPLUME_ENTRAIN
 !
 ! ==================================================================!
 !                                                                   !
@@ -239,7 +240,7 @@ END SUBROUTINE ICEPLUME_PLUME_MODEL
 !                                                                   !
 ! ==================================================================!
 !
-SUBROUTINE GENERAL_PLUME_MODEL (NEQ, T, Y, YDOT)
+SUBROUTINE GENERAL_ENTRAIN_MODEL (NEQ, T, Y, YDOT)
 !
   USE mod_iceplume
   implicit none
@@ -322,7 +323,7 @@ SUBROUTINE GENERAL_PLUME_MODEL (NEQ, T, Y, YDOT)
   YDOT(5) = Lm
   YDOT(6) = Lm*mdot
 !
-END SUBROUTINE GENERAL_PLUME_MODEL
+END SUBROUTINE GENERAL_ENTRAIN_MODEL
 !
 ! ==================================================================!
 !
