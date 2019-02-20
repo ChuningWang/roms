@@ -141,6 +141,7 @@ MODULE mod_iceplume
 ! ent           - entrainment rate [m^3 s^-1]                         !
 ! det           - detrainment rate [m^3 s^-1]                         !
 ! detI          - detrainment flag                                    !
+! verI          - vertical acceleration flag                          !
 !                                                                     !
 ! m             - plume melt rate [m^3 s^-1]                          !
 ! mB            - background melt rate [m^3 s^-1]                     !
@@ -203,6 +204,7 @@ MODULE mod_iceplume
     real(r8), pointer :: ent(:, :)
     real(r8), pointer :: det(:, :)
     integer(r8), pointer :: detI(:, :)
+    integer(r8), pointer :: verI(:, :)
 !
 ! Melt rate, freshwater and heat fluxes.
 !
@@ -267,6 +269,7 @@ MODULE mod_iceplume
         allocate( PLUME(ng) % ent  (Nsrc(ng), N(ng)) )
         allocate( PLUME(ng) % det  (Nsrc(ng), N(ng)) )
         allocate( PLUME(ng) % detI (Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % verI (Nsrc(ng), N(ng)) )
 !
         allocate( PLUME(ng) % m        (Nsrc(ng), N(ng)) )
         allocate( PLUME(ng) % mB       (Nsrc(ng), N(ng)) )
