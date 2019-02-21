@@ -22,7 +22,7 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                  &
   real(r8), intent(in) :: detr
   real(r8), intent(inout) :: detrDz
 !
-! For checkCFL & checkRiB
+! Local variables declaration
 !
   real(r8) :: maxVel, minDetrDz, minDetrDz2
   real(r8) :: rho0, rhoP, rhoUp, rhoDown, N2, N2A, N2P
@@ -56,7 +56,7 @@ SUBROUTINE ICEPLUME_DETRAIN_HALF(ng, I,                  &
   real(r8), intent(in) :: detr
   real(r8), intent(inout) :: detrDz
 !
-! For checkCFL & checkRiB
+! Local variables declaration
 !
   real(r8) :: maxVel, minDetrDz, minDetrDz2
   real(r8) :: rho0, rhoP, rhoUp, rhoDown, N2, N2A, N2P
@@ -74,49 +74,38 @@ SUBROUTINE ICEPLUME_DETRAIN_HALF(ng, I,                  &
 !                                                                   !
 ! ==================================================================!
 !
-  IF (checkCFL) THEN
-!
-! If activiated, check the horizontal advection CFL criteria to
+! Check the horizontal advection CFL criteria to
 ! determine if to distribute the detrainment in several layers.
-!
 ! Calculate maxinum velocity based on the CFL criteria
 !
-    maxVel = CuMax*dx/dt(ng)
-    minDetrDz = detr/(maxVel*dy)
-  ELSE
-    minDetrDz = 0.0d0
-  ENDIF
+  maxVel = CuMax*dx/dt(ng)
+  minDetrDz = detr/(maxVel*dy)
 !
-  IF (checkRiB) THEN
-!
-! If activated, check the Richardson number criteria to determine
+! Check the Richardson number criteria to determine
 ! if to distribute the detrainment in several layers.
 !
 ! Calculate Brunt-Vaisala frequency
 !
-    K = plumeDepthK
-    IF (K .EQ. N(ng)) THEN
-      rhoUp = PLUME(ng) % rhoAm(I, K)
-    ELSE
-      rhoUp =0.5*(PLUME(ng) % rhoAm(I, K+1) +  &
-        &         PLUME(ng) % rhoAm(I, K))
-    ENDIF
-!
-    IF (K .EQ. 1) THEN
-      rhoDown = PLUME(ng) % rhoAm(I, K)
-    ELSE
-      rhoDown = 0.5*(PLUME(ng) % rhoAm(I, K-1) +  &
-        &            PLUME(ng) % rhoAm(I, K))
-    ENDIF
-    rho0 = PLUME(ng) % rhoAm(I, K)
-    rhoP = 0.5*(PLUME(ng) % rho(I, K) + PLUME(ng) % rho(I, K-1))
-    N2A = -g*(rhoUp-rhoDown)/(PLUME(ng) % dz(I, K)*rho0)
-    N2P = -g*(rhoP -rho0   )/(PLUME(ng) % dz(I, K)*rho0)
-    N2  = MAX(N2A, N2P, N2Bkg)
-    minDetrDz2 = (detr**2*RiBmin/N2/dy**2)**0.25
+  K = plumeDepthK
+  IF (K .EQ. N(ng)) THEN
+    rhoUp = PLUME(ng) % rhoAm(I, K)
   ELSE
-    minDetrDz2 = 0.0d0
+    rhoUp =0.5*(PLUME(ng) % rhoAm(I, K+1) +  &
+      &         PLUME(ng) % rhoAm(I, K))
   ENDIF
+!
+  IF (K .EQ. 1) THEN
+    rhoDown = PLUME(ng) % rhoAm(I, K)
+  ELSE
+    rhoDown = 0.5*(PLUME(ng) % rhoAm(I, K-1) +  &
+      &            PLUME(ng) % rhoAm(I, K))
+  ENDIF
+  rho0 = PLUME(ng) % rhoAm(I, K)
+  rhoP = 0.5*(PLUME(ng) % rho(I, K) + PLUME(ng) % rho(I, K-1))
+  N2A = -g*(rhoUp-rhoDown)/(PLUME(ng) % dz(I, K)*rho0)
+  N2P = -g*(rhoP -rho0   )/(PLUME(ng) % dz(I, K)*rho0)
+  N2  = MAX(N2A, N2P, N2Bkg)
+  minDetrDz2 = (detr**2*RiBmin/N2/dy**2)**0.25
 !
   minDetrDz = MAX(minDetrDz, minDetrDz2)
 !
@@ -252,5 +241,5 @@ SUBROUTINE ICEPLUME_DETRAIN_HALF(ng, I,                  &
         & detr / detrWeightSum
     ENDDO
   ENDIF  ! detrN .GT. 1
-END SUBROUTINE ICEPLUME_CURVE_DET
+END SUBROUTINE ICEPLUME_DETRAIN_HALF
 #endif

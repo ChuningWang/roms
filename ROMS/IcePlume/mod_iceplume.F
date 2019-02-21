@@ -22,7 +22,6 @@ MODULE mod_iceplume
 !                                                                     !
 ! ====================================================================!
 !
-  logical :: conserveMass        = .false.
 # ifdef ICEPLUME_TRACER
   logical :: useTracers          = .true.
   logical :: useInputTracers     = .true.
@@ -40,8 +39,6 @@ MODULE mod_iceplume
 # else
   logical :: useMeltTracers      = .false.
 # endif
-  logical :: checkCFL            = .true.
-  logical :: checkRiB            = .true.
   integer :: depthFinder         = 2
 !
 ! ====================================================================!
@@ -52,8 +49,7 @@ MODULE mod_iceplume
 ! tIce      - ice temperature [degC]                                  !
 ! sIce      - ice salinity [PSU]                                      !
 ! rhoRef    - reference density [kg m^-3]                             !
-! rho_fresh - reference density [kg m^-3]                             !
-! rho_ice   - ice density [kg m^-3]                                   !
+! rhoAir    - air density [kg m^-3]                                   !
 ! g         - gravity acceleration [m s^-2]                           !
 ! cW        - heat capacity of water [J kg^-1 degC^-1]                !
 ! cI        - heat capacity of ice [J kg^-1 degC^-1]                  !
@@ -87,8 +83,7 @@ MODULE mod_iceplume
   real(r8), parameter :: tIce       = -1.d1
   real(r8), parameter :: sIce       = 0.d0
   real(r8), parameter :: rhoRef     = 1.020d3
-!  real(r8), parameter :: rho_fresh  = 1.000d3
-!  real(r8), parameter :: rho_ice    = 0.9167d3
+  real(r8), parameter :: rhoAir     = 1.225
   real(r8), parameter :: g          = 9.81d0
   real(r8), parameter :: cW         = 3.974d3
   real(r8), parameter :: cI         = 2.d3
@@ -246,13 +241,13 @@ MODULE mod_iceplume
 !
         allocate( PLUME(ng) % dir(1:Nsrc(ng)) )
 !
-        allocate( PLUME(ng) % zR    (Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % tAm   (Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % sAm   (Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % vAm   (Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % wAm   (Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % tpAm  (Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % rhoAm (Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % zR    (Nsrc(ng), N(ng)  ) )
+        allocate( PLUME(ng) % tAm   (Nsrc(ng), N(ng)  ) )
+        allocate( PLUME(ng) % sAm   (Nsrc(ng), N(ng)  ) )
+        allocate( PLUME(ng) % vAm   (Nsrc(ng), N(ng)  ) )
+        allocate( PLUME(ng) % wAm   (Nsrc(ng), N(ng)  ) )
+        allocate( PLUME(ng) % tpAm  (Nsrc(ng), N(ng)  ) )
+        allocate( PLUME(ng) % rhoAm (Nsrc(ng), N(ng)+1) )
 !
         allocate( PLUME(ng) % zW   (Nsrc(ng), 0:N(ng)) )
         allocate( PLUME(ng) % f    (Nsrc(ng), 0:N(ng)) )

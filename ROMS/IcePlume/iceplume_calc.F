@@ -37,18 +37,18 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !                                                                   !
 ! ==================================================================!
 !                                                                   !
-! areaP            - surface area of plume in contact with ice in   !
-!                   that cell [m^2]                                 !
-! areaB            - surface area of plume in contact with ice out  !
-!                   that cell [m^2]                                 !
-! negSum, posSum   - sum of negative and positive contributions to  !
-!                   the plume volume [m^3 s^-1]                     !
-! posNegRatio      - ratio of the above                             !
-! meanVel          - ice tangental velocity [m s^-1]                !
-! depth            - calculated depth [m]                           !
-! detr             - total detrainment volume [m^3 s^-1]            !
-! detrDz           - detrainment layer thickness [m]                !
-! mB               - background meltrate [m s^-1]                   !
+! iceDepthK   - vertical grid index of grounding line depth         !
+! plumeDepthK - vertical grid index of plume depth                  !
+! osDepthK    - vertical grid index of overshoot depth              !
+! areaP       - surface area of plume in contact with ice in        !
+!               that cell [m^2]                                     !
+! areaB       - surface area of plume in contact with ice out       !
+!               that cell [m^2]                                     !
+! meanVel     - ice tangental velocity [m s^-1]                     !
+! depth       - calculated depth [m]                                !
+! detr        - total detrainment volume [m^3 s^-1]                 !
+! detrDz      - detrainment layer thickness [m]                     !
+! mB          - background meltrate [m s^-1]                        !
 !                                                                   !
 ! ==================================================================!
 !
@@ -57,12 +57,11 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
   real(r8), intent(inout) :: fIni, tIni, sIni
   integer, intent(in) :: sgTyp
   real(r8), intent(in) :: sgDep, sgLen
-  integer :: iceDepthK, plumeDepthK
   integer :: K, iTracer
   real(r8) :: RHO
 !
+  integer :: iceDepthK, plumeDepthK, osDepthK
   real(r8) :: areaP, areaB
-  real(r8) :: negSum, posSum, posNegRatio
   real(r8) :: meanVel, depth
   real(r8) :: detr, detrDz
   real(r8) :: mB
@@ -79,6 +78,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
       &     PLUME(ng) % sAm(I, K), &
       &     PLUME(ng) % zR(I, K))
   ENDDO
+  PLUME(ng) % rhoAm(I, K+1) = rhoAir
 !
 ! If discharge input salinity is less or equal than zero, set it to
 ! a small number
@@ -107,7 +107,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !
 ! ==================================================================!
 !                                                                   !
-! Use plume model to calculate T, S, & flux in plume                !
+! Use entrainment plume model to calculate T, S, & flux in plume    !
 !                                                                   !
 ! ==================================================================!
 !
@@ -130,42 +130,16 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
     DO K = iceDepthK+1, N(ng)
       PLUME(ng) % ent(I, K) =                                     &
         & -(PLUME(ng) % f(I, K) - PLUME(ng) % f(I, K-1))          &
-        & -MAX(PLUME(ng) % mInt(I, K) - PLUME(ng) % mInt(I, K-1), &
+        & +MAX(PLUME(ng) % mInt(I, K) - PLUME(ng) % mInt(I, K-1), &
         &      0.0d0)
     ENDDO
-!
-    IF (conserveMass) THEN
-!
-! Scale output to compensate for entrainment lost in expanding of
-! output layer, i.e. so that there is no net flow over boundary
-!
-      negSum = 0.d0
-      posSum = 0.d0
-!
-      DO K = iceDepthK+1, N(ng)
-        IF ( PLUME(ng) % ent(I, K) .LT. 0 ) THEN
-          negSum = PLUME(ng) % ent(I, K) + negSum
-        ELSE
-          posSum = PLUME(ng) % ent(I, K) + posSum
-        ENDIF
-      ENDDO
-!
-      IF ( negSum .NE. 0 ) THEN
-        posNegRatio = -negSum / posSum
-          DO K = 1,N(ng)
-            IF (PLUME(ng) % ent(I, K) .GT. 0) THEN
-              PLUME(ng) % ent(I, K) =                   &
-                & (PLUME(ng) % ent(I, K)) * posNegRatio
-            ENDIF
-        ENDDO
-      ENDIF
-    ENDIF
 !
 ! Separate entrainment / detrainment
 !
     DO K = iceDepthK+1, N(ng)
       IF (PLUME(ng) % ent(I, K) .GT. 0.d0) THEN
-        PLUME(ng) % det(I, K) = PLUME(ng) % ent(I, K)
+        osDepthK = K
+        detr = PLUME(ng) % ent(I, K)
         PLUME(ng) % ent(I, K) = 0.d0
       ENDIF
     ENDDO
@@ -194,28 +168,10 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !
 ! ==================================================================!
 !                                                                   !
-! Check if detrainment velocity meets the CFL criteria              !
+! Use a detrainment model to distribute the detrainment plume in    !
+! several layers. Details in iceplume_detrain.F.                    !
 !                                                                   !
-! This section is added to deal with the surface intensification    !
-! of ROMS grid. When the grid thickness is too thin, the output     !
-! velocity is too high that violates the hroziontal advection CFL   !
-! criteria. If you are confident that the detrainment velocity      !
-! is small enough that would blow-up the model, turn checkCFL in    !
-! mod_iceplume.F to .false.                                         !
-! 2018/4/20 Chuning Wang                                            !
-!                                                                   !
-! Check if detrainment velocity meets Richardson number criteria    !
-!                                                                   !
-! This section is added to deal with the surface intensification    !
-! of ROMS grid. When the grid thickness is too small, the output    !
-! velocity is too high that violates the hroziontal advection CFL   !
-! criteria. If you are confident that the detrainment velocity      !
-! is small enough that would blow-up the model, turn checkCFL in    !
-! mod_iceplume.F to .false.                                         !
-! 2018/4/20 Chuning Wang                                            !
-!                                                                   !
-! To keep the code clean, this big chunk of code is wrapped in a    !
-! subroutine ICEPLUME_CURVE_DET.                                    !
+! *** This part is completely rewritten since Feb 20, 2019.         !
 !                                                                   !
 ! ==================================================================!
 !
@@ -224,25 +180,26 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 ! Find detrainment depth index, Calculate total detrainment volume
 ! and thickness
 !
-    detr = 0.d0
+    plumeDepthK = -1
     detrDz = 1.d-7
-    DO K = 1,N(ng)
-      IF (PLUME(ng) % det(I, K) .GT. 0.d0) THEN
+    DO K = iceDepthK+1,osDepthK
+      IF ((PLUME(ng) % rho(I, osDepthK) .LT.          &
+        &  PLUME(ng) % rhoAm(I, K)           ) .AND.  &
+        & (PLUME(ng) % rho(I, osDepthK) .GT.          &
+        &  PLUME(ng) % rhoAm(I, K+1)         )) THEN
         plumeDepthK = K
-        detr = detr + PLUME(ng) % det(I, K)
-        detrDz = detrDz + PLUME(ng) % dz(I, K)
-        PLUME(ng) % detI(I, K) = 1
-      ELSE
-        PLUME(ng) % detI(I, K) = 0
       ENDIF
     ENDDO
+    PLUME(ng) % det(I, plumeDepthK) = detr
+    PLUME(ng) % detI(I, plumeDepthK) = 1
+    detrDz = detrDz + PLUME(ng) % dz(I, plumeDepthK)
 !
-    IF (checkCFL .OR. checkRiB) THEN
-      CALL ICEPLUME_DETRAIN_HALF(ng, I,                           &
-                              &  iceDepthK, plumeDepthK, dx,      &
-                              &  PLUME(ng) % lc(I, plumeDepthK),  &
-                              &  detr, detrDz)
-    ENDIF  ! checkCFL .OR. checkRiB
+! Use HALF parameterization to spread detrainment in several layers.
+!
+    CALL ICEPLUME_DETRAIN_HALF(ng, I,                           &
+                            &  iceDepthK, plumeDepthK, dx,      &
+                            &  PLUME(ng) % lc(I, plumeDepthK),  &
+                            &  detr, detrDz)
   ELSE
     detr = 0.d0
     detrDz = 1.d-7
@@ -372,12 +329,12 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !
 ! Write the active tracer (T & S) concentration to PLUME (ng) % trc
 !
-    PLUME(ng) % trc(I, isalt) =                 &
-      & 0.5*(PLUME(ng) % s(I, plumeDepthK-1) +  &
-      &      PLUME(ng) % s(I, plumeDepthK))
-    PLUME(ng) % trc(I, itemp) =                 &
-      & 0.5*(PLUME(ng) % t(I, plumeDepthK-1) +  &
-      &      PLUME(ng) % t(I, plumeDepthK))
+    PLUME(ng) % trc(I, isalt) =             &
+      & 0.5*(PLUME(ng) % s(I, osDepthK-1) + &
+      &      PLUME(ng) % s(I, osDepthK))
+    PLUME(ng) % trc(I, itemp) =             &
+      & 0.5*(PLUME(ng) % t(I, osDepthK-1) + &
+      &      PLUME(ng) % t(I, osDepthK))
 !
     IF (useTracers) THEN
 !
@@ -396,7 +353,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !
 ! Add up total sum of each tracer in plume
 !
-      DO K = iceDepthK+1, plumeDepthK
+      DO K = iceDepthK+1, osDepthK
         IF (PLUME(ng) % ent(I, K) .LT. 0.) THEN
           DO iTracer = 3, NT(ng)
             PLUME(ng) % trcCum(I, iTracer) =        &
@@ -422,7 +379,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !
         PLUME(ng) % trcCum(I, NT(ng)-1) = 0.0d0
         PLUME(ng) % trcCum(I, NT(ng)  ) = 0.0d0
-        DO K = iceDepthK+1, plumeDepthK
+        DO K = iceDepthK+1, osDepthK
           PLUME(ng) % trcCum(I, NT(ng)-1) =           &
             & PLUME(ng) % trcCum(I, NT(ng)-1) +       &
             & (-PLUME(ng) % ent(I, K) *               &
