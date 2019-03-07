@@ -3,7 +3,7 @@
 !
 !=======================================================================
 !                                                                      !
-!  This subroutine is a wraper for the ICEPLUME module.                !
+!  This subroutine is a wraper for the iceplume module.                !
 !                                                                      !
 !=======================================================================
 !

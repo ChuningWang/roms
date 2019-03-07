@@ -3,7 +3,7 @@
 !
 ! ==================================================================!
 !                                                                   !
-! These are the core functions of ICEPLUME entrainment model.       !
+! These are the core functions of iceplume entrainment model.       !
 !                                                                   !
 ! ==================================================================!
 !

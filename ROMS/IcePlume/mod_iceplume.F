@@ -3,7 +3,7 @@ MODULE mod_iceplume
 #ifdef ICEPLUME
 ! ==================================================================!
 !                                                                   !
-! These are the module functions of ICEPLUME model.                 !
+! These are the module functions of iceplume model.                 !
 !                                                                   !
 ! ==================================================================!
 !
