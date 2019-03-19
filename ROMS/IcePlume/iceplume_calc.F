@@ -79,13 +79,14 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
       &     PLUME(ng) % sAm(I, K), &
       &     PLUME(ng) % zR(I, K))
   ENDDO
-  PLUME(ng) % rhoAm(I, K+1) = rhoAir
+  PLUME(ng) % rhoAm(I, N(ng)+1) = rhoAir
+  PLUME(ng) % dz(I, N(ng)+1) = 1.0E5
 !
 ! If discharge input salinity is less or equal than zero, set it to
 ! a small number
 !
-  IF (sIni .LE. 0.d0) THEN
-    sIni = 1.d-3
+  IF (sIni .LE. 0.0) THEN
+    sIni = 0.001
   ENDIF
 !
 ! ==================================================================!
@@ -95,7 +96,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 ! ==================================================================!
 !
   iceDepthK = -1
-  IF (sgDep .GE. 0) THEN
+  IF (sgDep .GE. 0.0) THEN
     iceDepthK = 0
   ELSE
     DO K = 0, N(ng)
@@ -112,7 +113,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !                                                                   !
 ! ==================================================================!
 !
-  IF (fIni .GT. 0) THEN
+  IF (fIni .GT. 0.0) THEN
 !
 ! Run the plume model
 !
@@ -124,24 +125,25 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 ! First clear ent / det
 !
     DO K = 1,N(ng)
-      PLUME(ng) % ent(I, K) = 0.0d0
-      PLUME(ng) % det(I, K) = 0.0d0
+      PLUME(ng) % ent(I, K) = 0.0
+      PLUME(ng) % det(I, K) = 0.0
+      PLUME(ng) % detI(I, K) = 0
     ENDDO
 !
     DO K = iceDepthK+1, N(ng)
       PLUME(ng) % ent(I, K) =                                     &
         & -(PLUME(ng) % f(I, K) - PLUME(ng) % f(I, K-1))          &
         & +MAX(PLUME(ng) % mInt(I, K) - PLUME(ng) % mInt(I, K-1), &
-        &      0.0d0)
+        &      0.0)
     ENDDO
 !
 ! Separate entrainment / detrainment
 !
     DO K = iceDepthK+1, N(ng)
-      IF (PLUME(ng) % ent(I, K) .GT. 0.d0) THEN
+      IF (PLUME(ng) % ent(I, K) .GT. 0.0) THEN
         osDepthK = K
         detr = PLUME(ng) % ent(I, K)
-        PLUME(ng) % ent(I, K) = 0.d0
+        PLUME(ng) % ent(I, K) = 0.0
       ENDIF
     ENDDO
 !
@@ -149,21 +151,21 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !
 ! If no subglacial discharge, then there is no plume
 !
-    PLUME(ng) % f(I, 0) = 0.d0
-    PLUME(ng) % w(I, 0) = 0.d0
-    PLUME(ng) % t(I, 0) = 0.d0
-    PLUME(ng) % s(I, 0) = 0.d0
-    PLUME(ng) % a(I, 0) = 0.d0
-    PLUME(ng) % mInt(I, 0) = 0.d0
+    PLUME(ng) % f(I, 0) = 0.0
+    PLUME(ng) % w(I, 0) = 0.0
+    PLUME(ng) % t(I, 0) = 0.0
+    PLUME(ng) % s(I, 0) = 0.0
+    PLUME(ng) % a(I, 0) = 0.0
+    PLUME(ng) % mInt(I, 0) = 0.0
     DO k = 1, N(ng)
-      PLUME(ng) % f(I, K) = 0.d0
-      PLUME(ng) % w(I, K) = 0.d0
-      PLUME(ng) % t(I, K) = 0.d0
-      PLUME(ng) % s(I, K) = 0.d0
-      PLUME(ng) % a(I, K) = 0.d0
-      PLUME(ng) % mInt(I, K) = 0.d0
-      PLUME(ng) % ent(I, K) = 0.d0
-      PLUME(ng) % det(I, K) = 0.d0
+      PLUME(ng) % f(I, K) = 0.0
+      PLUME(ng) % w(I, K) = 0.0
+      PLUME(ng) % t(I, K) = 0.0
+      PLUME(ng) % s(I, K) = 0.0
+      PLUME(ng) % a(I, K) = 0.0
+      PLUME(ng) % mInt(I, K) = 0.0
+      PLUME(ng) % ent(I, K) = 0.0
+      PLUME(ng) % det(I, K) = 0.0
     ENDDO
   ENDIF
 !
@@ -183,7 +185,6 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !
     plumeDepthK = iceDepthK+1
     neutrDepthK = iceDepthK+1
-    detrDz = 1.d-7
     DO K = iceDepthK+1,osDepthK
       IF ((PLUME(ng) % rho(I, osDepthK) .LT.          &
         &  PLUME(ng) % rhoAm(I, K)           ) .AND.  &
@@ -201,7 +202,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 # if defined ICEPLUME_DETRAIN_NO
     PLUME(ng) % det(I, plumeDepthK) = detr
     PLUME(ng) % detI(I, plumeDepthK) = 1
-    detrDz = detrDz + PLUME(ng) % dz(I, plumeDepthK)
+    detrDz = PLUME(ng) % dz(I, plumeDepthK)
 # elif defined ICEPLUME_DETRAIN_HALF
     CALL ICEPLUME_DETRAIN_HALF(ng, I,                           &
                             &  iceDepthK, plumeDepthK, dx,      &
@@ -214,11 +215,11 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
                             &  detr, detrDz)
 # endif
   ELSE
-    detr = 0.d0
-    detrDz = 1.d-7
+    detr = 0.0
+    detrDz = 0.0
     plumeDepthK = iceDepthK+1
     neutrDepthK = iceDepthK+1
-  ENDIF  ! fini .GT. 0.0d0
+  ENDIF  ! fini .GT. 0.0
 !
 ! ==================================================================!
 !                                                                   !
@@ -230,8 +231,8 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !
   DO K = 1, N(ng)
     DO iTracer = 1, NT(ng)
-      PLUME(ng) % trcB(I, K, iTracer)     = 0.d0
-      PLUME(ng) % trcAmToB(I, K, iTracer) = 0.d0
+      PLUME(ng) % trcB(I, K, iTracer)     = 0.0
+      PLUME(ng) % trcAmToB(I, K, iTracer) = 0.0
     ENDDO
   ENDDO
 !
@@ -243,8 +244,8 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !
 ! If not then there is no melting
 !
-      PLUME(ng) % m(I, K)  = 0.d0
-      PLUME(ng) % mB(I, K) = 0.d0
+      PLUME(ng) % m(I, K)  = 0.0
+      PLUME(ng) % mB(I, K) = 0.0
 !
     ELSE
 !
@@ -259,15 +260,15 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 ! ==================================================================!
 !
       areaP = PLUME(ng) % a(I, K) - PLUME(ng) % a(I, K-1)
-      areaP = MAX(areaP, 0.d0)
+      areaP = MAX(areaP, 0.0)
       areaB = PLUME(ng) % dz(I, K)*dy - areaP
-      areaB = MAX(areaB, 0.d0)
+      areaB = MAX(areaB, 0.0)
 !
       IF (areaP .GT. 0.0) THEN
         PLUME(ng) % m(I, K) = PLUME(ng) % mInt(I, K) - &
           &                   PLUME(ng) % mInt(I, K-1)
       ELSE
-        PLUME(ng) % m(I, K) = 0.d0
+        PLUME(ng) % m(I, K) = 0.0
       ENDIF
 !
 ! ==================================================================!
@@ -281,7 +282,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !                                                                   !
 ! ==================================================================!
 !
-      IF ((useBkgMelt) .AND. (areaB .GT. 0))THEN
+      IF ((useBkgMelt) .AND. (areaB .GT. 0.0))THEN
 !
         meanVel = SQRT((PLUME(ng) % vAm(I, K))**2 + &
           &            (PLUME(ng) % wAm(I, K))**2)
@@ -315,7 +316,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
         ENDIF
 !
       ELSE
-        PLUME(ng) % mB(I, K) = 0.d0
+        PLUME(ng) % mB(I, K) = 0.0
       ENDIF
     ENDIF  ! above or below sea bed
   ENDDO
@@ -335,11 +336,11 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 ! Clear local plume tracer variables
 !
   DO iTracer = 1, NT(ng)
-    PLUME(ng) % trc(I, iTracer)    = 0.d0
-    PLUME(ng) % trcCum(I, iTracer) = 0.d0
+    PLUME(ng) % trc(I, iTracer)    = 0.0
+    PLUME(ng) % trcCum(I, iTracer) = 0.0
   ENDDO
 !
-  IF (fIni .GT. 0) THEN
+  IF (fIni .GT. 0.0) THEN
 !
 ! Write the active tracer (T & S) concentration to PLUME (ng) % trc
 !
@@ -368,7 +369,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 ! Add up total sum of each tracer in plume
 !
       DO K = iceDepthK+1, osDepthK
-        IF (PLUME(ng) % ent(I, K) .LT. 0.) THEN
+        IF (PLUME(ng) % ent(I, K) .LT. 0.0) THEN
           DO iTracer = 3, NT(ng)
             PLUME(ng) % trcCum(I, iTracer) =        &
               & PLUME(ng) % trcCum(I, iTracer) +    &
@@ -391,8 +392,8 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !
 ! Calculate accumulated trcer amount from base to detrain depth
 !
-        PLUME(ng) % trcCum(I, NT(ng)-1) = 0.0d0
-        PLUME(ng) % trcCum(I, NT(ng)  ) = 0.0d0
+        PLUME(ng) % trcCum(I, NT(ng)-1) = 0.0
+        PLUME(ng) % trcCum(I, NT(ng)  ) = 0.0
         DO K = iceDepthK+1, osDepthK
           PLUME(ng) % trcCum(I, NT(ng)-1) =           &
             & PLUME(ng) % trcCum(I, NT(ng)-1) +       &
@@ -472,7 +473,7 @@ SUBROUTINE ICEPLUME_MELTRATE(temp, salt, vel, depth, mdot, sB, tB)
   c = GamS*salt*(cI*(lambda2 + lambda3*depth - tIce) + L) +     &
     & GamT*sIce*cW*(temp - lambda2 - lambda3*depth)
 !
-  sB   = (1./(2.*a))*(-b - SQRT(b**2. - 4.*a*c))
+  sB   = (1.0/(2.0*a))*(-b - SQRT(b**2 - 4.0*a*c))
   tB   = lambda1*sB + lambda2 + lambda3*depth
   mdot = GamS*SQRT(CdBkg)*ABS(vel)*(salt - sB)/sB
 !

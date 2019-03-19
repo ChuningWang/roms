@@ -79,31 +79,31 @@ MODULE mod_iceplume
 !
   real(r8), parameter :: pi = 4.0d0*ATAN(1.0d0)    ! Pi
 !
-  real(r8), parameter :: alpha      = 1.d-1
-  real(r8), parameter :: tIce       = -1.d1
-  real(r8), parameter :: sIce       = 0.d0
-  real(r8), parameter :: rhoRef     = 1.020d3
-  real(r8), parameter :: rhoAir     = 1.225
-  real(r8), parameter :: g          = 9.81d0
-  real(r8), parameter :: cW         = 3.974d3
-  real(r8), parameter :: cI         = 2.d3
-  real(r8), parameter :: L          = 3.35d5
-  real(r8), parameter :: lambda1    = -5.73d-2
-  real(r8), parameter :: lambda2    = 8.32d-2
-  real(r8), parameter :: lambda3    = 7.61d-4
+  real(r8), parameter :: alpha      = 0.1_r8
+  real(r8), parameter :: tIce       = -10.0_r8
+  real(r8), parameter :: sIce       = 0.0_r8
+  real(r8), parameter :: rhoRef     = 1020.0_r8
+  real(r8), parameter :: rhoAir     = 1.225_r8
+  real(r8), parameter :: g          = 9.81_r8
+  real(r8), parameter :: cW         = 3974.0_r8
+  real(r8), parameter :: cI         = 2000.0_r8
+  real(r8), parameter :: L          = 335000.0_r8
+  real(r8), parameter :: lambda1    = -0.0573_r8
+  real(r8), parameter :: lambda2    = 0.0832_r8
+  real(r8), parameter :: lambda3    = 0.000761_r8
 !
-  real(r8), parameter :: GamT       = 2.20d-2
-  real(r8), parameter :: GamS       = 6.20d-4
-  real(r8), parameter :: Cd         = 6.5d-2
+  real(r8), parameter :: GamT       = 0.0220_r8
+  real(r8), parameter :: GamS       = 0.000620_r8
+  real(r8), parameter :: Cd         = 0.065_r8
 !
-  real(r8), parameter :: N2Bkg      = 1.d-3
-  real(r8), parameter :: CdBkg      = 2.5d-3
-  real(r8), parameter :: velBkg     = 1.d-2
+  real(r8), parameter :: N2Bkg      = 0.001_r8
+  real(r8), parameter :: CdBkg      = 0.0025_r8
+  real(r8), parameter :: velBkg     = 0.01_r8
 !
-  real(r8), parameter :: wIni       = 1.d0
+  real(r8), parameter :: wIni       = 1.0_r8
 !
-  real(r8), parameter :: CuMax      = 0.5d0
-  real(r8), parameter :: RiBMin     = 1.0d0
+  real(r8), parameter :: CuMax      = 0.5_r8
+  real(r8), parameter :: RiBMin     = 1.0_r8
 !
 ! ====================================================================!
 !                                                                     !
@@ -136,7 +136,6 @@ MODULE mod_iceplume
 ! ent           - entrainment rate [m^3 s^-1]                         !
 ! det           - detrainment rate [m^3 s^-1]                         !
 ! detI          - detrainment flag                                    !
-! verI          - vertical acceleration flag                          !
 !                                                                     !
 ! m             - plume melt rate [m^3 s^-1]                          !
 ! mB            - background melt rate [m^3 s^-1]                     !
@@ -199,7 +198,6 @@ MODULE mod_iceplume
     real(r8), pointer :: ent(:, :)
     real(r8), pointer :: det(:, :)
     integer(r8), pointer :: detI(:, :)
-    integer(r8), pointer :: verI(:, :)
 !
 ! Melt rate, freshwater and heat fluxes.
 !
@@ -264,13 +262,12 @@ MODULE mod_iceplume
         allocate( PLUME(ng) % ent  (Nsrc(ng), N(ng)) )
         allocate( PLUME(ng) % det  (Nsrc(ng), N(ng)) )
         allocate( PLUME(ng) % detI (Nsrc(ng), N(ng)) )
-        allocate( PLUME(ng) % verI (Nsrc(ng), N(ng)) )
 !
         allocate( PLUME(ng) % m        (Nsrc(ng), N(ng)) )
         allocate( PLUME(ng) % mB       (Nsrc(ng), N(ng)) )
         allocate( PLUME(ng) % trcAmToB (Nsrc(ng), N(ng), NT(ng)) )
 !
-        allocate( PLUME(ng) % dz (Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % dz (Nsrc(ng), N(ng)+1) )
 !
         allocate( PLUME(ng) % trcAm  (Nsrc(ng), N(ng), NT(ng)) )
         allocate( PLUME(ng) % trcB   (Nsrc(ng), N(ng), NT(ng)) )

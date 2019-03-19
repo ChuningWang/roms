@@ -27,8 +27,8 @@ SUBROUTINE ICEPLUME_ENTRAIN(ng, I, iceDepthK, &
 ! ==================================================================!
 !
   integer :: IOPT, ISTATE, ITASK, ITOL, IWORK(20), LIW, LRW, MF, NEQ
-  real(r8), parameter :: RTOL = 1.0d-5
-  real(r8), parameter :: ATOL = 1.0d-5
+  real(r8), parameter :: RTOL = 1.0E-5_r8
+  real(r8), parameter :: ATOL = 1.0E-5_r8
   real(r8) :: RWORK(116), Y(10)
 !
 ! Y is input/output vector for DLSODE
@@ -179,7 +179,7 @@ SUBROUTINE ICEPLUME_ENTRAIN(ng, I, iceDepthK, &
       rhoA = RHO(tA, sA, zIn)
 !
 # ifdef ICEPLUME_OVERSHOOT
-      IF ( (Y(2) .LE. 0.0d0) .OR. (K .EQ. N(ng)) ) THEN
+      IF ( (Y(2) .LE. 0.0) .OR. (K .EQ. N(ng)) ) THEN
 # else
       IF ( (PLUME(ng) % rho(I, K) .GT. rhoA) .OR. &
          & (K .EQ. N(ng)) ) THEN
@@ -195,8 +195,8 @@ SUBROUTINE ICEPLUME_ENTRAIN(ng, I, iceDepthK, &
 ! of this cell, so plume area and velocity equal zero. Other values are
 ! kept for use in determining plume outflow properties.
 !
-        Y(1) = 0.d0
-        Y(2) = 0.d0
+        Y(1) = 0.0
+        Y(2) = 0.0
         PLUME(ng) % lm(I, K) = PLUME(ng) % lm(I, K-1)
         PLUME(ng) % lc(I, K) = PLUME(ng) % lc(I, K-1)
       ELSE
@@ -261,13 +261,13 @@ SUBROUTINE GENERAL_ENTRAIN_MODEL (NEQ, T, Y, YDOT)
 !
 ! Check if velcoity is positive
 !
-  IF (Y(2) .LE. 0.0d0) THEN
-    YDOT(1) = 0.0d0
-    YDOT(2) = 0.0d0
-    YDOT(3) = 0.0d0
-    YDOT(4) = 0.0d0
-    YDOT(5) = 0.0d0
-    YDOT(6) = 0.0d0
+  IF (Y(2) .LE. 0.0_r8) THEN
+    YDOT(1) = 0.0_r8
+    YDOT(2) = 0.0_r8
+    YDOT(3) = 0.0_r8
+    YDOT(4) = 0.0_r8
+    YDOT(5) = 0.0_r8
+    YDOT(6) = 0.0_r8
   ELSE
 !
 ! Interpolate from imposed ambient profiles
@@ -309,7 +309,7 @@ SUBROUTINE GENERAL_ENTRAIN_MODEL (NEQ, T, Y, YDOT)
     c = GamS*Y(4)*(cI*(lambda2 + lambda3*T - tIce) + L) +     &
       & GamT*sIce*cW*(Y(3) - lambda2 - lambda3*T)
 !
-    sB   = (1./(2.*a))*(-b - SQRT(b**2. - 4.*a*c))
+    sB   = (1.0/(2.0*a))*(-b - SQRT(b**2 - 4.0*a*c))
     tB   = lambda1*sB + lambda2 + lambda3*T
     mdot = GamS*SQRT(Cd)*Y(2)*(Y(4) - sB)/sB
 !
