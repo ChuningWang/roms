@@ -67,7 +67,7 @@ SUBROUTINE iceplume_tile (ng, tile)
 !
 ! ==================================================================!
 !                                                                   !
-! Find the right Rho coordinates                                    !
+! Find the right Rho coordinates.                                   !
 !                                                                   !
 ! ==================================================================!
 !
@@ -162,20 +162,22 @@ SUBROUTINE iceplume_tile (ng, tile)
 !
 ! Discharge tracer concentration
 !
-        IF (useTracers .and. useInputTracers) THEN
-          DO itrc = 3, NT(ng)
-            PLUME(ng) % trcIni(is, itrc) = &
-# ifdef ONE_TRACER_SOURCE
-              & SOURCES(ng) % SGtrc(itrc)
+# ifdef ICEPLUME_TRACER
+        PLUME(ng) % trcIni(is, itemp) = 0.0
+        PLUME(ng) % trcIni(is, isalt) = 0.0
+        DO itrc = 3, NT(ng)
+          PLUME(ng) % trcIni(is, itrc) = &
+#  ifdef ONE_TRACER_SOURCE
+            & SOURCES(ng) % SGtrc(itrc)
+#  else
+            & SOURCES(ng) % SGtrc(is, itrc)
+#  endif
+        ENDDO
 # else
-              & SOURCES(ng) % SGtrc(is, itrc)
+        DO itrc = 1, NT(ng)
+          PLUME(ng) % trcIni(is, itrc) = 0.d0
+        ENDDO
 # endif
-          ENDDO
-        ELSE
-          DO itrc = 3, NT(ng)
-            PLUME(ng) % trcIni(is, itrc) = 0.d0
-          ENDDO
-        ENDIF
 !
 ! ==================================================================!
 !                                                                   !

@@ -17,32 +17,6 @@ MODULE mod_iceplume
 !
 ! ====================================================================!
 !                                                                     !
-! User defined variables and logical switches                         !
-! These parameters are read when coupling with GCMs.                  !
-!                                                                     !
-! ====================================================================!
-!
-# ifdef ICEPLUME_TRACER
-  logical :: useTracers          = .true.
-  logical :: useInputTracers     = .true.
-# else
-  logical :: useTracers          = .false.
-  logical :: useInputTracers     = .false.
-# endif
-# ifdef ICEPLUME_MELT
-  logical :: useBkgMelt          = .true.
-# else
-  logical :: useBkgMelt          = .false.
-# endif
-# ifdef ICEPLUME_MELT_TRACER
-  logical :: useMeltTracers      = .true.
-# else
-  logical :: useMeltTracers      = .false.
-# endif
-  integer :: depthFinder         = 2
-!
-! ====================================================================!
-!                                                                     !
 ! Model parameters                                                    !
 !                                                                     !
 ! alpha     - entrainment rate                                        !
@@ -57,23 +31,16 @@ MODULE mod_iceplume
 ! lambda1   - freezing point slope [degC PSU^-1]                      !
 ! lambda2   - freezing point offset [degC]                            !
 ! lambda3   - freezing point depth slope [degC m^-1]                  !
+!                                                                     !
 ! GamT      - thermal turbulent transfer coefficient                  !
 ! GamS      - salt turbulent transfer coefficient                     !
 ! Cd        - ice-plume drag coefficient                              !
 !                                                                     !
-! N2Bkg     - background N2                                           !
+! RiB       - critical Richardson number                              !
+! gRedBkg   - background reduced gravity                              !
 ! CdBkg     - background ice-plume drag coefficient                   !
 ! velBkg    - background velocity [m s^-1]                            !
-!                                                                     !
 ! wIni      - initial (discharge) velocity [m s^-1]                   !
-!                                                                     !
-! CuMax     - maximum Courant number to triger checkCFL.              !
-! RiBMin    - minimum Richardson number to triger checkRiB.           !
-!                                                                     !
-! iceDepth  - ice bottom depth [m]                                    !
-!             if iceDepth is positive (iceDepth = 1),                 !
-!             then iceDepth = water depth                             !
-! L0        - finite line source length [m]                           !
 !                                                                     !
 ! ====================================================================!
 !
@@ -96,31 +63,20 @@ MODULE mod_iceplume
   real(r8), parameter :: GamS       = 0.000620_r8
   real(r8), parameter :: Cd         = 0.065_r8
 !
-  real(r8), parameter :: N2Bkg      = 0.001_r8
+  real(r8), parameter :: RiB        = 1.5_r8
+  real(r8), parameter :: gRedBkg    = 0.03_r8
   real(r8), parameter :: CdBkg      = 0.0025_r8
   real(r8), parameter :: velBkg     = 0.01_r8
-!
   real(r8), parameter :: wIni       = 1.0_r8
-!
-  real(r8), parameter :: CuMax      = 0.5_r8
-  real(r8), parameter :: RiBMin     = 1.0_r8
 !
 ! ====================================================================!
 !                                                                     !
-! Variables                                                           !
+! PLUME Type variables                                                !
 !                                                                     !
 ! dir           - direction of plume. +1 for positve direction and    !
 !                 -1 for negative direction. 0 for other situation.   !
 !                                                                     !
 ! Profiles                                                            !
-!                                                                     !
-! zR            - depth at Rho points [m]                             !
-! sAm           - ambient salinity [PSU]                              !
-! tAm           - ambient temperature [degC]                          !
-! vAm           - horizontal velocity parallel to glacier [m s^-1]    !
-! wAm           - vertical velocity parallel to glacier [m s^-1]      !
-! tpAm          - ambient potential temperature [degC]                !
-! rhoAm         - ambient density [kg m^-3]                           !
 !                                                                     !
 ! zW            - depth [m]                                           !
 ! f             - plume vertical volume flux [m^3 s^-1]               !
@@ -129,6 +85,15 @@ MODULE mod_iceplume
 ! s             - plume salinity [PSU]                                !
 ! a             - plume area integrated [m^2]                         !
 ! mInt          - plume area integrated melt [m^3 s^-1]               !
+! rho           - plume density [kg m^-3]                             !
+!                                                                     !
+! zR            - depth at Rho points [m]                             !
+! sAm           - ambient salinity [PSU]                              !
+! tAm           - ambient temperature [degC]                          !
+! vAm           - horizontal velocity parallel to glacier [m s^-1]    !
+! wAm           - vertical velocity parallel to glacier [m s^-1]      !
+! tpAm          - ambient potential temperature [degC]                !
+! rhoAm         - ambient density [kg m^-3]                           !
 !                                                                     !
 ! lm            - plume/glacier contact length [m]                    !
 ! lc            - plume/water contact length [m]                      !
@@ -143,6 +108,7 @@ MODULE mod_iceplume
 ! dz            - RHO layer thickness [m]                             !
 !                                                                     !
 ! Passive tracers                                                     !
+!                                                                     !
 ! trc           - passive tracer concentration                        !
 ! trcAm         - ambient passive tracer concentration                !
 ! trcB          - meltwater passive tracer concentration              !
@@ -167,17 +133,7 @@ MODULE mod_iceplume
 !
     real(r8), pointer :: dir(:)
 !
-! Grid, ambient state.
-!
-    real(r8), pointer :: zR(:, :)
-    real(r8), pointer :: tAm(:, :)
-    real(r8), pointer :: sAm(:, :)
-    real(r8), pointer :: vAm(:, :)
-    real(r8), pointer :: wAm(:, :)
-    real(r8), pointer :: tpAm(:, :)
-    real(r8), pointer :: rhoAm(:, :)
-!
-! Plume state.
+! Plume state (omega surface).
 !
     real(r8), pointer :: zW(:, :)
     real(r8), pointer :: f(:, :)
@@ -187,6 +143,16 @@ MODULE mod_iceplume
     real(r8), pointer :: a(:, :)
     real(r8), pointer :: mInt(:, :)
     real(r8), pointer :: rho(:, :)
+!
+! Grid, ambient state (rho surface).
+!
+    real(r8), pointer :: zR(:, :)
+    real(r8), pointer :: tAm(:, :)
+    real(r8), pointer :: sAm(:, :)
+    real(r8), pointer :: vAm(:, :)
+    real(r8), pointer :: wAm(:, :)
+    real(r8), pointer :: tpAm(:, :)
+    real(r8), pointer :: rhoAm(:, :)
 !
 ! Plume shape parameters.
 !
@@ -228,7 +194,11 @@ MODULE mod_iceplume
 !
   TYPE (T_PLUME), allocatable :: PLUME(:)
 !
-! ===================================================================
+! ====================================================================!
+!                                                                     !
+! Allocate PLUME Type variables.                                      !
+!                                                                     !
+! ====================================================================!
 !
   CONTAINS
     SUBROUTINE allocate_iceplume(ng)
@@ -239,14 +209,6 @@ MODULE mod_iceplume
 !
         allocate( PLUME(ng) % dir(1:Nsrc(ng)) )
 !
-        allocate( PLUME(ng) % zR    (Nsrc(ng), N(ng)  ) )
-        allocate( PLUME(ng) % tAm   (Nsrc(ng), N(ng)  ) )
-        allocate( PLUME(ng) % sAm   (Nsrc(ng), N(ng)  ) )
-        allocate( PLUME(ng) % vAm   (Nsrc(ng), N(ng)  ) )
-        allocate( PLUME(ng) % wAm   (Nsrc(ng), N(ng)  ) )
-        allocate( PLUME(ng) % tpAm  (Nsrc(ng), N(ng)  ) )
-        allocate( PLUME(ng) % rhoAm (Nsrc(ng), N(ng)+1) )
-!
         allocate( PLUME(ng) % zW   (Nsrc(ng), 0:N(ng)) )
         allocate( PLUME(ng) % f    (Nsrc(ng), 0:N(ng)) )
         allocate( PLUME(ng) % w    (Nsrc(ng), 0:N(ng)) )
@@ -255,6 +217,14 @@ MODULE mod_iceplume
         allocate( PLUME(ng) % a    (Nsrc(ng), 0:N(ng)) )
         allocate( PLUME(ng) % mInt (Nsrc(ng), 0:N(ng)) )
         allocate( PLUME(ng) % rho  (Nsrc(ng), 0:N(ng)) )
+!
+        allocate( PLUME(ng) % zR    (Nsrc(ng), N(ng)  ) )
+        allocate( PLUME(ng) % tAm   (Nsrc(ng), N(ng)  ) )
+        allocate( PLUME(ng) % sAm   (Nsrc(ng), N(ng)  ) )
+        allocate( PLUME(ng) % vAm   (Nsrc(ng), N(ng)  ) )
+        allocate( PLUME(ng) % wAm   (Nsrc(ng), N(ng)  ) )
+        allocate( PLUME(ng) % tpAm  (Nsrc(ng), N(ng)  ) )
+        allocate( PLUME(ng) % rhoAm (Nsrc(ng), N(ng)+1) )
 !
         allocate( PLUME(ng) % lm (Nsrc(ng), 0:N(ng)) )
         allocate( PLUME(ng) % lc (Nsrc(ng), 0:N(ng)) )
