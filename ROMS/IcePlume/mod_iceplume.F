@@ -63,7 +63,7 @@ MODULE mod_iceplume
   real(r8), parameter :: GamS       = 0.000620_r8
   real(r8), parameter :: Cd         = 0.065_r8
 !
-  real(r8), parameter :: RiB        = 1.5_r8
+  real(r8), parameter :: RiB        = 2.0_r8
   real(r8), parameter :: gRedBkg    = 0.03_r8
   real(r8), parameter :: CdBkg      = 0.0025_r8
   real(r8), parameter :: velBkg     = 0.01_r8
