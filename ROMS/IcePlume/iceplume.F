@@ -48,13 +48,10 @@ SUBROUTINE iceplume_tile (ng, tile)
 !  Local variable declarations.
 !
   integer :: is, Isrc, Jsrc, Dsrc, D2src
-  integer :: K, itrc
+  integer :: K, K2, itrc
   real(r8) :: pr, prRef
   real(r8) :: dx, dy
   real(r8) :: cff, cff1, cff2, cff3, cff4
-# ifdef ICEPLUME_VIRTUAL_MIX
-  real(r8), dimension(0:N(ng)) :: dzNew, zWNew, zLNew
-# endif
 !
 # include "set_bounds.h"
 !
@@ -207,96 +204,97 @@ SUBROUTINE iceplume_tile (ng, tile)
 !                                                                   !
 ! ==================================================================!
 !
-        IF (INT(PLUME(ng) % dir(is)) .EQ. 0) THEN
-!
 ! Calculate new box vertical boundary.
 !
-          zLNew(0) = PLUME(ng) % zW(is, 0)
-          DO K = 1, N(ng)
-            dzNew(K) = PLUME(ng) % dz(is, K) +                    &
-              &        (PLUME(ng) % det(is, K) +                  &
-              &         PLUME(ng) % ent(is, K))*dt(ng)/(dx*dy)
-            zLNew(K) = zLNew(K-1) + dzNew(K)
-          ENDDO
+        PLUME(ng) % zLNew(is, 0) = PLUME(ng) % zW(is, 0)
+        DO K = 1, N(ng)
+          PLUME(ng) % dzNew(is, K) = PLUME(ng) % dz(is, K) +    &
+            &        (PLUME(ng) % det(is, K) +                  &
+            &         PLUME(ng) % ent(is, K) +                  &
+            &         PLUME(ng) % mB(is, K))*dt(ng)/(dx*dy)
+          PLUME(ng) % zLNew(is, K) =                            &
+            & PLUME(ng) % zLNew(is, K-1) +                      &
+            & PLUME(ng) % dzNew(is, K)
+        ENDDO
 !
 ! Calculate tracer concentration.
 !
-          DO K = 1, N(ng)
-            cff  = dx*dy*PLUME(ng) % dz(is, K)
-            cff1 = (PLUME(ng) % det(is, K) +                      &
-              &     PLUME(ng) % ent(is, K))*dt(ng)
-            DO itrc = 1, NT(ng)
-              cff2 = (PLUME(ng) % det(is, K)*                     &
-                &     PLUME(ng) % trc(is, itrc)+                  &
-                &     PLUME(ng) % ent(is, K)*                     &
-                &     PLUME(ng) % trcAm(is, K, itrc))*dt(ng)
-              PLUME(ng) % trcNew(is, K, itrc) =                   &
-                & (PLUME(ng) % trcAm(is, K, itrc)*cff + cff2) /   &
-                & (cff + cff1)
-            ENDDO
+        DO K = 1, N(ng)
+          cff  = dx*dy*PLUME(ng) % dz(is, K)
+          cff1 = (PLUME(ng) % det(is, K) +                      &
+            &     PLUME(ng) % ent(is, K) +                      &
+            &     PLUME(ng) % mB(is, K))*dt(ng)
+          DO itrc = 1, NT(ng)
+            cff2 = (PLUME(ng) % det(is, K)*                     &
+              &     PLUME(ng) % trc(is, itrc)+                  &
+              &     PLUME(ng) % ent(is, K)*                     &
+              &     PLUME(ng) % trcAm(is, K, itrc)+             &
+              &     PLUME(ng) % mB(is,k)*                       &
+              &     PLUME(ng)%trcB(is,k,itrc)+                  &
+              &     PLUME(ng) % trcAmToB(is,k,itrc))*dt(ng)
+            PLUME(ng) % trcL(is, K, itrc) =                     &
+              & (PLUME(ng) % trcAm(is, K, itrc)*cff + cff2) /   &
+              & (cff + cff1)
           ENDDO
+        ENDDO
 !
 ! Correction for grid stretching.
 !
-          cff1 = PLUME(ng) % zW(is, N(ng)) - PLUME(ng) % zW(is, 0)
-          cff2 = zLNew(N(ng))              - PLUME(ng) % zW(is, 0)
-          DO K = 0, N(ng)
-            zWNew(K) = &
-              & (PLUME(ng) % zW(is, K)-zWNew(0))*cff2/cff1+zWNew(0)
-          ENDDO
+        cff1 = PLUME(ng) % zW(is, N(ng)) -                        &
+          &    PLUME(ng) % zW(is, 0)
+        cff2 = PLUME(ng) % zLNew(is, N(ng)) -                     &
+          &    PLUME(ng) % zW(is, 0)
+        DO K = 0, N(ng)
+          PLUME(ng) % zWNew(is, K) =                              &
+            & (PLUME(ng) % zW(is, K) - PLUME(ng) %zWNew(is, 0))*  &
+            & cff2/cff1 + PLUME(ng) % zWNew(is, 0)
+        ENDDO
 !
-          cff  = zWNew(1) - zWNew(0)
-          cff1 = MAX(zWNew(1) - zLNew(1), 0.0d0)
-          cff3 = cff - cff1
+! Calculate weight function.
+!
+        DO K = 1, N(ng)
+          cff = PLUME(ng) % zWNew(is, K) -                        &
+            &   PLUME(ng) % zWNew(is, K-1)
+          DO K2 = 1, N(ng)
+            cff1 = PLUME(ng) % zWNew(is, K) -                     &
+              &    PLUME(ng) % zLNew(is, K2)
+            cff1 = MIN(MAX(cff1, 0.0_r8), cff)
+            cff2 = PLUME(ng) % zWNew(is, K-1) -                   &
+              &    PLUME(ng) % zLNew(is, K2-1)
+            cff2 = MIN(-MIN(cff2, 0.0_r8), cff)
+            PLUME(ng) % dzWei(is, K2) = (cff-cff1-cff2)/cff
+          ENDDO
           DO itrc = 1, NT(ng)
-            PLUME(ng) % trcNew(is, 1, itrc) =                  &
-              & (PLUME(ng) % trcNew(is, 1, itrc)*cff3 +        &
-              &  PLUME(ng) % trcNew(is, 2, itrc)*cff1) / cff
-          ENDDO
-!
-          cff  = zWNew(N(ng)) - zWNew(N(ng)-1)
-          cff2 = -MIN(zWNew(N(ng)-1)-zLNew(N(ng)-1), 0.0d0)
-          cff3 = cff - cff2
-          DO itrc = 1, NT(ng)
-            PLUME(ng) % trcNew(is, N(ng), itrc) =                   &
-              & (PLUME(ng) % trcNew(is, N(ng)  , itrc)*cff3 +       &
-              &  PLUME(ng) % trcNew(is, N(ng)-1, itrc)*cff2) / cff
-          ENDDO
-!
-          DO K = 2, N(ng)-1
-            cff  = zWNew(K) - zWNew(K-1)
-            cff1 = MAX(zWNew(K) - zLNew(K), 0.0d0)
-            cff2 = -MIN(zWNew(K-1)-zLNew(K-1), 0.0d0)
-            cff3 = cff - cff1 - cff2
-            DO itrc = 1, NT(ng)
-              PLUME(ng) % trcNew(is, K, itrc) =               &
-                & (PLUME(ng) % trcNew(is, K+1, itrc)*cff1 +   &
-                &  PLUME(ng) % trcNew(is, K-1, itrc)*cff2 +   &
-                &  PLUME(ng) % trcNew(is, K  , itrc)*cff3)/   &
-                & cff
+            PLUME(ng) % trcNew(is, K, itrc) = 0.0_r8
+            DO K2 = 1, N(ng)
+              PLUME(ng) % trcNew(is, K, itrc) =                   &
+                & PLUME(ng) % trcNew(is, K, itrc) +               &
+                & PLUME(ng) % dzWei(is, K2)*                      &
+                & PLUME(ng) % trcL(is, K2, itrc)
             ENDDO
           ENDDO
+        ENDDO
 !
 ! Scale tracers with original omega levels.
 !
-          cff = (zWNew(N(ng))-zWnew(0)) / &
-            &   (PLUME(ng) % zW(is, N(ng))-PLUME(ng) % zW(is, 0))
-          DO K = 1, N(ng)
-            DO itrc = 1, NT(ng)
-              PLUME(ng) % trcNew(is, K, itrc) =       &
-                & PLUME(ng) % trcNew(is, K, itrc)*cff
-            ENDDO
+        cff = (PLUME(ng) % zWNew(is, N(ng)) -                     &
+          &    PLUME(ng) % zWNew(is, 0)) /                        &
+          &   (PLUME(ng) % zW(is, N(ng)) - PLUME(ng) % zW(is, 0))
+        DO K = 1, N(ng)
+          DO itrc = 1, NT(ng)
+            PLUME(ng) % trcNew(is, K, itrc) =       &
+              & PLUME(ng) % trcNew(is, K, itrc)*cff
           ENDDO
+        ENDDO
 !
 ! Substitute new tracer values back to OCEAN.
 !
-          DO K = 1, N(ng)
-            DO itrc = 1, NT(ng)
-              OCEAN(ng) % t(Isrc, Jsrc, K, nstp(ng), itrc) =  &
-                & PLUME(ng) % trcNew(is, K, itrc)
-            ENDDO
+        DO K = 1, N(ng)
+          DO itrc = 1, NT(ng)
+            OCEAN(ng) % t(Isrc, Jsrc, K, nstp(ng), itrc) =        &
+              & PLUME(ng) % trcNew(is, K, itrc)
           ENDDO
-        ENDIF
+        ENDDO
 # endif
       ENDIF
     ENDDO

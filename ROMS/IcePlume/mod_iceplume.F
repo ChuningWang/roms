@@ -120,8 +120,11 @@ MODULE mod_iceplume
 # ifdef ICEPLUME_VIRTUAL_MIX
 !                                                                     !
 ! For calculation of virtual tracer flux                              !
-! fW            - volume flux through omega surface [m^3 s^-1]        !
-! fC            - tracer flux through omega surface [m^3 s^-1]        !
+! dzNew         - new layer thickness [m]                             !
+! zWNew         - new omega surface depth [m]                         !
+! zLNew         - new box vertical boundary [m]                       !
+! dzWei         - new layer weight function                           !
+! trcL          - new box tracer concentration                        !
 ! trcNew        - updated tracer concentration                        !
 # endif
 !                                                                     !
@@ -186,8 +189,11 @@ MODULE mod_iceplume
 !
 ! For calculation of virtual tracer flux.
 !
-    real(r8), pointer :: fW(:, :)
-    real(r8), pointer :: fC(:, :, :)
+    real(r8), pointer :: dzNew(:, :)
+    real(r8), pointer :: zWNew(:, :)
+    real(r8), pointer :: zLNew(:, :)
+    real(r8), pointer :: dzWei(:, :)
+    real(r8), pointer :: trcL(:, :, :)
     real(r8), pointer :: trcNew(:, :, :)
 # endif
   END TYPE T_PLUME
@@ -246,8 +252,11 @@ MODULE mod_iceplume
         allocate( PLUME(ng) % trcIni (Nsrc(ng), NT(ng)) )
 # ifdef ICEPLUME_VIRTUAL_MIX
 !
-        allocate( PLUME(ng) % fW     (Nsrc(ng), 0:N(ng)) )
-        allocate( PLUME(ng) % fC     (Nsrc(ng), 0:N(ng), NT(ng)) )
+        allocate( PLUME(ng) % dzNew  (Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % zWNew  (Nsrc(ng), 0:N(ng)) )
+        allocate( PLUME(ng) % zLNew  (Nsrc(ng), 0:N(ng)) )
+        allocate( PLUME(ng) % dzWei  (Nsrc(ng), N(ng)) )
+        allocate( PLUME(ng) % trcL   (Nsrc(ng), N(ng), NT(ng)) )
         allocate( PLUME(ng) % trcNew (Nsrc(ng), N(ng), NT(ng)) )
 # endif
     END SUBROUTINE allocate_iceplume
