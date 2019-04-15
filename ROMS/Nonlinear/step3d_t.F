@@ -692,7 +692,7 @@
      &                      SOURCES(ng)%Tsrc(is,k,itrc)
 #  endif
 # if defined ICEPLUME && !defined ICEPLUME_VIRTUAL_MIX
-                    FE(Isrc,Jsrc)=FE(Isrc,Jsrc)+PLUME(ng)dir(is)*       &
+                    FE(Isrc,Jsrc)=FE(Isrc,Jsrc)+PLUME(ng)%dir(is)*      &
                       (PLUME(ng)%det(is,k)*PLUME(ng)%trc(is,itrc)+      &
      &                 PLUME(ng)%ent(is,k)*PLUME(ng)%trcAm(is,k,itrc)+  &
      &                 PLUME(ng)%mB(is,k)*PLUME(ng)%trcB(is,k,itrc)+    &
