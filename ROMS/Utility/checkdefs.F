@@ -1388,14 +1388,14 @@
       Coptions(is:is+10)=' ICEPLUME,'
 !
 # ifdef ICEPLUME_TRACER
-      IF (Master) WRITE (stdout,20) 'ICEPLUME_TRACER',             &
+      IF (Master) WRITE (stdout,20) 'ICEPLUME_TRACER',                  &
      &   'Tracers for plume water in iceplume model.'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+10)=' ICEPLUME_TRACER,'
 # endif
 !
 # ifdef ICEPLUME_MELT
-      IF (Master) WRITE (stdout,20) 'ICEPLUME_MELT',                &
+      IF (Master) WRITE (stdout,20) 'ICEPLUME_MELT',                    &
      &   'Background melting for the iceplume model.'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+10)=' ICEPLUME_MELT,'
@@ -1409,6 +1409,18 @@
 # endif
 !
 #endif
+!
+#ifdef ICEPLUME_VIRTUAL_BOX
+      IF (Master) WRITE (stdout,20) 'ICEPLUME_VIRTUAL_BOX',             &
+     &   'Mixing instead of flux form for iceplume model.'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+10)=' ICEPLUME_VIRTUAL_BOX,'
+!
+#ifdef ICEPLUME_VIRTUAL_BOX
+      IF (Master) WRITE (stdout,20) 'ICEPLUME_DETRAIN_NO',              &
+     &   'Suppress detrainment model for iceplume model.'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+10)=' ICEPLUME_DETRAIN_NO,'
 !
 !-----------------------------------------------------------------------
 !
