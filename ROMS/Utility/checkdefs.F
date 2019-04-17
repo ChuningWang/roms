@@ -1408,19 +1408,21 @@
       Coptions(is:is+10)=' ICEPLUME_MELT_TRACER,'
 # endif
 !
-#endif
-!
 #ifdef ICEPLUME_VIRTUAL_BOX
       IF (Master) WRITE (stdout,20) 'ICEPLUME_VIRTUAL_BOX',             &
      &   'Mixing instead of flux form for iceplume model.'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+10)=' ICEPLUME_VIRTUAL_BOX,'
+# endif
 !
 #ifdef ICEPLUME_VIRTUAL_BOX
       IF (Master) WRITE (stdout,20) 'ICEPLUME_DETRAIN_NO',              &
      &   'Suppress detrainment model for iceplume model.'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+10)=' ICEPLUME_DETRAIN_NO,'
+# endif
+!
+#endif
 !
 !-----------------------------------------------------------------------
 !
