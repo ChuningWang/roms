@@ -645,20 +645,29 @@
      &              ((Jstr.le.Jsrc).and.(Jsrc.le.Jend))) THEN
 # endif
                   IF (LtracerSrc(itrc,ng)) THEN
-                    FX(Isrc,Jsrc)=Huon(Isrc,Jsrc,k)*                    &
-# ifdef ONE_TRACER_SOURCE
-     &                      SOURCES(ng)%Tsrc(itrc)
-# elif defined TWO_D_TRACER_SOURCE
-     &                      SOURCES(ng)%Tsrc(is,itrc)
-# else
-     &                      SOURCES(ng)%Tsrc(is,k,itrc)
-# endif
 # if defined ICEPLUME && !defined ICEPLUME_VIRTUAL_MIX
+                    FX(Isrc,Jsrc)=SOURCES(ng)%Qsrc(is,k)*               &
+#  ifdef ONE_TRACER_SOURCE
+     &                      SOURCES(ng)%Tsrc(itrc)
+#  elif defined TWO_D_TRACER_SOURCE
+     &                      SOURCES(ng)%Tsrc(is,itrc)
+#  else
+     &                      SOURCES(ng)%Tsrc(is,k,itrc)
+#  endif
                     FX(Isrc,Jsrc)=FX(Isrc,Jsrc)+PLUME(ng)%dir(is)*      &
-                      (PLUME(ng)%det(is,k)*PLUME(ng)%trc(is,itrc)+      &
+     &                (PLUME(ng)%det(is,k)*PLUME(ng)%trc(is,itrc)+      &
      &                 PLUME(ng)%ent(is,k)*PLUME(ng)%trcAm(is,k,itrc)+  &
      &                 PLUME(ng)%mB(is,k)*PLUME(ng)%trcB(is,k,itrc)+    &
      &                 PLUME(ng)%trcAmToB(is,k,itrc))
+# else
+                    FX(Isrc,Jsrc)=Huon(Isrc,Jsrc,k)*                    &
+#  ifdef ONE_TRACER_SOURCE
+     &                      SOURCES(ng)%Tsrc(itrc)
+#  elif defined TWO_D_TRACER_SOURCE
+     &                      SOURCES(ng)%Tsrc(is,itrc)
+#  else
+     &                      SOURCES(ng)%Tsrc(is,k,itrc)
+#  endif
 # endif
 # ifdef MASKING
                   ELSE
@@ -683,6 +692,21 @@
      &              ((Jstr.le.Jsrc).and.(Jsrc.le.Jend+1))) THEN
 # endif
                   IF (LtracerSrc(itrc,ng)) THEN
+# if defined ICEPLUME && !defined ICEPLUME_VIRTUAL_MIX
+                    FE(Isrc,Jsrc)=SOURCES(ng)%Qsrc(is,k)*               &
+#  ifdef ONE_TRACER_SOURCE
+     &                      SOURCES(ng)%Tsrc(itrc)
+#  elif defined TWO_D_TRACER_SOURCE
+     &                      SOURCES(ng)%Tsrc(is,itrc)
+#  else
+     &                      SOURCES(ng)%Tsrc(is,k,itrc)
+#  endif
+                    FE(Isrc,Jsrc)=FE(Isrc,Jsrc)+PLUME(ng)%dir(is)*      &
+     &                (PLUME(ng)%det(is,k)*PLUME(ng)%trc(is,itrc)+      &
+     &                 PLUME(ng)%ent(is,k)*PLUME(ng)%trcAm(is,k,itrc)+  &
+     &                 PLUME(ng)%mB(is,k)*PLUME(ng)%trcB(is,k,itrc)+    &
+     &                 PLUME(ng)%trcAmToB(is,k,itrc))
+# else
                     FE(Isrc,Jsrc)=Hvom(Isrc,Jsrc,k)*                    &
 #  ifdef ONE_TRACER_SOURCE
      &                      SOURCES(ng)%Tsrc(itrc)
@@ -691,12 +715,6 @@
 #  else
      &                      SOURCES(ng)%Tsrc(is,k,itrc)
 #  endif
-# if defined ICEPLUME && !defined ICEPLUME_VIRTUAL_MIX
-                    FE(Isrc,Jsrc)=FE(Isrc,Jsrc)+PLUME(ng)%dir(is)*      &
-                      (PLUME(ng)%det(is,k)*PLUME(ng)%trc(is,itrc)+      &
-     &                 PLUME(ng)%ent(is,k)*PLUME(ng)%trcAm(is,k,itrc)+  &
-     &                 PLUME(ng)%mB(is,k)*PLUME(ng)%trcB(is,k,itrc)+    &
-     &                 PLUME(ng)%trcAmToB(is,k,itrc))
 # endif
 # ifdef MASKING
                   ELSE
