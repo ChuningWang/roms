@@ -54,6 +54,7 @@
 !               TYPEsrc(:) = 3,  finite-line.                          !
 !               TYPEsrc(:) = 4,  sheet.                                !
 !               TYPEsrc(:) = 5,  detached.                             !
+!               TYPEsrc(:) = 6,  ellipse.                              !
 !  SGlen      Length of point Sources/Sinks (m).                       !
 # ifdef ICEPLUME_SPREAD
 !  SGgid      River/glacier ID number. The same ID suggests the point  !
