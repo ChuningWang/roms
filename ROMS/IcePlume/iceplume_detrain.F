@@ -65,7 +65,7 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                  &
   real(r8) :: detrDz, minDz, maxVel, Fr
   real(r8) :: rhoP, rho1, rho2, h1, h2, gRed, potE
   integer  :: udSwitch
-  logical :: isSurface = .FALSE.
+  logical  :: isSurface = .FALSE.
 !
 ! For detrainment weight function
 !
@@ -74,7 +74,7 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                  &
 ! Other local variables
 !
   integer  :: KI, K, counter
-  real(r8) :: rhoH
+  real(r8) :: rhoH, h01, h02
 !
 ! ==================================================================!
 !                                                                   !
@@ -153,6 +153,8 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                  &
     udSwitch = 1
 # else
     KI = plumeDepthK
+    h01 = 0.5*PLUME(ng) % dz(I, KI)
+    h02 = 0.5*PLUME(ng) % dz(I, KI)
     potE = g*PLUME(ng) % dz(I, KI)*(PLUME(ng) % rhoAm(I, KI)-rhoP)
     IF (potE .GT. 0.0) THEN
       udSwitch = 1
@@ -185,6 +187,7 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                  &
           IF ((PLUME(ng) % detI(I, K) .EQ. 0) .AND.   &
             & (PLUME(ng) % detI(I, K-1) .EQ. 1)) THEN
             KI = K
+            h01 = h01 + PLUME(ng) % dz(I, KI)
           ENDIF
         ENDDO
       ELSEIF (udSwitch .EQ. -1) THEN
@@ -195,6 +198,7 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                  &
           IF ((PLUME(ng) % detI(I, K+1) .EQ. 1) .AND. &
             & (PLUME(ng) % detI(I, K) .EQ. 0)) THEN
             KI = K
+            h02 = h02 + PLUME(ng) % dz(I, KI)
           ENDIF
         ENDDO
       ENDIF
@@ -242,19 +246,29 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                  &
   detrVel = detr / (lc * detrDz)
   DO K = 1,N(ng)
     IF (PLUME(ng) % detI(I, K) .EQ. 1) THEN
-# ifdef ICEPLUME_DETRAIN_HALF
 !
 ! First, calculate weight using Gaussian function.
 !
-      detrWeight = EXP(-0.5 *                 &
+# ifdef ICEPLUME_DETRAIN_HALF
+      detrWeight = EXP(-1.0 *                 &
         & ((PLUME(ng) % zR(I, K)-             &
         &   PLUME(ng) % zR(I, plumeDepthK)) / &
         &  detrDz)**2)
+# else
+      IF (K .GT. plumeDepthK) THEN
+        detrWeight = EXP(-1.0 *                 &
+          & ((PLUME(ng) % zR(I, K)-             &
+          &   PLUME(ng) % zR(I, plumeDepthK)) / &
+          &  h01)**2)
+      ELSE
+        detrWeight = EXP(-1.0 *                 &
+          & ((PLUME(ng) % zR(I, K)-             &
+          &   PLUME(ng) % zR(I, plumeDepthK)) / &
+          &  h02)**2)
+      ENDIF
+# endif
       PLUME(ng) % det(I, K) = detrWeight * detrVel * lc * &
         & PLUME(ng) % dz(I, K)
-# else
-      PLUME(ng) % det(I, K) = detrVel * lc * PLUME(ng) % dz(I, K)
-# endif
     ENDIF
   ENDDO
 !

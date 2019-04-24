@@ -79,7 +79,6 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
       &     PLUME(ng) % zR(I, K))
   ENDDO
   PLUME(ng) % rhoAm(I, N(ng)+1) = rhoAir
-  PLUME(ng) % dz(I, N(ng)+1) = 1.0E5
 !
 ! If discharge input salinity is less or equal than zero, set it to
 ! a small number

@@ -64,7 +64,7 @@ MODULE mod_iceplume
   real(r8), parameter :: Cd         = 0.065_r8
 !
   real(r8), parameter :: RiB        = 2.0_r8
-  real(r8), parameter :: gRedBkg    = 0.03_r8
+  real(r8), parameter :: gRedBkg    = 0.10_r8
   real(r8), parameter :: CdBkg      = 0.0025_r8
   real(r8), parameter :: velBkg     = 0.01_r8
   real(r8), parameter :: wIni       = 1.0_r8
@@ -243,7 +243,7 @@ MODULE mod_iceplume
         allocate( PLUME(ng) % mB       (Nsrc(ng), N(ng)) )
         allocate( PLUME(ng) % trcAmToB (Nsrc(ng), N(ng), NT(ng)) )
 !
-        allocate( PLUME(ng) % dz (Nsrc(ng), N(ng)+1) )
+        allocate( PLUME(ng) % dz (Nsrc(ng), N(ng)) )
 !
         allocate( PLUME(ng) % trcAm  (Nsrc(ng), N(ng), NT(ng)) )
         allocate( PLUME(ng) % trcB   (Nsrc(ng), N(ng), NT(ng)) )
