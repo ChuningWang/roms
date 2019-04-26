@@ -7,8 +7,8 @@
 !                                                                   !
 ! ==================================================================!
 !
-SUBROUTINE ICEPLUME_DETRAIN(ng, I,                  &
-                          & iceDepthK, plumeDepthK, &
+SUBROUTINE ICEPLUME_DETRAIN(ng, I,                            &
+                          & iceDepthK, plumeDepthK, osDepthK, &
                           & lc, detr)
   USE mod_iceplume
   implicit none
@@ -23,6 +23,7 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                  &
 ! I           - point source index identifier                       !
 ! iceDepthK   - glacier grounding line depth vertical grid index    !
 ! plumeDepthK - plume detrainment depth vertical grid index         !
+! osDepthK    - plume overshoot depth vertical grid index           !
 ! lc          - plume/ocean contact length [m]                      !
 ! detr        - detrainment volume flux [m^3 s^-1]                  !
 !                                                                   !
@@ -57,7 +58,7 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                  &
 ! In/out variables
 !
   integer, intent(in) :: ng, I
-  integer, intent(in) :: iceDepthK, plumeDepthK
+  integer, intent(in) :: iceDepthK, plumeDepthK, osDepthK
   real(r8), intent(in) :: lc, detr
 !
 ! Local variables declaration
@@ -83,6 +84,7 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                  &
 ! ==================================================================!
 !
   detrDz = 0.0
+  rhoP = PLUME(ng) % rho(I, osDepthK)
 !
 ! First, check if plume detrains in surface layer.
 !
@@ -92,7 +94,6 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                  &
 !
 ! Use Froude number to limit detrainment flow speed.
 !
-    rhoP = PLUME(ng) % rho(I, plumeDepthK)
     rhoH = 0.0
     h1 = 0.0
     DO K = N(ng), 1, -1
@@ -164,21 +165,6 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                  &
 # endif
     DO WHILE ( (detrDz .LT. minDz) .AND. (counter .LT. 100) )
       counter = counter + 1
-!
-! If the plume has reached surface/bottom, set searchswitch to -1/1.
-!
-      IF     ( (PLUME(ng) % detI(I, N(ng)) .EQ. 1) .AND.  &
-        &      (PLUME(ng) % detI(I, 0) .EQ. 1) ) THEN
-        udSwitch = 0
-        EXIT
-      ELSEIF ( (PLUME(ng) % detI(I, N(ng)) .EQ. 1) .AND.  &
-        &      (PLUME(ng) % detI(I, 0) .EQ. 0) ) THEN
-        udSwitch = -1
-      ELSEIF ( (PLUME(ng) % detI(I, N(ng)) .EQ. 0) .AND.  &
-        &      (PLUME(ng) % detI(I, 0) .EQ. 1) ) THEN
-        udSwitch = 1
-      ENDIF
-!
       IF (udSwitch .EQ. 1) THEN
 !
 ! Search one layer up
@@ -225,9 +211,22 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                  &
       PLUME(ng) % detI(I, KI) = 1
       detrDz = detrDz + PLUME(ng) % dz(I, KI)
 !
+! IF layer reached surface/bottom, force udSwitch to switch sign
+!
+      IF     ( (PLUME(ng) % detI(I, N(ng)) .EQ. 1) .AND.    &
+        &      (PLUME(ng) % detI(I, 1)     .EQ. 0) ) THEN
+        udSwitch = -1
+      ELSEIF ( (PLUME(ng) % detI(I, 1)     .EQ. 1) .AND.    &
+        &      (PLUME(ng) % detI(I, N(ng)) .EQ. 0)) THEN
+        udSwitch = 1
+      ELSEIF ( (PLUME(ng) % detI(I, 1)     .EQ. 1) .AND.    &
+        &      (PLUME(ng) % detI(I, N(ng)) .EQ. 1)) THEN
+        udSwitch = 0
+      ENDIF
+!
 ! This is another exit loop criteria.
 !
-      IF ( detrDz .EQ. (detrDz+1.0) ) EXIT
+      IF ( (detrDz .EQ. (detrDz+1.0)) .OR. (udSwitch .EQ. 0) ) EXIT
     ENDDO
   ENDIF
 !
@@ -250,23 +249,27 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                  &
 ! First, calculate weight using Gaussian function.
 !
 # ifdef ICEPLUME_DETRAIN_HALF
-      detrWeight = EXP(-1.0 *                 &
-        & ((PLUME(ng) % zR(I, K)-             &
-        &   PLUME(ng) % zR(I, plumeDepthK)) / &
+      detrWeight = EXP(-1.0 *                   &
+        & ((PLUME(ng) % zR(I, K)-               &
+        &   PLUME(ng) % zR(I, plumeDepthK)) /   &
         &  detrDz)**2)
 # else
-      IF (K .GT. plumeDepthK) THEN
-        detrWeight = EXP(-1.0 *                 &
-          & ((PLUME(ng) % zR(I, K)-             &
-          &   PLUME(ng) % zR(I, plumeDepthK)) / &
-          &  h01)**2)
-      ELSE
-        detrWeight = EXP(-1.0 *                 &
-          & ((PLUME(ng) % zR(I, K)-             &
-          &   PLUME(ng) % zR(I, plumeDepthK)) / &
-          &  h02)**2)
-      ENDIF
+!       IF (K .GT. plumeDepthK) THEN
+!         detrWeight = EXP(-0.5 *                 &
+!           & ((PLUME(ng) % zR(I, K)-             &
+!           &   PLUME(ng) % zR(I, plumeDepthK)) / &
+!           &  h01)**2)
+!       ELSE
+!         detrWeight = EXP(-0.5 *                 &
+!           & ((PLUME(ng) % zR(I, K)-             &
+!           &   PLUME(ng) % zR(I, plumeDepthK)) / &
+!           &  h02)**2)
+!       ENDIF
+      detrWeight = 1.0
 # endif
+!
+! Distribute the detrainment.
+!
       PLUME(ng) % det(I, K) = detrWeight * detrVel * lc * &
         & PLUME(ng) % dz(I, K)
     ENDIF
