@@ -198,7 +198,7 @@ SUBROUTINE ICEPLUME_ENTRAIN(ng, I, iceDepthK, &
       ENDIF
       rhoA = RHO(tA, sA, zIn)
 !
-# ifdef ICEPLUME_NO_OVERSHOOT
+# ifdef ICEPLUME_OVERSHOOT_NO
       IF ( (PLUME(ng) % rho(I, K) .GT. rhoA) .OR. &
          & (K .EQ. N(ng)) ) THEN
 # else
