@@ -586,7 +586,11 @@
      &                    SOURCES(ng)%Tsrc(is,k,itrc)
 #  endif
                   FX(Isrc,Jsrc)=FX(Isrc,Jsrc)+PLUME(ng)%dir(is)*        &
+#  ifdef ICEPLUME_DETRAIN_NEUTRAL
+     &              (PLUME(ng)%det(is,k)*PLUME(ng)%detTrc(is,k,itrc)+   &
+#  else
      &              (PLUME(ng)%det(is,k)*PLUME(ng)%trc(is,itrc)+        &
+#  endif
      &               PLUME(ng)%ent(is,k)*PLUME(ng)%trcAm(is,k,itrc)+    &
      &               PLUME(ng)%mB(is,k)*PLUME(ng)%trcB(is,k,itrc)+      &
      &               PLUME(ng)%trcAmToB(is,k,itrc))
@@ -611,7 +615,11 @@
      &                    SOURCES(ng)%Tsrc(is,k,itrc)
 #  endif
                   FE(Isrc,Jsrc)=FE(Isrc,Jsrc)+PLUME(ng)%dir(is)*        &
+#  ifdef ICEPLUME_DETRAIN_NEUTRAL
+     &              (PLUME(ng)%det(is,k)*PLUME(ng)%detTrc(is,k,itrc)+   &
+#  else
      &              (PLUME(ng)%det(is,k)*PLUME(ng)%trc(is,itrc)+        &
+#  endif
      &               PLUME(ng)%ent(is,k)*PLUME(ng)%trcAm(is,k,itrc)+    &
      &               PLUME(ng)%mB(is,k)*PLUME(ng)%trcB(is,k,itrc)+      &
      &               PLUME(ng)%trcAmToB(is,k,itrc))

@@ -183,6 +183,7 @@ SUBROUTINE ICEPLUME_ENTRAIN(ng, I, iceDepthK, &
 ! Calculate plume density (rho = RHO(temp, salt, depth))
 !
       PLUME(ng) % rho(I, K) = RHO(Y(3), Y(4), zIn)
+# ifdef ICEPLUME_OVERSHOOT_NO
 !
 ! Calculate ambient density
 !
@@ -197,38 +198,22 @@ SUBROUTINE ICEPLUME_ENTRAIN(ng, I, iceDepthK, &
         sA = 0.5*(PLUME(ng) % sAm(I, K) + PLUME(ng) % sAm(I, K+1))
       ENDIF
       rhoA = RHO(tA, sA, zIn)
-!
-# ifdef ICEPLUME_OVERSHOOT_NO
       IF ( (PLUME(ng) % rho(I, K) .GT. rhoA) .OR. &
          & (K .EQ. N(ng)) ) THEN
 # else
+!
       IF ( (Y(2) .LE. 0.0) .OR. (K .EQ. N(ng)) ) THEN
 # endif
         ISTATE = -1
       ENDIF
 !
-! If ISTATE is now < 0, then plume has reached neutral buoyancy 
-!
-      IF (ISTATE .LT. 0) THEN
-!
-! If we have reached neutral buoyancy then there is no volume flux out
-! of this cell, so plume area and velocity equal zero. Other values are
-! kept for use in determining plume outflow properties.
-!
-        Y(1) = 0.0
-        Y(2) = 0.0
-        PLUME(ng) % lm(I, K) = PLUME(ng) % lm(I, K-1)
-        PLUME(ng) % lc(I, K) = PLUME(ng) % lc(I, K-1)
-      ELSE
-!
 ! If the plume has not reached neutral buoyancy, then we assign a depth
 ! at which to calculate the next value and loop round to call the plume
 ! model again. Make sure we're not at the surface
 !
-        IF (K .NE. N(ng)) THEN
-          zIn = zOut
-          zOut = PLUME(ng) % zW(I, K+1)
-        ENDIF
+      IF (ISTATE .GT. -1) THEN
+        zIn = zOut
+        zOut = PLUME(ng) % zW(I, K+1)
       ENDIF
 !
     ELSE  ! (ISTATE .LE. -1)
