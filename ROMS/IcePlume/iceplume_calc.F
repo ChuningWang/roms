@@ -45,7 +45,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 ! areaB       - surface area of plume in contact with ice out       !
 !               that cell [m^2]                                     !
 ! meanVel     - ice tangental velocity [m s^-1]                     !
-! detr        - total detrainment volume [m^3 s^-1]                 !
+! det         - total detrainment volume [m^3 s^-1]                 !
 ! mB          - background meltrate [m s^-1]                        !
 !                                                                   !
 ! ==================================================================!
@@ -61,7 +61,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 ! Local variables declaration
 !
   integer :: iceDepthK, plumeDepthK, osDepthK
-  real(r8) :: areaP, areaB, meanVel, detr, mB
+  real(r8) :: areaP, areaB, meanVel, det, mB
 !
   integer :: K, itrc
   real(r8) :: RHO
@@ -142,7 +142,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
     DO K = iceDepthK+1, N(ng)
       IF (PLUME(ng) % f(I, K) .GT. 0.0) THEN
         osDepthK = K
-        detr = PLUME(ng) % f(I, K)
+        det = PLUME(ng) % f(I, K)
       ENDIF
     ENDDO
 !
@@ -164,7 +164,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 ! If no subglacial discharge, then there is no plume
 !
     plumeDepthK = iceDepthK+1
-    detr = 0.0
+    det = 0.0
     PLUME(ng) % f(I, 0) = 0.0
     PLUME(ng) % w(I, 0) = 0.0
     PLUME(ng) % t(I, 0) = 0.0
@@ -341,7 +341,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !
     DO itrc = 3, NT(ng)
       PLUME(ng) % trc(I, itrc) =              &
-        & PLUME(ng) % trcCum(I, itrc) / detr
+        & PLUME(ng) % trcCum(I, itrc) / det
     ENDDO
 #  ifdef ICEPLUME_MELT_TRACER
 !
@@ -366,9 +366,9 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 ! Calculate tracer concentration
 !
     PLUME(ng) % trc(I, NT(ng)-1) =  &
-      & PLUME(ng) % trcCum(I, NT(ng)-1) / detr
+      & PLUME(ng) % trcCum(I, NT(ng)-1) / det
     PLUME(ng) % trc(I, NT(ng)  ) =  &
-      & PLUME(ng) % trcCum(I, NT(ng)  ) / detr
+      & PLUME(ng) % trcCum(I, NT(ng)  ) / det
 #  endif
 # endif
   ENDIF
@@ -407,24 +407,24 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 ! Write detrainment in outputs.
 !
 # ifdef ICEPLUME_DETRAIN_NO
-    PLUME(ng) % det(I, plumeDepthK) = detr
+    PLUME(ng) % det(I, plumeDepthK) = det
     PLUME(ng) % detI(I, plumeDepthK) = 1
 # else
 #  ifdef ICEPLUME_DETRAIN_VEL
     CALL ICEPLUME_DETRAIN(ng, I,                            &
                         & iceDepthK, plumeDepthK, osDepthK, &
                         & dy,                               &
-                        & detr)
+                        & det)
 #  elif defined ICEPLUME_DETRAIN_NEUTRAL
     CALL ICEPLUME_DETRAIN2(ng, I,                           &
                         & iceDepthK, plumeDepthK, osDepthK, &
                         & PLUME(ng) % lc(I, osDepthK),      &
-                        & detr)
+                        & det)
 #  else
     CALL ICEPLUME_DETRAIN(ng, I,                            &
                         & iceDepthK, plumeDepthK, osDepthK, &
                         & PLUME(ng) % lc(I, osDepthK),      &
-                        & detr)
+                        & det)
 #  endif
 # endif
   ENDIF  ! fini .GT. 0.0

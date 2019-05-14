@@ -624,10 +624,6 @@
 !
 !  Apply tracers point sources to the horizontal advection terms,
 !  if any.
-# if defined ICEPLUME && !defined ICEPLUME_VIRTUAL_MIX
-!  Apply ICEPLUME style tracers point sources to horizontal advection
-!  terms.
-# endif
 !
           IF (LuvSrc(ng).and.ANY(LtracerSrc(:,ng))) THEN
             DO is=1,Nsrc(ng)
