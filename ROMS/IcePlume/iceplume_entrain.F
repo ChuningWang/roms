@@ -275,9 +275,9 @@ SUBROUTINE GENERAL_ENTRAIN_MODEL (NEQ, T, Y, YDOT)
 !
 ! Interpolate from imposed ambient profiles
 !
-    ng    = INT(Y(7))
-    I     = INT(Y(8))
-    sgTyp = INT(Y(9))
+    ng    = NINT(Y(7))
+    I     = NINT(Y(8))
+    sgTyp = NINT(Y(9))
     sgLen = Y(10)
 !
     IF (T .LE. PLUME(ng) % zR(I, 1)) THEN

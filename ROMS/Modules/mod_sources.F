@@ -46,7 +46,7 @@
 !                subglacial Sources/Sinks.                             !
 !  SGtrc      Tracer (tracer units) of subglacial Sources/Sinks.       !
 !  SGtrcG     Latest two-time snapshots of tracer (tracer units) of    !
-!                subglacial Sources/Sinks.                             !
+!               subglacial Sources/Sinks.                              !
 !  SGdep      Depth of subglacial point Sources/Sinks (m).             !
 !  SGtyp      Type of subglacial point Sources/Sinks:                  !
 !               TYPEsrc(:) = 1,  No subglaical plume or melt.          !
@@ -59,6 +59,10 @@
 # ifdef ICEPLUME_SPREAD
 !  SGgid      River/glacier ID number. The same ID suggests the point  !
 !               sources/sinks belong to the same river/glacier.        !
+# endif
+# ifdef ICEPLUME_DETTRAIN_AVERAGE
+!  SGavgLoc   Location indices (Istr, Iend, Jstr, Jend) when spacially !
+!               average density profiles.                              !
 # endif
 #endif
 !                                                                      !
@@ -123,6 +127,10 @@
           real(r8), pointer :: SGlen(:)
 # ifdef ICEPLUME_SPREAD
           real(r8), pointer :: SGgid(:)
+# endif
+# ifdef ICEPLUME_DETRAIN_AVERAGE
+          real(r8), pointer :: SGavgLocRaw(:, :)
+          integer, pointer :: SGavgLoc(:, :)
 # endif
 #endif
 
@@ -279,6 +287,10 @@
 # ifdef ICEPLUME_SPREAD
       allocate ( SOURCES(ng) % SGgid(Nsrc(ng)) )
 # endif
+# ifdef ICEPLUME_DETRAIN_AVERAGE
+      allocate ( SOURCES(ng) % SGavgLocRaw(Nsrc(ng), 4) )
+      allocate ( SOURCES(ng) % SGavgLoc(Nsrc(ng), 4) )
+# endif
 #endif
 
 !
@@ -341,6 +353,12 @@
         SOURCES(ng) % SGlen(is) = IniVal
 # ifdef ICEPLUME_SPREAD
         SOURCES(ng) % SGgid(is) = IniVal
+# endif
+# ifdef ICEPLUME_DETRAIN_AVERAGE
+        DO K = 1, 4
+          SOURCES(ng) % SGavgLocRaw(is, K) = IniVal
+          SOURCES(ng) % SGavgLoc(is, K) = 0
+        ENDDO
 # endif
       END DO
       DO itrc=1,NT(ng)

@@ -263,6 +263,9 @@
 # ifdef ICEPLUME_SPREAD
         integer  :: idSGgid        ! glacier id number
 # endif
+# ifdef ICEPLUME_DETRAIN_AVERAGE
+        integer  :: idSGavgLoc     ! subglacier background average indices
+# endif
 #endif
         integer  :: idRuct        ! RHS of U-momentum coupling term
         integer  :: idRu2d        ! RHS of 2D U-momentum
@@ -1421,6 +1424,10 @@
 # ifdef ICEPLUME_SPREAD
             CASE ('idSGgid')
               idSGgid=varid
+# endif
+# ifdef ICEPLUME_DETRAIN_AVERAGE
+            CASE ('idSGavgLoc')
+              idSGavgLoc=varid
 # endif
             CASE ('idSGtrc(itemp)')
               idSGtrc(itemp)=varid

@@ -601,6 +601,21 @@
      &                 __FILE__)) RETURN
 
 #  endif
+#  ifdef ICEPLUME_DETRAIN_AVERAGE
+        CALL get_ngfld (ng, iNLM, idSGavgLoc, ncSSFid(idSGavgLoc,ng),   &
+     &                  1, SSF(1,ng), update(1),                        &
+     &                  1, Nsrc(ng), 4, 1, 1, Nsrc(ng), 4,              &
+     &                  SOURCES(ng) % SGavgLocRaw)
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+        DO is=1,Nsrc(ng)
+          DO itrc=1,4
+          SOURCES(ng) % SGavgLoc(is,itrc) =                             &
+     &      NINT(SOURCES(ng) % SGavgLocRaw(is,itrc))
+          ENDDO
+        ENDDO
+
+#  endif
 # endif
 # ifdef SOLVE3D
         CALL get_ngfld (ng, iNLM, idRvsh, ncSSFid(idRvsh,ng),           &

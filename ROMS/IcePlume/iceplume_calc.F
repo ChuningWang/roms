@@ -64,21 +64,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
   real(r8) :: areaP, areaB, meanVel, det, mB
 !
   integer :: K, itrc
-  real(r8) :: RHO
-!
-! Calculate rho-layer depth, thickness, and ambient density
-!
-  DO K = 1, N(ng)
-    PLUME(ng) % zR(I, K) = &
-      & 0.5d0 * (PLUME(ng) % zW(I, K-1) + PLUME(ng) % zW(I, K))
-    PLUME(ng) % dz(I, K) = &
-      & PLUME(ng) % zW(I, K) - PLUME(ng) % zW(I, K-1)
-    PLUME(ng) % rhoAm(I, K) = &
-      & RHO(PLUME(ng) % tAm(I, K), &
-      &     PLUME(ng) % sAm(I, K), &
-      &     PLUME(ng) % zR(I, K))
-  ENDDO
-  PLUME(ng) % rhoAm(I, N(ng)+1) = rhoAir
+  real(r8) :: cff, cff1
 !
 ! If discharge input salinity is less or equal than zero, set it to
 ! a small number
@@ -151,12 +137,21 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,       &
 !
     plumeDepthK = iceDepthK+1
     DO K = iceDepthK+1,osDepthK
+# ifdef ICEPLUME_DETRAIN_AVERAGE
+      IF ((PLUME(ng) % rho(I, osDepthK) .LT.    &
+        &  PLUME(ng) % rhoAmAvg(I, K)   ) .AND. &
+        & (PLUME(ng) % rho(I, osDepthK) .GT.    &
+        &  PLUME(ng) % rhoAmAvg(I, K+1) )) THEN
+        plumeDepthK = K
+      ENDIF
+# else
       IF ((PLUME(ng) % rho(I, osDepthK) .LT.          &
         &  PLUME(ng) % rhoAm(I, K)           ) .AND.  &
         & (PLUME(ng) % rho(I, osDepthK) .GT.          &
         &  PLUME(ng) % rhoAm(I, K+1)         )) THEN
         plumeDepthK = K
       ENDIF
+# endif
     ENDDO
 !
   ELSE  ! (fIni .EQ. 0)

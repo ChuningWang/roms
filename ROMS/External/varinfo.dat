@@ -2733,6 +2733,15 @@
   'nulvar'
   1.0d0
 
+'subglacial_avgLoc'                                ! Input
+  'subglacial runoff average location' 
+  'nondimensional'                                 ! [nondimensional]
+  'subglacial_avgLoc, scalar'
+  'river'
+  'idSGavgLoc'
+  'nulvar'
+  1.0d0
+
 !--------------------------UMAINE variables
 'river_NO3_'                                        ! Input
   'river runoff NO3'

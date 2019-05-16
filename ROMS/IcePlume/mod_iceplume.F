@@ -11,7 +11,7 @@ MODULE mod_iceplume
 !
   USE mod_kinds
   USE mod_param, ONLY: Ngrids, N, NT
-  USE mod_scalars, ONLY: isalt, itemp, dt
+  USE mod_scalars, ONLY: isalt, itemp, dt, ntstart, iic
   USE mod_sources, ONLY: Nsrc
   implicit none
 !
@@ -134,6 +134,11 @@ MODULE mod_iceplume
 ! trcL          - new box tracer concentration                        !
 ! trcNew        - updated tracer concentration                        !
 # endif
+# ifdef ICEPLUME_DETRAIN_AVERAGE
+!                                                                     !
+! wAvg          - average weight for the current time step (0 to 1)   !
+! rhoAmAvg      - time averaged ambient density [kg m^-3]             !
+# endif
 !                                                                     !
 ! ====================================================================!
 !
@@ -212,6 +217,13 @@ MODULE mod_iceplume
     real(r8), pointer :: trcL(:, :, :)
     real(r8), pointer :: trcNew(:, :, :)
 # endif
+# ifdef ICEPLUME_DETRAIN_AVERAGE
+!
+! For temporally average background density profile.
+!
+    real(r8) :: wAvg
+    real(r8), pointer :: rhoAmAvg(:, :)
+# endif
   END TYPE T_PLUME
 !
   TYPE (T_PLUME), allocatable :: PLUME(:)
@@ -281,6 +293,11 @@ MODULE mod_iceplume
       allocate( PLUME(ng) % dzWei  (Nsrc(ng), N(ng)) )
       allocate( PLUME(ng) % trcL   (Nsrc(ng), N(ng), NT(ng)) )
       allocate( PLUME(ng) % trcNew (Nsrc(ng), N(ng), NT(ng)) )
+# endif
+# ifdef ICEPLUME_DETRAIN_AVERAGE
+!
+      PLUME(ng) % wAvg = 1.0
+      allocate( PLUME(ng) % rhoAmAvg (Nsrc(ng), N(ng)+1) )
 # endif
     END SUBROUTINE allocate_iceplume
 #endif
