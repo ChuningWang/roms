@@ -439,7 +439,13 @@ SUBROUTINE ICEPLUME_DETRAIN2(ng, I,                                     &
     IF (KI .EQ. N(ng)) isSurface = .TRUE.
     IF (KI .EQ. 1) isBottom = .TRUE.
 !
-! Search layer to minimize potential energy anomaly.
+! Update detrainment layer flag and detrainment depth.
+!
+    PLUME(ng) % detI(I, KI) = 1
+    detDz = detDz + PLUME(ng) % dz(I, KI)
+    PLUME(ng) % detFrac(I, KI) = 1.0
+!
+! Determine next layer to minimize potential energy anomaly.
 !
     potE = potE +                                                       &
      &     g*PLUME(ng) % dz(I, KI)*(PLUME(ng) % rhoAm(I, KI)-rhoP)
@@ -449,13 +455,7 @@ SUBROUTINE ICEPLUME_DETRAIN2(ng, I,                                     &
       udSwitch = -1
     ENDIF
 !
-! Update detrainment layer flag and detrainment depth.
-!
-    PLUME(ng) % detI(I, KI) = 1
-    detDz = detDz + PLUME(ng) % dz(I, KI)
-    PLUME(ng) % detFrac(I, KI) = 1.0
-!
-! IF layer reached surface/bottom, force udSwitch to switch sign
+! IF layer reached surface/bottom, force udSwitch to -1/1
 !
     IF     ( (       isSurface ) .AND. ( .NOT. isBottom ) ) THEN
       udSwitch = -1
@@ -475,7 +475,7 @@ SUBROUTINE ICEPLUME_DETRAIN2(ng, I,                                     &
   IF ( (.NOT. isSurface) .AND. (counter .GT. 0) ) THEN
     IF ( potE .GT. 0.0 ) THEN
       KI = K2
-    ELSEIF ( potE .LT. 0.0 ) THEN
+    ELSE
       KI = K1
     ENDIF
       cff = 1 - potE / (g*(PLUME(ng) % rhoAm(I, KI)-rhoP)) /            &
@@ -524,11 +524,13 @@ SUBROUTINE ICEPLUME_DETRAIN2(ng, I,                                     &
   tP = PLUME(ng) % trc(I, itemp)
   tGade = (L - cI*tIce)/cW
   tF = (tGade*volM + PLUME(ng) % t(I, iceDepthK)*volR)/volF
+  tE = (tP*volP-tF*volF)/volE
 !
 ! Salinity.
 !
   sP = PLUME(ng) % trc(I, isalt)
   sF = (sIce*volM  + PLUME(ng) % s(I, iceDepthK)*volR)/volF
+  sE = (sP*volP-sF*volF)/volE
 !
 ! Density.
 !
@@ -550,13 +552,12 @@ SUBROUTINE ICEPLUME_DETRAIN2(ng, I,                                     &
 ! Make corrections to make sure each water mass sums to its previous
 ! volume.
 !
-  cff1 = volF - SUM(PLUME(ng) % detF(I, :))
-  cff2 = volE - SUM(PLUME(ng) % detE(I, :))
+  cff1 = volF/SUM(PLUME(ng) % detF(I, :))
+  cff2 = volE/SUM(PLUME(ng) % detE(I, :))
   DO K = 1, N(ng)
     IF (PLUME(ng) % detI(I, K) .EQ. 1) THEN
-      cff = PLUME(ng) % dz(I, K)*PLUME(ng) % detFrac(I, K)/detDz
-      PLUME(ng) % detF(I, K) = PLUME(ng) % detF(I, K) + cff*cff1
-      PLUME(ng) % detE(I, K) = PLUME(ng) % detE(I, K) + cff*cff2
+      PLUME(ng) % detF(I, K) = PLUME(ng) % detF(I, K)*cff1
+      PLUME(ng) % detE(I, K) = PLUME(ng) % detE(I, K)*cff2
     ENDIF
   ENDDO
 !
@@ -568,8 +569,6 @@ SUBROUTINE ICEPLUME_DETRAIN2(ng, I,                                     &
 !
 ! Active tracers.
 !
-  tE = (tP*volP-tF*volF)/volE
-  sE = (sP*volP-sF*volF)/volE
   DO K = 1, N(ng)
     IF (PLUME(ng) % detI(I, K) .EQ. 1) THEN
       PLUME(ng) % detTrc(I, K, itemp) =                                 &
