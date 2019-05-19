@@ -542,7 +542,7 @@ SUBROUTINE ICEPLUME_DETRAIN2(ng, I,                                     &
   DO K = 1, N(ng)
     IF (PLUME(ng) % detI(I, K) .EQ. 1) THEN
       cff1 = MIN(MAX((PLUME(ng) % rhoAm(I, K)-rhoE)/(rhoF-rhoE),        &
-     &               0.0), 1.0)
+     &               0.01), 0.99)
       cff2 = 1-cff1
       PLUME(ng) % detF(I, K) = PLUME(ng) % det(I, K)*cff1
       PLUME(ng) % detE(I, K) = PLUME(ng) % det(I, K)*cff2

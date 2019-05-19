@@ -296,7 +296,7 @@ MODULE mod_iceplume
 # endif
 # ifdef ICEPLUME_DETRAIN_AVERAGE
 !
-      PLUME(ng) % wAvg = 1.0
+      PLUME(ng) % wAvg = 0.5
       allocate( PLUME(ng) % rhoAmAvg (Nsrc(ng), N(ng)+1) )
 # endif
     END SUBROUTINE allocate_iceplume

@@ -394,6 +394,11 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,                                 &
 !                                                                   !
 ! ==================================================================!
 !
+# ifdef ICEPLUME_DETRAIN_AVERAGE
+  DO K = 1, N(ng)
+    PLUME(ng) % rhoAm(I, K) = PLUME(ng) % rhoAmAvg(I, K)
+  ENDDO
+# endif
   IF (fIni .GT. 0) THEN
 !
 ! Write detrainment in outputs.
