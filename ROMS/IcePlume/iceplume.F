@@ -166,14 +166,14 @@ SUBROUTINE iceplume_tile (ng, tile)
      &            PLUME(ng) % sAm(is, K),                               &
      &            PLUME(ng) % zR(is, K))
         ENDDO
-        IF (iic(ng) .EQ. 0) THEN
+        IF (iic(ng) .EQ. ntstart(ng)) THEN
           PLUME(ng) % rhoAm(is, N(ng)+1) = rhoAir
         ENDIF
 # ifdef ICEPLUME_DETRAIN_AVERAGE
 !
 ! Average density profile to surpress some oscillation
 !
-        IF (iic(ng) .EQ. 0) THEN
+        IF (iic(ng) .EQ. ntstart(ng)) THEN
           PLUME(ng) % wAvg = MAX(MIN(PLUME(ng) % wAvg, 1.0), 0.0)
           PLUME(ng) % rhoAmAvg(is, N(ng)+1) = rhoAir
         ENDIF
@@ -192,7 +192,7 @@ SUBROUTINE iceplume_tile (ng, tile)
      & SOURCES(ng) % SGavgLoc(is, 3):SOURCES(ng) % SGavgLoc(is, 4),     &
      & K, nstp(ng), itemp) ) / cff4
           cff = RHO(cff2, cff1, PLUME(ng) % zR(is, K))
-          IF (iic(ng) .EQ. 0) THEN
+          IF (iic(ng) .EQ. ntstart(ng)) THEN
             PLUME(ng) % rhoAmAvg(is, K) = cff
           ELSE
             PLUME(ng) % rhoAmAvg(is, K) =                               &
