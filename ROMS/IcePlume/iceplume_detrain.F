@@ -139,7 +139,8 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
   IF (plumeDepthK .EQ. N(ng)) isSurface = .TRUE.
   IF (plumeDepthK .EQ. 1) isBottom = .TRUE.
   detDz = 0.0
-  rhoP = PLUME(ng) % rho(I, osDepthK)
+  rhoP = RHO(PLUME(ng) % t(I, osDepthK), PLUME(ng) % s(I, osDepthK),    &
+     &          PLUME(ng) % zR(I, plumeDepthK))
 # ifdef ICEPLUME_DETRAIN_CONSERV
 !
 ! Compute minimum detrainment thickness.
@@ -342,7 +343,7 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
 ! Temperature. Note that tGade is effective temperature of Gade line.
 !
   tP = PLUME(ng) % trc(I, itemp)
-  tGade = (L - cI*tIce)/cW
+  tGade = -(L - cI*tIce)/cW
   tF = (tGade*volM + PLUME(ng) % t(I, iceDepthK)*volR)/volF
   tE = (tP*volP-tF*volF)/volE
 !
@@ -361,8 +362,12 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
 !
   DO K = 1, N(ng)
     IF (PLUME(ng) % detI(I, K) .EQ. 1) THEN
+      cff = (PLUME(ng) % zR(I, K) -                                     &
+     &       PLUME(ng) % zR(I, plumeDepthK))*0.005
       cff1 = MIN(MAX((PLUME(ng) % rhoAm(I, K)-rhoE)/(rhoF-rhoE),        &
      &               0.01), 0.99)
+      cff1 = ((PLUME(ng) % rhoAm(I, K)+cff)-rhoE)/(rhoF-rhoE)
+      cff1 = MIN(MAX(cff1, 0.01), 0.99)
       cff2 = 1-cff1
       PLUME(ng) % detF(I, K) = PLUME(ng) % det(I, K)*cff1
       PLUME(ng) % detE(I, K) = PLUME(ng) % det(I, K)*cff2

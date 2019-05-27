@@ -62,6 +62,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,                                 &
 !
   integer :: iceDepthK, plumeDepthK, osDepthK
   real(r8) :: areaP, areaB, meanVel, det, mB
+  real(r8) :: RHO
 !
   integer :: K, itrc
   real(r8) :: cff, cff1
@@ -138,18 +139,17 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,                                 &
 !
     plumeDepthK = iceDepthK+1
     DO K = iceDepthK+1,osDepthK
+      cff = RHO(PLUME(ng) % t(I, osDepthK),                             &
+     &          PLUME(ng) % s(I, osDepthK),                             &
+     &          PLUME(ng) % zR(I, K))
 # ifdef ICEPLUME_DETRAIN_AVERAGE
-      IF ((PLUME(ng) % rho(I, osDepthK) .LT.                            &
-     &     PLUME(ng) % rhoAmAvg(I, K)   ) .AND.                         &
-     &    (PLUME(ng) % rho(I, osDepthK) .GT.                            &
-     &     PLUME(ng) % rhoAmAvg(I, K+1) )) THEN
+      IF ((cff .LT. PLUME(ng) % rhoAmAvg(I, K)   ) .AND.                &
+     &    (cff .GT. PLUME(ng) % rhoAmAvg(I, K+1) )) THEN
         plumeDepthK = K
       ENDIF
 # else
-      IF ((PLUME(ng) % rho(I, osDepthK) .LT.                            &
-     &     PLUME(ng) % rhoAm(I, K)           ) .AND.                    &
-     &    (PLUME(ng) % rho(I, osDepthK) .GT.                            &
-     &     PLUME(ng) % rhoAm(I, K+1)         )) THEN
+      IF ((cff .LT. PLUME(ng) % rhoAm(I, K)      ) .AND.                &
+     &    (cff .GT. PLUME(ng) % rhoAm(I, K+1)    )) THEN
         plumeDepthK = K
       ENDIF
 # endif
