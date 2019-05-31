@@ -178,18 +178,18 @@ SUBROUTINE iceplume_tile (ng, tile)
           PLUME(ng) % rhoAmAvg(is, N(ng)+1) = rhoAir
         ENDIF
         cff4 = REAL(                                                    &
-     &      (SOURCES(ng) % SGavgLoc(is, 2)-                             &
-     &       SOURCES(ng) % SGavgLoc(is, 1)+1) *                         &
-     &      (SOURCES(ng) % SGavgLoc(is, 4)-                             &
-     &       SOURCES(ng) % SGavgLoc(is, 3)+1))
+     &      (SOURCES(ng) % SGIrange(is, 2)-                             &
+     &       SOURCES(ng) % SGIrange(is, 1)+1) *                         &
+     &      (SOURCES(ng) % SGJrange(is, 2)-                             &
+     &       SOURCES(ng) % SGJrange(is, 1)+1))
         DO K = 1, N(ng)
           cff1 = SUM( OCEAN(ng) % t(                                    &
-     & SOURCES(ng) % SGavgLoc(is, 1):SOURCES(ng) % SGavgLoc(is, 2),     &
-     & SOURCES(ng) % SGavgLoc(is, 3):SOURCES(ng) % SGavgLoc(is, 4),     &
+     & SOURCES(ng) % SGIrange(is, 1):SOURCES(ng) % SGIrange(is, 2),     &
+     & SOURCES(ng) % SGJrange(is, 1):SOURCES(ng) % SGJrange(is, 2),     &
      & K, nstp(ng), isalt) ) / cff4
           cff2 = SUM( OCEAN(ng) % t(                                    &
-     & SOURCES(ng) % SGavgLoc(is, 1):SOURCES(ng) % SGavgLoc(is, 2),     &
-     & SOURCES(ng) % SGavgLoc(is, 3):SOURCES(ng) % SGavgLoc(is, 4),     &
+     & SOURCES(ng) % SGIrange(is, 1):SOURCES(ng) % SGIrange(is, 2),     &
+     & SOURCES(ng) % SGJrange(is, 1):SOURCES(ng) % SGJrange(is, 2),     &
      & K, nstp(ng), itemp) ) / cff4
           cff = RHO(cff2, cff1, PLUME(ng) % zR(is, K))
           IF (iic(ng) .EQ. ntstart(ng)) THEN

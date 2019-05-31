@@ -2733,12 +2733,21 @@
   'nulvar'
   1.0d0
 
-'subglacial_avgLoc'                                ! Input
-  'subglacial runoff average location' 
+'subglacial_Xrange'                                ! Input
+  'subglacial runoff average indices, XI direction'
   'nondimensional'                                 ! [nondimensional]
-  'subglacial_avgLoc, scalar'
+  'subglacial_Xrange, scalar'
   'river'
-  'idSGavgLoc'
+  'idSGxrange'
+  'nulvar'
+  1.0d0
+
+'subglacial_Erange'                                ! Input
+  'subglacial runoff average indices, ETA direction'
+  'nondimensional'                                 ! [nondimensional]
+  'subglacial_Erange, scalar'
+  'river'
+  'idSGerange'
   'nulvar'
   1.0d0
 

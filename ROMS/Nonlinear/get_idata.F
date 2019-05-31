@@ -602,16 +602,26 @@
 
 #  endif
 #  ifdef ICEPLUME_DETRAIN_AVERAGE
-        CALL get_ngfld (ng, iNLM, idSGavgLoc, ncSSFid(idSGavgLoc,ng),   &
+        CALL get_ngfld (ng, iNLM, idSGxrange, ncSSFid(idSGxrange,ng),   &
      &                  1, SSF(1,ng), update(1),                        &
-     &                  1, Nsrc(ng), 4, 1, 1, Nsrc(ng), 4,              &
-     &                  SOURCES(ng) % SGavgLocRaw)
+     &                  1, Nsrc(ng), 2, 1, 1, Nsrc(ng), 2,              &
+     &                  SOURCES(ng) % SGIrangeRaw)
         IF (FoundError(exit_flag, NoError, __LINE__,                    &
      &                 __FILE__)) RETURN
+
+        CALL get_ngfld (ng, iNLM, idSGerange, ncSSFid(idSGerange,ng),   &
+     &                  1, SSF(1,ng), update(1),                        &
+     &                  1, Nsrc(ng), 2, 1, 1, Nsrc(ng), 2,              &
+     &                  SOURCES(ng) % SGJrangeRaw)
+        IF (FoundError(exit_flag, NoError, __LINE__,                    &
+     &                 __FILE__)) RETURN
+
         DO is=1,Nsrc(ng)
-          DO itrc=1,4
-          SOURCES(ng) % SGavgLoc(is,itrc) =                             &
-     &      NINT(SOURCES(ng) % SGavgLocRaw(is,itrc))
+          DO itrc=1,2
+          SOURCES(ng) % SGIrange(is,itrc) =                             &
+     &      NINT(SOURCES(ng) % SGIrangeRaw(is,itrc))
+          SOURCES(ng) % SGJrange(is,itrc) =                             &
+     &      NINT(SOURCES(ng) % SGJrangeRaw(is,itrc))
           ENDDO
         ENDDO
 

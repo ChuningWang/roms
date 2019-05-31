@@ -93,6 +93,7 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
   integer  :: udSwitch
   logical  :: isSurface = .FALSE.
   logical  :: isBottom = .FALSE.
+  real(r8) :: RHO
 !
 ! For detrainment weight function
 !
@@ -108,7 +109,6 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
 # ifdef ICEPLUME_DETRAIN_NEUTRAL
   real(r8) :: volR, volM, volF, volE, volP
   real(r8) :: tF, tE, tP, tGade, sF, sE, sP, rhoF, rhoE
-  real(r8) :: RHO
 # endif
 !
 ! Other local variables

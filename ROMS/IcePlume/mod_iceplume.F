@@ -64,7 +64,7 @@ MODULE mod_iceplume
   real(r8), parameter :: Cd         = 0.065_r8
 !
   real(r8), parameter :: RiB        = 1.0_r8
-  real(r8), parameter :: gRedBkg    = 0.01_r8
+  real(r8), parameter :: gRedBkg    = 0.1_r8
   real(r8), parameter :: CdBkg      = 0.0025_r8
   real(r8), parameter :: velBkg     = 0.03_r8
   real(r8), parameter :: wIni       = 1.0_r8
@@ -296,7 +296,7 @@ MODULE mod_iceplume
 # endif
 # ifdef ICEPLUME_DETRAIN_AVERAGE
 !
-      PLUME(ng) % wAvg = 0.5
+      PLUME(ng) % wAvg = 1.0
       allocate( PLUME(ng) % rhoAmAvg (Nsrc(ng), N(ng)+1) )
 # endif
     END SUBROUTINE allocate_iceplume

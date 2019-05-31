@@ -61,8 +61,10 @@
 !               sources/sinks belong to the same river/glacier.        !
 # endif
 # ifdef ICEPLUME_DETTRAIN_AVERAGE
-!  SGavgLoc   Location indices (Istr, Iend, Jstr, Jend) when spacially !
-!               average density profiles.                              !
+!  SGIrange   Location indices (Istr, Iend) when spacially average     !
+!               density profiles.                                      !
+!  SGJrange   Location indices (Jstr, Jend) when spacially average     !
+!               density profiles.                                      !
 # endif
 #endif
 !                                                                      !
@@ -129,8 +131,10 @@
           real(r8), pointer :: SGgid(:)
 # endif
 # ifdef ICEPLUME_DETRAIN_AVERAGE
-          real(r8), pointer :: SGavgLocRaw(:, :)
-          integer, pointer :: SGavgLoc(:, :)
+          real(r8), pointer :: SGIrangeRaw(:, :)
+          real(r8), pointer :: SGJrangeRaw(:, :)
+          integer, pointer :: SGIrange(:, :)
+          integer, pointer :: SGJrange(:, :)
 # endif
 #endif
 
@@ -288,8 +292,10 @@
       allocate ( SOURCES(ng) % SGgid(Nsrc(ng)) )
 # endif
 # ifdef ICEPLUME_DETRAIN_AVERAGE
-      allocate ( SOURCES(ng) % SGavgLocRaw(Nsrc(ng), 4) )
-      allocate ( SOURCES(ng) % SGavgLoc(Nsrc(ng), 4) )
+      allocate ( SOURCES(ng) % SGIrangeRaw(Nsrc(ng), 2) )
+      allocate ( SOURCES(ng) % SGJrangeRaw(Nsrc(ng), 2) )
+      allocate ( SOURCES(ng) % SGIrange(Nsrc(ng), 2) )
+      allocate ( SOURCES(ng) % SGJrange(Nsrc(ng), 2) )
 # endif
 #endif
 
@@ -355,9 +361,11 @@
         SOURCES(ng) % SGgid(is) = IniVal
 # endif
 # ifdef ICEPLUME_DETRAIN_AVERAGE
-        DO K = 1, 4
-          SOURCES(ng) % SGavgLocRaw(is, K) = IniVal
-          SOURCES(ng) % SGavgLoc(is, K) = 0
+        DO K = 1, 2
+          SOURCES(ng) % SGIrangeRaw(is, K) = IniVal
+          SOURCES(ng) % SGJrangeRaw(is, K) = IniVal
+          SOURCES(ng) % SGIrange(is, K) = 0
+          SOURCES(ng) % SGJrange(is, K) = 0
         ENDDO
 # endif
       END DO
