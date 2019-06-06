@@ -142,17 +142,10 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,                                 &
       cff = RHO(PLUME(ng) % t(I, osDepthK),                             &
      &          PLUME(ng) % s(I, osDepthK),                             &
      &          PLUME(ng) % zR(I, K))
-# ifdef ICEPLUME_DETRAIN_AVERAGE
-      IF ((cff .LT. PLUME(ng) % rhoAmAvg(I, K)   ) .AND.                &
-     &    (cff .GT. PLUME(ng) % rhoAmAvg(I, K+1) )) THEN
+      IF ((cff .LT. PLUME(ng) % rhoAm(I, K)  ) .AND.                    &
+     &    (cff .GT. PLUME(ng) % rhoAm(I, K+1))) THEN
         plumeDepthK = K
       ENDIF
-# else
-      IF ((cff .LT. PLUME(ng) % rhoAm(I, K)      ) .AND.                &
-     &    (cff .GT. PLUME(ng) % rhoAm(I, K+1)    )) THEN
-        plumeDepthK = K
-      ENDIF
-# endif
     ENDDO
 !
   ELSE  ! (fIni .EQ. 0)
@@ -395,11 +388,6 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,                                 &
 !                                                                   !
 ! ==================================================================!
 !
-# ifdef ICEPLUME_DETRAIN_AVERAGE
-  DO K = 1, N(ng)
-    PLUME(ng) % rhoAm(I, K) = PLUME(ng) % rhoAmAvg(I, K)
-  ENDDO
-# endif
   IF (fIni .GT. 0) THEN
 !
 ! Write detrainment in outputs.

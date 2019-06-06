@@ -95,6 +95,10 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
   logical  :: isBottom = .FALSE.
   real(r8) :: RHO
 !
+! For BV frequency formula
+!
+  real(r8) :: bvf0, bvf
+!
 ! For detrainment weight function
 !
   real(r8) :: detSum
@@ -102,7 +106,7 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
 !
 ! For calculation of internal wave speed
 !
-  real(r8) :: maxVel, Fr
+  real(r8) :: maxVel, Fr, Ri
   real(r8) :: rho1, rho2, h1, h2, gRed
   real(r8) :: rhoH, h01, h02
 # endif
@@ -146,6 +150,98 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
 ! Compute minimum detrainment thickness.
 !
   minDz = det/lc
+# elif defined ICEPLUME_DETRAIN_CHING
+  IF (isSurface) THEN
+    rhoH = 0.0
+    h2 = 0.0
+    DO K = iceDepthK+1, N(ng)
+      h2 = h2+PLUME(ng) % dz(I, K)
+      rhoH = rhoH + PLUME(ng) % dz(I, K)*PLUME(ng) % rhoAm(I, K)
+    ENDDO
+    rho2 = rhoH/h2
+    gRed = MAX(-g*(rhoP-rho2)/rhoRef, 0.0)
+    minDz = SQRT(det/(lc*gRed))
+  ELSE
+    KI = iceDepthK
+    bvf0 = -g*(PLUME(ng) % rhoAm(I, KI+1) - PLUME(ng) % rhoAm(I, KI)) / &
+        & (rhoRef*(PLUME(ng) % zW(I, KI+1) - PLUME(ng) % zW(I, KI)))
+    DO K = iceDepthK+1, osDepthK-1
+      bvf = -g*(PLUME(ng) % rhoAm(I, K+1) - PLUME(ng) % rhoAm(I, K)) /  &
+        & (rhoRef*(PLUME(ng) % zW(I, K+1) - PLUME(ng) % zW(I, K)))
+      IF ( bvf .GT. bvf0 ) THEN
+        KI = K
+        bvf0 = bvf
+      ENDIF
+    ENDDO
+    rhoH = 0.0
+    h1 = 0.0
+    DO K = KI+1, N(ng)
+      h1 = h1+PLUME(ng) % dz(I, K)
+      rhoH = rhoH + PLUME(ng) % dz(I, K)*PLUME(ng) % rhoAm(I, K)
+    ENDDO
+    rho1 = rhoH/h1
+!
+    rhoH = 0.0
+    h2 = 0.0
+    DO K = 1, KI 
+      h2 = h2+PLUME(ng) % dz(I, K)
+      rhoH = rhoH + PLUME(ng) % dz(I, K)*PLUME(ng) % rhoAm(I, K)
+    ENDDO
+    rho2 = rhoH/h2
+!
+    gRed = -g*(rho1-rho2)/rhoRef
+    minDz = SQRT(det/(lc*gRed))
+  ENDIF
+# elif defined ICEPLUME_DETRAIN_CHING93
+  IF (isSurface) THEN
+    rhoH = 0.0
+    h2 = 0.0
+    DO K = iceDepthK+1, N(ng)
+      h2 = h2+PLUME(ng) % dz(I, K)
+      rhoH = rhoH + PLUME(ng) % dz(I, K)*PLUME(ng) % rhoAm(I, K)
+    ENDDO
+    rho2 = rhoH/h2
+    gRed = MAX(-g*(rhoP-rho2)/rhoRef, 0.0)
+    minDz = SQRT(det/(lc*gRed))
+  ELSE
+    KI = iceDepthK
+    bvf0 = -g*(PLUME(ng) % rhoAm(I, KI+1) - PLUME(ng) % rhoAm(I, KI)) / &
+        & (rhoRef*(PLUME(ng) % zW(I, KI+1) - PLUME(ng) % zW(I, KI)))
+    DO K = iceDepthK+1, osDepthK-1
+      bvf = -g*(PLUME(ng) % rhoAm(I, K+1) - PLUME(ng) % rhoAm(I, K)) /  &
+        & (rhoRef*(PLUME(ng) % zW(I, K+1) - PLUME(ng) % zW(I, K)))
+      IF ( bvf .GT. bvf0 ) THEN
+        KI = K
+        bvf0 = bvf
+      ENDIF
+    ENDDO
+    rhoH = 0.0
+    h1 = 0.0
+    DO K = KI+1, N(ng)
+      h1 = h1+PLUME(ng) % dz(I, K)
+      rhoH = rhoH + PLUME(ng) % dz(I, K)*PLUME(ng) % rhoAm(I, K)
+    ENDDO
+    rho1 = rhoH/h1
+!
+    rhoH = 0.0
+    h2 = 0.0
+    DO K = 1, KI 
+      h2 = h2+PLUME(ng) % dz(I, K)
+      rhoH = rhoH + PLUME(ng) % dz(I, K)*PLUME(ng) % rhoAm(I, K)
+    ENDDO
+    rho2 = rhoH/h2
+!
+    gRed = -g*(rho1-rho2)/rhoRef
+    KI = MAXLOC(PLUME(ng) % w(I, :), 1)
+    cff1 = PLUME(ng) % f(I, KI)/PLUME(ng) % w(I, KI)/lc
+    Ri = gRed*cff1/(PLUME(ng) % w(I, KI)**2)
+    IF (Ri .LT. 6.0) THEN
+      cff = (0.7*Ri**0.17)*PLUME(ng) % w(I, KI)
+    ELSE
+      cff = 0.95*PLUME(ng) % w(I, KI)
+    ENDIF
+    minDz = det/lc/cff
+  ENDIF
 # else
 !
   IF (isSurface) THEN

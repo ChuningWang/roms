@@ -49,7 +49,7 @@ SUBROUTINE iceplume_tile (ng, tile)
 !
   integer :: is, Isrc, Jsrc, Dsrc, D2src
   integer :: K, K2, itrc
-  real(r8) :: pr, prRef
+  real(r8) :: pr, prRef = 101.d3*1.d-4
   real(r8) :: dx, dy
   real(r8) :: cff, cff1, cff2, cff3, cff4
   real(r8) :: RHO
@@ -116,6 +116,10 @@ SUBROUTINE iceplume_tile (ng, tile)
         ENDDO
 !
         DO K = 1, N(ng)
+          PLUME(ng) % zR(is, K) =                                       &
+     &        0.5d0 * (PLUME(ng) % zW(is, K-1) + PLUME(ng) % zW(is, K))
+          PLUME(ng) % dz(is, K) =                                       &
+     &        PLUME(ng) % zW(is, K) - PLUME(ng) % zW(is, K-1)
 !
 ! temp, salt and density
 !
@@ -126,8 +130,7 @@ SUBROUTINE iceplume_tile (ng, tile)
 !
 ! convert potential temp to in-situ temp
 !
-          prRef = 101.d3*1.d-4
-          pr = prRef+(ABS(PLUME(ng) % zW(is, K))*rhoRef*g)*1.d-4
+          pr = prRef+(ABS(PLUME(ng) % zR(is, K))*rhoRef*g)*1.d-4
           CALL SW_TEMP(PLUME(ng) % sAm(is, K), PLUME(ng) % tpAm(is, K), &
      &                 pr, prRef, PLUME(ng) % tAm(is, K))
 !
@@ -156,51 +159,49 @@ SUBROUTINE iceplume_tile (ng, tile)
 !
 ! Calculate rho-layer depth, thickness, and ambient density
 !
-        DO K = 1, N(ng)
-          PLUME(ng) % zR(is, K) =                                       &
-     &        0.5d0 * (PLUME(ng) % zW(is, K-1) + PLUME(ng) % zW(is, K))
-          PLUME(ng) % dz(is, K) =                                       &
-     &        PLUME(ng) % zW(is, K) - PLUME(ng) % zW(is, K-1)
-          PLUME(ng) % rhoAm(is, K) =                                    &
-     &        RHO(PLUME(ng) % tAm(is, K),                               &
-     &            PLUME(ng) % sAm(is, K),                               &
-     &            PLUME(ng) % zR(is, K))
-        ENDDO
         IF (iic(ng) .EQ. ntstart(ng)) THEN
           PLUME(ng) % rhoAm(is, N(ng)+1) = rhoAir
         ENDIF
 # ifdef ICEPLUME_DETRAIN_AVERAGE
-!
-! Average density profile to surpress some oscillation
-!
-        IF (iic(ng) .EQ. ntstart(ng)) THEN
-          PLUME(ng) % wAvg = MAX(MIN(PLUME(ng) % wAvg, 1.0), 0.0)
-          PLUME(ng) % rhoAmAvg(is, N(ng)+1) = rhoAir
-        ENDIF
         cff4 = REAL(                                                    &
      &      (SOURCES(ng) % SGIrange(is, 2)-                             &
      &       SOURCES(ng) % SGIrange(is, 1)+1) *                         &
      &      (SOURCES(ng) % SGJrange(is, 2)-                             &
      &       SOURCES(ng) % SGJrange(is, 1)+1))
+        IF (iic(ng) .EQ. ntstart(ng)) THEN
+          PLUME(ng) % wAvg = MAX(MIN(PLUME(ng) % wAvg, 1.0), 0.0)
+        ENDIF
+# endif
         DO K = 1, N(ng)
+# ifdef ICEPLUME_DETRAIN_AVERAGE
+!
+! Average density profiles in a box to surpress some oscillation
+!
           cff1 = SUM( OCEAN(ng) % t(                                    &
      & SOURCES(ng) % SGIrange(is, 1):SOURCES(ng) % SGIrange(is, 2),     &
      & SOURCES(ng) % SGJrange(is, 1):SOURCES(ng) % SGJrange(is, 2),     &
      & K, nstp(ng), isalt) ) / cff4
-          cff2 = SUM( OCEAN(ng) % t(                                    &
+          cff3 = SUM( OCEAN(ng) % t(                                    &
      & SOURCES(ng) % SGIrange(is, 1):SOURCES(ng) % SGIrange(is, 2),     &
      & SOURCES(ng) % SGJrange(is, 1):SOURCES(ng) % SGJrange(is, 2),     &
      & K, nstp(ng), itemp) ) / cff4
+          pr = prRef+(ABS(PLUME(ng) % zR(is, K))*rhoRef*g)*1.d-4
+          CALL SW_TEMP(cff1, cff3, pr, prRef, cff2)
           cff = RHO(cff2, cff1, PLUME(ng) % zR(is, K))
           IF (iic(ng) .EQ. ntstart(ng)) THEN
-            PLUME(ng) % rhoAmAvg(is, K) = cff
+            PLUME(ng) % rhoAm(is, K) = cff
           ELSE
-            PLUME(ng) % rhoAmAvg(is, K) =                               &
-     &          PLUME(ng) % rhoAmAvg(is, K)*(1-PLUME(ng) % wAvg) +      &
+            PLUME(ng) % rhoAm(is, K) =                                  &
+     &          PLUME(ng) % rhoAm(is, K)*(1.0-PLUME(ng) % wAvg) +       &
      &          cff*PLUME(ng) % wAvg
           ENDIF
-        ENDDO
+# else
+          PLUME(ng) % rhoAm(is, K) =                                    &
+     &        RHO(PLUME(ng) % tAm(is, K),                               &
+     &            PLUME(ng) % sAm(is, K),                               &
+     &            PLUME(ng) % zR(is, K))
 # endif
+        ENDDO
 !
 ! Discharge tracer concentration
 !
