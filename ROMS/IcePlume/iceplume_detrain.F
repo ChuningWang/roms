@@ -144,7 +144,7 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
   IF (plumeDepthK .EQ. 1) isBottom = .TRUE.
   detDz = 0.0
   rhoP = RHO(PLUME(ng) % t(I, osDepthK), PLUME(ng) % s(I, osDepthK),    &
-     &          PLUME(ng) % zR(I, plumeDepthK))
+     &       PLUME(ng) % zR(I, plumeDepthK))
 # ifdef ICEPLUME_DETRAIN_CONSERV
 !
 ! Compute minimum detrainment thickness.

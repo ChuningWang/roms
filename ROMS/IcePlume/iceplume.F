@@ -116,8 +116,7 @@ SUBROUTINE iceplume_tile (ng, tile)
         ENDDO
 !
         DO K = 1, N(ng)
-          PLUME(ng) % zR(is, K) =                                       &
-     &        0.5d0 * (PLUME(ng) % zW(is, K-1) + PLUME(ng) % zW(is, K))
+          PLUME(ng) % zR(is, K) = GRID(ng) % z_r(Isrc, Jsrc, K)
           PLUME(ng) % dz(is, K) =                                       &
      &        PLUME(ng) % zW(is, K) - PLUME(ng) % zW(is, K-1)
 !
