@@ -140,8 +140,16 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
 !                                                                   !
 ! ==================================================================!
 !
-  IF (plumeDepthK .EQ. N(ng)) isSurface = .TRUE.
-  IF (plumeDepthK .EQ. 1) isBottom = .TRUE.
+  IF (plumeDepthK .EQ. N(ng)) THEN
+    isSurface = .TRUE.
+  ELSE
+    isSurface = .FALSE.
+  ENDIF
+  IF (plumeDepthK .EQ. 1) THEN
+    isBottom = .TRUE.
+  ELSE
+    isBottom = .FALSE.
+  ENDIF
   detDz = 0.0
   rhoP = RHO(PLUME(ng) % t(I, osDepthK), PLUME(ng) % s(I, osDepthK),    &
      &       PLUME(ng) % zR(I, plumeDepthK))
@@ -159,7 +167,7 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
       rhoH = rhoH + PLUME(ng) % dz(I, K)*PLUME(ng) % rhoAm(I, K)
     ENDDO
     rho2 = rhoH/h2
-    gRed = MAX(-g*(rhoP-rho2)/rhoRef, 0.0)
+    gRed = MAX(-g*(rhoP-rho2)/rhoRef, gRedBkg)
     minDz = SQRT(det/(lc*gRed))
   ELSE
     KI = iceDepthK
@@ -189,7 +197,7 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
     ENDDO
     rho2 = rhoH/h2
 !
-    gRed = -g*(rho1-rho2)/rhoRef
+    gRed = MAX(-g*(rho1-rho2)/rhoRef, gRedBkg)
     minDz = SQRT(det/(lc*gRed))
   ENDIF
 # elif defined ICEPLUME_DETRAIN_CHING93
@@ -201,7 +209,7 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
       rhoH = rhoH + PLUME(ng) % dz(I, K)*PLUME(ng) % rhoAm(I, K)
     ENDDO
     rho2 = rhoH/h2
-    gRed = MAX(-g*(rhoP-rho2)/rhoRef, 0.0)
+    gRed = MAX(-g*(rhoP-rho2)/rhoRef, gRedBkg)
     minDz = SQRT(det/(lc*gRed))
   ELSE
     KI = iceDepthK
@@ -231,7 +239,7 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
     ENDDO
     rho2 = rhoH/h2
 !
-    gRed = -g*(rho1-rho2)/rhoRef
+    gRed = MAX(-g*(rho1-rho2)/rhoRef, gRedBkg)
     KI = MAXLOC(PLUME(ng) % w(I, :), 1)
     cff1 = PLUME(ng) % f(I, KI)/PLUME(ng) % w(I, KI)/lc
     Ri = gRed*cff1/(PLUME(ng) % w(I, KI)**2)
@@ -254,7 +262,7 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
       h1 = h1+PLUME(ng) % dz(I, K)
       rhoH = rhoH+PLUME(ng) % dz(I, K)*PLUME(ng) % rhoAm(I, K)
       rho1 = rhoH/h1
-      gRed = MAX(g*(rho1-rhoP)/rhoRef, 0.0)
+      gRed = MAX(g*(rho1-rhoP)/rhoRef, gRedBkg)
       Fr = det/(lc*h1)/SQRT(gRed*h1)
       IF (Fr .LE. 1.0/RiB) EXIT
     ENDDO
@@ -403,20 +411,34 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
   detVel = det / (lc * detDz)
   DO K = 1,N(ng)
     IF (PLUME(ng) % detI(I, K) .EQ. 1) THEN
+# ifdef ICEPLUME_DETRAIN_SMOOTH
 !
 ! First, calculate weight using Gaussian function.
 !
-!       detWeight = EXP(-1.0 *                                            &
-!      &    ((PLUME(ng) % zR(I, K)-                                       &
-!      &      PLUME(ng) % zR(I, plumeDepthK)) /                           &
-!      &     detDz)**2)
+      IF ( K .GT. plumeDepthK ) THEN
+        cff = (PLUME(ng) % zR(I, K) -PLUME(ng) % zR(I, plumeDepthK)) /  &
+     &    (PLUME(ng) % zR(I, K1)-PLUME(ng) % zR(I, plumeDepthK)+0.0001)
+      ELSE
+        cff = (PLUME(ng) % zR(I, K) -PLUME(ng) % zR(I, plumeDepthK)) /  &
+     &    (PLUME(ng) % zR(I, K2)-PLUME(ng) % zR(I, plumeDepthK)+0.0001)
+      ENDIF
+      detWeight = EXP(-0.5 * (cff*2)**2)
+# else
       detWeight = 1.0
+# endif
 !
 ! Distribute the detrainment.
 !
       PLUME(ng) % det(I, K) = detWeight * detVel * lc *                 &
      &  PLUME(ng) % detFrac(I, K) * PLUME(ng) % dz(I, K)
     ENDIF
+  ENDDO
+!
+! Normalize
+!
+  detSum = SUM(PLUME(ng) % det(I, :))
+  DO K = 1,N(ng)
+    PLUME(ng) % det(I, K) = PLUME(ng) % det(I, K)*det/detSum
   ENDDO
 # ifdef ICEPLUME_DETRAIN_NEUTRAL
 !
@@ -432,8 +454,8 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
 !
   volP = PLUME(ng) % f(I, osDepthK)
   volR = PLUME(ng) % f(I, iceDepthK)
-  volM = PLUME(ng) % m(I, osDepthK)
-  volF = PLUME(ng) % m(I, osDepthK) + PLUME(ng) % f(I, iceDepthK)
+  volM = PLUME(ng) % mInt(I, osDepthK)
+  volF = volR + volM 
   volE = volP - volF
 !
 ! Temperature. Note that tGade is effective temperature of Gade line.
@@ -482,6 +504,15 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
     ENDIF
   ENDDO
 !
+! Rewrite detrainment volume.
+!
+  DO K = 1, N(ng)
+    IF (PLUME(ng) % detI(I, K) .EQ. 1) THEN
+      PLUME(ng) % det(I, K) = PLUME(ng) % detF(I, K) +                  &
+     &                        PLUME(ng) % detE(I, K)
+    ENDIF
+  ENDDO
+!
 ! ==================================================================!
 !                                                                   !
 ! Update tracer concentration in detrainment model.                 !
@@ -522,14 +553,6 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
      &       PLUME(ng) % detE(I, K))
       ENDIF
     ENDDO
-  ENDDO
-# else
-!
-! Normalize
-!
-  detSum = SUM(PLUME(ng) % det(I, :))
-  DO K = 1,N(ng)
-    PLUME(ng) % det(I, K) = PLUME(ng) % det(I, K)*det/detSum
   ENDDO
 # endif
 END SUBROUTINE ICEPLUME_DETRAIN
