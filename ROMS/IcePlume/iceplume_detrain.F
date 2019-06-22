@@ -305,6 +305,54 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
     minDz = det/maxVel/lc
   ENDIF
 # endif
+# ifdef ICEPLUME_DETRAIN_BULK
+  K1 = plumeDepthK
+  K2 = plumeDepthK
+  detDz = 0.0
+  IF (isSurface) THEN
+    DO K = N(ng), 1, -1
+      detDz = detDz + PLUME(ng) % dz(I, K)
+      PLUME(ng) % detI(I, KI) = 1
+      PLUME(ng) % detFrac(I, KI) = 1.0
+      IF ( detDz .GT. minDz ) THEN
+        PLUME(ng) % detFrac(I, KI) =                                    &
+     &    (detDz - minDz) / PLUME(ng) % dz(I, KI)
+        detDz = minDz
+        EXIT
+      ENDIF
+    ENDDO
+  ELSE
+    cff1 = (rho2-rhoP)/(rho2-rho1)*minDz
+    cff2 = (rhoP-rho1)/(rho2-rho1)*minDz
+    h1 = 0.0
+    h2 = 0.0
+    DO K = plumeDepthK+1, N(ng)
+      h1 = h1 + PLUME(ng) % dz(I, K)
+      PLUME(ng) % detI(I, K) = 1
+      PLUME(ng) % detFrac(I, K) = 1.0
+      K1 = K
+      IF ( h1 .GT. cff1 ) THEN
+        PLUME(ng) % detFrac(I, K) =                                     &
+     &    1 - (h1 - cff1) / PLUME(ng) % dz(I, K)
+        h1 = cff1
+        EXIT
+      ENDIF
+    ENDDO
+    DO K = plumeDepthK, 1, -1
+      h2 = h2 + PLUME(ng) % dz(I, K)
+      PLUME(ng) % detI(I, K) = 1
+      PLUME(ng) % detFrac(I, K) = 1.0
+      K2 = K
+      IF ( h2 .GT. cff2 ) THEN
+        PLUME(ng) % detFrac(I, K) =                                     &
+     &    1 - (h2 - cff2) / PLUME(ng) % dz(I, K)
+        h2 = cff2
+        EXIT
+      ENDIF
+    ENDDO
+    detDz = h1 + h2
+  ENDIF
+# else
 !
 ! Add layers around plumeDepthK until it reaches critical thickness.
 !
@@ -327,7 +375,7 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
 !
 ! Search one layer up
 !
-      DO K = 1, N(ng)
+      DO K = 2, N(ng)
         IF ((PLUME(ng) % detI(I, K  ) .EQ. 0) .AND.                     &
      &      (PLUME(ng) % detI(I, K-1) .EQ. 1)) THEN
           KI = K
@@ -377,7 +425,7 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
 !
 ! Other exit loop criteria.
 !
-    IF ( (detDz .EQ. (detDz+1.0)) .OR. (udSwitch .EQ. 0) ) EXIT
+    IF ( (minDz .EQ. (minDz+1.0)) .OR. (udSwitch .EQ. 0) ) EXIT
   ENDDO
 !
 ! Only take partial grid from top/bottom layer to satisfy potE=0
@@ -395,6 +443,7 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
       detDz = detDz - PLUME(ng) % dz(I, KI)*(1 - cff)
     ENDIF
   ENDIF
+# endif
 !
 ! ==================================================================!
 !                                                                   !
