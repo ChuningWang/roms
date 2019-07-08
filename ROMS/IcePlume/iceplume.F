@@ -168,7 +168,7 @@ SUBROUTINE iceplume_tile (ng, tile)
      &      (SOURCES(ng) % SGJrange(is, 2)-                             &
      &       SOURCES(ng) % SGJrange(is, 1)+1))
         IF (iic(ng) .EQ. ntstart(ng)) THEN
-          PLUME(ng) % wAvg = MAX(MIN(PLUME(ng) % wAvg, 1.0), 0.0)
+          avgAlpha = MAX(MIN(avgAlpha, 1.0), 0.0)
         ENDIF
 # endif
         DO K = 1, N(ng)
@@ -191,8 +191,7 @@ SUBROUTINE iceplume_tile (ng, tile)
             PLUME(ng) % rhoAm(is, K) = cff
           ELSE
             PLUME(ng) % rhoAm(is, K) =                                  &
-     &          PLUME(ng) % rhoAm(is, K)*(1.0-PLUME(ng) % wAvg) +       &
-     &          cff*PLUME(ng) % wAvg
+     &          PLUME(ng) % rhoAm(is, K)*(1.0-avgAlpha) + cff*avgAlpha
           ENDIF
 # else
           PLUME(ng) % rhoAm(is, K) =                                    &

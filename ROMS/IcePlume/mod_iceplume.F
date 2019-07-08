@@ -42,6 +42,11 @@ MODULE mod_iceplume
 ! velBkg    - background velocity [m s^-1]                             !
 ! wIni      - initial (discharge) velocity [m s^-1]                    !
 !                                                                      !
+! detSigma  - detrainment Gaussian profile standard deviation          !
+# ifdef ICEPLUME_DETRAIN_AVERAGE
+! avgAlpha  - average weight for exponential smoothing (0 to 1)        !
+# endif
+!                                                                      !
 ! =====================================================================!
 !
   real(r8), parameter :: pi = 4.0d0*ATAN(1.0d0)    ! Pi
@@ -68,6 +73,11 @@ MODULE mod_iceplume
   real(r8), parameter :: CdBkg      = 0.0025_r8
   real(r8), parameter :: velBkg     = 0.03_r8
   real(r8), parameter :: wIni       = 1.0_r8
+!
+  real(r8), parameter :: detSigma   = 0.5_r8
+# ifdef ICEPLUME_DETRAIN_AVERAGE
+  real(r8), parameter :: avgAlpha   = 1.0_r8
+# endif
 !
 ! =====================================================================!
 !                                                                      !
@@ -133,10 +143,6 @@ MODULE mod_iceplume
 ! dzWei         - new layer weight function                            !
 ! trcL          - new box tracer concentration                         !
 ! trcNew        - updated tracer concentration                         !
-# endif
-# ifdef ICEPLUME_DETRAIN_AVERAGE
-!                                                                      !
-! wAvg          - average weight for the current time step (0 to 1)    !
 # endif
 !                                                                      !
 ! =====================================================================!
@@ -216,12 +222,6 @@ MODULE mod_iceplume
     real(r8), pointer :: trcL(:, :, :)
     real(r8), pointer :: trcNew(:, :, :)
 # endif
-# ifdef ICEPLUME_DETRAIN_AVERAGE
-!
-! For temporally average background density profile.
-!
-    real(r8) :: wAvg
-# endif
   END TYPE T_PLUME
 !
   TYPE (T_PLUME), allocatable :: PLUME(:)
@@ -291,10 +291,6 @@ MODULE mod_iceplume
       allocate( PLUME(ng) % dzWei  (Nsrc(ng), N(ng)) )
       allocate( PLUME(ng) % trcL   (Nsrc(ng), N(ng), NT(ng)) )
       allocate( PLUME(ng) % trcNew (Nsrc(ng), N(ng), NT(ng)) )
-# endif
-# ifdef ICEPLUME_DETRAIN_AVERAGE
-!
-      PLUME(ng) % wAvg = 1.0
 # endif
     END SUBROUTINE allocate_iceplume
 #endif
