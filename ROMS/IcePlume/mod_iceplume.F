@@ -85,6 +85,7 @@ MODULE mod_iceplume
 !                                                                      !
 ! dir           - direction of plume. +1 for positve direction and     !
 !                 -1 for negative direction. 0 for other situation.    !
+! trs           - depth integrated total transport [m^3 s^-1]          !
 !                                                                      !
 ! Profiles                                                             !
 !                                                                      !
@@ -132,8 +133,6 @@ MODULE mod_iceplume
 ! trcCum        - accumulative tracer concentration                    !
 ! trcIni        - initial tracer concentration in discharge            !
 !                                                                      !
-! trcAmToB      - tracer flux rate associated with background          !
-!               - melt [unit s^-1]                                     !
 # ifdef ICEPLUME_VIRTUAL_MIX
 !                                                                      !
 ! For calculation of virtual tracer flux                               !
@@ -151,7 +150,11 @@ MODULE mod_iceplume
 !
 ! Variables.
 !
+!
+! Depth independent variables.
+!
     real(r8), pointer :: dir(:)
+    real(r8), pointer :: trs(:)
 !
 ! Plume state (omega surface).
 !
@@ -198,7 +201,6 @@ MODULE mod_iceplume
 !
     real(r8), pointer :: m(:, :)
     real(r8), pointer :: mB(:, :)
-    real(r8), pointer :: trcAmToB(:, :, :)
 !
 ! Other profiles.
 !
@@ -207,7 +209,7 @@ MODULE mod_iceplume
 ! Passive tracer concentration.
 !
     real(r8), pointer :: trcAm(:, :, :)
-    real(r8), pointer :: trcB(:, :, :)
+    real(r8), pointer :: trcB(:, :)
     real(r8), pointer :: trc(:, :)
     real(r8), pointer :: trcCum(:, :)
     real(r8), pointer :: trcIni(:, :)
@@ -240,6 +242,7 @@ MODULE mod_iceplume
 ! Allocate profiles
 !
       allocate( PLUME(ng) % dir(1:Nsrc(ng)) )
+      allocate( PLUME(ng) % trs(1:Nsrc(ng)) )
 !
       allocate( PLUME(ng) % zW   (Nsrc(ng), 0:N(ng)) )
       allocate( PLUME(ng) % f    (Nsrc(ng), 0:N(ng)) )
@@ -274,12 +277,11 @@ MODULE mod_iceplume
 !
       allocate( PLUME(ng) % m        (Nsrc(ng), N(ng)) )
       allocate( PLUME(ng) % mB       (Nsrc(ng), N(ng)) )
-      allocate( PLUME(ng) % trcAmToB (Nsrc(ng), N(ng), NT(ng)) )
 !
       allocate( PLUME(ng) % dz (Nsrc(ng), N(ng)) )
 !
       allocate( PLUME(ng) % trcAm  (Nsrc(ng), N(ng), NT(ng)) )
-      allocate( PLUME(ng) % trcB   (Nsrc(ng), N(ng), NT(ng)) )
+      allocate( PLUME(ng) % trcB   (Nsrc(ng), NT(ng)) )
       allocate( PLUME(ng) % trc    (Nsrc(ng), NT(ng)) )
       allocate( PLUME(ng) % trcCum (Nsrc(ng), NT(ng)) )
       allocate( PLUME(ng) % trcIni (Nsrc(ng), NT(ng)) )

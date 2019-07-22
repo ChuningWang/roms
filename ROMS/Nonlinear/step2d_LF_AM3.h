@@ -929,18 +929,6 @@
 !
 !  Apply mass point sources (volume vertical influx), if any.
 !
-# if defined ICEPLUME && defined ICEPLUME_VIRTUAL_MIX
-      DO is=1,Nsrc(ng)
-        i=SOURCES(ng)%Isrc(is)
-        j=SOURCES(ng)%Jsrc(is)
-        IF (((IstrR.le.i).and.(i.le.IendR)).and.                        &
-     &      ((JstrR.le.j).and.(j.le.JendR))) THEN
-          zeta(i,j,knew)=zeta(i,j,knew)+                                &
-     &                   ABS(SOURCES(ng)%SGbar(is))*                    &
-     &                   pm(i,j)*pn(i,j)*dtfast(ng)
-        END IF
-      END DO
-# endif
       IF (LwSrc(ng)) THEN
         DO is=1,Nsrc(ng)
           i=SOURCES(ng)%Isrc(is)
@@ -950,6 +938,11 @@
             zeta(i,j,knew)=zeta(i,j,knew)+                              &
      &                     SOURCES(ng)%Qbar(is)*                        &
      &                     pm(i,j)*pn(i,j)*dtfast(ng)
+# if defined ICEPLUME && !defined ICEPLUME_VIRTUAL_MIX
+            zeta(i,j,knew)=zeta(i,j,knew)+                              &
+     &                     PLUME(ng)%trs(is)*                           &
+     &                     pm(i,j)*pn(i,j)*dtfast(ng)
+# endif
           END IF
         END DO
       END IF
@@ -2561,14 +2554,14 @@
               ubar(i,j,knew)=SOURCES(ng)%Qbar(is)*cff
 # if defined ICEPLUME && !defined ICEPLUME_VIRTUAL_MIX
               ubar(i,j,knew)=ubar(i,j,knew)+                            &
-     &          ABS(SOURCES(ng)%SGbar(is))*PLUME(ng)%dir(is)*cff
+     &          PLUME(ng)%trs(is)*PLUME(ng)%dir(is)*cff
 # endif
             ELSE
               cff=1.0_r8/(om_v(i,j)*0.5_r8*(Dnew(i,j-1)+Dnew(i,j)))
               vbar(i,j,knew)=SOURCES(ng)%Qbar(is)*cff
 # if defined ICEPLUME && !defined ICEPLUME_VIRTUAL_MIX
               vbar(i,j,knew)=vbar(i,j,knew)+                            &
-     &          ABS(SOURCES(ng)%SGbar(is))*PLUME(ng)%dir(is)*cff
+     &          PLUME(ng)%trs(is)*PLUME(ng)%dir(is)*cff
 # endif
             END IF
           END IF

@@ -37,7 +37,7 @@ SUBROUTINE iceplume_tile (ng, tile)
   USE mod_grid, ONLY : GRID
   USE mod_ocean, ONLY : OCEAN
   USE mod_stepping, ONLY : nstp
-  USE mod_scalars, ONLY : dt, LuvSrc
+  USE mod_scalars, ONLY : dt, LuvSrc, LwSrc
   USE mod_sources
   USE mod_iceplume
 !
@@ -56,7 +56,7 @@ SUBROUTINE iceplume_tile (ng, tile)
 !
 # include "set_bounds.h"
 !
-  IF (LuvSrc(ng)) THEN
+  IF ((LuvSrc(ng)) .OR. (LwSrc(ng))) THEN
     DO is=1,Nsrc(ng)
       Isrc = SOURCES(ng) % Isrc(is)
       Jsrc = SOURCES(ng) % Jsrc(is)
@@ -70,28 +70,32 @@ SUBROUTINE iceplume_tile (ng, tile)
 ! ==================================================================!
 !
         Dsrc = NINT(SOURCES(ng) % Dsrc(is))
-        IF (Dsrc .EQ. 0) THEN
-          IF ( (GRID(ng) % rmask(Isrc  , Jsrc) .EQ. 0) .AND.            &
-     &         (GRID(ng) % rmask(Isrc-1, Jsrc) .EQ. 1) ) THEN
-            Isrc = Isrc-1
-            D2src = -1
-          ELSEIF ( (GRID(ng) % rmask(Isrc  , Jsrc) .EQ. 1) .AND.        &
-     &             (GRID(ng) % rmask(Isrc-1, Jsrc) .EQ. 0) ) THEN
-            D2src = 1
-          ELSE
-            D2src = 0
+        IF (LuvSrc(ng)) THEN
+          IF (Dsrc .EQ. 0) THEN
+            IF ( (GRID(ng) % rmask(Isrc  , Jsrc) .EQ. 0) .AND.          &
+     &           (GRID(ng) % rmask(Isrc-1, Jsrc) .EQ. 1) ) THEN
+              Isrc = Isrc-1
+              D2src = -1
+            ELSEIF ( (GRID(ng) % rmask(Isrc  , Jsrc) .EQ. 1) .AND.      &
+     &               (GRID(ng) % rmask(Isrc-1, Jsrc) .EQ. 0) ) THEN
+              D2src = 1
+            ELSE
+              D2src = 0
+            ENDIF
+          ELSEIF (Dsrc .EQ. 1) THEN
+            IF ( (GRID(ng) % rmask(Isrc, Jsrc  ) .EQ. 0) .AND.          &
+     &           (GRID(ng) % rmask(Isrc, Jsrc-1) .EQ. 1)) THEN
+              Jsrc = Jsrc-1
+              D2src = -1
+            ELSEIF ((GRID(ng) % rmask(Isrc, Jsrc  ) .EQ. 1) .AND.       &
+     &              (GRID(ng) % rmask(Isrc, Jsrc-1) .EQ. 0)) THEN
+              D2src = 1
+            ELSE
+              D2src = 0
+            ENDIF
           ENDIF
-        ELSEIF (Dsrc .EQ. 1) THEN
-          IF ( (GRID(ng) % rmask(Isrc, Jsrc  ) .EQ. 0) .AND.            &
-     &         (GRID(ng) % rmask(Isrc, Jsrc-1) .EQ. 1)) THEN
-            Jsrc = Jsrc-1
-            D2src = -1
-          ELSEIF ((GRID(ng) % rmask(Isrc, Jsrc  ) .EQ. 1) .AND.         &
-     &            (GRID(ng) % rmask(Isrc, Jsrc-1) .EQ. 0)) THEN
-            D2src = 1
-          ELSE
-            D2src = 0
-          ENDIF
+        ELSEIF (LwSrc(ng)) THEN
+          D2src = 0
         ENDIF
         PLUME(ng) % dir(is) = REAL(D2src)
 !

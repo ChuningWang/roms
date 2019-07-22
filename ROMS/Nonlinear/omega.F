@@ -82,6 +82,9 @@
       USE mod_param
       USE mod_scalars
       USE mod_sources
+# ifdef ICEPLUME
+      USE mod_iceplume, ONLY : PLUME
+# endif
 !
       USE bc_3d_mod, ONLY : bc_w3d_tile
 # ifdef DISTRIBUTE
@@ -168,7 +171,15 @@
      &          ((JstrR.le.jj).and.(jj.le.JendR)).and.                  &
      &          (j.eq.jj)) THEN
               DO k=1,N(ng)
-                W(ii,jj,k)=W(ii,jj,k)+SOURCES(ng)%Qsrc(is,k)
+                W(ii,jj,k)=W(ii,jj,k-1)-                                &
+     &               (Huon(ii+1,jj,k)-Huon(ii,jj,k)+                    &
+     &                Hvom(ii,jj+1,k)-Hvom(ii,jj,k))+                   &
+     &                SOURCES(ng)%Qsrc(is,k)
+# if defined ICEPLUME && !defined ICEPLUME_VIRTUAL_MIX
+                W(ii,jj,k)=W(ii,jj,k)+                                  &
+     &                     (PLUME(ng)%det(is,k)+PLUME(ng)%ent(is,k)+    &
+     &                      PLUME(ng)%mB(is,k))
+# endif
               END DO
             END IF
           END DO

@@ -650,15 +650,14 @@
 #  else
      &                      SOURCES(ng)%Tsrc(is,k,itrc)
 #  endif
-                    FX(Isrc,Jsrc)=FX(Isrc,Jsrc)+PLUME(ng)%dir(is)*      &
+                    FX(Isrc,Jsrc)=FX(Isrc,Jsrc)+PLUME(ng)%dir(is)*(     &
 #  ifdef ICEPLUME_DETRAIN_NEUTRAL
-     &                (PLUME(ng)%det(is,k)*PLUME(ng)%detTrc(is,k,itrc)+ &
+     &                PLUME(ng)%det(is,k)*PLUME(ng)%detTrc(is,k,itrc)+  &
 #  else
-     &                (PLUME(ng)%det(is,k)*PLUME(ng)%trc(is,itrc)+      &
+     &                PLUME(ng)%det(is,k)*PLUME(ng)%trc(is,itrc)+       &
 #  endif
-     &                 PLUME(ng)%ent(is,k)*PLUME(ng)%trcAm(is,k,itrc)+  &
-     &                 PLUME(ng)%mB(is,k)*PLUME(ng)%trcB(is,k,itrc)+    &
-     &                 PLUME(ng)%trcAmToB(is,k,itrc))
+     &                PLUME(ng)%ent(is,k)*PLUME(ng)%trcAm(is,k,itrc)+   &
+     &                PLUME(ng)%mB(is,k)*PLUME(ng)%trcB(is,itrc))
 # else
                     FX(Isrc,Jsrc)=Huon(Isrc,Jsrc,k)*                    &
 #  ifdef ONE_TRACER_SOURCE
@@ -701,15 +700,14 @@
 #  else
      &                      SOURCES(ng)%Tsrc(is,k,itrc)
 #  endif
-                    FE(Isrc,Jsrc)=FE(Isrc,Jsrc)+PLUME(ng)%dir(is)*      &
+                    FE(Isrc,Jsrc)=FE(Isrc,Jsrc)+PLUME(ng)%dir(is)*(     &
 #  ifdef ICEPLUME_DETRAIN_NEUTRAL
-     &                (PLUME(ng)%det(is,k)*PLUME(ng)%detTrc(is,k,itrc)+ &
+     &                PLUME(ng)%det(is,k)*PLUME(ng)%detTrc(is,k,itrc)+  &
 #  else
-     &                (PLUME(ng)%det(is,k)*PLUME(ng)%trc(is,itrc)+      &
+     &                PLUME(ng)%det(is,k)*PLUME(ng)%trc(is,itrc)+       &
 #  endif
-     &                 PLUME(ng)%ent(is,k)*PLUME(ng)%trcAm(is,k,itrc)+  &
-     &                 PLUME(ng)%mB(is,k)*PLUME(ng)%trcB(is,k,itrc)+    &
-     &                 PLUME(ng)%trcAmToB(is,k,itrc))
+     &                PLUME(ng)%ent(is,k)*PLUME(ng)%trcAm(is,k,itrc)+   &
+     &                PLUME(ng)%mB(is,k)*PLUME(ng)%trcB(is,itrc))
 # else
                     FE(Isrc,Jsrc)=Hvom(Isrc,Jsrc,k)*                    &
 #  ifdef ONE_TRACER_SOURCE
@@ -1036,6 +1034,7 @@
           END DO
 !
 !  Apply mass point sources (volume vertical influx), if any.
+!  (Notice the j-loop is pipelined above).
 !
           IF (LwSrc(ng).and.ANY(LtracerSrc(:,ng))) THEN
             DO is=1,Nsrc(ng)
@@ -1048,30 +1047,39 @@
      &            ((IstrR.le.Isrc).and.(Isrc.le.IendR)).and.            &
 # endif
      &            (j.eq.Jsrc)) THEN
-                DO k=1,N(ng)-1
-#  ifdef ONE_TRACER_SOURCE
-                  FC(i,k)=FC(i,k)+0.5_r8*                               &
-     &                    (SOURCES(ng)%Qsrc(is,k  )*                    &
-     &                     SOURCES(ng)%Tsrc(itrc)+                      &
-     &                     SOURCES(ng)%Qsrc(is,k+1)*                    &
-     &                     SOURCES(ng)%Tsrc(itrc) )
-#  elif defined TWO_D_TRACER_SOURCE
-                  FC(i,k)=FC(i,k)+0.5_r8*                               &
-     &                    (SOURCES(ng)%Qsrc(is,k  )*                    &
-     &                     SOURCES(ng)%Tsrc(is,itrc)+                   &
-     &                     SOURCES(ng)%Qsrc(is,k+1)*                    &
-     &                     SOURCES(ng)%Tsrc(is,itrc) )
+                cff=dt(ng)*pm(Isrc,Jsrc)*pn(Isrc,Jsrc)
+                DO k=1,N(ng)
+                  cff1=cff*SOURCES(ng)%Qsrc(is,k)*                      &
+# ifdef ONE_TRACER_SOURCE
+     &              SOURCES(ng)%Tsrc(itrc)
+# elif defined TWO_D_TRACER_SOURCE
+     &              SOURCES(ng)%Tsrc(is,itrc)
+# else
+     &              SOURCES(ng)%Tsrc(is,k,itrc)
+# endif
+# if defined ICEPLUME && !defined ICEPLUME_VIRTUAL_MIX
+                  cff1=cff1+cff*(                                       &
+#  ifdef ICEPLUME_DETRAIN_NEUTRAL
+     &              PLUME(ng)%det(is,k)*PLUME(ng)%detTrc(is,k,itrc)+    &
 #  else
-                  FC(i,k)=FC(i,k)+0.5_r8*                               &
-     &                    (SOURCES(ng)%Qsrc(is,k  )*                    &
-     &                     SOURCES(ng)%Tsrc(is,k  ,itrc)+               &
-     &                     SOURCES(ng)%Qsrc(is,k+1)*                    &
-     &                     SOURCES(ng)%Tsrc(is,k+1,itrc))
+     &              PLUME(ng)%det(is,k)*PLUME(ng)%trc(is,itrc)+         &
 #  endif
+                    PLUME(ng)%ent(is,k)*PLUME(ng)%trcAm(is,k,itrc)+     &
+     &              PLUME(ng)%mB(is,k)*PLUME(ng)%trcB(is,itrc))
+# endif
+!
+! Modify tracer concentration (Tunits m) based on source term.
+!
+# ifdef TS_MPDATA
+                  Ta(Isrc,Jsrc,k,itrc)=Ta(Isrc,Jsrc,k,itrc)+cff1
+# else
+                  t(Isrc,Jsrc,k,nnew,itrc)=t(Isrc,Jsrc,k,nnew,itrc)+cff1
+# endif
                 END DO
               END IF
             END DO
           END IF
+
 !
           DO k=1,N(ng)
             DO i=I_RANGE
