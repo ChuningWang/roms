@@ -162,35 +162,22 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,                                 &
      &          PLUME(ng) % s(I, osDepthK),                             &
      &          PLUME(ng) % zR(I, K))
       IF (K .EQ. 1) THEN
-        cff1 = RHO(                                                     &
-     &    PLUME(ng) % tAm(I, 1),                                        &
-     &    PLUME(ng) % sAm(I, 1),                                        &
-     &    PLUME(ng) % zW(I, 0))
-        cff2 = RHO(                                                     &
-     &    0.5*(PLUME(ng) % tAm(I, 1)+PLUME(ng) % tAm(I, 2)),            &
-     &    0.5*(PLUME(ng) % sAm(I, 1)+PLUME(ng) % sAm(I, 2)),            &
-     &    PLUME(ng) % zW(I, 1))
+        cff1 = PLUME(ng) % rhoAm(I, 1)
+        cff2 = 0.5*(PLUME(ng) % rhoAm(I, 1)+                            &
+     &              PLUME(ng) % rhoAm(I, 2))
       ELSEIF (K .EQ. N(ng)) THEN
-        cff1 = RHO(                                                     &
-     &    0.5*(PLUME(ng) % tAm(I, N(ng)-1)+PLUME(ng) % tAm(I, N(ng))),  &
-     &    0.5*(PLUME(ng) % sAm(I, N(ng)-1)+PLUME(ng) % sAm(I, N(ng))),  &
-     &    PLUME(ng) % zW(I, N(ng)-1))
-        cff2 = RHO(                                                     &
-     &    PLUME(ng) % tAm(I, N(ng)),                                    &
-     &    PLUME(ng) % sAm(I, N(ng)),                                    &
-     &    PLUME(ng) % zW(I, N(ng)))
+        cff1 = 0.5*(PLUME(ng) % rhoAm(I, N(ng)-1)+                      &
+     &              PLUME(ng) % rhoAm(I, N(ng)))
+        cff2 = PLUME(ng) % rhoAm(I, N(ng))
       ELSE
-        cff1 = RHO(                                                     &
-     &    0.5*(PLUME(ng) % tAm(I, K-1)+PLUME(ng) % tAm(I, K)),          &
-     &    0.5*(PLUME(ng) % sAm(I, K-1)+PLUME(ng) % sAm(I, K)),          &
-     &    PLUME(ng) % zW(I, K-1))
-        cff2 = RHO(                                                     &
-     &    0.5*(PLUME(ng) % tAm(I, K)+PLUME(ng) % tAm(I, K+1)),          &
-     &    0.5*(PLUME(ng) % sAm(I, K)+PLUME(ng) % sAm(I, K+1)),          &
-     &    PLUME(ng) % zW(I, K))
+        cff1 = 0.5*(PLUME(ng) % rhoAm(I, K-1)+PLUME(ng) % rhoAm(I, K))
+        cff2 = 0.5*(PLUME(ng) % rhoAm(I, K)+PLUME(ng) % rhoAm(I, K+1))
       ENDIF
       IF ((cff .LT. cff1) .AND. (cff .GT. cff2)) THEN
         plumeDepthK = K
+      ENDIF
+      IF (K .EQ. N(ng)) THEN
+        IF (cff .LT. cff2) plumeDepthK = K
       ENDIF
     ENDDO
   ENDIF

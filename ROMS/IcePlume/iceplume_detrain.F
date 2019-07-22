@@ -180,17 +180,6 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
 !
 ! Use the Richardson number criteria.
 !
-!     KI = iceDepthK
-!     bvf0 = -g*(PLUME(ng) % rhoAm(I, KI+1) - PLUME(ng) % rhoAm(I, KI)) / &
-!         & (rhoRef*(PLUME(ng) % zW(I, KI+1) - PLUME(ng) % zW(I, KI)))
-!     DO K = iceDepthK+1, osDepthK-1
-!       bvf = -g*(PLUME(ng) % rhoAm(I, K+1) - PLUME(ng) % rhoAm(I, K)) /  &
-!         & (rhoRef*(PLUME(ng) % zW(I, K+1) - PLUME(ng) % zW(I, K)))
-!       IF ( bvf .GT. bvf0 ) THEN
-!         KI = K
-!         bvf0 = bvf
-!       ENDIF
-!     ENDDO
     KI = plumeDepthK
     rhoH = 0.0
     h1 = 0.0
