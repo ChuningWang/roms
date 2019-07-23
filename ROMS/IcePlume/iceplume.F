@@ -274,12 +274,15 @@ SUBROUTINE iceplume_tile (ng, tile)
      &            PLUME(ng) % mB(is, K))*dt(ng)
           DO itrc = 1, NT(ng)
             cff2 = (PLUME(ng) % det(is, K)*                             &
+#  ifdef ICEPLUME_DETRAIN_NEUTRAL
+     &              PLUME(ng) % detTrc(is, K, itrc)+                    &
+#  else
      &              PLUME(ng) % trc(is, itrc)+                          &
+#  endif
      &              PLUME(ng) % ent(is, K)*                             &
      &              PLUME(ng) % trcAm(is, K, itrc)+                     &
-     &              PLUME(ng) % mB(is,k)*                               &
-     &              PLUME(ng)%trcB(is,k,itrc)+                          &
-     &              PLUME(ng) % trcAmToB(is,k,itrc))*dt(ng)
+     &              PLUME(ng) % mB(is, K)*                              &
+     &              PLUME(ng) % trcB(is, itrc))*dt(ng)
             PLUME(ng) % trcL(is, K, itrc) =                             &
      &          (PLUME(ng) % trcAm(is, K, itrc)*cff + cff2) /           &
      &          (cff + cff1)
