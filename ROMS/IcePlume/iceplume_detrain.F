@@ -45,7 +45,6 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
 ! isSurface   - logical, if the plume discharge at surface          !
 ! isBottom    - logical, if the plume discharge at bottom           !
 ! udSwitch    - switch to determine search one layer up(1)/down(-1) !
-# ifndef ICEPLUME_DETRAIN_CONSERV
 !                                                                   !
 ! maxVel      - maximum velocity based on Richardson number         !
 !               criterion [m s^-1]                                  !
@@ -55,7 +54,6 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
 ! h1          - upper layer thickness [m]                           !
 ! h2          - lower layer thickness [m]                           !
 ! gRed        - reduced gravity [m s^-2]                            !
-# endif
 # ifdef ICEPLUME_DETRAIN_NEUTRAL
 !                                                                   !
 ! volR        - detrainment volume of runoff [m^3]                  !
@@ -102,15 +100,16 @@ SUBROUTINE ICEPLUME_DETRAIN(ng, I,                                      &
 ! For detrainment weight function
 !
   real(r8) :: detSum
-# ifndef ICEPLUME_DETRAIN_CONSERV
 !
 ! For calculation of internal wave speed
 !
   real(r8) :: maxVel, Fr, Ri
   real(r8) :: rho1, rho2, h1, h2, gRed
   real(r8) :: rhoH, h01, h02
-# endif
 # ifdef ICEPLUME_DETRAIN_NEUTRAL
+!
+! For variable detrainment tracer concentration
+!
   real(r8) :: volR, volM, volF, volE, volP
   real(r8) :: tF, tE, tP, tGade, sF, sE, sP, rhoF, rhoE
 # endif
