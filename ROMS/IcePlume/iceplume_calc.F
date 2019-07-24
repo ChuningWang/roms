@@ -368,11 +368,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,                                 &
 # else
     CALL ICEPLUME_DETRAIN(ng, I,                                        &
      &                    iceDepthK, plumeDepthK, osDepthK,             &
-#  ifdef ICEPLUME_DETRAIN_DY
-     &                    dy,                                           &
-#  else
      &                    PLUME(ng) % lc(I, osDepthK),                  &
-#  endif
      &                    det)
 # endif
   ENDIF  ! fini .GT. 0.0

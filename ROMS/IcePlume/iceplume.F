@@ -171,9 +171,6 @@ SUBROUTINE iceplume_tile (ng, tile)
      &       SOURCES(ng) % SGIrange(is, 1)+1) *                         &
      &      (SOURCES(ng) % SGJrange(is, 2)-                             &
      &       SOURCES(ng) % SGJrange(is, 1)+1))
-        IF (iic(ng) .EQ. ntstart(ng)) THEN
-          avgAlpha = MAX(MIN(avgAlpha, 1.0), 0.0)
-        ENDIF
 # endif
         DO K = 1, N(ng)
 # ifdef ICEPLUME_DETRAIN_AVERAGE
