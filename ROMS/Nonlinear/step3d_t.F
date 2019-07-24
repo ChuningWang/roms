@@ -1068,12 +1068,18 @@
      &              PLUME(ng)%mB(is,k)*PLUME(ng)%trcB(is,itrc))
 # endif
 !
-! Modify tracer concentration (Tunits m) based on source term.
+! Modify tracer concentration (m Tunits) based on source term.
 !
 # ifdef TS_MPDATA
                   Ta(Isrc,Jsrc,k,itrc)=Ta(Isrc,Jsrc,k,itrc)+cff1
 # else
-                  t(Isrc,Jsrc,k,nnew,itrc)=t(Isrc,Jsrc,k,nnew,itrc)+cff1
+#  ifdef SPLINES_VDIFF
+                  t(Isrc,Jsrc,k,nnew,itrc)=t(Isrc,Jsrc,k,nnew,itrc)+    &
+     &                                     cff1
+#  else
+                  t(Isrc,Jsrc,k,nnew,itrc)=t(Isrc,Jsrc,k,nnew,itrc)+    &
+     &                                     cff1*oHz(i,j,k)
+#  endif
 # endif
                 END DO
               END IF
