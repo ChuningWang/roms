@@ -157,7 +157,8 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,                                 &
 ! Find detrainment depth index, Calculate total detrainment volume
 ! and thickness
 !
-# if defined ICEPLUME_OVERSHOOT_NO && defined ICEPLUME_DETRAIN_NO
+! # if defined ICEPLUME_OVERSHOOT_NO && defined ICEPLUME_DETRAIN_NO
+# ifdef ICEPLUME_DETRAIN_NO
     plumeDepthK = osDepthK
 # else
     DO K = iceDepthK+1,osDepthK
@@ -248,15 +249,6 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,                                 &
       PLUME(ng) % mB(I, K) = mB*areaB
     ENDIF
 # endif
-  ENDDO
-!
-! Calculate depth integrated volume transport [m3 s-1]
-!
-  PLUME(ng) % trs(I) = 0.0
-  DO K = 1, N(ng)
-    PLUME(ng) % trs(I) =                                                &
-     & PLUME(ng) % det(I, K) + PLUME(ng) % ent(I, K) +                  &
-     & PLUME(ng) % mB(I, K)
   ENDDO
 !
 ! ==================================================================!
@@ -376,6 +368,15 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,                                 &
      &                    det)
 # endif
   ENDIF  ! fini .GT. 0.0
+!
+! Calculate depth integrated volume transport [m3 s-1]
+!
+  PLUME(ng) % trs(I) = 0.0
+  DO K = 1, N(ng)
+    PLUME(ng) % trs(I) = PLUME(ng) % trs(I) +                           &
+     & PLUME(ng) % det(I, K) + PLUME(ng) % ent(I, K) +                  &
+     & PLUME(ng) % mB(I, K)
+  ENDDO
 END SUBROUTINE ICEPLUME_CALC
 !
 ! ==================================================================!

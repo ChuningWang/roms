@@ -335,6 +335,12 @@ SUBROUTINE iceplume_tile (ng, tile)
           ENDDO
         ENDDO
 !
+! Substitute new zeta back to OCEAN.
+!
+        OCEAN(ng) % zeta(Isrc, Jsrc, nstp(ng)) =                        &
+     &    OCEAN(ng) % zeta(Isrc, Jsrc, nstp(ng))+                       &
+     &    PLUME(ng)%trs(is)*dt(ng)/(dx*dy)
+!
 ! Substitute new tracer values back to OCEAN.
 !
         DO K = 1, N(ng)

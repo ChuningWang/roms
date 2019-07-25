@@ -938,7 +938,7 @@
             zeta(i,j,knew)=zeta(i,j,knew)+                              &
      &                     SOURCES(ng)%Qbar(is)*                        &
      &                     pm(i,j)*pn(i,j)*dtfast(ng)
-# if defined ICEPLUME
+# if defined ICEPLUME && !defined ICEPLUME_VIRTUAL_MIX
             zeta(i,j,knew)=zeta(i,j,knew)+                              &
      &                     PLUME(ng)%trs(is)*                           &
      &                     pm(i,j)*pn(i,j)*dtfast(ng)
