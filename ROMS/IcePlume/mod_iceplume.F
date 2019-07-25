@@ -67,6 +67,8 @@ MODULE mod_iceplume
   real(r8), parameter :: GamT       = 0.0220_r8
   real(r8), parameter :: GamS       = 0.000620_r8
   real(r8), parameter :: Cd         = 0.065_r8
+! Original value from Cowton et al. 2015
+!  real(r8), parameter :: Cd         = 0.0025_r8
 !
   real(r8), parameter :: RiB        = 1.0_r8
   real(r8), parameter :: gRedBkg    = 0.03_r8

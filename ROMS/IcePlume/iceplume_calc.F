@@ -157,6 +157,9 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,                                 &
 ! Find detrainment depth index, Calculate total detrainment volume
 ! and thickness
 !
+# if defined ICEPLUME_OVERSHOOT_NO && defined ICEPLUME_DETRAIN_NO
+    plumeDepthK = osDepthK
+# else
     DO K = iceDepthK+1,osDepthK
       cff = RHO(PLUME(ng) % t(I, osDepthK),                             &
      &          PLUME(ng) % s(I, osDepthK),                             &
@@ -180,6 +183,7 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,                                 &
         IF (cff .LT. cff2) plumeDepthK = K
       ENDIF
     ENDDO
+# endif
   ENDIF
 !
 ! ==================================================================!
