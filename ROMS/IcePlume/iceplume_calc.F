@@ -154,6 +154,11 @@ SUBROUTINE ICEPLUME_CALC(ng, I, dx, dy,                                 &
       ENDIF
     ENDDO
 !
+! Replace the last value of lc and lm
+!
+    PLUME(ng) % lm(I, osDepthK) = PLUME(ng) % lm(I, osDepthK-1)
+    PLUME(ng) % lc(I, osDepthK) = PLUME(ng) % lc(I, osDepthK-1)
+!
 ! Find detrainment depth index, Calculate total detrainment volume
 ! and thickness
 !
