@@ -37,8 +37,12 @@ SUBROUTINE iceplume_tile (ng, tile)
   USE mod_grid, ONLY : GRID
   USE mod_ocean, ONLY : OCEAN
   USE mod_stepping, ONLY : nstp
-  USE mod_scalars, ONLY : dt, LuvSrc, LwSrc
   USE mod_sources
+# ifdef ICEPLUME_VIRTUAL_MIX
+  USE mod_scalars, ONLY : dt, LuvSrc, LwSrc, Vtransform, hc, SCALARS
+# else
+  USE mod_scalars, ONLY : dt, LuvSrc, LwSrc
+# endif
   USE mod_iceplume
 !
 !  Imported variable declarations.
@@ -53,6 +57,11 @@ SUBROUTINE iceplume_tile (ng, tile)
   real(r8) :: dx, dy
   real(r8) :: cff, cff1, cff2, cff3, cff4
   real(r8) :: RHO
+# ifdef ICEPLUME_VIRTUAL_MIX
+  real(r8) :: cff_r, cff1_r, cff2_r, cff_w, cff1_w, cff2_w
+  real(r8) :: hinv, hwater, z_r0, z_w0
+  real(r8) :: C2_r, C2_w, hh2, vert_n1, vert_a, vert_h0, vert_s0
+# endif
 !
 # include "set_bounds.h"
 !
@@ -286,17 +295,55 @@ SUBROUTINE iceplume_tile (ng, tile)
           ENDDO
         ENDDO
 !
-! Correction for grid stretching.
+! Calculate new W-point location. This section is copied from set_depth.
 !
-        cff1 = PLUME(ng) % zW(is, N(ng)) -                              &
-     &         PLUME(ng) % zW(is, 0)
-        cff2 = PLUME(ng) % zLNew(is, N(ng)) -                           &
-     &         PLUME(ng) % zW(is, 0)
-        DO K = 0, N(ng)
-          PLUME(ng) % zWNew(is, K) =                                    &
-     &        (PLUME(ng) % zW(is, K) - PLUME(ng) %zWNew(is, 0))*        &
-     &        cff2/cff1 + PLUME(ng) % zWNew(is, 0)
-        ENDDO
+        cff= OCEAN(ng) % zeta(Isrc, Jsrc, nstp(ng))+                    &
+     &       PLUME(ng)%trs(is)*dt(ng)/(dx*dy)
+!
+        IF (Vtransform(ng).eq.3) THEN
+          vert_s0 = 90./120.
+          vert_n1 = 2./3. !3./5.
+          vert_h0 = 60./(vert_s0)**(vert_n1)
+          vert_a = 1./(vert_s0-1)
+        END IF
+!
+        PLUME(ng) % zWNew(is, 0) = PLUME(ng) % zW(is, 0)
+        hwater = GRID(ng) % h(Isrc, Jsrc)
+        IF (Vtransform(ng).eq.1) THEN
+          hinv = 1.0_r8/hwater
+          DO k=1,N(ng)
+            cff_w=hc(ng)*(SCALARS(ng)%sc_w(k)-SCALARS(ng)%Cs_w(k))
+            cff1_w=SCALARS(ng)%Cs_w(k)
+            z_w0=cff_w+cff1_w*hwater
+            PLUME(ng) % zWNew(is, k)=z_w0+cff*(1.0_r8+z_w0*hinv)
+          ENDDO
+        ELSE IF (Vtransform(ng).eq.3) THEN
+          hinv=1.0_r8/hwater
+          hh2=(min(vert_h0,hwater))*hinv
+          DO k=1,N(ng)
+            IF (SCALARS(ng)%sc_w(k).gt.-vert_s0) THEN 
+              C2_w=-hh2*(-SCALARS(ng)%sc_w(k))**(vert_n1) 
+              cff_w=hc(ng)*(SCALARS(ng)%sc_w(k)-C2_w)
+              cff1_w=C2_w
+              z_w0=cff_w+cff1_w*hwater
+              PLUME(ng) % zWNew(is, k)=z_w0+cff*(1.0_r8+z_w0*hinv)
+            ELSE
+              C2_w=-hh2*(-SCALARS(ng)%sc_w(k))**(vert_n1)               &
+     &             -(1-hh2)*(vert_a*(SCALARS(ng)%sc_w(k)+vert_s0))**2
+              cff_w=hc(ng)*(SCALARS(ng)%sc_w(k)-C2_w)
+              cff1_w=C2_w
+              PLUME(ng) % zWNew(is, k)=z_w0+cff*(1.0_r8+z_w0*hinv)
+            ENDIF
+          ENDDO
+        ELSE IF (Vtransform(ng).eq.2) THEN
+          hinv=1.0_r8/(hc(ng)+hwater)
+          DO k=1,N(ng)
+            cff_w=hc(ng)*SCALARS(ng)%sc_w(k)
+            cff1_w=SCALARS(ng)%Cs_w(k)
+            cff2_w=(cff_w+cff1_w*hwater)*hinv
+            PLUME(ng) % zWNew(is, k)=cff+(cff+hwater)*cff2_w
+          ENDDO
+        ENDIF
 !
 ! Calculate weight function.
 !
@@ -320,18 +367,6 @@ SUBROUTINE iceplume_tile (ng, tile)
      &            PLUME(ng) % dzWei(is, K2)*                            &
      &            PLUME(ng) % trcL(is, K2, itrc)
             ENDDO
-          ENDDO
-        ENDDO
-!
-! Scale tracers with original omega levels.
-!
-        cff = (PLUME(ng) % zWNew(is, N(ng)) -                           &
-     &         PLUME(ng) % zWNew(is, 0)) /                              &
-     &        (PLUME(ng) % zW(is, N(ng)) - PLUME(ng) % zW(is, 0))
-        DO K = 1, N(ng)
-          DO itrc = 1, NT(ng)
-            PLUME(ng) % trcNew(is, K, itrc) =                           &
-     &          PLUME(ng) % trcNew(is, K, itrc)*cff
           ENDDO
         ENDDO
 !
