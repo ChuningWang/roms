@@ -151,7 +151,11 @@
       MyThread=0
 #endif
       DO ng=1,Ngrids
+#ifdef TILEMASK
+        chunk_size=1
+#else
         chunk_size=(NtileX(ng)*NtileE(ng)+numthreads-1)/numthreads
+#endif
         first_tile(ng)=MyThread*chunk_size
         last_tile (ng)=first_tile(ng)+chunk_size-1
       END DO

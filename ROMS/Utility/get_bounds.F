@@ -901,7 +901,11 @@
 !
 !  Compute C-staggered variables bounds from tile bounds.
 !
+#ifdef TILEMASK
+      CALL var_bounds (ng, TILE_MASKS(ng) % tile0(tile),                &
+#else
       CALL var_bounds (ng, tile,                                        &
+#endif
      &                 my_Lm, my_Mm,                                    &
      &                 my_Istr, my_Iend, my_Jstr, my_Jend,              &
      &                 Istr, Iend, Jstr, Jend,                          &

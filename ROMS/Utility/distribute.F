@@ -4004,6 +4004,17 @@
       integer :: Lstr, MyError, MyType, Serror, Srequest
       integer :: i, ic, j, jc, np
 
+# ifdef TILEMASK
+      integer, dimension(0:tile_sum(ng)-1) :: MySize
+      integer, dimension(0:tile_sum(ng)-1) :: Rrequest
+
+      integer, dimension(MPI_STATUS_SIZE) :: Rstatus
+      integer, dimension(MPI_STATUS_SIZE) :: Sstatus
+!
+      real(r8), dimension(TileSize(ng)) :: Asend
+
+      real(r8), dimension(TileSize(ng),tile_sum(ng)-1) :: Arecv
+# else
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: MySize
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: Rrequest
 
@@ -4014,6 +4025,7 @@
 
       real(r8), dimension(TileSize(ng),                                 &
      &                    NtileI(ng)*NtileJ(ng)-1) :: Arecv
+# endif
 !
       character (len=MPI_MAX_ERROR_STRING) :: string
 
@@ -4112,7 +4124,11 @@
 !
 !  Compute size of distributed buffers.
 !
+# ifdef TILEMASK
+      DO rank=0,tile_sum(ng)-1
+# else
       DO rank=0,NtileI(ng)*NtileJ(ng)-1
+# endif
         MySize(rank)=(BOUNDS(ng) % Imax(Cgrid,ghost,rank)-              &
      &                BOUNDS(ng) % Imin(Cgrid,ghost,rank)+1)*           &
      &               (BOUNDS(ng) % Jmax(Cgrid,ghost,rank)-              &
@@ -4190,12 +4206,20 @@
 !  Send, receive, and unpack data.
 !
       IF (MyRank.eq.MyMaster) THEN
+# ifdef TILEMASK
+        DO rank=1,tile_sum(ng)-1
+# else
         DO rank=1,NtileI(ng)*NtileJ(ng)-1
+# endif
           CALL mpi_irecv (Arecv(1,rank), MySize(rank), MP_FLOAT, rank,  &
      &                    rank+5, OCN_COMM_WORLD, Rrequest(rank),       &
      &                    MyError)
         END DO
+# ifdef TILEMASK
+        DO rank=1,tile_sum(ng)-1
+# else
         DO rank=1,NtileI(ng)*NtileJ(ng)-1
+# endif
           CALL mpi_wait (Rrequest(rank), Rstatus, MyError)
           IF (MyError.ne.MPI_SUCCESS) THEN
             CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -4333,6 +4357,17 @@
       integer :: Lstr, MyError, MyType, Serror, Srequest
       integer :: i, ic, j, jc, np
 
+# ifdef TILEMASK
+      integer, dimension(0:tile_sum(ng)-1) :: MySize
+      integer, dimension(0:tile_sum(ng)-1) :: Rrequest
+
+      integer, dimension(MPI_STATUS_SIZE) :: Rstatus
+      integer, dimension(MPI_STATUS_SIZE) :: Sstatus
+!
+      real(r8), dimension(TileSize(ng)) :: Asend
+
+      real(r8), dimension(TileSize(ng),tile_sum(ng)-1) :: Arecv
+# else
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: MySize
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: Rrequest
 
@@ -4343,6 +4378,7 @@
 
       real(r8), dimension(TileSize(ng),                                 &
      &                    NtileI(ng)*NtileJ(ng)-1) :: Arecv
+# endif
 !
       character (len=MPI_MAX_ERROR_STRING) :: string
 
@@ -4441,7 +4477,11 @@
 !
 !  Compute size of distributed buffers.
 !
+# ifdef TILEMASK
+      DO rank=0,tile_sum(ng)-1
+# else
       DO rank=0,NtileI(ng)*NtileJ(ng)-1
+# endif
         MySize(rank)=(xtr_BOUNDS(ng) % Imax(Cgrid,ghost,rank)-          &
      &                xtr_BOUNDS(ng) % Imin(Cgrid,ghost,rank)+1)*       &
      &               (xtr_BOUNDS(ng) % Jmax(Cgrid,ghost,rank)-          &
@@ -4519,12 +4559,20 @@
 !  Send, receive, and unpack data.
 !
       IF (MyRank.eq.MyMaster) THEN
+# ifdef TILEMASK
+        DO rank=1,tile_sum(ng)-1
+# else
         DO rank=1,NtileI(ng)*NtileJ(ng)-1
+# endif
           CALL mpi_irecv (Arecv(1,rank), MySize(rank), MP_FLOAT, rank,  &
      &                    rank+5, OCN_COMM_WORLD, Rrequest(rank),       &
      &                    MyError)
         END DO
+# ifdef TILEMASK
+        DO rank=1,tile_sum(ng)-1
+# else
         DO rank=1,NtileI(ng)*NtileJ(ng)-1
+# endif
           CALL mpi_wait (Rrequest(rank), Rstatus, MyError)
           IF (MyError.ne.MPI_SUCCESS) THEN
             CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -4664,6 +4712,18 @@
       integer :: Lstr, MyError, MyType, Serror, Srequest
       integer :: i, ic, j, jc, k, kc, np
 
+# ifdef TILEMASK
+      integer, dimension(0:tile_sum(ng)-1) :: MySize
+      integer, dimension(0:tile_sum(ng)-1) :: Rrequest
+
+      integer, dimension(MPI_STATUS_SIZE) :: Rstatus
+      integer, dimension(MPI_STATUS_SIZE) :: Sstatus
+!
+      real(r8), dimension(TileSize(ng)*(UBk-LBk+1)) :: Asend
+
+      real(r8), dimension(TileSize(ng)*(UBk-LBk+1),                     &
+     &                    tile_sum(ng)-1) :: Arecv
+# else
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: MySize
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: Rrequest
 
@@ -4674,6 +4734,7 @@
 
       real(r8), dimension(TileSize(ng)*(UBk-LBk+1),                     &
      &                    NtileI(ng)*NtileJ(ng)-1) :: Arecv
+# endif
 !
       character (len=MPI_MAX_ERROR_STRING) :: string
 
@@ -4780,7 +4841,11 @@
 !
 !  Compute size of distributed buffers.
 !
+# ifdef TILEMASK
+      DO rank=0,tile_sum(ng)-1
+# else
       DO rank=0,NtileI(ng)*NtileJ(ng)-1
+# endif
         MySize(rank)=(BOUNDS(ng) % Imax(Cgrid,ghost,rank)-              &
      &                BOUNDS(ng) % Imin(Cgrid,ghost,rank)+1)*           &
      &               (BOUNDS(ng) % Jmax(Cgrid,ghost,rank)-              &
@@ -4868,12 +4933,20 @@
 !  Send, receive, and unpack data.
 !
       IF (MyRank.eq.MyMaster) THEN
+# ifdef TILEMASK
+        DO rank=1,tile_sum(ng)-1
+# else
         DO rank=1,NtileI(ng)*NtileJ(ng)-1
+# endif
           CALL mpi_irecv (Arecv(1,rank), MySize(rank), MP_FLOAT, rank,  &
      &                    rank+5, OCN_COMM_WORLD, Rrequest(rank),       &
      &                    MyError)
         END DO
+# ifdef TILEMASK
+        DO rank=1,tile_sum(ng)-1
+# else
         DO rank=1,NtileI(ng)*NtileJ(ng)-1
+# endif
           CALL mpi_wait (Rrequest(rank), Rstatus, MyError)
           IF (MyError.ne.MPI_SUCCESS) THEN
             CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -4984,7 +5057,11 @@
 
       integer :: my_bounds(2)
       integer, dimension(MPI_STATUS_SIZE) :: status
+# ifdef TILEMASK
+      integer, dimension(2,0:tile_sum(ng)-1) :: Abounds
+# else
       integer, dimension(2,0:NtileI(ng)*NtileJ(ng)-1) :: Abounds
+# endif
 !
       character (len=MPI_MAX_ERROR_STRING) :: string
 
@@ -5025,7 +5102,11 @@
 !  If master node, loop over other nodes and receive the data.
 !
       IF (MyRank.eq.MyMaster) THEN
+# ifdef TILEMASK
+        DO rank=1,tile_sum(ng)-1
+# else
         DO rank=1,NtileI(ng)*NtileJ(ng)-1
+# endif
           np=Abounds(2,rank)-Abounds(1,rank)+1
           LB=Abounds(1,rank)
           CALL mpi_irecv (Awrk(LB:), np, MP_FLOAT, rank, rank+5,        &
@@ -5141,7 +5222,11 @@
       integer :: ibuffer(2), my_bounds(2), start(1), total(1)
 
       integer, dimension(MPI_STATUS_SIZE) :: status
+# ifdef TILEMASK
+      integer, dimension(4,0:tile_sum(ng)-1) :: Asize
+# else
       integer, dimension(4,0:NtileI(ng)*NtileJ(ng)-1) :: Asize
+# endif
 !
       real(r8), allocatable :: Asend(:)
 !
@@ -5207,7 +5292,11 @@
 !
       ELSE
         Npts=0
+# ifdef TILEMASK
+        DO rank=0,tile_sum(ng)-1
+# else
         DO rank=0,NtileI(ng)*NtileJ(ng)-1
+# endif
           np=Asize(2,rank)-Asize(1,rank)+1
           Npts=MAX(Npts, np)
         END DO
@@ -5224,7 +5313,11 @@
           ioerror=io_error
         END IF
         IF (exit_flag.eq.NoError) THEN
+# ifdef TILEMASK
+          DO rank=0,tile_sum(ng)-1
+# else
           DO rank=0,NtileI(ng)*NtileJ(ng)-1
+# endif
             start(1)=Asize(1,rank)
             total(1)=Asize(2,rank)-Asize(1,rank)+1
             io_error=nf90_get_var(ncid, varid,  Asend, start, total)
@@ -5355,7 +5448,11 @@
       integer :: ibuffer(2), my_bounds(4), start(2), total(2)
 
       integer, dimension(MPI_STATUS_SIZE) :: status
+# ifdef TILEMASK
+      integer, dimension(4,0:tile_sum(ng)-1) :: Asize
+# else
       integer, dimension(4,0:NtileI(ng)*NtileJ(ng)-1) :: Asize
+# endif
 !
       real(r8), allocatable :: Asend(:)
 !
@@ -5425,7 +5522,11 @@
 !
       ELSE
         Npts=0
+# ifdef TILEMASK
+        DO rank=0,tile_sum(ng)-1
+# else
         DO rank=0,NtileI(ng)*NtileJ(ng)-1
+# endif
           np=(Asize(2,rank)-Asize(1,rank)+1)*                           &
      &       (Asize(4,rank)-Asize(3,rank)+1)
           Npts=MAX(Npts, np)
@@ -5443,7 +5544,11 @@
           ioerror=io_error
         END IF
         IF (exit_flag.eq.NoError) THEN
+# ifdef TILEMASK
+          DO rank=0,tile_sum(ng)-1
+# else
           DO rank=0,NtileI(ng)*NtileJ(ng)-1
+# endif
             start(1)=Asize(1,rank)
             total(1)=Asize(2,rank)-Asize(1,rank)+1
             start(2)=Asize(3,rank)
@@ -5577,7 +5682,11 @@
       integer :: ibuffer(2), my_bounds(2), start(1), total(1)
 
       integer, dimension(MPI_STATUS_SIZE) :: status
+# ifdef TILEMASK
+      integer, dimension(2,0:tile_sum(ng)-1) :: Asize
+# else
       integer, dimension(2,0:NtileI(ng)*NtileJ(ng)-1) :: Asize
+# endif
 !
       real(r8), allocatable :: Arecv(:)
 !
@@ -5622,7 +5731,11 @@
 !
       IF (MyRank.eq.MyMaster) THEN
         Npts=0
+# ifdef TILEMASK
+        DO rank=0,tile_sum(ng)-1
+# else
         DO rank=0,NtileI(ng)*NtileJ(ng)-1
+# endif
           np=(Asize(2,rank)-Asize(1,rank)+1)
           Npts=MAX(Npts, np)
         END DO
@@ -5656,7 +5769,11 @@
 !  If master node, loop over other nodes and receive the data.
 !
         IF (exit_flag.eq.NoError) THEN
+# ifdef TILEMASK
+          DO rank=1,tile_sum(ng)-1
+# else
           DO rank=1,NtileI(ng)*NtileJ(ng)-1
+# endif
             np=Asize(2,rank)-Asize(1,rank)+1
             CALL mpi_irecv (Arecv, np, MP_FLOAT, rank, rank+5,          &
      &                      OCN_COMM_WORLD, request, MyError)
@@ -5797,7 +5914,11 @@
       integer :: ibuffer(2), my_bounds(4), start(2), total(2)
 
       integer, dimension(MPI_STATUS_SIZE) :: status
+# ifdef TILEMASK
+      integer, dimension(4,0:tile_sum(ng)-1) :: Asize
+# else
       integer, dimension(4,0:NtileI(ng)*NtileJ(ng)-1) :: Asize
+# endif
 !
       real(r8), allocatable :: Arecv(:)
 !
@@ -5844,7 +5965,11 @@
 !
       IF (MyRank.eq.MyMaster) THEN
         Npts=0
+# ifdef TILEMASK
+        DO rank=0,tile_sum(ng)-1
+# else
         DO rank=0,NtileI(ng)*NtileJ(ng)-1
+# endif
           np=(Asize(2,rank)-Asize(1,rank)+1)*                           &
      &       (Asize(4,rank)-Asize(3,rank)+1)
           Npts=MAX(Npts, np)
@@ -5883,7 +6008,11 @@
 !  If master node, loop over other nodes and receive the data.
 !
         IF (exit_flag.eq.NoError) THEN
+# ifdef TILEMASK
+          DO rank=1,tile_sum(ng)-1
+# else
           DO rank=1,NtileI(ng)*NtileJ(ng)-1
+# endif
             np=(Asize(2,rank)-Asize(1,rank)+1)*                         &
      &         (Asize(4,rank)-Asize(3,rank)+1)
             CALL mpi_irecv (Arecv, np, MP_FLOAT, rank, rank+5,          &
@@ -7986,7 +8115,11 @@
       integer :: Lstr, MyError, Serror
       integer :: i, rank, request
 
+# ifdef TILEMASK
+      integer, dimension(0:tile_sum(ng)-1) :: Rrequest
+# else
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: Rrequest
+# endif
 
       integer, dimension(MPI_STATUS_SIZE) :: status
 !
@@ -8037,7 +8170,11 @@
 !  If master node, loop over other nodes to receive and accumulate the
 !  data.
 !
+# ifdef TILEMASK
+        DO rank=1,tile_sum(ng)-1
+# else
         DO rank=1,NtileI(ng)*NtileJ(ng)-1
+# endif
           CALL mpi_irecv (Arecv, Asize, MP_FLOAT, rank, rank+5,         &
      &                    OCN_COMM_WORLD, Rrequest(rank), MyError)
           CALL mpi_wait (Rrequest(rank), status, MyError)
@@ -8271,11 +8408,18 @@
       integer :: Lstr, MyError, MyType, Nnodes, Npts, Serror
       integer :: i, j, np, rank
 
+# ifdef TILEMASK
+      integer,  dimension(4,0:tile_sum(ng)-1) :: my_bounds
+!
+      real(r8), dimension(TileSize(ng)) :: Asend
+      real(r8), dimension(TileSize(ng)*tile_sum(ng)) :: Arecv
+# else
       integer,  dimension(4,0:NtileI(ng)*NtileJ(ng)-1) :: my_bounds
 !
       real(r8), dimension(TileSize(ng)) :: Asend
       real(r8), dimension(TileSize(ng)*                                 &
      &                    NtileI(ng)*NtileJ(ng)) :: Arecv
+# endif
 !
       character (len=MPI_MAX_ERROR_STRING) :: string
 
@@ -8304,7 +8448,11 @@
 !
 !  Number of nodes in the group.
 !
+# ifdef TILEMASK
+      Nnodes=tile_sum(ng)-1
+# else
       Nnodes=NtileI(ng)*NtileJ(ng)-1
+# endif
 !
 !  Set starting and ending indices to process including contact points
 !  (if nesting) according to the staggered C-grid classification.
@@ -8476,12 +8624,20 @@
       integer :: Klen, Lstr, MyError, MyType, Nnodes, Npts, Serror
       integer :: i, j, k, np, rank
 
+# ifdef TILEMASK
+      integer,  dimension(4,0:tile_sum(ng)-1) :: my_bounds
+!
+      real(r8), dimension(TileSize(ng)*(UBk-LBk+1)) :: Asend
+
+      real(r8), dimension(TileSize(ng)*(UBk-LBk+1)*tile_sum(ng)) :: Arecv
+# else
       integer,  dimension(4,0:NtileI(ng)*NtileJ(ng)-1) :: my_bounds
 !
       real(r8), dimension(TileSize(ng)*(UBk-LBk+1)) :: Asend
 
       real(r8), dimension(TileSize(ng)*(UBk-LBk+1)*                     &
      &                    NtileI(ng)*NtileJ(ng)) :: Arecv
+# endif
 !
       character (len=MPI_MAX_ERROR_STRING) :: string
 
@@ -8510,7 +8666,11 @@
 !
 !  Number of nodes in the group.
 !
+# ifdef TILEMASK
+      Nnodes=tile_sum(ng)-1
+# else
       Nnodes=NtileI(ng)*NtileJ(ng)-1
+# endif
 !
 !  Set starting and ending indices to process including contact points
 !  (if nesting) according to the staggered C-grid classification.

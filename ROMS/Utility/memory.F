@@ -67,7 +67,11 @@
 !  Allocate and initialize.
 !
 !$OMP MASTER
+#ifdef TILEMASK
+      Ntiles=tile_sum(ng)-1
+#else
       Ntiles=MAXVAL(NtileI)*MAXVAL(NtileJ)-1
+#endif
       IF (.not.allocated(Asize)) THEN
         allocate ( Asize(0:Ntiles,Ngrids) )
         Asize=spv
@@ -124,7 +128,11 @@
 !  (see memory.txt for more information).
 !
       DO ng=1,Ngrids
+#ifdef TILEMASK
+        DO tile=0,tile_sum(ng)-1
+#else
         DO tile=0,NtileI(ng)*NtileJ(ng)-1
+#endif
 #ifdef NESTING
           IminS=BOUNDS(ng)%Istr(tile)-4
           ImaxS=BOUNDS(ng)%Iend(tile)+3
@@ -206,7 +214,11 @@
           WRITE (stdout,10) ng, Lm(ng), Mm(ng),                         &
      &                      NtileI(ng), NtileJ(ng)
 #endif
+#ifdef TILEMASK
+          DO tile=0,tile_sum(ng)-1
+#else
           DO tile=0,NtileI(ng)*NtileJ(ng)-1
+#endif
             Avalue=MAX(Asize(tile,ng), Bsize(tile,ng), IOsize(tile,ng))
             sumAsize=sumAsize+Avalue
             sumBsize=sumBsize+Bsize(tile,ng)

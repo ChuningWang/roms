@@ -94,6 +94,9 @@
       integer :: nPETs, maxPETs
       integer :: OutFiles
       integer :: Ivalue(1)
+#ifdef TILEMASK
+      integer :: j, tile, tile0
+#endif
 #ifdef ICE_MODEL
       integer :: ioff
 #endif
@@ -375,6 +378,31 @@
             CASE ('NtileJ')
               Npts=load_i(Nval, Rval, Ngrids, NtileJ)
               NtileE(1:Ngrids)=NtileJ(1:Ngrids)
+#ifdef TILEMASK
+            CASE ('TileMask')
+              CALL initialize_tile_mask (Ngrids)
+              Npts=load_l(Nval, Cval, tile_sum0, tile_mask0)
+              tile=0
+              DO ng=1,Ngrids
+                tile0=0
+                tile_sum(ng)=0
+                skip_sum(ng)=0
+                DO j=0,NtileE(ng)-1
+                  DO i=0,NtileX(ng)-1
+                    tile=tile+1
+                    TILE_MASKS(ng) % tile_mask(i,j)=tile_mask0(tile)
+                    IF (tile_mask0(tile)) THEN
+                      tile_sum(ng)=tile_sum(ng)+1
+                      TILE_MASKS(ng) % tile0(tile-1)=tile0
+                      tile0=tile0+1
+                    ELSE
+                      skip_sum(ng)=skip_sum(ng)+1
+                      TILE_MASKS(ng) % tile0(tile)=-2
+                    END IF
+                  END DO
+                END DO
+              END DO
+#endif
 #ifdef BIOLOGY
               CALL initialize_biology
 #endif
@@ -4906,7 +4934,11 @@
           WRITE (out,70) ng, Lm(ng), Mm(ng), N(ng), numthreads,         &
      &                   NtileI(ng), NtileJ(ng)
           maxPETs=numthreads                           ! regular unsplit
+# ifdef TILEMASK
+          nPETs=tile_sum(ng)
+# else
           nPETs=NtileI(ng)*NtileJ(ng)                  ! values
+# endif
           label='NtileI * NtileJ ='
 !
 # ifdef SP4DVAR

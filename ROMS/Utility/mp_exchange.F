@@ -123,12 +123,18 @@
       rank=0
       DO j=0,NtileJ(ng)-1
         DO i=0,NtileI(ng)-1
+# ifdef TILEMASK
+          IF (TILE_MASKS(ng) % tile_mask(i,j)) THEN
+# endif
           table(i,j)=rank
           IF (MyRank.eq.rank) THEN
             MyRankI=i
             MyRankJ=j
           END IF
           rank=rank+1
+# ifdef TILEMASK
+          END IF
+# endif
         END DO
       END DO
 !

@@ -89,6 +89,24 @@
       integer :: tile_count = 0
       integer :: block_count = 0
       integer :: thread_count = 0
+#ifdef TILEMASK
+
+      PUBLIC :: initialize_tile_mask
+      PUBLIC :: deallocate_tile_mask
+
+      integer :: tile_sum0
+
+      logical, allocatable :: tile_mask0(:)
+      integer, allocatable :: tile_sum(:)
+      integer, allocatable :: skip_sum(:)
+
+      TYPE T_TILE_MASKS
+        logical, pointer :: tile_mask(:, :)
+        integer, pointer :: tile0(:)
+      END TYPE T_TILE_MASKS
+
+      TYPE (T_TILE_MASKS), allocatable :: TILE_MASKS(:)
+#endif
 !
 !  Profiling variables as function of parallel thread:
 !
@@ -272,6 +290,96 @@
 
       RETURN
       END SUBROUTINE allocate_parallel
+!
+#ifdef TILEMASK
+      SUBROUTINE initialize_tile_mask (Ngrids)
+!
+!=======================================================================
+!                                                                      !
+!  This routine initializes tile mask parameters for type T_TILE_MASKS !
+!  and tile masks for all nested grids.                                !
+!                                                                      !
+!=======================================================================
+!
+      USE mod_param, ONLY: NtileI, NtileJ
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: Ngrids
+!
+!  Local variable declarations
+!
+      integer :: ng
+!
+!-----------------------------------------------------------------------
+!  Allocate and initialize module variables.
+!-----------------------------------------------------------------------
+!
+!$OMP PARALLEL
+!  First and last tile to process in a tiled application.
+!
+      tile_sum0=0
+      DO ng=1,Ngrids
+        tile_sum0=tile_sum0+NtileI(ng)*NtileJ(ng)
+      END DO
+
+      IF (.not.allocated(tile_mask0)) THEN
+        allocate ( tile_mask0(tile_sum0) )
+        allocate ( tile_sum(Ngrids) )
+        allocate ( skip_sum(Ngrids) )
+      END IF
+
+      IF (.not.allocated(TILE_MASKS)) THEN
+        allocate ( TILE_MASKS(Ngrids) )
+        DO ng=1,Ngrids
+          allocate ( TILE_MASKS(ng) % tile_mask(0:NtileI(ng)-1,         &
+     &                                          0:NtileJ(ng)-1) )
+          allocate ( TILE_MASKS(ng) % tile0(0:NtileI(ng)*NtileJ(ng)-1) )
+        END DO
+      END IF
+!$OMP END PARALLEL
+
+      RETURN
+      END SUBROUTINE initialize_tile_mask
+!
+      SUBROUTINE deallocate_tile_mask (Ngrids)
+!
+!=======================================================================
+!                                                                      !
+!  This routine deallocates variables in the module.                   !
+!                                                                      !
+!=======================================================================
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: Ngrids
+!
+!  Local variable declarations
+!
+      integer :: ng
+!
+!-----------------------------------------------------------------------
+!  Deallocate variables in module.
+!-----------------------------------------------------------------------
+!
+!$OMP PARALLEL
+      IF (allocated(tile_mask0)) deallocate ( tile_mask0 )
+      IF (allocated(tile_sum)) deallocate ( tile_sum )
+      IF (allocated(skip_sum)) deallocate ( skip_sum )
+
+      DO ng=1,Ngrids
+        IF (associated(TILE_MASKS(ng)%tile_mask)) THEN
+          deallocate ( TILE_MASKS(ng)%tile_mask )
+          deallocate ( TILE_MASKS(ng)%tile0 )
+        END IF
+      END DO
+
+      IF (allocated(TILE_MASKS)) deallocate ( TILE_MASKS )
+!$OMP END PARALLEL
+!
+      RETURN
+      END SUBROUTINE deallocate_tile_mask
+#endif
 !
       SUBROUTINE deallocate_parallel
 !

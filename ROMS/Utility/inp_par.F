@@ -343,7 +343,11 @@
             RETURN
           END IF
 #endif
+#ifdef TILEMASK
+          DO tile=0,tile_sum(ng)-1
+#else
           DO tile=0,NtileI(ng)*NtileJ(ng)-1
+#endif
 #ifdef SOLVE3D
             npts=(BOUNDS(ng)%Iend(tile)-                                &
      &            BOUNDS(ng)%Istr(tile)+1)*                             &
@@ -417,7 +421,11 @@
       DO ng=1,Ngrids
         IF (Master.and.Lwrite) THEN
           WRITE (stdout,90) ng
+#ifdef TILEMASK
+          DO tile=0,tile_sum(ng)-1
+#else
           DO tile=0,NtileI(ng)*NtileJ(ng)-1
+#endif
             WRITE (stdout,100) tile,                                    &
      &                         DOMAIN(ng)%Xmin_rho(tile),               &
      &                         DOMAIN(ng)%Xmax_rho(tile),               &
@@ -425,7 +433,11 @@
      &                         DOMAIN(ng)%Ymax_rho(tile), 'RHO-points'
           END DO
           WRITE (stdout,'(1x)')
+#ifdef TILEMASK
+          DO tile=0,tile_sum(ng)-1
+#else
           DO tile=0,NtileI(ng)*NtileJ(ng)-1
+#endif
             WRITE (stdout,100) tile,                                    &
      &                         DOMAIN(ng)%Xmin_u(tile),                 &
      &                         DOMAIN(ng)%Xmax_u(tile),                 &
@@ -433,7 +445,11 @@
      &                         DOMAIN(ng)%Ymax_u(tile), '  U-points'
           END DO
           WRITE (stdout,'(1x)')
+#ifdef TILEMASK
+          DO tile=0,tile_sum(ng)-1
+#else
           DO tile=0,NtileI(ng)*NtileJ(ng)-1
+#endif
             WRITE (stdout,100) tile,                                    &
      &                         DOMAIN(ng)%Xmin_v(tile),                 &
      &                         DOMAIN(ng)%Xmax_v(tile),                 &
@@ -471,7 +487,11 @@
         MaxHaloLenI=0
         MaxHaloLenJ=0
         HaloBry(ng)=Nghost
+#ifdef TILEMASK
+        DO tile=0,tile_sum(ng)-1
+#else
         DO tile=0,NtileI(ng)*NtileJ(ng)-1
+#endif
           Imin=BOUNDS(ng)%LBi(tile)-1
           Imax=BOUNDS(ng)%UBi(tile)+1
           Jmin=BOUNDS(ng)%LBj(tile)-1
