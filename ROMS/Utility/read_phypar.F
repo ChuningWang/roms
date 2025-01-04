@@ -20,6 +20,9 @@
 #ifdef ICE_MODEL
       USE mod_ice
 #endif
+#ifdef ICESHELF_DYNAM
+      USE mod_isf,       ONLY : allocate_isf
+#endif
 #if defined MODEL_COUPLING && defined MCT_LIB
       USE mod_coupler
 #endif
@@ -412,6 +415,9 @@
               CALL initialize_param    ! Continue allocating/initalizing
               CALL allocate_scalars    ! variables since the application
               CALL initialize_scalars  ! number of nested grids and
+#ifdef ICESHELF_DYNAM
+              CALL allocate_isf (ng, 0, 0, 0, 0, .FALSE.)
+#endif
               CALL allocate_ncparam    ! domain parameters are known
               CALL initialize_ncparam
 #if defined AD_SENSITIVITY    || defined I4DVAR_ANA_SENSITIVITY || \
@@ -4303,6 +4309,13 @@
                 iparnam(i:i)=blank
               END DO
               iparnam=TRIM(ADJUSTL(Cval(Nval)))
+# ifdef ICESHELF_DYNAM
+            CASE ('ISFPNAM')
+              DO i=1,LEN(isfpnam)
+                isfpnam(i:i)=blank
+              END DO
+              isfpnam=TRIM(ADJUSTL(Cval(Nval)))
+# endif
             CASE ('BPARNAM')
               DO i=1,LEN(bparnam)
                 bparnam(i:i)=blank
@@ -7754,6 +7767,15 @@
         ELSE
           IF (Master.and.Lwrite) WRITE (out,230)                        &
      &      '         Ice Model Parameters File:  ', TRIM(fname)
+        END IF
+# endif
+# ifdef ICESHELF_DYNAM
+        fname=isfpnam
+        IF (.not.find_file(ng, out, fname, 'ISFPNAM')) THEN
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        ELSE
+          IF (Master.and.Lwrite) WRITE (out,230)                        &
+     &      '         Iceshelf Model Parameters File:  ', TRIM(fname)
         END IF
 # endif
 # ifdef BIOLOGY

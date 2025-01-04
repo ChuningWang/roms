@@ -562,7 +562,7 @@
 #ifdef SUBOBJECT_DEALLOCATION
 !
 !-----------------------------------------------------------------------
-!  Deallocate each variable in the derived-type T_FORCES structure
+!  Deallocate each variable in the derived-type T_ICE structure
 !  separately.
 !-----------------------------------------------------------------------
 !

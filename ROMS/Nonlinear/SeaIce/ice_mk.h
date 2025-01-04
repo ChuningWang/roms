@@ -78,6 +78,10 @@
       USE mod_param
       USE mod_boundary
 #ifdef AICLM_NUDGING
+!
+!  (CW) TODO: CPP flags with '_NUDGING' are obselete now. Need to
+!             rewrite this.
+!
       USE mod_clima
 #endif
 #ifdef ICE_SHOREFAST
@@ -288,14 +292,19 @@
       real(r8), parameter :: sice_ref = 3.2_r8          ! [psu]
       real(r8), parameter :: tpr = 0.85_r8              ! Turb. Prandtl
       real(r8), parameter :: ykf = 3.14                 ! Yaglom/Kader
-      real(r8), parameter :: z0ii = 0.02_r8             ! ice roughness
+!
+!  (CW) In MK89, z0ii is 0.05/3 (Table 1)
+!       We also add ocean roughness following MK89 PG 10,941
+!
+      real(r8), parameter :: z0ii = 0.01666666666667_r8 ! ice roughness
+      real(r8), parameter :: z0oi = 1.317633460955_r8   ! sea roughness
 !
       real(r8) :: cff, cff1, cff2, cff3
       real(r8) :: d1, d2i, d3, dztop, fac_shflx
       real(r8) :: ai_tmp, corfac, cot, delta_mi
       real(r8) :: hicehinv, hstar, mi_old, phi
       real(r8) :: Qsur, rno, termt, terms, tfrz, tfz
-      real(r8) :: xwai, xtot, z0, zdz0, xmelt
+      real(r8) :: xwai, xtot, z0i, z0o, z0, zdz0, xmelt
 #ifdef ICE_SHOREFAST
       real(r8) :: clear, fac_sf, hh
 #endif
@@ -522,6 +531,8 @@
 !
 !  Compute ice melt water thickness.
 !
+!  (CW) Add notes to mark the decision tree of Durski et al. (2019)
+!
       DO j=Jstr,Jend
         DO i=Istr,Iend
           tfrz=frln*sice(i,j)
@@ -549,15 +560,26 @@
 
             IF ((Si(i,j,linew,isHsno).gt.eps).and.                      &
      &          (Fi(i,j,icIsst).ge.0.0_r8)) THEN
+!
+!  (CW) snow>0 -> sfw -> Tis>0a -> Qsurf>0, snow melt (1, 7)
+!       Alternatively, Qsurf<0, no snow melt (2, 8)
+!       Note that because it is snow melting, the density scaling factor
+!       should be SnowWetRho/1003.1_r8 instead of SnowWetRho/RhoSW
+!
               Si(i,j,linew,isHsno)=Si(i,j,linew,isHsno)-                &
      &                             Si(i,j,linew,isAice)*                &
      &                             MAX(Qsur, 0.0_r8)*dtice(ng)
               Si(i,j,linew,isHmel)=Si(i,j,linew,isHmel)+                &
      &                             Si(i,j,linew,isAice)*                &
      &                             MAX(Qsur, 0.0_r8)*                   &
-     &                             SnowWetRho(ng)/RhoSW*dtice(ng)
+     &                             SnowWetRho(ng)/1003.1_r8*            &
+     &                             dtice(ng)
             ELSE IF ((Si(i,j,linew,isHmel).gt.eps).and.                 &
      &               (Fi(i,j,icIsst).le.tfrz)) THEN
+!
+!  (CW) snow -> sfw>0 -> Tis<Tfrz -> Qsurf<0, meltpond refreeze (6, 15)
+!       Alternatively, Qsurf>0, no meltpond refreeze (5, 14)
+!
               Fi(i,j,icW_ai)=MIN(Qsur, 0.0_r8)
               Si(i,j,linew,isHmel)=Si(i,j,linew,isHmel)+                &
      &                             Si(i,j,linew,isAice)*                &
@@ -565,6 +587,10 @@
             ELSE IF ((Si(i,j,linew,isHsno).le.eps).and.                 &
      &               (Si(i,j,linew,isHmel).ge.eps).and.                 &
      &               (Fi(i,j,icIsst).gt.tfrz)) THEN
+!
+!  (CW) snow=0 -> sfw>0 -> Tis>Tfrz -> Qsurf>0, ice melt (10, 12)
+!       Alternatively, Qsurf<0, no ice melt (11, 13)
+!
               Fi(i,j,icW_ai)=MAX(Qsur, 0.0_r8)
               Si(i,j,linew,isHmel)=Si(i,j,linew,isHmel)+                &
      &                             Si(i,j,linew,isAice)*                &
@@ -572,11 +598,19 @@
             ELSE IF ((Si(i,j,linew,isHsno).lt.eps).and.                 &
      &               (Si(i,j,linew,isHmel).lt.eps).and.                 &
      &               (Fi(i,j,icIsst).gt.tfrz)) THEN
+!
+!  (CW) snow=0 -> sfw=0 -> Tis>Tfrz -> Qsurf>0, ice melt (16, 18)
+!       Alternatively, Qsurf<0, no ice melt (17, 19)
+!
                Fi(i,j,icW_ai)=MAX(Qsur, 0.0_r8)
                Si(i,j,linew,isHmel)=Si(i,j,linew,isHmel)+               &
      &                              Si(i,j,linew,isAice)*               &
      &                              MAX(Qsur, 0.0_r8)*dtice(ng)
             END IF
+!
+!  (CW) Otherwise no surface phase change, only ice cooling
+!       (3, 4, 9, 20, 21)
+!
 
             IF (rain(i,j).le.0.0_r8) THEN
               Si(i,j,linew,isHsno)=Si(i,j,linew,isHsno)+                &
@@ -592,11 +626,16 @@
      &                       rain(i,j)/IceRho(ng)
             ELSE IF ((Si(i,j,linew,isHsno).gt.0.0_r8).and.              &
      &               (Si(i,j,linew,isHmel).gt.0.0_r8)) THEN
+!
+!  (CW) This is code block looks buggy... Mass balance is wrong.
+!       I assume in this condition it is a half and half formula of the
+!       conditions above and below this code block.
+!
               Si(i,j,linew,isHsno)=MAX(0.0_r8, Si(i,j,linew,isHsno)-    &
      &                             0.5_r8*Si(i,j,linew,isAice)*         &
      &                             rain(i,j)/SnowDryRho(ng))
               Fi(i,j,icW_ai)=Fi(i,j,icW_ai)-                            &
-     &                       0.5_r8*Si(i,j,linew,isAice)*               &
+     &                       Si(i,j,linew,isAice)*                      &
      &                       rain(i,j)/IceRho(ng)
               Si(i,j,linew,isHmel)=Si(i,j,linew,isHmel)+                &
      &                             Si(i,j,linew,isAice)*                &
@@ -634,12 +673,22 @@
 !
       DO j=Jstr,Jend
         DO i=Istr,Iend
-          z0=MAX(z0ii*ice_thick(i,j), 0.01_r8)
-          z0=MIN(z0, 0.1_r8)
+!
+!  (CW) Revert algorithm back to MK89 eq 19
+!
+          z0o = MAX(z0ii*ice_thick(i,j), 0.00001_r8)
+          z0i = MAX(z0oi*utau(i,j)*utau(i,j), 0.00001_r8)
+          z0 = EXP(       Si(i,j,linew,isAice) *LOG(z0i) +              &
+     &             (1._r8-Si(i,j,linew,isAice))*LOG(z0o))
+          z0 = MIN(MAX(z0, 0.01_r8), 0.1_r8)
+!
           dztop=z_w(i,j,N(ng))-z_r(i,j,N(ng))
           zdz0=dztop/z0
           zdz0=MAX(zdz0, 3.0_r8)
-          rno=utau(i,j)*0.09_r8/nu
+!
+!  (CW) In MK89 eq 18b, rno = utau*z0/nu, not rno = utau*0.09/nu
+!
+          rno=utau(i,j)*z0/nu
           termt=ykf*SQRT(rno)*prt**0.666667_r8
           terms=ykf*SQRT(rno)*prs**0.666667_r8
           cht(i,j)=utau(i,j)/(tpr*(LOG(zdz0)/kappa+termt))
@@ -677,14 +726,23 @@
             xtot=Si(i,j,linew,isAice)*Fi(i,j,icW_io)+                   &
      &           (1.0_r8-Si(i,j,linew,isAice))*Fi(i,j,icW_ao)
 !
+!  (CW) Revert algorithm back to MK89
+!
+            Fi(i,j,icS0mk) =                                            &
+     &        (chs(i,j)*salt_top(i,j) +                                 &
+     &         (Si(i,j,linew,isAice)*xwai - xtot)*sice(i,j)) /          &
+     &        (chs(i,j) + Si(i,j,linew,isAice)*Fi(i,j,icW_ro) - xtot -  &
+     &         (1._r8-Si(i,j,linew,isAice))*stflx(i,j,isalt) /          &
+     &         salt_top(i,j))
+!
 !  Based on my reading of MK89, this calculation of "s0mk" does not
 !  follow from the derivation. But it works quite well (SMD)!  Some
 !  alternatives are commented below.
 !
-            Fi(i,j,icS0mk)=(chs(i,j)*salt_top(i,j)+                     &
-     &                      (xwai-Fi(i,j,icW_io))*sice(i,j))/           &
-     &                      (chs(i,j)+xwai+                             &
-     &                       Fi(i,j,icW_ro)-Fi(i,j,icW_io))
+!           Fi(i,j,icS0mk)=(chs(i,j)*salt_top(i,j)+                     &
+!    &                      (xwai-Fi(i,j,icW_io))*sice(i,j))/           &
+!    &                      (chs(i,j)+xwai+                             &
+!    &                       Fi(i,j,icW_ro)-Fi(i,j,icW_io))
 !                                                               SMD s02
 !           Fi(i,j,icS0mk)=(chs(i,j)*salt_top(i,j)+                     &
 !    &                      (Si(i,j,linew,isAice)*Fi(i,j,icW_ro)-       &
@@ -699,7 +757,7 @@
 !    &                 (Si(i,j,linew,isAice)*xwai-xtot)*sice(i,j))/     &
 !    &                (chs(i,j)+Si(i,j,linew,isAice)*xwai-xtot)
 !
-!                                                               SDM s04
+!                                                               SMD s04
 !  Modify the original formulation by considering the balance
 !  only over the ice covered portion of the grid cell such that
 !  "wao" does not enter the expression.
@@ -842,24 +900,29 @@
 !  Track the amount of new ice produced thermodynamically to calculate
 !  average ice age.
 !
+!  (CW) Revert algorithm back to MK89.
+!
+      cff1=dtice(ng)*RhoSw/IceRho(ng)
       DO j=Jstr,Jend
         DO i=Istr,Iend
           mi_old=Si(i,j,linew,isHice)            ! old ice mass
-          phi=3.0_r8
-          IF (Fi(i,j,icW_ao).lt. 0.0_r8) phi=0.5_r8
+          phi=4.0_r8
+          IF (Fi(i,j,icW_ao).lt.0.0_r8) phi=0.5_r8
           xmelt=MIN((Fi(i,j,icW_io)-Fi(i,j,icW_ai)), 0.0_r8)
           Si(i,j,linew,isHice)=Si(i,j,linew,isHice)+                    &
-     &                         dtice(ng)*                               &
+     &                         cff1*                                    &
      &                         (Si(i,j,linew,isAice)*                   &
      &                          (Fi(i,j,icW_io)-Fi(i,j,icW_ai))+        &
      &                          (1.0_r8-Si(i,j,linew,isAice))*          &
      &                          Fi(i,j,icW_ao)+Fi(i,j,icW_fr))
 
           ai_tmp=Si(i,j,linew,isAice)            ! old ice concentration
-          Si(i,j,linew,isAice)=Si(i,j,linew,isAice)+                    &
-     &                         dtice(ng)*                               &
-     &                         (1.0_r8-Si(i,j,linew,isAice))*           &
-     &                         (phi*Fi(i,j,icW_ao)+Fi(i,j,icW_fr))
+          cff=cff1*(phi*Fi(i,j,icW_ao)+Fi(i,j,icW_fr))/ice_thick(i,j)
+          Si(i,j,linew,isAice)=(cff+Si(i,j,linew,isAice))/(1.0_r8+cff)
+!         Si(i,j,linew,isAice)=Si(i,j,linew,isAice)+                    &
+!    &                         dtice(ng)*                               &
+!    &                         (1.0_r8-Si(i,j,linew,isAice))*           &
+!    &                         (phi*Fi(i,j,icW_ao)+Fi(i,j,icW_fr))
           Si(i,j,linew,isAice)= MIN(Si(i,j,linew,isAice), max_ai(ng))
           IF (Si(i,j,linew,isAice).lt.ai_tmp) THEN
             Si(i,j,linew,isHsno)=Si(i,j,linew,isHsno)*                  &

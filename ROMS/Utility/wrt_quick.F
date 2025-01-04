@@ -50,6 +50,12 @@
       USE ice_output_mod,      ONLY : ice_wrt_pio
 # endif
 #endif
+#if defined ICESHELF_DYNAM && defined SOLVE3D
+      USE isf_output_mod,      ONLY : isf_wrt_nf90
+# if defined PIO_LIB && defined DISTRIBUTE
+      USE isf_output_mod,      ONLY : isf_wrt_pio
+# endif
+#endif
       USE nf_fwrite2d_mod,     ONLY : nf_fwrite2d
 #ifdef SOLVE3D
       USE nf_fwrite3d_mod,     ONLY : nf_fwrite3d
@@ -1538,6 +1544,18 @@
 !-----------------------------------------------------------------------
 !
         CALL ice_wrt_nf90 (ng, model, tile,                             &
+     &                     LBi, UBi, LBj, UBj,                          &
+     &                     Qout, QCK)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#endif
+
+#if defined ICESHELF_DYNAM && defined SOLVE3D
+!
+!-----------------------------------------------------------------------
+!  Write out the iceshelf model variables.
+!-----------------------------------------------------------------------
+!
+        CALL isf_wrt_nf90 (ng, model, tile,                             &
      &                     LBi, UBi, LBj, UBj,                          &
      &                     Qout, QCK)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -3259,6 +3277,18 @@
 !-----------------------------------------------------------------------
 !
         CALL ice_wrt_pio (ng, model, tile,                              &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    Qout, QCK)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+# endif
+
+# if defined ICESHELF_DYNAM && defined SOLVE3D
+!
+!-----------------------------------------------------------------------
+!  Write out the iceshelf model variables.
+!-----------------------------------------------------------------------
+!
+        CALL isf_wrt_pio (ng, model, tile,                              &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    Qout, QCK)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN

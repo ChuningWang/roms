@@ -1157,6 +1157,9 @@
 #ifdef SEAICE
       USE mod_ice
 #endif
+#ifdef ICESHELF_DYNAM
+      USE mod_isf
+#endif
       USE mod_iounits
       USE mod_scalars
 #if defined SEDIMENT || defined BBL_MODEL
@@ -2352,6 +2355,9 @@
 #ifdef SEAICE
 # include <ice_var.h>
 #endif
+#ifdef ICESHELF_DYNAM
+# include <isf_var.h>
+#endif
 
 #ifdef BIOLOGY
 # if defined BIO_FENNEL
@@ -2474,6 +2480,10 @@
                 END DO
 # endif
               END IF
+
+#ifdef ICESHELF_DYNAM
+# include <isf_var_trc.h>
+#endif
 
 # if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
      defined OPT_OBSERVATIONS || defined SENSITIVITY_4DVAR      || \
@@ -3241,6 +3251,22 @@
       idBvar(isU3Sd)=idU3Sd
       idBvar(isV3Sd)=idV3Sd
 # endif
+#endif
+#ifdef ICESHELF_MOM
+!
+!  Set iceshelf model state boundary indices.  Currently, the last
+!  iceshelf model LBC state variable is isItis=4.
+!
+      isf_ic_brylast=ic_brylast
+      DO i=1,nIsfS
+        ibISF(i)=i
+      END DO
+      ic=ic_brylast
+      DO i=1,isItis
+        ic=ic+1
+        idBvar(ic)=iSisf(i)
+      END DO
+      ic_brylast=ic
 #endif
 #ifdef ICE_MODEL
 !

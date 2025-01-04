@@ -304,6 +304,9 @@
       character (len=256) :: fbionam        ! floats behavior parameters
       character (len=256) :: fposnam        ! floats positions
       character (len=256) :: iparnam        ! ice model parameters
+#ifdef ICESHELF_DYNAM
+      character (len=256) :: isfpnam        ! iceshelf model parameters
+#endif
       character (len=256) :: sparnam        ! sediment model parameters
       character (len=256) :: sposnam        ! station positions
       character (len=256) :: varname        ! I/O metadata

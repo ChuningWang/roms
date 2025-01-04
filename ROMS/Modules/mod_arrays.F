@@ -61,6 +61,11 @@
      &                         deallocate_ice,                          &
      &                         initialize_ice
 #endif
+#ifdef ICESHELF_DYNAM
+      USE mod_isf,      ONLY : allocate_isf,                            &
+     &                         deallocate_isf,                          &
+     &                         initialize_isf
+#endif
       USE mod_iounits,  ONLY : deallocate_iounits
       USE mod_mixing,   ONLY : allocate_mixing,                         &
      &                         deallocate_mixing,                       &
@@ -195,6 +200,9 @@
 #ifdef ICE_MODEL
           CALL allocate_ice (ng, LBi, UBi, LBj, UBj, .TRUE.)
 #endif
+#ifdef ICESHELF_DYNAM
+          CALL allocate_isf (ng, LBi, UBi, LBj, UBj, .TRUE.)
+#endif
           CALL allocate_mixing (ng, LBi, UBi, LBj, UBj)
           CALL allocate_ocean (ng, LBi, UBi, LBj, UBj)
 #if defined SEDIMENT || defined BBL_MODEL
@@ -303,6 +311,9 @@
         CALL deallocate_grid (ng)
 #ifdef ICE_MODEL
         CALL deallocate_ice (ng)
+#endif
+#ifdef ICESHELF_DYNAM
+        CALL deallocate_isf (ng)
 #endif
         CALL deallocate_mixing (ng)
         CALL deallocate_ocean (ng)
@@ -417,6 +428,9 @@
           CALL initialize_grid (ng, tile, model)
 #ifdef ICE_MODEL
           CALL initialize_ice (ng, tile, model)
+#endif
+#ifdef ICESHELF_DYNAM
+          CALL initialize_isf (ng, tile, model)
 #endif
           CALL initialize_mixing (ng, tile, model)
           CALL initialize_ocean (ng, tile, model)

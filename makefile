@@ -450,6 +450,9 @@ endif
 ifdef USE_SEAICE
  modules  +=	ROMS/Nonlinear/SeaIce
 endif
+ifdef USE_ICESHELF
+ modules  +=	ROMS/Nonlinear/IceShelf
+endif
 ifdef USE_TANGENT
  modules  +=	ROMS/Tangent \
 		ROMS/Tangent/Biology
@@ -477,6 +480,9 @@ ifdef USE_REPRESENTER
 endif
 ifdef USE_SEAICE
  includes +=	ROMS/Nonlinear/SeaIce
+endif
+ifdef USE_ICESHELF
+ includes +=	ROMS/Nonlinear/IceShelf
 endif
 ifdef USE_TANGENT
  includes +=	ROMS/Tangent \

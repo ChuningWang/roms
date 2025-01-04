@@ -31,6 +31,9 @@
 #if defined ICE_MODEL && defined SOLVE3D
       USE mod_ice
 #endif
+#if defined ICESHELF_DYNAM && defined SOLVE3D
+      USE mod_isf
+#endif
       USE mod_iounits
 #if defined ADJUST_WSTRESS || defined ADJUST_STFLUX
       USE mod_forces
@@ -2367,6 +2370,9 @@
             END IF
           END IF
         END DO
+#  endif
+#  ifdef ICESHELF_DYNAM
+#   include "isf_get_state_nf90.h"
 #  endif
 # endif
       END IF NLM_STATE
@@ -10019,6 +10025,9 @@
             END IF
           END IF
         END DO
+#   endif
+#   ifdef ICESHELF_DYNAM
+#    include "isf_get_state_pio.h"
 #   endif
 #  endif
       END IF NLM_STATE

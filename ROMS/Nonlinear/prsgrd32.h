@@ -82,6 +82,9 @@
      &                    GRID(ng) % Hz,                                &
      &                    GRID(ng) % z_r,                               &
      &                    GRID(ng) % z_w,                               &
+#ifdef ICESHELF
+     &                    GRID(ng) % zice,                              &
+#endif
      &                    OCEAN(ng) % rho,                              &
 #ifdef TIDE_GENERATING_FORCES
      &                    OCEAN(ng) % eq_tide,                          &
@@ -118,6 +121,9 @@
 #endif
      &                          om_v, on_u,                             &
      &                          Hz, z_r, z_w,                           &
+#ifdef ICESHELF
+     &                          zice,                                   &
+#endif
      &                          rho,                                    &
 #ifdef TIDE_GENERATING_FORCES
      &                          eq_tide,                                &
@@ -158,6 +164,9 @@
       real(r8), intent(in) :: Hz(LBi:,LBj:,:)
       real(r8), intent(in) :: z_r(LBi:,LBj:,:)
       real(r8), intent(in) :: z_w(LBi:,LBj:,0:)
+# ifdef ICESHELF
+      real(r8), intent(in) :: zice(LBi:,LBj:)
+# endif
       real(r8), intent(in) :: rho(LBi:,LBj:,:)
 # ifdef TIDE_GENERATING_FORCES
       real(r8), intent(in) :: eq_tide(LBi:,LBj:)
@@ -188,6 +197,9 @@
       real(r8), intent(in) :: Hz(LBi:UBi,LBj:UBj,N(ng))
       real(r8), intent(in) :: z_r(LBi:UBi,LBj:UBj,N(ng))
       real(r8), intent(in) :: z_w(LBi:UBi,LBj:UBj,0:N(ng))
+# ifdef ICESHELF
+      real(r8), intent(in) :: zice(LBi:UBi,LBj:UBj)
+# endif
       real(r8), intent(in) :: rho(LBi:UBi,LBj:UBj,N(ng))
 # ifdef TIDE_GENERATING_FORCES
       real(r8), intent(in) :: eq_tide(LBi:UBi,LBj:UBj)
@@ -213,6 +225,9 @@
       real(r8), parameter :: OneFifth = 0.2_r8
       real(r8), parameter :: OneTwelfth = 1.0_r8/12.0_r8
       real(r8), parameter :: eps = 1.0E-10_r8
+#ifdef ICESHELF
+      real(r8), parameter :: drhodz = 0.00478_r8
+#endif
 
       real(r8) :: GRho, GRho0,  HalfGRho
       real(r8) :: cff, cff1, cff2
@@ -274,6 +289,10 @@
           cff2=0.5_r8*(rho(i,j,N(ng))-rho(i,j,N(ng)-1))*                &
      &         (z_w(i,j,N(ng))-z_r(i,j,N(ng)))*cff1
           P(i,j,N(ng))=g*z_w(i,j,N(ng))+                                &
+#ifdef ICESHELF
+     &                 g*(-zice(i,j))-                                  &
+     &      GRho*zice(i,j)*(rho(i,j,N(ng))+0.5_r8*drhodz*zice(i,j))+    &
+#endif
 #ifdef WEC_VF
      &                 zetat(i,j)+                                      &
 #endif

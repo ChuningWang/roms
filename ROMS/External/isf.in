@@ -1,0 +1,160 @@
+!
+!  Iceshelf Model Input Parameters
+!
+!git $Id$
+!========================================================= Hernan G. Arango ===
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group                                !
+!    Licensed under a MIT/X style license                                     !
+!    See License_ROMS.md                                                      !
+!==============================================================================
+!                                                                             !
+! Input parameters can be entered in ANY order, provided that the parameter   !
+! KEYWORD (usually, upper case) is typed correctly followed by "="  or "=="   !
+! symbols. Any comment lines are allowed and must begin with an exclamation   !
+! mark (!) in column one.  Comments may appear to the right of a parameter    !
+! specification to improve documentation.  Comments are ignored during        !
+! reading.  Blank lines are also allowed and ignored. Continuation lines in   !
+! a parameter specification are allowed if preceded by a backslash (\).  In   !
+! some instances, more than one value is required for a parameter.  If fewer  !
+! values are provided, the last value is assigned for the entire parameter    !
+! array.  The multiplication symbol (*),  without blank spaces in between,    !
+! is allowed for a parameter specification. For example, in two grids nested  !
+! application:                                                                !
+!                                                                             !
+!    AKT_BAK == 2*1.0d-6  2*5.0d-6              ! m2/s                        !
+!                                                                             !
+! indicates that the first two entries of array AKT_BAK,  in fortran column-  !
+! major order, will have the same value of "1.0d-6" for grid 1,  whereas the  !
+! next two entries will have the same value of "5.0d-6" for grid 2.           !
+!                                                                             !
+! In multiple levels of nesting or multiple connected domains step-ups,       !
+! "Ngrids" entries are expected for some of these parameters. In such case,   !
+! the order of the entries for a parameter is critical. It must follow the    !
+! same order (1:Ngrids) as in the state variable declaration. The USER may    !
+! follow the above guidelines for specifying his/her values. These parameters !
+! are marked by "==" plural symbol after the KEYWORD.                         !
+!                                                                             !
+!==============================================================================
+!
+! Set lateral boundary conditions keyword. Notice that a value is expected
+! for each boundary segment per nested grid for each state variable.
+!
+! Each tracer variable requires [1:4,1:NAT+NPT,Ngrids] values. Otherwise,
+! [1:4,1:Ngrids] values are expected for other variables. The boundary
+! order is: 1=west, 2=south, 3=east, and 4=north. That is, anticlockwise
+! starting at the western boundary.
+!
+! The keyword is case insensitive and usually has three characters. However,
+! it is possible to have compound keywords, if applicable. For example, the
+! keyword "RadNud" implies radiation boundary condition with nudging. This
+! combination is usually used in active/passive radiation conditions.
+!
+!   Keyword    Lateral Boundary Condition Type
+!                                                     _____N_____     j=Mm
+!    Cla        Clamped                              |     4     |
+!    Clo        Closed                               |           |
+!    Gra        Gradient                           1 W           E 3
+!    Nud        Nudging                              |           |
+!    Per        Periodic                             |_____S_____|
+!    Rad        Radiation                                  2          j=1
+!                                                   i=1         i=Lm
+!
+!                   W       S       E       N
+!                   e       o       a       o
+!                   s       u       s       r
+!                   t       t       t       t
+!                           h               h
+!
+!                   1       2       3       4
+
+   LBC(isIhis) ==   Clo     Clo     Clo     Clo         ! thickness
+   LBC(isIuis) ==   Clo     Clo     Clo     Clo         ! U-velocity
+   LBC(isIvis) ==   Clo     Clo     Clo     Clo         ! V-velocity
+   LBC(isItis) ==   Clo     Clo     Clo     Clo         ! temperature
+
+! Iceshelf Ustar scaling factor [non-dimensional].
+
+      gamU    == 1.0d0
+
+! Iceshelf Ustar minimum value [m/s]. 8.0d-6 for diffusion only,
+! 1.0d-3 for diffusion + tidal forcing.
+
+      min_ustar == 8.0d-6
+
+! Logical switches for iceshelf melt water passive tracers.
+
+     LtracerIsf == T       ! dye_01, ...        inert passive tracers
+
+! Logical switches (TRUE/FALSE) to activate writing of iceshelf prognostic
+! variables into HISTORY output file.
+
+Hout(idIhis) == T     ! Si(...,isIhis)     iceshelf thickness
+Hout(idIuis) == T     ! Si(...,isIuis)     iceshelf U-velocity
+Hout(idIvis) == T     ! Si(...,isIvis)     iceshelf V-velocity
+Hout(idIuer) == T     !                    iceshelf eastward velocity
+Hout(idIvnr) == T     !                    iceshelf northward velocity
+Hout(idItis) == T     ! Si(...,isItis)     iceshelf temperature
+Hout(idIeis) == T     ! Si(...,isIeis)     iceshelf enthalpy
+
+Hout(idImel) == T     ! Fi(...,icImel)     iceshelf basal melt rate
+Hout(idIgat) == T     ! Fi(...,icItat)     iceshelf gammaT
+Hout(idIgas) == T     ! Fi(...,icIgas)     iceshelf gammaS
+Hout(idItst) == T     ! Fi(...,icItst)     iceshelf Tstar
+Hout(idIust) == T     ! Fi(...,icIust)     iceshelf Ustar
+Hout(idItbo) == T     ! Fi(...,icItbo)     iceshelf boundary layer temperature
+Hout(idIsbo) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
+
+! Logical switches (TRUE/FALSE) to activate writing of ice prognostic
+! variables into QUICKSAVE output file.
+
+Qout(idIhis) == T     ! Si(...,isIhis)     iceshelf thickness
+Qout(idIuis) == T     ! Si(...,isIuis)     iceshelf U-velocity
+Qout(idIvis) == T     ! Si(...,isIvis)     iceshelf V-velocity
+Qout(idIuer) == T     !                    iceshelf eastward velocity
+Qout(idIvnr) == T     !                    iceshelf northward velocity
+Qout(idItis) == T     ! Si(...,isItis)     iceshelf temperature
+Qout(idIeis) == T     ! Si(...,isIeis)     iceshelf enthalpy
+
+Qout(idImel) == T     ! Fi(...,icImel)     iceshelf basal melt rate
+Qout(idIgat) == T     ! Fi(...,icItat)     iceshelf gammaT
+Qout(idIgas) == T     ! Fi(...,icIgas)     iceshelf gammaS
+Qout(idItst) == T     ! Fi(...,icItst)     iceshelf Tstar
+Qout(idIust) == T     ! Fi(...,icIust)     iceshelf Ustar
+Qout(idItbo) == T     ! Fi(...,icItbo)     iceshelf boundary layer temperature
+Qout(idIsbo) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
+
+! Logical switches (TRUE/FALSE) to activate writing of ice prognostic
+! variables into AVERAGES output file.
+
+Aout(idIhis) == T     ! Si(...,isIhis)     iceshelf thickness
+Aout(idIuis) == T     ! Si(...,isIuis)     iceshelf U-velocity
+Aout(idIvis) == T     ! Si(...,isIvis)     iceshelf V-velocity
+Aout(idIuer) == T     !                    iceshelf eastward velocity
+Aout(idIvnr) == T     !                    iceshelf northward velocity
+Aout(idItis) == T     ! Si(...,isItis)     iceshelf temperature
+Aout(idIeis) == T     ! Si(...,isIeis)     iceshelf enthalpy
+
+Aout(idImel) == T     ! Fi(...,icImel)     iceshelf basal melt rate
+Aout(idIgat) == T     ! Fi(...,icItat)     iceshelf gammaT
+Aout(idIgas) == T     ! Fi(...,icIgas)     iceshelf gammaS
+Aout(idItst) == T     ! Fi(...,icItst)     iceshelf Tstar
+Aout(idIust) == T     ! Fi(...,icIust)     iceshelf Ustar
+Aout(idItbo) == T     ! Fi(...,icItbo)     iceshelf boundary layer temperature
+Aout(idIsbo) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
+
+
+!
+!  GLOSSARY:
+!  =========
+!
+!------------------------------------------------------------------------------
+!  Iceshelf model parameters.
+!------------------------------------------------------------------------------
+!
+!  gamU           Iceshelf Ustar scaling factor.
+!
+!  min_ustar      Iceshelf Ustar minimum value. 8.0d-6 for diffusion only,
+!                   1.0d-3 for diffusion + tidal forcing.
+!
+!  LtracerIsf     Logical switches for iceshelf melt water passive tracers.
+!

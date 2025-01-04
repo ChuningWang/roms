@@ -1404,6 +1404,47 @@
      &   'Include Ice Shelf Cavities'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+10)=' ICESHELF,'
+# ifdef ICESHELF_DYNAM
+!
+      IF (Master) WRITE (stdout,20) 'ICESHELF_DYNAM',                   &
+     &   'Include Dynamic Ice Shelf'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+16)=' ICESHELF_DYNAM,'
+#  ifdef ICESHELF_THERMO
+!
+      IF (Master) WRITE (stdout,20) 'ICESHELF_THERMO',                  &
+     &   'Include Ice Shelf Thermodynamics'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+17)=' ICESHELF_THERMO,'
+#   if defined ICESHELF_2EQN_VBC
+!
+      IF (Master) WRITE (stdout,20) 'ICESHELF_2EQN_VBC',                &
+     &   '2-Equation Ice/Ocean Thermodynamics'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+19)=' ICESHELF_2EQN_VBC,'
+#   elif defined ICESHELF_3EQN_VBC
+!
+      IF (Master) WRITE (stdout,20) 'ICESHELF_3EQN_VBC',                &
+     &   '3-Equation Ice/Ocean Thermodynamics'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+19)=' ICESHELF_3EQN_VBC,'
+#   endif
+#   ifdef ICESHELF_TRACER
+!
+      IF (Master) WRITE (stdout,20) 'ICESHELF_TRACER',                  &
+     &   'Include Ice Shelf Melt/Freeze Passive Tracer'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+17)=' ICESHELF_TRACER,'
+#   endif
+#  endif
+#  ifdef ICESHELF_MOM
+!
+      IF (Master) WRITE (stdout,20) 'ICESHELF_MOM',                     &
+     &   'Include Ice Shelf Momemtum'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+14)=' ICESHELF_MOM,'
+#  endif
+# endif
 #endif
 #if defined IMPACT_INNER             && \
     defined OBS_IMPACT               && \

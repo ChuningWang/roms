@@ -56,6 +56,9 @@
 #ifdef SOLVE3D
      &                  nstp(ng), nnew(ng),                             &
 #endif
+#ifdef ICESHELF
+     &                  GRID(ng) % zice,                                &
+#endif
 #ifdef MASKING
      &                  GRID(ng) % pmask,       GRID(ng) % rmask,       &
      &                  GRID(ng) % umask,       GRID(ng) % vmask,       &
@@ -166,6 +169,9 @@
      &                        krhs, kstp, knew,                         &
 #ifdef SOLVE3D
      &                        nstp, nnew,                               &
+#endif
+#ifdef ICESHELF
+     &                        zice,                                     &
 #endif
 #ifdef MASKING
      &                        pmask, rmask, umask, vmask,               &
@@ -278,6 +284,9 @@
 #endif
 !
 #ifdef ASSUMED_SHAPE
+# ifdef ICESHELF
+      real(r8), intent(in   ) :: zice(LBi:,LBj:)
+# endif
 # ifdef MASKING
       real(r8), intent(in   ) :: pmask(LBi:,LBj:)
       real(r8), intent(in   ) :: rmask(LBi:,LBj:)
@@ -412,6 +421,9 @@
 
 #else
 
+# ifdef ICESHELF
+      real(r8), intent(in   ) :: zice(LBi:UBi,LBj:UBj)
+# endif
 # ifdef MASKING
       real(r8), intent(in   ) :: pmask(LBi:UBi,LBj:UBj)
       real(r8), intent(in   ) :: rmask(LBi:UBi,LBj:UBj)
@@ -591,6 +603,9 @@
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: rhs_zeta
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: zeta_new
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: zwrk
+#ifdef ICESHELF
+      real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: hw
+#endif
 #ifdef WET_DRY
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: wetdry
 #endif
@@ -621,7 +636,12 @@
 !
       DO j=JstrV-2,Jendp2
         DO i=IstrU-2,Iendp2
+# ifdef ICESHELF
+          hw(i,j)=h(i,j)+zice(i,j)
+          Drhs(i,j)=zeta(i,j,krhs)+hw(i,j)
+# else
           Drhs(i,j)=zeta(i,j,krhs)+h(i,j)
+# endif
         END DO
       END DO
       DO j=JstrV-2,Jendp2
@@ -663,7 +683,12 @@
 
       DO j=JstrVm2-1,Jendp2
         DO i=IstrUm2-1,Iendp2
+# ifdef ICESHELF
+          hw(i,j)=h(i,j)+zice(i,j)
+          Drhs(i,j)=zeta(i,j,krhs)+hw(i,j)
+# else
           Drhs(i,j)=zeta(i,j,krhs)+h(i,j)
+# endif
         END DO
       END DO
       DO j=JstrVm2-1,Jendp2
@@ -907,7 +932,11 @@
 #ifdef MASKING
             zeta_new(i,j)=zeta_new(i,j)*rmask(i,j)
 #endif
+#ifdef ICESHELF
+            Dnew(i,j)=zeta_new(i,j)+hw(i,j)
+#else
             Dnew(i,j)=zeta_new(i,j)+h(i,j)
+#endif
 !
             zwrk(i,j)=0.5_r8*(zeta(i,j,kstp)+zeta_new(i,j))
 #if defined VAR_RHO_2D && defined SOLVE3D
@@ -933,7 +962,11 @@
 #ifdef MASKING
             zeta_new(i,j)=zeta_new(i,j)*rmask(i,j)
 #endif
+#ifdef ICESHELF
+            Dnew(i,j)=zeta_new(i,j)+hw(i,j)
+#else
             Dnew(i,j)=zeta_new(i,j)+h(i,j)
+#endif
 !
             zwrk(i,j)=cff5*zeta(i,j,krhs)+                              &
      &                cff4*(zeta(i,j,kstp)+zeta_new(i,j))
@@ -964,7 +997,11 @@
 #ifdef MASKING
             zeta_new(i,j)=zeta_new(i,j)*rmask(i,j)
 #endif
+#ifdef ICESHELF
+            Dnew(i,j)=zeta_new(i,j)+hw(i,j)
+#else
             Dnew(i,j)=zeta_new(i,j)+h(i,j)
+#endif
 !
             zwrk(i,j)=cff5*zeta_new(i,j)+cff4*zeta(i,j,krhs)
 #if defined VAR_RHO_2D && defined SOLVE3D
@@ -1088,13 +1125,23 @@
       DO j=Jstr,Jend
         DO i=IstrU,Iend
           rhs_ubar(i,j)=cff1*on_u(i,j)*                                 &
+#ifdef ICESHELF
+     &                  ((hw(i-1,j)+                                    &
+     &                    hw(i ,j))*                                    &
+#else
      &                  ((h(i-1,j)+                                     &
      &                    h(i ,j))*                                     &
+#endif
      &                   (gzeta(i-1,j)-                                 &
      &                    gzeta(i  ,j))+                                &
 #if defined VAR_RHO_2D && defined SOLVE3D
+# ifdef ICESHELF
+     &                   (hw(i-1,j)-                                    &
+     &                    hw(i  ,j))*                                   &
+# else
      &                   (h(i-1,j)-                                     &
      &                    h(i  ,j))*                                    &
+# endif
      &                   (gzetaSA(i-1,j)+                               &
      &                    gzetaSA(i  ,j)+                               &
      &                    cff2*(rhoA(i-1,j)-                            &
@@ -1146,13 +1193,23 @@
         IF (j.ge.JstrV) THEN
           DO i=Istr,Iend
             rhs_vbar(i,j)=cff1*om_v(i,j)*                               &
+#ifdef ICESHELF
+     &                    ((hw(i,j-1)+                                  &
+     &                      hw(i,j  ))*                                 &
+#else
      &                    ((h(i,j-1)+                                   &
      &                      h(i,j  ))*                                  &
+#endif
      &                     (gzeta(i,j-1)-                               &
      &                      gzeta(i,j  ))+                              &
 #if defined VAR_RHO_2D && defined SOLVE3D
+# ifdef ICESHELF
+     &                     (hw(i,j-1)-                                  &
+     &                      hw(i,j  ))*                                 &
+# else
      &                     (h(i,j-1)-                                   &
      &                      h(i,j  ))*                                  &
+# endif
      &                     (gzetaSA(i,j-1)+                             &
      &                      gzetaSA(i,j  )+                             &
      &                      cff2*(rhoA(i,j-1)-                          &
@@ -2492,7 +2549,11 @@
 !
       DO j=JstrV-1,Jend
         DO i=IstrU-1,Iend
+# ifdef ICESHELF
+          Dstp(i,j)=zeta(i,j,kstp)+hw(i,j)
+# else
           Dstp(i,j)=zeta(i,j,kstp)+h(i,j)
+# endif
         END DO
       END DO
 !
@@ -2890,7 +2951,11 @@
 #ifdef MASKING
      &                      umask, vmask,                               &
 #endif
+#ifdef ICESHELF
+     &                      hw, om_v, on_u,                             &
+#else
      &                      h, om_v, on_u,                              &
+#endif
      &                      ubar, vbar, zeta)
       END IF
 
@@ -2994,16 +3059,26 @@
      &        ((JstrR.le.j).and.(j.le.JendR))) THEN
             IF (INT(SOURCES(ng)%Dsrc(is)).eq.0) THEN
               cff=1.0_r8/(on_u(i,j)*                                    &
+#ifdef ICESHELF
+     &                    0.5_r8*(zeta(i-1,j,knew)+hw(i-1,j)+           &
+     &                            zeta(i  ,j,knew)+hw(i  ,j)))
+#else
      &                    0.5_r8*(zeta(i-1,j,knew)+h(i-1,j)+            &
      &                            zeta(i  ,j,knew)+h(i  ,j)))
+#endif
               ubar(i,j,knew)=SOURCES(ng)%Qbar(is)*cff
 #if defined NESTING && !defined SOLVE3D
               DU_flux(i,j)=SOURCES(ng)%Qbar(is)
 #endif
             ELSE IF (INT(SOURCES(ng)%Dsrc(is)).eq.1) THEN
               cff=1.0_r8/(om_v(i,j)*                                    &
+#ifdef ICESHELF
+     &                    0.5_r8*(zeta(i,j-1,knew)+hw(i,j-1)+           &
+     &                            zeta(i,j  ,knew)+hw(i,j  )))
+#else
      &                    0.5_r8*(zeta(i,j-1,knew)+h(i,j-1)+            &
      &                            zeta(i,j  ,knew)+h(i,j  )))
+#endif
               vbar(i,j,knew)=SOURCES(ng)%Qbar(is)*cff
 #if defined NESTING && !defined SOLVE3D
               DV_flux(i,j)=SOURCES(ng)%Qbar(is)

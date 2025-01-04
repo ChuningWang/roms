@@ -6126,6 +6126,186 @@ metadata:
     add_offset:     0.0d0
     scale:          1.0d0
 
+  ##################################
+  ###  Iceshelf State Variables  ###
+  ##################################
+
+  - variable:       is_h
+    standard_name:  iceshelf_thickness
+    long_name:      ice shelf thickness
+    units:          meter
+    field:          ice shelf thickness
+    time:           ocean_time
+    index_code:     idIhis
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_u
+    standard_name:  iceshelf_u_velocity
+    long_name:      ice shelf U-velocity
+    units:          meter second-1
+    field:          ice shelf U-velocity
+    time:           ocean_time
+    index_code:     idIuis
+    type:           u2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_v
+    standard_name:  iceshelf_v_velocity
+    long_name:      ice shelf V-velocity
+    units:          meter second-1
+    field:          ice shelf V-velocity
+    time:           ocean_time
+    index_code:     idIvis
+    type:           v2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_ue
+    standard_name:  iceshelf_eastward_velocity
+    long_name:      ice shelf eastward velocity
+    units:          meter second-1
+    field:          ice shelf eastward velocity
+    time:           ocean_time
+    index_code:     idIuer
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_vn
+    standard_name:  iceshelf_northward_velocity
+    long_name:      ice shelf northward velocity
+    units:          meter second-1
+    field:          ice shelf northward velocity
+    time:           ocean_time
+    index_code:     idIvnr
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_temp
+    standard_name:  iceshelf_temperature
+    long_name:      ice shelf temperature
+    units:          Celcius
+    field:          ice shelf temperature
+    time:           ocean_time
+    index_code:     idItis
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_enthalpy
+    standard_name:  iceshelf_enthalpy
+    long_name:      ice shelf enthalpy
+    units:          m Celcius
+    field:          ice shelf enthalpy
+    time:           ocean_time
+    index_code:     idIeis
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_mr
+    standard_name:  iceshelf_melt_rate
+    long_name:      ice shelf basal melt rate
+    units:          meter second-1
+    field:          ice shelf basal melt rate
+    time:           ocean_time
+    index_code:     idImel
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_gammaT
+    standard_name:  iceshelf_temperature_turbulent_mixing_coefficient
+    long_name:      temperature mixing coefficient in boundary layer
+    units:          meter second-1
+    field:          temperature mixing coefficient
+    time:           ocean_time
+    index_code:     idIgat
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_gammaS
+    standard_name:  iceshelf_salinity_turbulent_mixing_coefficient
+    long_name:      salinity mixing coefficient in boundary layer
+    units:          meter second-1
+    field:          salinity mixing coefficient
+    time:           ocean_time
+    index_code:     idIgas
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_Tstar
+    standard_name:  iceshelf_tstar
+    long_name:      in-situ temperature gradient at ice base
+    units:          Celcius
+    field:          ice base temperature gradient
+    time:           ocean_time
+    index_code:     idItst
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_Ustar
+    standard_name:  iceshelf_friction_velocity
+    long_name:      friction velocity at ice base
+    units:          meter second-1
+    field:          ice shelf friction velocity
+    time:           ocean_time
+    index_code:     idIust
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_Tb
+    standard_name:  iceshelf_boundary_layer_temperature
+    long_name:      temperature of sub-layer under ice shelf
+    units:          Celcius
+    field:          ice shelf boundary layer temperature
+    time:           ocean_time
+    index_code:     idItbo
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_Sb
+    standard_name:  iceshelf_boundary_layer_practical_salinity
+    long_name:      salinity of sub-layer under ice shelf
+    units:          nondimensional
+    field:          ice shelf boundary layer salinity
+    time:           ocean_time
+    index_code:     idIsbo
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_vol
+    standard_name:  iceshelf_refreezed_draft
+    long_name:      thickness of refreezed volume at ice shelf base
+    units:          meter
+    field:          ice shelf refreezed thickness
+    time:           ocean_time
+    index_code:     idIvol
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_dye_
+    standard_name:  mass_concentration_of_dye_in_refreezed_draft
+    long_name:      icesehlf runoff dye concentration
+    units:          kilogram meter-3
+    field:          iceshelf dye_
+    time:           ocean_time
+    index_code:     idItrc(inert(i))
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
   #######################################
   ###  Time-averaged Quadratic Terms  ###
   #######################################

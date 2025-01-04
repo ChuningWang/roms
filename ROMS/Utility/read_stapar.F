@@ -18,6 +18,9 @@
 # ifdef ICE_MODEL
       USE mod_ice
 # endif
+# ifdef ICESHELF_DYNAM
+      USE mod_isf
+# endif
       USE mod_iounits
       USE mod_ncparam
 # if defined SEDIMENT || defined BBL_MODEL
@@ -43,6 +46,9 @@
 
       logical, dimension(Ngrids) :: Lswitch
       logical, dimension(MT,Ngrids) :: Ltracer
+# ifdef ICESHELF_TRACER
+      logical, dimension(NPT,Ngrids) :: Linert
+# endif
 
       integer, dimension(Ngrids) :: is
 
@@ -228,6 +234,66 @@
             CASE ('Sout(idW_ro)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idW_ro,1:Ngrids)=Lswitch(1:Ngrids)
+# endif
+# ifdef ICESHELF_DYNAM
+#  ifdef ICESHELF_MOM
+            CASE ('Sout(idIhis)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idIhis,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idIuis)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idIuis,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idIvis)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idIvis,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idIuer)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idIuer,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idIvnr)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idIvnr,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idItis)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idItis,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idIeis)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idIeis,1:Ngrids)=Lswitch(1:Ngrids)
+#  endif
+#  ifdef ICESHELF_THERMO
+            CASE ('Sout(idImel)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idImel,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idIgat)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idIgat,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idIgas)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idIgas,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idItst)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idItst,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idIust)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idIust,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idItbo)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idItbo,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idIsbo)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idIsbo,1:Ngrids)=Lswitch(1:Ngrids)
+#   ifdef ICESHELF_TRACER
+            CASE ('Sout(idIvol)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idIvol,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idItrc)')
+              Npts=load_l(Nval, Cval, NPT, Ngrids, Linert)
+              DO ng=1,Ngrids
+                DO itrc=1,NPT
+                  Sout(idItrc(itrc),ng)=Linert(itrc,ng)
+                END DO
+              END DO
+#   endif
+#  endif
 # endif
 # ifdef WEC_VF
             CASE ('Sout(idWztw)')
@@ -776,6 +842,65 @@
             IF (Sout(idW_ro,ng)) WRITE (out,90) Sout(idW_ro,ng),        &
      &          'Sout(idW_ro)',                                         &
      &          'Write out rate of melt/freeze runoff into ocean.'
+# endif
+# ifdef ICESHELF_DYNAM
+#  ifdef ICESHELF_MOM
+            IF (Sout(idIhis,ng)) WRITE (out,70) Sout(idIhis,ng),        &
+     &          'Sout(idIhis)',                                         &
+     &          'Write out iceshelf thickness.'
+            IF (Sout(idIuis,ng)) WRITE (out,70) Sout(idIuis,ng),        &
+     &          'Sout(idIuis)',                                         &
+     &          'Write out iceshelf U-velocity.'
+            IF (Sout(idIvis,ng)) WRITE (out,70) Sout(idIvis,ng),        &
+     &          'Sout(idIvis)',                                         &
+     &          'Write out iceshelf V-velocity.'
+            IF (Sout(idIuer,ng)) WRITE (out,70) Sout(idIuer,ng),        &
+     &          'Sout(idIuer)',                                         &
+     &          'Write out iceshelf eastward velocity.'
+            IF (Sout(idIvnr,ng)) WRITE (out,70) Sout(idIvnr,ng),        &
+     &          'Sout(idIvnr)',                                         &
+     &          'Write out iceshelf northward velocity.'
+            IF (Sout(idItis,ng)) WRITE (out,70) Sout(idItis,ng),        &
+     &          'Sout(idItis)',                                         &
+     &          'Write out iceshelf temperature.'
+            IF (Sout(idIeis,ng)) WRITE (out,70) Sout(idIeis,ng),        &
+     &          'Sout(idIeis)',                                         &
+     &          'Write out iceshelf enthalpy.'
+#  endif
+#  ifdef ICESHELF_THERMO
+            IF (Sout(idImel,ng)) WRITE (out,70) Sout(idImel,ng),        &
+     &          'Sout(idImel)',                                         &
+     &          'Write out iceshelf basal melt rate.'
+            IF (Sout(idIgat,ng)) WRITE (out,70) Sout(idIgat,ng),        &
+     &          'Sout(idIgat)',                                         &
+     &          'Write out iceshelf gammaT value.'
+            IF (Sout(idIgas,ng)) WRITE (out,70) Sout(idIgas,ng),        &
+     &          'Sout(idIgas)',                                         &
+     &          'Write out iceshelf gammaS value.'
+            IF (Sout(idItst,ng)) WRITE (out,70) Sout(idItst,ng),        &
+     &          'Sout(idItst)',                                         &
+     &          'Write out iceshelf Tstar value.'
+            IF (Sout(idIust,ng)) WRITE (out,70) Sout(idIust,ng),        &
+     &          'Sout(idIust)',                                         &
+     &          'Write out iceshelf Ustar value.'
+            IF (Sout(idItbo,ng)) WRITE (out,70) Sout(idItbo,ng),        &
+     &          'Sout(idItbo)',                                         &
+     &          'Write out iceshelf laminar boundary layer temperature.'
+            IF (Sout(idIsbo,ng)) WRITE (out,70) Sout(idIsbo,ng),        &
+     &          'Sout(idIsbo)',                                         &
+     &          'Write out iceshelf laminar boundary layer salinity.'
+#   ifdef ICESHELF_TRACER
+            IF (Sout(idIvol,ng)) WRITE (out,70) Sout(idIvol,ng),        &
+     &          'Sout(idIvol)',                                         &
+     &          'Write out iceshelf refreezed volume.'
+            DO itrc=1,NPT
+              IF (Sout(idItrc(itrc),ng)) WRITE (out,180)                &
+     &            Sout(idItrc(itrc),ng), 'Sout(idItrc)',                &
+     &            'Write out iceshelf refreezed passive tracer ', itrc, &
+     &            TRIM(Vname(1,idItrc(itrc)))
+            END DO
+#   endif
+#  endif
 # endif
 # ifdef WEC
             IF (Sout(idU2rs,ng)) WRITE (out,90) Sout(idU2rs,ng),        &

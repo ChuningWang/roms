@@ -49,6 +49,12 @@
       USE ice_output_mod,      ONLY : ice_def_pio
 #  endif
 # endif
+# if defined ICESHELF_DYNAM && defined SOLVE3D
+      USE isf_output_mod,      ONLY : isf_def_nf90
+#  if defined PIO_LIB && defined DISTRIBUTE
+      USE isf_output_mod,      ONLY : isf_def_pio
+#  endif
+# endif
 # if defined SEDIMENT && defined SOLVE3D
       USE sediment_output_mod, ONLY : sediment_def_nf90
 #  if defined PIO_LIB && defined DISTRIBUTE
@@ -1816,6 +1822,17 @@
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
 
+# if defined ICESHELF_DYNAM && defined SOLVE3D
+!
+!-----------------------------------------------------------------------
+!  Define the iceshelf model variables.
+!-----------------------------------------------------------------------
+!
+        CALL isf_def_nf90 (ng, model, ldef, Aout, AVG,                  &
+     &                     t2dgrd, u2dgrd, v2dgrd)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+# endif
+
 # if defined SEDIMENT && defined SOLVE3D
 !
 !-----------------------------------------------------------------------
@@ -2626,6 +2643,14 @@
 !  time-averaged variables. Get variable IDs.
 !
         CALL ice_def_nf90 (ng, model, ldef, Aout, AVG)
+# endif
+
+# if defined ICESHELF_DYNAM && defined SOLVE3D
+!
+!  Scan iceshelf variables from input NetCDF and activate switches for
+!  time-averaged variables. Get variable IDs.
+!
+        CALL isf_def_nf90 (ng, model, ldef, Aout, AVG)
 # endif
 
 # if defined SEDIMENT && defined SOLVE3D
@@ -4640,6 +4665,17 @@
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  endif
 
+#  if defined ICESHELF_DYNAM && defined SOLVE3D
+!
+!-----------------------------------------------------------------------
+!  Define the iceshelf model variables.
+!-----------------------------------------------------------------------
+!
+        CALL isf_def_pio (ng, model, ldef, Aout, AVG,                   &
+     &                    t2dgrd, u2dgrd, v2dgrd)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#  endif
+
 #  if defined SEDIMENT && defined SOLVE3D
 !
 !-----------------------------------------------------------------------
@@ -5599,6 +5635,14 @@
 !  time-averaged variables. Get variable IDs.
 !
         CALL ice_def_pio (ng, model, ldef, Aout, AVG)
+#  endif
+
+#  if defined ICESHELF_DYNAM && defined SOLVE3D
+!
+!  Scan iceshelf variables from input NetCDF and activate switches for
+!  time-averaged variables. Get variable IDs.
+!
+        CALL isf_def_pio (ng, model, ldef, Aout, AVG)
 #  endif
 
 # if defined SEDIMENT && defined SOLVE3D

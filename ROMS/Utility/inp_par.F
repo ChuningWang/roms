@@ -168,6 +168,17 @@
       CALL read_IcePar (model, 15, out, Lwrite)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
+#ifdef ICESHELF_DYNAM
+!
+!-----------------------------------------------------------------------
+!  Read in iceshelf model input parameters.
+!-----------------------------------------------------------------------
+!
+      OPEN (65, FILE=TRIM(isfpnam), FORM='formatted', STATUS='old')
+
+      CALL read_IsfPar (model, 65, out, Lwrite)
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#endif
 #ifdef BIOLOGY
 !
 !-----------------------------------------------------------------------

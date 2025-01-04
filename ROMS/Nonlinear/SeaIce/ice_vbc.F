@@ -347,7 +347,7 @@
           IceCavity=.FALSE.
 #   endif
           IF (.not.IceCavity) THEN
-            svstr(i,j)=aiy*chuy*(Si(i,j,liuol,isVice)-Fi(i,j,icVavg))+          &
+            svstr(i,j)=aiy*chuy*(Si(i,j,liuol,isVice)-Fi(i,j,icVavg))+  &
      &                 (1.0_r8-aiy)*svstr_ao(i,j)
 #   ifdef WET_DRY
             svstr(i,j)=svstr(i,j)*vmask_wet(i,j)

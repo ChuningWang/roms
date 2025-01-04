@@ -61,6 +61,12 @@
   USE_SEAICE :=
 #endif
 
+#ifdef ICESHELF
+  USE_ICESHELF := on
+#else
+  USE_ICESHELF :=
+#endif
+
 /*
 ** Process CICE seaice model for coupling.
 */

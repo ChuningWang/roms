@@ -45,6 +45,10 @@
 # if defined ICE_MODEL && defined SOLVE3D
       USE ice_set_avg_mod, ONLY : ice_set_avg_tile
 # endif
+# if defined ICESHELF_DYNAM && defined SOLVE3D
+      USE mod_isf,         ONLY : lsnew
+      USE isf_set_avg_mod, ONLY : isf_set_avg_tile
+# endif
 # ifdef WET_DRY
       USE set_masks_mod,   ONLY : set_avg_masks
 # endif
@@ -105,6 +109,13 @@
      &                       LBi, UBi, LBj, UBj,                        &
      &                       IminS, ImaxS, JminS, JmaxS,                &
      &                       IOUT)
+# endif
+
+# if defined ICESHELF_DYNAM && defined SOLVE3D
+      CALL isf_set_avg_tile (ng, tile, iNLM,                            &
+     &                       LBi, UBi, LBj, UBj,                        &
+     &                       IminS, ImaxS, JminS, JmaxS,                &
+     &                       lsnew(ng))
 # endif
 
 # ifdef PROFILE
@@ -228,6 +239,9 @@
      &                       GRID(ng) % on_v,                           &
      &                       GRID(ng) % pm,                             &
      &                       GRID(ng) % pn,                             &
+# ifdef ICESHELF
+     &                       GRID(ng) % zice,                           &
+# endif
 # ifdef SOLVE3D
      &                       GRID(ng) % z_r,                            &
      &                       OCEAN(ng) % pden,                          &

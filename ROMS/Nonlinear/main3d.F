@@ -122,6 +122,9 @@
       USE set_tides_mod,        ONLY : set_tides
 # endif
       USE set_vbc_mod,          ONLY : set_vbc
+# ifdef ICESHELF_DYNAM
+      USE iceshelf_mod,         ONLY : iceshelf
+# endif
 # if !(defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3)
       USE set_zeta_mod,         ONLY : set_zeta
 # endif
@@ -458,6 +461,10 @@
 !-----------------------------------------------------------------------
 !
             CALL seaice (iNLM)
+# endif
+
+# ifdef ICESHELF_DYNAM
+            CALL iceshelf (iNLM)
 # endif
 
 # ifdef ADJUST_BOUNDARY

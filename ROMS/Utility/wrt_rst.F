@@ -39,6 +39,12 @@
       USE ice_output_mod,  ONLY : ice_wrt_pio
 # endif
 #endif
+#ifdef ICESHELF_DYNAM
+      USE isf_output_mod,  ONLY : isf_wrt_nf90
+# if defined PIO_LIB && defined DISTRIBUTE
+      USE isf_output_mod,  ONLY : isf_wrt_pio
+# endif
+#endif
       USE nf_fwrite2d_mod, ONLY : nf_fwrite2d
 #if defined PERFECT_RESTART || defined SOLVE3D
       USE nf_fwrite3d_mod, ONLY : nf_fwrite3d
@@ -1199,6 +1205,17 @@
 !-----------------------------------------------------------------------
 !
         CALL ice_wrt_nf90 (ng, model, tile,                             &
+     &                     LBi, UBi, LBj, UBj,                          &
+     &                     Hout, RST)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#endif
+#ifdef ICESHELF_DYNAM
+!
+!-----------------------------------------------------------------------
+!  Write out iceshelf model state variables.
+!-----------------------------------------------------------------------
+!
+        CALL isf_wrt_nf90 (ng, model, tile,                             &
      &                     LBi, UBi, LBj, UBj,                          &
      &                     Hout, RST)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -2545,6 +2562,17 @@
 !-----------------------------------------------------------------------
 !
         CALL ice_wrt_pio (ng, model, tile,                              &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    Hout, RST)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+# endif
+# ifdef ICESHELF_DYNAM
+!
+!-----------------------------------------------------------------------
+!  Write out iceshelf model state variables.
+!-----------------------------------------------------------------------
+!
+        CALL isf_wrt_pio (ng, model, tile,                              &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    Hout, RST)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN

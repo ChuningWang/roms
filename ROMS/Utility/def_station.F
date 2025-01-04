@@ -45,6 +45,12 @@
       USE ice_output_mod,      ONLY : ice_def_station_pio
 #  endif
 # endif
+# ifdef ICESHELF_DYNAM
+      USE isf_output_mod,      ONLY : isf_def_station_nf90
+#  if defined PIO_LIB && defined DISTRIBUTE
+      USE isf_output_mod,      ONLY : isf_def_station_pio
+#  endif
+# endif
 # ifdef SEDIMENT
       USE sediment_output_mod, ONLY : sediment_def_station_nf90
 #  if defined PIO_LIB && defined DISTRIBUTE
@@ -1003,6 +1009,17 @@
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
 
+# ifdef ICESHELF_DYNAM
+!
+!-----------------------------------------------------------------------
+!  Define the iceshelf model variables.
+!-----------------------------------------------------------------------
+!
+        CALL isf_def_station_nf90 (ng, model, ldef, Sout, STA,          &
+     &                             pgrd)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+# endif
+
 # ifdef SEDIMENT
 !
 !-----------------------------------------------------------------------
@@ -1532,6 +1549,15 @@
 !  station variables. Get variable IDs.
 !
         CALL ice_def_station_nf90 (ng, model, ldef, Sout, STA)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+# endif
+
+# ifdef ICESHELF_DYNAM
+!
+!  Scan iceshelf model variables from input NetCDF and activate switches
+!  for station variables. Get variable IDs.
+!
+        CALL isf_def_station_nf90 (ng, model, ldef, Sout, STA)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
 
@@ -2605,6 +2631,17 @@
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  endif
 
+#  ifdef ICESHELF_DYNAM
+!
+!-----------------------------------------------------------------------
+!  Define the iceshelf model variables.
+!-----------------------------------------------------------------------
+!
+        CALL isf_def_station_pio (ng, model, ldef, Sout, STA,           &
+     &                            pgrd)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#  endif
+
 #  ifdef SEDIMENT
 !
 !-----------------------------------------------------------------------
@@ -3196,6 +3233,15 @@
 !  station variables. Get variable IDs.
 !
         CALL ice_def_station_pio (ng, model, ldef, Sout, STA)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#  endif
+
+#  ifdef ICESHELF_DYNAM
+!
+!  Scan iceshelf model variables from input NetCDF and activate switches
+!  for station variables. Get variable IDs.
+!
+        CALL isf_def_station_pio (ng, model, ldef, Sout, STA)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  endif
 

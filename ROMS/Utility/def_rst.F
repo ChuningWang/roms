@@ -43,6 +43,12 @@
       USE ice_output_mod, ONLY : ice_def_pio
 # endif
 #endif
+#ifdef ICESHELF_DYNAM
+      USE isf_output_mod, ONLY : isf_def_nf90
+# if defined PIO_LIB && defined DISTRIBUTE
+      USE isf_output_mod, ONLY : isf_def_pio
+# endif
+#endif
       USE strings_mod,    ONLY : FoundError
       USE wrt_info_mod,   ONLY : wrt_info
 !
@@ -1582,6 +1588,16 @@
                            t2dgrd, u2dgrd, v2dgrd)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
+#ifdef ICESHELF_DYNAM
+!
+!-----------------------------------------------------------------------
+!  Define iceshelf model variables.
+!-----------------------------------------------------------------------
+!
+        CALL isf_def_nf90 (ng, model, Ldefine, Hout, RST,               &
+                           t2dgrd, u2dgrd, v2dgrd)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#endif
 !
 !-----------------------------------------------------------------------
 !  Leave definition mode.
@@ -2067,6 +2083,13 @@
 !  restart variables. Get variable IDs.
 !
         CALL ice_def_nf90 (ng, model, Ldefine, Hout, RST)
+#endif
+#ifdef ICESHELF_DYNAM
+!
+!  Scan iceshelf variables from input NetCDF and activate switches for
+!  restart variables. Get variable IDs.
+!
+        CALL isf_def_nf90 (ng, model, Ldefine, Hout, RST)
 #endif
 !
 !  Set unlimited time record dimension to current value.
@@ -3723,6 +3746,16 @@
      &                    t2dgrd, u2dgrd, v2dgrd)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
+# ifdef ICESHELF_DYNAM
+!
+!-----------------------------------------------------------------------
+!  Define iceshelf model variables.
+!-----------------------------------------------------------------------
+!
+        CALL isf_def_pio (ng, model, Ldefine, Hout, RST,                &
+     &                    t2dgrd, u2dgrd, v2dgrd)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+# endif
 !
 !-----------------------------------------------------------------------
 !  Leave definition mode.
@@ -4288,6 +4321,13 @@
 !  restart variables. Get variable IDs.
 !
         CALL ice_def_pio (ng, model, Ldefine, Hout, RST)
+# endif
+# ifdef ICESHELF_DYNAM
+!
+!  Scan iceshelf variables from input NetCDF and activate switches for
+!  restart variables. Get variable IDs.
+!
+        CALL isf_def_pio (ng, model, Ldefine, Hout, RST)
 # endif
 !
 !  Set unlimited time record dimension to current value.

@@ -48,6 +48,12 @@
       USE ice_output_mod,      ONLY : ice_wrt_station_pio
 #  endif
 # endif
+# ifdef ICESHELF_DYNAM
+      USE isf_output_mod,      ONLY : isf_wrt_station_nf90
+#  if defined PIO_LIB && defined DISTRIBUTE
+      USE isf_output_mod,      ONLY : isf_wrt_station_pio
+#  endif
+# endif
 # ifdef SEDIMENT
       USE sediment_output_mod, ONLY : sediment_wrt_station_nf90
 #  if defined PIO_LIB && defined DISTRIBUTE
@@ -1010,6 +1016,18 @@
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
 
+# ifdef ICESHELF_DYNAM
+!
+!-----------------------------------------------------------------------
+!  Write out the iceshelf model variables.
+!-----------------------------------------------------------------------
+!
+      CALL isf_wrt_station_nf90 (ng, model, tile,                       &
+     &                           LBi, UBi, LBj, UBj,                    &
+     &                           Sout, STA)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+# endif
+
 # ifdef SEDIMENT
 !
 !-----------------------------------------------------------------------
@@ -1956,6 +1974,18 @@
 !-----------------------------------------------------------------------
 !
       CALL ice_wrt_station_pio (ng, model, tile,                        &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Sout, STA)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#  endif
+
+#  ifdef ICESHELF_DYNAM
+!
+!-----------------------------------------------------------------------
+!  Write out the iceshelf model variables.
+!-----------------------------------------------------------------------
+!
+      CALL isf_wrt_station_pio (ng, model, tile,                        &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          Sout, STA)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
