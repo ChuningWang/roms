@@ -48,7 +48,7 @@
 !     ExtractField Field extraction flag (integer, OPTIONAL)           !
 !                    ExtractField = 0   no extraction                  !
 !                    ExtractField = 1   extraction by intrpolation     !
-!                    ExtractFiels > 1   extraction by decimation       !
+!                    ExtractField > 1   extraction by decimation       !
 !                                                                      !
 !  On Output:                                                          !
 !                                                                      !

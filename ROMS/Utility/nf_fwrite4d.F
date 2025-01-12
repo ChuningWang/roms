@@ -659,6 +659,7 @@
      &                       Amask,                                     &
 # endif
      &                       Adat, SetFillVal,                          &
+     &                       ExtractField,                              &
      &                       MinValue, MaxValue) RESULT (status)
 !***********************************************************************
 !
