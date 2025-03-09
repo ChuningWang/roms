@@ -6126,6 +6126,39 @@ metadata:
     add_offset:     0.0d0
     scale:          1.0d0
 
+  - variable:       albedo_ocn
+    standard_name:  surface_albedo
+    long_name:      ocean surface albedo
+    units:          nondimensional
+    field:          ocean surface albedo
+    time:           ocean_time
+    index_code:     idAlbo
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       albedo_ice
+    standard_name:  sea_ice_albedo
+    long_name:      sea ice albedo
+    units:          nondimensional
+    field:          sea ice albedo
+    time:           ocean_time
+    index_code:     idAlbi
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       swrad_io_frac
+    standard_name:  ice_shortwave_penetration_fraction
+    long_name:      penetration fraction of shortwave radiation in ice
+    units:          nondimensional
+    field:          penetration fraction of shortwave radiation in ice
+    time:           ocean_time
+    index_code:     idFrsw
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
   ##################################
   ###  Iceshelf State Variables  ###
   ##################################

@@ -43,7 +43,7 @@
 !    Drennan, W. M., Graber, H. C., Hauser, D., & Quentin, C., 2003:   !
 !      On the wave age dependence of wind stress over pure wind seas.  !
 !      J. Geophys. Res: Oceans, 108(C3).                               !
-!                                                                      !                
+!                                                                      !
 !    Edson, J.B., Jampana, V., Weller, R.A., Bigorre, S.P.,            !
 !      Plueddemann, A.J., Fairall, C.W., Miller, S.D., Mahrt, L.,      !
 !      Vickers, D. and Hersbach, H., 2013. On the exchange of          !
@@ -75,7 +75,7 @@
 !  Modified by Jim Edson to correct specific humidities.               !
 !  Modified by John Wilkin to introduce WIND_MINUS_CURRENT (02/2018)   !
 !  Modified by Fernando Pareja-Roman and John Wilkin to introduce      !
-!      COARE 3.5 and correct the partition of vector stress (02/2024)  !     
+!      COARE 3.5 and correct the partition of vector stress (02/2024)  !
 !      To recover older COAREv3.0 #define COARE_30                     !
 !                                                                      !
 !=======================================================================
@@ -167,10 +167,10 @@
       defined DRENNAN)
      &                     FORCES(ng) % Lwavep,                         &
 # endif
-# if defined ICE_MODEL  && defined ICE_BULK_FLUXES && \
-     defined ICE_ALBEDO && defined SHORTWAVE
-!!   &                     FORCES(ng) % albedo,                         &
-     &                     FORCES(ng) % albedo_ice,                     &
+# if defined ICE_MODEL && defined ICE_ALBEDO
+     &                     FORCES(ng) % srflx_ocn,                      &
+     &                     FORCES(ng) % srflx_ics,                      &
+     &                     FORCES(ng) % srflx_icb,                      &
 # endif
      &                     FORCES(ng) % rain,                           &
      &                     FORCES(ng) % lhflx,                          &
@@ -184,10 +184,8 @@
      &                     FORCES(ng) % svstr_ai,                       &
      &                     FORCES(ng) % sustr_ao,                       &
      &                     FORCES(ng) % svstr_ao,                       &
-     &                     FORCES(ng) % Qnet_ao,                        &
 #  ifdef ICE_THERMO
      &                     FORCES(ng) % Qnet_ai,                        &
-     &                     FORCES(ng) % srflx_ice,                      &
      &                     FORCES(ng) % snow,                           &
 #  endif
 # endif
@@ -238,19 +236,17 @@
       defined DRENNAN)
      &                           Lwavep,                                &
 # endif
-# if defined ICE_MODEL  && defined ICE_BULK_FLUXES && \
-     defined ICE_ALBEDO && defined SHORTWAVE
-     &                           albedo_ice,                            &
+# if defined ICE_MODEL && defined ICE_ALBEDO
+     &                           srflx_ocn, srflx_ics, srflx_icb,       &
 # endif
      &                           rain, lhflx, lrflx, shflx, srflx,      &
 # if defined ICE_MODEL && defined ICE_BULK_FLUXES
      &                           Fi, Si,                                &
      &                           sustr_ai, svstr_ai,                    &
      &                           sustr_ao, svstr_ao,                    &
-     &                           Qnet_ao,                               &
 #  ifdef ICE_THERMO
      &                           Qnet_ai,                               &
-     &                           srflx_ice, snow,                       &
+     &                           snow,                                  &
 #  endif
 # endif
 # ifdef EMINUSP
@@ -308,9 +304,10 @@
       defined DRENNAN)
       real(r8), intent(in   ) :: Lwavep(LBi:,LBj:)
 # endif
-#  if defined ICE_MODEL  && defined ICE_BULK_FLUXES && \
-      defined ICE_ALBEDO && defined SHORTWAVE
-      real(r8), intent(in   ) :: albedo_ice(LBi:,LBj:)
+#  if defined ICE_MODEL && defined ICE_ALBEDO
+      real(r8), intent(in   ) :: srflx_ocn(LBi:,LBj:)
+      real(r8), intent(in   ) :: srflx_ics(LBi:,LBj:)
+      real(r8), intent(in   ) :: srflx_icb(LBi:,LBj:)
 #  endif
       real(r8), intent(in   ) :: rain(LBi:,LBj:)
       real(r8), intent(inout) :: lhflx(LBi:,LBj:)
@@ -325,10 +322,8 @@
       real(r8), intent(out  ) :: svstr_ai(LBi:,LBj:)
       real(r8), intent(out  ) :: sustr_ao(LBi:,LBj:)
       real(r8), intent(out  ) :: svstr_ao(LBi:,LBj:)
-      real(r8), intent(out  ) :: Qnet_ao(LBi:,LBj:)
 #   ifdef ICE_THERMO
       real(r8), intent(out  ) :: Qnet_ai(LBi:,LBj:)
-      real(r8), intent(out  ) :: srflx_ice(LBi:,LBj:)
       real(r8), intent(out  ) :: snow(LBi:,LBj:)
 #   endif
 #  endif
@@ -377,9 +372,10 @@
       defined DRENNAN)
       real(r8), intent(in   ) :: Lwavep(LBi:UBi,LBj:UBj)
 # endif
-#  if defined ICE_MODEL  && defined ICE_BULK_FLUXES && \
-      defined ICE_ALBEDO && defined SHORTWAVE
-      real(r8), intent(in   ) :: albedo_ice(LBi:UBi,LBj:UBj)
+#  if defined ICE_MODEL && defined ICE_ALBEDO
+      real(r8), intent(in   ) :: srflx_ocn(LBi:UBi,LBj:UBj)
+      real(r8), intent(in   ) :: srflx_ics(LBi:UBi,LBj:UBj)
+      real(r8), intent(in   ) :: srflx_icb(LBi:UBi,LBj:UBj)
 #  endif
       real(r8), intent(in   ) :: rain(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: lhflx(LBi:UBi,LBj:UBj)
@@ -394,10 +390,8 @@
       real(r8), intent(out  ) :: svstr_ai(LBi:UBi,LBj:UBj)
       real(r8), intent(out  ) :: sustr_ao(LBi:UBi,LBj:UBj)
       real(r8), intent(out  ) :: svstr_ao(LBi:UBi,LBj:UBj)
-      real(r8), intent(out  ) :: Qnet_ao(LBi:UBi,LBj:UBj)
 #   ifdef ICE_THERMO
       real(r8), intent(out  ) :: Qnet_ai(LBi:UBi,LBj:UBj)
-      real(r8), intent(out  ) :: srflx_ice(LBi:UBi,LBj:UBj)
       real(r8), intent(out  ) :: snow(LBi:UBi,LBj:UBj)
 #   endif
 #  endif
@@ -423,6 +417,9 @@
       real(r8) :: PairM,  RH, Taur
       real(r8) :: Wspeed, ZQoL, ZToL
 # if defined ICE_MODEL && defined ICE_BULK_FLUXES
+!
+      real(r8), parameter :: hfus = 3.347E+5_r8
+!
       real(r8) :: Qsw_i, Qlw_i, Qlh_i, Qsh_i
       real(r8) :: Qsati, TiceK
       real(r8) :: Ce, Ch, dq_i, le_i, slp, vap_p_i
@@ -495,16 +492,16 @@
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: Tauy
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: Uair
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: Vair
-# ifdef ICE_THERMO
-      real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: Coef_Ice
-      real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: RHS_Ice
-      real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: Qai
-# endif
 # if defined ICE_MODEL && defined ICE_BULK_FLUXES
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: Taux_Ice
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: Tauy_Ice
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: ice_thick
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: snow_thick
+#  ifdef ICE_THERMO
+      real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: Coef_Ice
+      real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: RHS_Ice
+      real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: Qai
+#  endif
 # endif
 
 # include "set_bounds.h"
@@ -580,9 +577,10 @@
           TseaK(i)=TseaC(i)+273.16_r8                        ! Kelvin
           rhoSea(i)=rho(i,j,N(ng))+1000.0_r8
           RH=Hair(i,j)
+# if defined ICE_MODEL && defined ICE_ALBEDO
+          SRad(i,j)=srflx_ocn(i,j)*Hscale
+# else
           SRad(i,j)=srflx(i,j)*Hscale
-# if defined ICE_MODEL && defined ICE_BULK_FLUXES && defined ICE_THERMO
-          srflx_ice(i,j)=SRad(i,j)
 # endif
           Tcff(i)=alpha(i,j)
           Scff(i)=beta(i,j)
@@ -778,7 +776,7 @@
 # if defined COARE_30
 !
 !  Momentum roughness length based on COARE 3.0 (Fairall et al 2003, JPO)
-!  
+!
           IF (delW(i).gt.18.0_r8) THEN
             charn(i)=0.018_r8
           ELSE IF ((10.0_r8.lt.delW(i)).and.(delW(i).le.18.0_r8)) THEN
@@ -788,7 +786,7 @@
             charn(i)=0.011_r8
           END IF
 
-# else  
+# else
 !
 ! Momentum roughness length based on COARE 3.5 (Edson et al 2013, JPO)
 !
@@ -839,16 +837,16 @@
 !
 #if defined COARE_30
 !
-! Moisture and thermal roughness lengths, COARE 3.0      
-!           
-            ZoQ(i)=MIN(1.15e-4_r8,5.5e-5_r8/Rr(i)**0.6_r8)
-#else 
+! Moisture and thermal roughness lengths, COARE 3.0
 !
-! In COARE 3.5, moisture and thermal roughness lengths are adjusted 
+            ZoQ(i)=MIN(1.15e-4_r8,5.5e-5_r8/Rr(i)**0.6_r8)
+#else
+!
+! In COARE 3.5, moisture and thermal roughness lengths are adjusted
 ! to reflect COARE 3.0 fluxes (J. Edson, pers. comm, 11/2023)
 !
             ZoQ(i)=MIN(1.6e-4_r8,5.8e-5_r8/(Rr(i)**0.72_r8))
-# endif            
+# endif
             ZoT(i)=ZoQ(i)
 !
 !  Compute Monin-Obukhov stability parameter, Z/L.
@@ -949,7 +947,7 @@
 !  sensible heat (Ch), and latent heat (Ce).
 !
           Wspeed=SQRT(Wmag(i)*Wmag(i)+Wgus(i)*Wgus(i))
-!         Cd=Wstar(i)*Wstar(i)/(Wspeed*Wspeed+eps) ! used prior to 02/2024   
+!         Cd=Wstar(i)*Wstar(i)/(Wspeed*Wspeed+eps) ! used prior to 02/2024
 # if defined ICE_MODEL && defined ICE_BULK_FLUXES && defined ICE_THERMO
           Ch=Wstar(i)*Tstar(i)/(-Wspeed*delT(i)+0.0098_r8*blk_ZT(ng))
           Ce=Wstar(i)*Qstar(i)/(-Wspeed*delQ(i)+eps)
@@ -990,7 +988,7 @@
 !  melting snow (SMD).
 !
           IF (rain(i,j).lt.0.0_r8) THEN
-            Hl=Hl+3.347E+5_r8*rain(i,j)
+            Hl=Hl+hfus*rain(i,j)
           END IF
 # endif
 !
@@ -1009,16 +1007,16 @@
           LHeat(i,j)=LHeat(i,j)*rmask_wet(i,j)
 # endif
 !
-!  Horizontal momentum flux (N/m2) due to rain (kg/m2/s) impact 
+!  Horizontal momentum flux (N/m2) due to rain (kg/m2/s) impact
 !  traveling at 85% of air velocity
 !
           Taur=0.85_r8*ABS(rain(i,j))*Wmag(i)
 !
-!  Sum of stresses (N/m2) expressed as friction velocities.  
+!  Sum of stresses (N/m2) expressed as friction velocities.
 !  Normalization by Wmag (m/s) so that stress components (Taux,
 !  Tauy in N/m2) are cff times the respective wind components
-!  (Uair,Vair in m/s). 
-!    
+!  (Uair,Vair in m/s).
+!
           cff=rhoAir(i)*(Wstar(i)*Wstar(i)+Taur/rhoAir(i))/(Wmag(i)+eps)
 !
 !  In prior versions incorrect normalization included gustiness in
@@ -1094,7 +1092,7 @@
           slp=Pair(i,j)*100.0_r8           ! Convert back to Pa from mb
           cff=611.0_r8*                                                 &
      &        10.0_r8**(9.5_r8*(TiceK-273.16_r8)/(TiceK-7.66_r8))
-!!        Qsati=eps*cff/(slp-(1.0_r8-.62197_r8)*cff)
+!         Qsati=eps*cff/(slp-(1.0_r8-.62197_r8)*cff)
           Qsati=0.62197_r8*cff/(slp-(1.0_r8-0.62197_r8)*cff)
           dq_i=Q(i)-Qsati
           Qlh_i=rhoAir(i)*Ce*delW(i)*                                   &
@@ -1106,19 +1104,24 @@
 !
           IF ((rain(i,j).gt.0.0_r8).and.                                &
      &        (Si(i,j,li_stp,isHmel).eq.0.0_r8)) THEN
-            Qlh_i=Qlh_i+3.347E+5_r8*rain(i,j)
+            Qlh_i=Qlh_i+hfus*rain(i,j)
           END IF
           RHS_Ice(i,j)=RHS_Ice(i,j)+Qlh_i
 !
 !  Short-wave radiation (W/m**2) to ice.
 !
-          Qsw_i=(1.0_r8-albedo_ice(i,j))*srflx_ice(i,j)
+          Qsw_i=(srflx_ics(i,j)-srflx_icb(i,j))*Hscale
 !
 !  A question remains as to what fraction of the solar radiation should
 !  be considered to contribute to the surface temperature of the
 !  ice/snow/meltwater?  Leaving unchanged for now, assuming entire
 !  'Qsw_i' contributes to ice surface temperature although it should
 !  probably be something less (SMD).
+!
+!  The algorithm ICE_I_O from the code of Wang et al. (2024) is ported
+!    here to address the issue of penetrated/preserved SWR. Computations
+!    of related fields are carried out in subroutine ice_albedo_tile
+!    (CW, 03/2025)
 !
           RHS_Ice(i,j)=RHS_Ice(i,j)+Qsw_i
 !
@@ -1169,7 +1172,7 @@
 !  seaice surface temperature, Fi(:,:,icIsst), in Kelivin in module
 !  'ice_mk.h' and then converted to Celsius afterwards (SMD).
 !
-           Qai(i,j)=-Qsh_i-Qlh_i-Qsw_i+Qlw_i
+          Qai(i,j)=-Qsh_i-Qlh_i-Qsw_i+Qlw_i
 #  endif
 # endif
         END DO
@@ -1207,30 +1210,12 @@
       cff=1.0_r8/rhow
       DO j=JstrR,JendR
         DO i=IstrR,IendR
-# if defined ALBEDO && defined SHORTWAVE
-!!        srflx(i,j) = srflx(i,j)*(1.0_r8-albedo(i,j))
-# endif
-# if defined ICE_MODEL && defined ICE_BULK_FLUXES
-!
-!  Limit shortwave radiation to be used in computing penetrative
-!  radiation by presence of ice alone.
-!
-          cff1=1.0_r8/(Si(i,j,li_stp,isAice)+eps)
-          ice_thick(i,j) =Si(i,j,li_stp,isHice)*cff1
-          snow_thick(i,j)=Si(i,j,li_stp,isHsno)*cff1
-
-          IF (ice_thick(i,j).le.0.1_r8) THEN
-            cff2=ice_thick(i,j)*5.0_r8
-          ELSE
-            cff2=0.1_r8*(5.0_r8+(ice_thick(i,j)-0.1_r8))
-          ENDIF
-
-          cff2=cff2+snow_thick(i,j)*20.0_r8
-          srflx(i,j)=(1.0_r8-Si(i,j,li_stp,isAice))*srflx(i,j)+         &
-     &               Si(i,j,li_stp,isAice)*srflx(i,j)*EXP(-cff2)
+# if defined ICE_MODEL && defined ICE_BULK_FLUXES && defined ICE_THERMO
 !
 !  Net precipitation (m/s). Negative values of 'rain' indicate frozen
 !  precipitation (SMD).
+!
+!  May need to reforge the treatment of rain/snow here (CW 03/2025).
 !
           IF (rain(i,j).ge.0.0_r8) THEN
             snow(i,j)=0.0_r8
@@ -1241,19 +1226,21 @@
 !
 !  Load surface fluxes to state arrays.
 !
-# if defined ICE_MODEL && defined ICE_BULK_FLUXES
-          Fi(i,j,icQcon)=Coef_Ice(i,j)                       !(W/m2)/K
-          Fi(i,j,icQrhs)=RHS_Ice(i,j)                        ! W/m2
-# endif
           lrflx(i,j)=LRad(i,j)*Hscale                        ! C m/s
           lhflx(i,j)=-LHeat(i,j)*Hscale                      ! C m/s
           shflx(i,j)=-SHeat(i,j)*Hscale                      ! C m/s
+# if defined ICE_MODEL && defined ICE_ALBEDO
+          stflux(i,j,itemp)=(srflx_ocn(i,j)+lrflx(i,j)+                 &
+# else
           stflux(i,j,itemp)=(srflx(i,j)+lrflx(i,j)+                     &
+# endif
      &                       lhflx(i,j)+shflx(i,j))          ! C m/s
 
-# if defined ICE_MODEL && defined ICE_BULK_FLUXES
-          Qnet_ao(i,j)=-stflux(i,j,itemp)/Hscale             ! W/m2
+# if defined ICE_MODEL && defined ICE_BULK_FLUXES && defined ICE_THERMO
+          Fi(i,j,icQcon)=Coef_Ice(i,j)                       !(W/m2)/K
+          Fi(i,j,icQrhs)=RHS_Ice(i,j)                        ! W/m2
           Qnet_ai(i,j)=Qai(i,j)                              ! W/m2
+#  endif
 # endif
 # ifdef MASKING
           stflux(i,j,itemp)=stflux(i,j,itemp)*rmask(i,j)
@@ -1263,9 +1250,6 @@
 # endif
 # ifdef EMINUSP
           evap(i,j)=LHeat(i,j)/(Hlv(i,j)+eps)                ! kg/m2/s
-#  if defined ICE_MODEL && defined ICE_BULK_FLUXES
-          evap(i,j)=(1.0_r8-Si(i,j,li_stp,isAice))*evap(i,j)
-#  endif
 #  ifdef MASKING
           evap(i,j)=evap(i,j)*rmask(i,j)
 #  endif
@@ -1340,15 +1324,25 @@
      &                          LBi, UBi, LBj, UBj,                     &
      &                          stflux(:,:,itemp))
 
+# ifdef EMINUSP
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          evap)
+#  ifdef SALINITY
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          stflux(:,:,isalt))
+#  endif
+# endif
+        CALL exchange_u2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          sustr)
+
+        CALL exchange_v2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          svstr)
+
 # if defined ICE_MODEL && defined ICE_BULK_FLUXES
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          srflx)
-
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Qnet_ao)
-
 #  ifdef ICE_THERMO
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
@@ -1374,31 +1368,13 @@
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          svstr_ai)
-# endif
 
-# ifdef EMINUSP
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          evap)
-#  ifdef SALINITY
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          stflux(:,:,isalt))
-#  endif
-# endif
         CALL exchange_u2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
-     &                          sustr)
-
-        CALL exchange_v2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          svstr)
-# if defined ICE_MODEL && defined ICE_BULK_FLUXES
-        CALL exchange_u2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                       &
      &                          sustr_ao)
+
         CALL exchange_v2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                       &
+     &                          LBi, UBi, LBj, UBj,                     &
      &                          svstr_ao)
 # endif
       END IF
@@ -1411,24 +1387,6 @@
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    lrflx, lhflx, shflx,                          &
      &                    stflux(:,:,itemp))
-
-#  if defined ICE_MODEL && defined ICE_BULK_FLUXES
-      CALL mp_exchange2d (ng, tile, iNLM, 4,                            &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    NghostPoints,                                 &
-     &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    srflx, Qnet_ao, sustr_ai, svstr_ai)
-
-#   ifdef ICE_THERMO
-      CALL mp_exchange2d (ng, tile, iNLM, 4,                            &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    NghostPoints,                                 &
-     &                    EWperiodic(ng), NSperiodic(ng),               &
-                          Fi(:,:,icQcon),                               &
-     &                    Fi(:,:,icQrhs),                               &
-     &                    Qnet_ai, snow)
-#   endif
-#  endif
 
 #  ifdef EMINUSP
       CALL mp_exchange2d (ng, tile, iNLM, 1,                            &
@@ -1450,11 +1408,22 @@
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    sustr, svstr)
 
-# if defined ICE_MODEL && defined ICE_BULK_FLUXES
-      CALL mp_exchange2d (ng, tile, iNLM, 2,                            &
+#  if defined ICE_MODEL && defined ICE_BULK_FLUXES
+#   ifdef ICE_THERMO
+      CALL mp_exchange2d (ng, tile, iNLM, 4,                            &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &
+     &                    Fi(:,:,icQcon),                               &
+     &                    Fi(:,:,icQrhs),                               &
+     &                    Qnet_ai, snow)
+#   endif
+
+      CALL mp_exchange2d (ng, tile, iNLM, 4,                            &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+     &                    sustr_ai, svstr_ai,                           &
      &                    sustr_ao, svstr_ao)
 #  endif
 # endif

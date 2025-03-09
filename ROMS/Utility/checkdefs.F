@@ -1314,7 +1314,7 @@
       Coptions(is:is+13)=' HYPOXIA_SRM,'
       ibiology=ibiology+1
 #endif
-#if defined ICE_MODEL && defined SOLVE3D
+#ifdef ICE_MODEL
 !
       IF (Master) WRITE (stdout,20) 'ICE_MODEL',                        &
      &   'Native Sea-Ice Model (Budgell; Durski and Kurapov)'
@@ -1326,20 +1326,69 @@
      &   'Including advection of ice tracers'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+12)=' ICE_ADVECT,'
+#  ifdef ICE_SMOLAR
+!
+      IF (Master) WRITE (stdout,20) 'ICE_SMOLAR',                       &
+     &   'MPDATA advection scheme'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+12)=' ICE_SMOLAR,'
+#  endif
+#  ifdef ICE_UPWIND
+!
+      IF (Master) WRITE (stdout,20) 'ICE_UPWIND',                       &
+     &   'Upwind advection scheme'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+12)=' ICE_UPWIND,'
+#  endif
 # endif
-# ifdef ICE_ALB_EC92
+# ifdef ICE_MOMENTUM
+!
+      IF (Master) WRITE (stdout,20) 'ICE_MOMENTUM',                     &
+     &   'Including sea ice momentum'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+14)=' ICE_MOMENTUM,'
+#  ifdef ICE_EVP
+!
+      IF (Master) WRITE (stdout,20) 'ICE_EVP',                          &
+     &   'Elastic-viscous-plastic rheology'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+9)=' ICE_EVP,'
+#  endif
+# endif
+# ifdef ICE_MOMENTUM
+!
+      IF (Master) WRITE (stdout,20) 'ICE_THERMO',                       &
+     &   'Including sea ice thermodynamics'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+12)=' ICE_THERMO,'
+#  ifdef ICE_MK
+!
+      IF (Master) WRITE (stdout,20) 'ICE_MK',                           &
+     &   'Mellor-Kantha sea ice thermodynamics'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+8)=' ICE_MK,'
+#  endif
+# endif
+# ifdef ICE_BULK_FLUXES
+!
+      IF (Master) WRITE (stdout,20) 'ICE_BULK_FLUXES',                  &
+     &   'Including sea ice in bulk flux computation'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+17)=' ICE_BULK_FLUXES,'
+#  ifdef ICE_ALB_EC92
 !
       IF (Master) WRITE (stdout,20) 'ICE_ALB_EC92',                     &
      &   'Albedo computation from Ebert and Curry'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+14)=' ICE_ALB_EC92,'
-# endif
-# ifdef ICE_BULK_FLUXES
+#  endif
+#  ifdef ICE_ALB_CSIM
 !
-      IF (Master) WRITE (stdout,20) 'ICE_BULK_FLUXES',                  &
-     &   'Including ice terms in the bulk flux computation'
+      IF (Master) WRITE (stdout,20) 'ICE_ALB_CSIM',                     &
+     &   'Albedo computation from CSIM/CICE 5.1'
       is=LEN_TRIM(Coptions)+1
-      Coptions(is:is+17)=' ICE_BULK_FLUXES,'
+      Coptions(is:is+14)=' ICE_ALB_CSIM,'
+#  endif
 # endif
 # ifdef ICE_CONVSNOW
 !
@@ -1347,27 +1396,6 @@
      &   'Conversion of flooded snow to ice'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+14)=' ICE_CONVSNOW,'
-# endif
-# if defined ICE_EVP && defined ICE_MOMENTUM
-!
-      IF (Master) WRITE (stdout,20) 'ICE_EVP',                          &
-     &   'Elastic-viscous-plastic rheology'
-      is=LEN_TRIM(Coptions)+1
-      Coptions(is:is+9)=' ICE_EVP,'
-# endif
-# ifdef ICE_MK
-!
-      IF (Master) WRITE (stdout,20) 'ICE_MK',                           &
-     &   'Mellor-Kantha thermodynamics'
-      is=LEN_TRIM(Coptions)+1
-      Coptions(is:is+8)=' ICE_MK,'
-# endif
-# ifdef ICE_MOMENTUM
-!
-      IF (Master) WRITE (stdout,20) 'ICE_MOMENTUM',                     &
-     &   'Including momentum term'
-      is=LEN_TRIM(Coptions)+1
-      Coptions(is:is+14)=' ICE_MOMENTUM,'
 # endif
 # ifdef ICE_MOM_BULK
 !
@@ -1382,20 +1410,6 @@
      &   'Quadratic ice strength, a function of thickness'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+19)=' ICE_STRENGTH_QUAD,'
-# endif
-# if defined ICE_SMOLAR && defined ICE_ADVECT
-!
-      IF (Master) WRITE (stdout,20) 'ICE_SMOLAR',                       &
-     &   'MPDATA advection scheme'
-      is=LEN_TRIM(Coptions)+1
-      Coptions(is:is+12)=' ICE_SMOLAR,'
-# endif
-# if defined ICE_UPWIND && defined ICE_ADVECT
-!
-      IF (Master) WRITE (stdout,20) 'ICE_UPWIND',                       &
-     &   'Upwind advection scheme'
-      is=LEN_TRIM(Coptions)+1
-      Coptions(is:is+12)=' ICE_UPWIND,'
 # endif
 #endif
 #ifdef ICESHELF

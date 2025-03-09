@@ -21,7 +21,6 @@
 !  Required atmospheric fields:                                        !
 !                                                                      !
 !    Qnet_ai(:,:)          net heat flux at the air-ice interface      !
-!    Qnet_ao(:,:)          net heat flux at the air-ocean interface    !
 !    rain(:,:)             rain fall rate                              !
 !    snow(:,:)             snow fall rate                              !
 !    sustr(:,:)            surface u-wind stress                       !
@@ -156,9 +155,11 @@
      &                      FORCES(ng) % sustr,                         &
      &                      FORCES(ng) % svstr,                         &
      &                      FORCES(ng) % Qnet_ai,                       &
-     &                      FORCES(ng) % Qnet_ao,                       &
      &                      FORCES(ng) % snow,                          &
      &                      FORCES(ng) % rain,                          &
+#ifdef ICE_ALBEDO
+     &                      FORCES(ng) % srflx_icb,                     &
+#endif
      &                      FORCES(ng) % stflx,                         &
      &                      ICE(ng) % Fi,                               &
      &                      ICE(ng) % Si)
@@ -192,9 +193,12 @@
 #endif
      &                            t,                                    &
      &                            sustr, svstr,                         &
-     &                            Qnet_ai, Qnet_ao,                     &
+     &                            Qnet_ai,                              &
      &                            snow,                                 &
      &                            rain,                                 &
+#ifdef ICE_ALBEDO
+     &                            srflx_icb,                            &
+#endif
      &                            stflx,                                &
      &                            Fi, Si)
 !***********************************************************************
@@ -231,9 +235,11 @@
       real(r8), intent(in) :: sustr(LBi:,LBj:)
       real(r8), intent(in) :: svstr(LBi:,LBj:)
       real(r8), intent(in) :: Qnet_ai(LBi:,LBj:)
-      real(r8), intent(in) :: Qnet_ao(LBi:,LBj:)
       real(r8), intent(in) :: snow(LBi:,LBj:)
       real(r8), intent(in) :: rain(LBi:,LBj:)
+# ifdef ICE_ALBEDO
+      real(r8), intent(in) :: srflx_icb(LBi:,LBj:)
+# endif
       real(r8), intent(inout) :: stflx(LBi:,LBj:,:)
       real(r8), intent(inout) :: Fi(LBi:,LBj:,:)
       real(r8), intent(inout) :: Si(LBi:,LBj:,:,:)
@@ -262,9 +268,11 @@
       real(r8), intent(in) :: sustr(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: svstr(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: Qnet_ai(LBi:UBi,LBj:UBj)
-      real(r8), intent(in) :: Qnet_ao(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: snow(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: rain(LBi:UBi,LBj:UBj)
+# ifdef ICE_ALBEDO
+      real(r8), intent(in) :: srflx_icb(LBi:UBi,LBj:UBj)
+# endif
       real(r8), intent(inout) :: stflx(LBi:UBi,LBj:UBj,NT(ng))
       real(r8), intent(inout) :: Fi(LBi:UBi,LBj:UBj,nIceF)
       real(r8), intent(inout) :: Si(LBi:UBi,LBj:UBj,2,nIceS)
@@ -300,7 +308,7 @@
       real(r8), parameter :: z0oi = 1.317633460955_r8   ! sea roughness
 !
       real(r8) :: cff, cff1, cff2, cff3
-      real(r8) :: d1, d2i, d3, dztop, fac_shflx
+      real(r8) :: d1, d2i, d3, dztop
       real(r8) :: ai_tmp, corfac, cot, delta_mi
       real(r8) :: hicehinv, hstar, mi_old, phi
       real(r8) :: Qsur, rno, termt, terms, tfrz, tfz
@@ -319,6 +327,7 @@
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: ice_thick
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: Qai
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: Qio
+      real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: Qao
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: Qi2
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: salt_top
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: sice
@@ -351,6 +360,7 @@
           temp_top(i,j)=t(i,j,N(ng),nrhs,itemp)
           salt_top(i,j)=t(i,j,N(ng),nrhs,isalt)
           salt_top(i,j)=MIN(MAX(0.0_r8, salt_top(i,j)), 40.0_r8)
+          Qao(i,j)=-stflx(i,j,itemp)/RhoCpr
         END DO
       END DO
 !
@@ -708,10 +718,10 @@
           hfus1(i,j)=hfus*cff+                                          &
      &               Fi(i,j,icT0mk)*Cp_w-                               &
      &               (cff*Cp_i+brnfr(i,j)*Cp_w)*Si(i,j,linew,isTice)
-          IF (((temp_top(i,j).le.tfz).and.(Qnet_ao(i,j).gt.0.0_r8)).or. &
-     &        ((temp_top(i,j).ge.tfz).and.(Qnet_ao(i,j).lt.0.0_r8).and. &
+          IF (((temp_top(i,j).le.tfz).and.(Qao(i,j).gt.0.0_r8)).or.     &
+     &        ((temp_top(i,j).ge.tfz).and.(Qao(i,j).lt.0.0_r8).and.     &
      &         (Si(i,j,linew,isAice).gt.0.0_r8))) THEN
-            Fi(i,j,icW_ao)=Qnet_ao(i,j)/(hfus1(i,j)*RhoSW)
+            Fi(i,j,icW_ao)=Qao(i,j)/(hfus1(i,j)*RhoSW)
           END IF
           IF ((Si(i,j,linew,isAice).le.min_ai(ng)).or.                  &
      &        (Si(i,j,linew,isHice).le.min_hi(ng))) THEN
@@ -726,14 +736,21 @@
             xtot=Si(i,j,linew,isAice)*Fi(i,j,icW_io)+                   &
      &           (1.0_r8-Si(i,j,linew,isAice))*Fi(i,j,icW_ao)
 !
-!  (CW) Revert algorithm back to MK89
+!  Revert algorithm back to MK89 Eqs 20, 21 (CW)
 !
             Fi(i,j,icS0mk) =                                            &
-     &        (chs(i,j)*salt_top(i,j) +                                 &
-     &         (Si(i,j,linew,isAice)*xwai - xtot)*sice(i,j)) /          &
-     &        (chs(i,j) + Si(i,j,linew,isAice)*Fi(i,j,icW_ro) - xtot -  &
-     &         (1._r8-Si(i,j,linew,isAice))*stflx(i,j,isalt) /          &
-     &         salt_top(i,j))
+     &  (chs(i,j)*salt_top(i,j) -                                       &
+     &   (xtot-Si(i,j,linew,isAice)*Fi(i,j,icW_ro))*sice(i,j)) /        &
+     &  (chs(i,j) -                                                     &
+     &   (xtot-Si(i,j,linew,isAice)*Fi(i,j,icW_ro)) -                   &
+     &   (1._r8-Si(i,j,linew,isAice))*stflx(i,j,isalt)/salt_top(i,j))
+!
+!  Alternatively, also remove terms with "wao" (CW)
+!
+!           Fi(i,j,icS0mk) =                                            &
+!    &  (chs(i,j)*salt_top(i,j) -                                       &
+!    &              (Fi(i,j,icW_io)-Fi(i,j,icW_ro))*sice(i,j)) /        &
+!    &  (chs(i,j) - (Fi(i,j,icW_io)-Fi(i,j,icW_ro)))
 !
 !  Based on my reading of MK89, this calculation of "s0mk" does not
 !  follow from the derivation. But it works quite well (SMD)!  Some
@@ -787,7 +804,6 @@
 !
 !  Adjust surface heat flux.
 !
-          fac_shflx=1.0_r8
 #ifdef ICESHELF
           IceCavity=zice(i,j).ne.0.0_r8
 #else
@@ -795,7 +811,7 @@
 #endif
           IF (.not.IceCavity) THEN
             IF(Si(i,j,linew,isAice).le.min_ai(ng)) THEN
-               stflx(i,j,itemp)=Qnet_ao(i,j)*fac_shflx
+               stflx(i,j,itemp)=Qao(i,j)
             ELSE
 #ifdef ICE_SHOREFAST
               hh=h(i,j)+Zt_avg1(i,j)
@@ -807,14 +823,22 @@
                 fac_sf=1.0_r8
               END IF
               stflx(i,j,itemp)=(1.0_r8-Si(i,j,linew,isAice))*           &
-     &                         Qnet_ao(i,j)*fac_shflx+                  &
+     &                         Qao(i,j)+                                &
      &                         (Si(i,j,linew,isAice)*Qio(i,j)-          &
-     &                          xtot*hfus1(i,j))*fac_sf
+     &                          xtot*hfus1(i,j)*RhoSW)*fac_sf
 #else
               stflx(i,j,itemp)=(1.0_r8-Si(i,j,linew,isAice))*           &
-     &                         Qnet_ao(i,j)+                            &
+     &                         Qao(i,j)+                                &
      &                         Si(i,j,linew,isAice)*Qio(i,j)-           &
      &                         xtot*hfus1(i,j)*RhoSW
+#endif
+#ifdef ICE_ALBEDO
+!
+!  Add short-wave radiation flux that penetrats sea ice.
+!
+              stflx(i,j,itemp)=stflx(i,j,itemp) -                       &
+     &                         Si(i,j,linew,isAice)*srflx_icb(i,j) /    &
+     &                         RhoCpr
 #endif
             END IF
 !
@@ -977,8 +1001,8 @@
           Si(i,j,linew,isHice)=Si(i,j,linew,isHice)*rmask(i,j)
 #endif
 #ifdef WET_DRY
-!         Si(i,j,linew,isAice)=Si(i,j,linew,isAice)*rmask_wet(i,j)
-!         Si(i,j,linew,isHice)=Si(i,j,linew,isHice)*rmask_wet(i,j)
+          Si(i,j,linew,isAice)=Si(i,j,linew,isAice)*rmask_wet(i,j)
+          Si(i,j,linew,isHice)=Si(i,j,linew,isHice)*rmask_wet(i,j)
 #endif
 #ifdef ICESHELF
           IF (zice(i,j).ne.0.0_r8) THEN

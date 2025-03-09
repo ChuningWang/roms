@@ -133,18 +133,31 @@
 !                                                                      !
 !  tflux        Surface tracer flux adjustments (:,:,Nfrec,2,itrc)     !
 #endif
-#if defined ICE_MODEL && defined ICE_BULK_FLUXES && defined BULK_FLUXES
+#ifdef ICE_MODEL
 !                                                                      !
 !  Seaice fluxes.                                                      !
 !                                                                      !
+# if defined ICE_ALBEDO && defined SHORTWAVE
+!  albedo_ocn   Ocean albedo [fraction]                                !
+!  albedo_ice   Sea ice albedo [fraction]                              !
+!  frswp        Shortwave penetration rate in ice [fraction]           !
+#  ifdef ICE_LMD_SHORTWAVE
+!  rfaci        Correction factor for lmd_r1 [fraction]                !
+#  endif
+!  srflx_ocn    Shortwave radiation flux on ocean surface              !
+!  srflx_ics    Shortwave radiation flux on ice surface                !
+!  srflx_icb    Shortwave radiation flux on ice base                   !
+# endif
+# if defined ICE_BULK_FLUXES && defined BULK_FLUXES
+#  ifdef ICE_THERMO
 !  Qnet_ai      Surface net heat flux at the Air/Ice inteface          !
-!  Qnet_ao      Surface net heat flux at the Air/Ocean inteface        !
 !  snow         Snow fall rate on ice                                  !
-!  srflx_ice    Shortwave radiation flux on ice                        !
+#  endif
 !  sustr_ai     Surface U-momentum stress at the Air/Ice interface     !
 !  svstr_ai     Surface V-momentum stress at the Air/Ice interface     !
 !  sustr_ao     Surface U-momentum stress at the Air/Ocean interface   !
 !  svstr_ao     Surface V-momentum stress at the Air/Ocean interface   !
+# endif
 #endif
 !                                                                      !
 !  Bottom tracer fluxes.                                               !
@@ -339,11 +352,16 @@
 #  ifndef ANA_SRFLUX
           real(r8), pointer :: srflxG(:,:,:)
 #  endif
-#  ifdef ICE_ALBEDO
-          real(r8), pointer :: albedo(:,:)
-#   ifdef ICE_MODEL
+#  if defined ICE_MODEL && defined ICE_ALBEDO
+          real(r8), pointer :: albedo_ocn(:,:)
           real(r8), pointer :: albedo_ice(:,:)
+          real(r8), pointer :: frswp(:,:)
+#   ifdef ICE_LMD_SHORTWAVE
+          real(r8), pointer :: rfaci(:,:)
 #   endif
+          real(r8), pointer :: srflx_ocn(:,:)
+          real(r8), pointer :: srflx_ics(:,:)
+          real(r8), pointer :: srflx_icb(:,:)
 #  endif
 # endif
 
@@ -403,14 +421,14 @@
 
 # if defined ICE_MODEL       && \
      defined ICE_BULK_FLUXES && defined BULK_FLUXES
+#  ifdef ICE_THERMO
           real(r8), pointer :: Qnet_ai(:,:)
-          real(r8), pointer :: Qnet_ao(:,:)
-          real(r8), pointer :: srflx_ice(:,:)
+          real(r8), pointer :: snow(:,:)
+#  endif
           real(r8), pointer :: sustr_ao(:,:)
           real(r8), pointer :: svstr_ao(:,:)
           real(r8), pointer :: sustr_ai(:,:)
           real(r8), pointer :: svstr_ai(:,:)
-          real(r8), pointer :: snow(:,:)
 # endif
 
           real(r8), pointer :: stflux(:,:,:)
@@ -780,13 +798,23 @@
       allocate ( FORCES(ng) % srflxG(LBi:UBi,LBj:UBj,2) )
       Dmem(ng)=Dmem(ng)+size2d
 #  endif
-#  ifdef ICE_ALBEDO
-      allocate ( FORCES(ng) % albedo(LBi:UBi,LBj:UBj) )
+#  if defined ICE_MODEL && defined ICE_ALBEDO
+      allocate ( FORCES(ng) % albedo_ocn(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
-#   ifdef ICE_MODEL
       allocate ( FORCES(ng) % albedo_ice(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
+      allocate ( FORCES(ng) % frswp(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
+#   ifdef ICE_LMD_SHORTWAVE
+      allocate ( FORCES(ng) % rfaci(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
 #   endif
+      allocate ( FORCES(ng) % srflx_ocn(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
+      allocate ( FORCES(ng) % srflx_ics(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
+      allocate ( FORCES(ng) % srflx_icb(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
 #  endif
 # endif
 
@@ -876,18 +904,15 @@
 #  endif
 # endif
 
-# if defined ICE_MODEL && defined ICE_BULK_FLUXES && defined BULK_FLUXES
+# if defined ICE_MODEL       && \
+     defined ICE_BULK_FLUXES && defined BULK_FLUXES
+#  ifdef ICE_THERMO
       allocate ( FORCES(ng) % Qnet_ai(LBi:UBi,LBj:UBj) )
-      Dmem(ng)=Dmem(ng)+size2d
-
-      allocate ( FORCES(ng) % Qnet_ao(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
 
       allocate ( FORCES(ng) % snow(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
-
-      allocate ( FORCES(ng) % srflx_ice(LBi:UBi,LBj:UBj) )
-      Dmem(ng)=Dmem(ng)+size2d
+#  endif
 
       allocate ( FORCES(ng) % sustr_ao(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
@@ -1357,13 +1382,23 @@
      &                 __LINE__, 'FORCES(ng)%srflxG')) RETURN
 #   endif
 
-#   ifdef ICE_ALBEDO
-      IF (.not.destroy(ng, FORCES(ng)%albedo, MyFile,                   &
-     &                 __LINE__, 'FORCES(ng)%albedo')) RETURN
-#    ifdef ICE_MODEL
+#   if defined ICE_MODEL && defined ICE_ALBEDO
+      IF (.not.destroy(ng, FORCES(ng)%albedo_ocn, MyFile,               &
+     &                 __LINE__, 'FORCES(ng)%albedo_ocn')) RETURN
       IF (.not.destroy(ng, FORCES(ng)%albedo_ice, MyFile,               &
      &                 __LINE__, 'FORCES(ng)%albedo_ice')) RETURN
+      IF (.not.destroy(ng, FORCES(ng)%frswp, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%frswp')) RETURN
+#    ifdef ICE_LMD_SHORTWAVE
+      IF (.not.destroy(ng, FORCES(ng)%rfaci, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%rfaci')) RETURN
 #    endif
+      IF (.not.destroy(ng, FORCES(ng)%srflx_ocn, MyFile,                &
+     &                 __LINE__, 'FORCES(ng)%srflx_ocn')) RETURN
+      IF (.not.destroy(ng, FORCES(ng)%srflx_ics, MyFile,                &
+     &                 __LINE__, 'FORCES(ng)%srflx_ics')) RETURN
+      IF (.not.destroy(ng, FORCES(ng)%srflx_icb, MyFile,                &
+     &                 __LINE__, 'FORCES(ng)%srflx_icb')) RETURN
 #   endif
 #  endif
 
@@ -1454,17 +1489,13 @@
 
 #  if defined ICE_MODEL       && \
       defined ICE_BULK_FLUXES && defined BULK_FLUXES
+#  ifdef ICE_THERMO
       IF (.not.destroy(ng, FORCES(ng)%Qnet_ai, MyFile,                  &
      &                 __LINE__, 'FORCES(ng)%Qnet_ai')) RETURN
 
-      IF (.not.destroy(ng, FORCES(ng)%Qnet_ao, MyFile,                  &
-     &                 __LINE__, 'FORCES(ng)%Qnet_ao')) RETURN
-
       IF (.not.destroy(ng, FORCES(ng)%snow, MyFile,                     &
      &                 __LINE__, 'FORCES(ng)%snow')) RETURN
-
-      IF (.not.destroy(ng, FORCES(ng)%srflx_ice, MyFile,                &
-     &                 __LINE__, 'FORCES(ng)%srflx_ice')) RETURN
+#  endif
 
       IF (.not.destroy(ng, FORCES(ng)%sustr_ai, MyFile,                 &
      &                 __LINE__, 'FORCES(ng)%sustr_ai')) RETURN
@@ -1957,11 +1988,16 @@
             FORCES(ng) % srflxG(i,j,1) = IniVal
             FORCES(ng) % srflxG(i,j,2) = IniVal
 #  endif
-#  ifdef ICE_ALBEDO
-            FORCES(ng) % albedo(i,j) = IniVal
-#   ifdef ICE_MODEL
+#  if defined ICE_MODEL && defined ICE_ALBEDO
+            FORCES(ng) % albedo_ocn(i,j) = IniVal
             FORCES(ng) % albedo_ice(i,j) = IniVal
+            FORCES(ng) % frswp(i,j) = IniVal
+#   ifdef ICE_LMD_SHORTWAVE
+            FORCES(ng) % rfaci(i,j) = IniVal
 #   endif
+            FORCES(ng) % srflx_ocn(i,j) = IniVal
+            FORCES(ng) % srflx_ics(i,j) = IniVal
+            FORCES(ng) % srflx_icb(i,j) = IniVal
 #  endif
 # endif
 # if defined RED_TIDE && defined DAILY_SHORTWAVE
@@ -2000,10 +2036,10 @@
 # endif
 # if defined ICE_MODEL       && \
      defined ICE_BULK_FLUXES && defined BULK_FLUXES
+#  ifdef ICE_THERMO
             FORCES(ng) % Qnet_ai(i,j) = IniVal
-            FORCES(ng) % Qnet_ao(i,j) = IniVal
             FORCES(ng) % snow(i,j) = IniVal
-            FORCES(ng) % srflx_ice(i,j) = IniVal
+#  endif
             FORCES(ng) % sustr_ai(i,j) = IniVal
             FORCES(ng) % svstr_ai(i,j) = IniVal
             FORCES(ng) % sustr_ao(i,j) = IniVal

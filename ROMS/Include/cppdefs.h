@@ -627,19 +627,21 @@
 ** Sea-ice modeling OPTIONS:                                                 **
 **                                                                           **
 ** ICE_MODEL               to activate sea-ice model                         **
-** ICE_THERMO              if thermodynamic component                        **
-** ICE_MK                  if Mellor-Kantha thermodynamics (only choice)     **
-** ICE_ALB_EC92            if albedo computation from Ebert and Curry        **
-** ICE_MOMENTUM            if momentum component                             **
-** ICE_MOM_BULK            if alternate ice-water stress computation         **
-** ICE_EVP                 if elastic-viscous-plastic rheology               **
 ** ICE_ADVECT              if advection of ice tracers                       **
 ** ICE_SMOLAR              if MPDATA advection scheme                        **
 ** ICE_UPWIND              if upwind advection scheme                        **
+** ICE_MOMENTUM            if momentum component                             **
+** ICE_EVP                 if elastic-viscous-plastic rheology               **
+** ICE_THERMO              if thermodynamic component                        **
+** ICE_MK                  if Mellor-Kantha thermodynamics (only choice)     **
 ** ICE_BULK_FLUXES         if ice part of bulk flux computation              **
+** ICE_ALBEDO              if albedo computation                             **
+** ICE_ALB_EC92            if albedo computation from Ebert and Curry        **
+** ICE_ALB_CSIM            if albedo computation algorithm from CSIM/CICE5.1 **
 ** ICE_CONVSNOW            if conversion of flooded snow to ice              **
+** ICE_MOM_BULK            if alternate ice-water stress computation         **
 ** ICE_STRENGTH_QUAD       if quadratic ice strength, a function of thickness**
-** NO_SCORRECTION_ICE      if no salinity correction under the ice           **
+** ICE_NO_SCORRECTION      if no temperature/salinity correction under ice   **
 ** OUTFLOW_MASK            if Hibler style outflow cells                     **
 
 **                                                                           **

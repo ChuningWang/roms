@@ -2,16 +2,25 @@
       MODULE ice_albedo_mod
 
 #if defined ICE_MODEL && defined ICE_ALBEDO
+#define ICE_ALB_EC92
+#define ICE_ALB_SANGLE
+#define ICE_ALB_GREGORIAN
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group          Chuning Wang   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This module computes the surface albedo over seawater, snow, or ice !
 !  using selected formulation.                                         !
+!                                                                      !
+!  Additionally, it computes the fraction of shortwave radtion         !
+!    penetrating ice base (frswp), so that shortwave radiation         !
+!    reaching ice base is:                                             !
+!                                                                      !
+!      SW_ice_base = SW*(1-albedo_ice)*frswp                           !
 !                                                                      !
 !  References:                                                         !
 !                                                                      !
@@ -20,9 +29,15 @@
 !      from Satellite Observations and Model Computations, J.          !
 !      Climate and Appled Meteor., 25, 214-226.                        !
 !                                                                      !
+!    Briegleb, B.P., et al., 2004: Scientific Description of the Sea   !
+!      Ice Component in the Community Climate System Model, Version    !
+!      Three                                                           !
+!                                                                      !
 !    Ebert, E.E. and J.A. Curry, 1992: A parameterization of ice       !
 !      cloud optical properties for climate models, J. Geophys.        !
 !      Res., 97, 3831-3836, doi: doi.org/10.1029/91jD02472.            !
+!                                                                      !
+!    Iqbal, M.,1983 An Introduction to Solar Radiation [Book]          !
 !                                                                      !
 !=======================================================================
 !
@@ -59,28 +74,40 @@
 !
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__
-!
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, model, 42, __LINE__, MyFile)
+      CALL wclock_on (ng, iNLM, 42, __LINE__, MyFile)
 # endif
       CALL ice_albedo_tile (ng, tile, model,                            &
      &                      LBi, UBi, LBj, UBj,                         &
      &                      IminS, ImaxS, JminS, JmaxS,                 &
      &                      liold(ng), linew(ng),                       &
-# if defined SHORTWAVE && (defined ALBEDO_CURVE || defined ALBEDO_SZO)
-     &                      GRID(ng) % lonr,                            &
+# ifdef ICESHELF
+     &                      GRID(ng) % zice,                            &
+# endif
+# ifdef ICE_ALB_SANGLE
      &                      GRID(ng) % latr,                            &
+     &                      GRID(ng) % lonr,                            &
+#  ifdef CLOUDS
+     &                      FORCES(ng) % cloud,                         &
+#  endif
 # endif
      &                      ICE(ng) % Fi,                               &
      &                      ICE(ng) % Si,                               &
+     &                      FORCES(ng) % srflx,                         &
      &                      FORCES(ng) % albedo_ice,                    &
-     &                      FORCES(ng) % albedo)
-# ifdef PROFILE
-      CALL wclock_off (ng, model, 42, __LINE__, MyFile)
+     &                      FORCES(ng) % albedo_ocn,                    &
+     &                      FORCES(ng) % frswp,                         &
+# ifdef ICE_LMD_SHORTWAVE
+     &                      FORCES(ng) % rfaci,                         &
 # endif
-!
+     &                      FORCES(ng) % srflx_ics,                     &
+     &                      FORCES(ng) % srflx_icb,                     &
+     &                      FORCES(ng) % srflx_ocn)
+# ifdef PROFILE
+      CALL wclock_off (ng, iNLM, 17, __LINE__, __FILE__)
+# endif
       RETURN
       END SUBROUTINE ice_albedo
 !
@@ -89,11 +116,20 @@
      &                            LBi, UBi, LBj, UBj,                   &
      &                            IminS, ImaxS, JminS, JmaxS,           &
      &                            liold, linew,                         &
-# if defined SHORTWAVE && (defined ALBEDO_CURVE || defined ALBEDO_SZO)
-     &                            lonr, latr,                           &
+# ifdef ICESHELF
+     &                            zice,                                 &
 # endif
-     &                            Fi, Si,                               &
-     &                            albedo_ice, albedo)
+# ifdef ICE_ALB_SANGLE
+     &                            latr, lonr,                           &
+#  ifdef CLOUDS
+     &                            cloud,                                &
+#  endif
+     &                            Fi, Si, srflx,                        &
+     &                            albedo_ice, albedo_ocn, frswp,        &
+# ifdef ICE_LMD_SHORTWAVE
+     &                            rfaci,                                &
+# endif
+     &                            srflx_ics, srflx_icb, srflx_ocn)
 !***********************************************************************
 !
 !  Imported variable declarations.
@@ -104,40 +140,139 @@
       integer, intent(in) :: liold, linew
 !
 # ifdef ASSUMED_SHAPE
-#  if defined SHORTWAVE && (defined ALBEDO_CURVE || defined ALBEDO_SZO)
-      real(r8), intent(in) :: lonr(LBi:,LBj:)
+#  ifdef ICESHELF
+      real(r8), intent(in) :: zice(LBi:,LBj:)
+#  endif
+#  ifdef ICE_ALB_SANGLE
       real(r8), intent(in) :: latr(LBi:,LBj:)
+      real(r8), intent(in) :: lonr(LBi:,LBj:)
+#   ifdef CLOUDS
+      real(r8), intent(in) :: cloud(LBi:,LBj:)
+#   endif
 #  endif
       real(r8), intent(in) :: Fi(LBi:,LBj:,:)
       real(r8), intent(in) :: Si(LBi:,LBj:,:,:)
+      real(r8), intent(in) :: srflx(LBi:,LBj:)
       real(r8), intent(out) :: albedo_ice(LBi:,LBj:)
-      real(r8), intent(out) :: albedo(LBi:,LBj:)
+      real(r8), intent(out) :: albedo_ocn(LBi:,LBj:)
+      real(r8), intent(out) :: frswp(LBi:,LBj:)
+#  ifdef ICE_LMD_SHORTWAVE
+      real(r8), intent(out) :: rfaci(LBi:,LBj:)
+#  endif
+      real(r8), intent(out) :: srflx_ics(LBi:,LBj:)
+      real(r8), intent(out) :: srflx_icb(LBi:,LBj:)
+      real(r8), intent(out) :: srflx_ocn(LBi:,LBj:)
 
 # else
-
-#  if defined SHORTWAVE && (defined ALBEDO_CURVE || defined ALBEDO_SZO)
-      real(r8), intent(in) :: lonr(LBi:UBi,LBj:UBj)
+#  ifdef ICESHELF
+      real(r8), intent(in) :: zice(LBi:UBi,LBj:UBj)
+#  endif
+#  ifdef ICE_ALB_SANGLE
       real(r8), intent(in) :: latr(LBi:UBi,LBj:UBj)
+      real(r8), intent(in) :: lonr(LBi:UBi,LBj:UBj)
+#   ifdef CLOUDS
+      real(r8), intent(in) :: cloud(LBi:UBi,LBj:UBj)
+#   endif
 #  endif
       real(r8), intent(in) :: Fi(LBi:UBi,LBj:UBj,nIceF)
       real(r8), intent(in) :: Si(LBi:UBi,LBj:UBj,2,nIceS)
+      real(r8), intent(in) :: srflx(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: albedo_ice(LBi:UBi,LBj:UBj)
-      real(r8), intent(out) :: albedo(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: albedo_ocn(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: frswp(LBi:UBi,LBj:UBj)
+#  ifdef ICE_LMD_SHORTWAVE
+      real(r8), intent(out) :: rfaci(LBi:UBi,LBj:UBj)
+#  endif
+      real(r8), intent(out) :: srflx_ics(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: srflx_icb(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: srflx_ocn(LBi:UBi,LBj:UBj)
 # endif
 !
 !  Local variable declarations.
 !
       integer :: i, j, li_stp
-# if defined ALBEDO_SZO
-      integer :: iday, month, year
-# endif
 !
-      real(r8), parameter :: alb_w = 0.06_r8
+!  Default ocean surface albedo
+!
+      real(r8), parameter :: alb_o  = 0.060_r8
+      real(r8), parameter :: alb_oz = 0.065_r8
+!
+# ifdef ICE_ALB_CSIM
+!
+! DuVivier et al., 2018
+!
+!   Visible ice albedo for h > ahmax; CESM2/CICE5.1 default
+!     (cf. 0.73 in Briegleb et al., 2004)
+!
+      real(r8), parameter :: albicev   = 0.78_r8
+!
+!   Near-ir ice albedo for h > ahmax; CESM2/CICE5.1 default
+!     (cf. 0.33 in Briegleb et al., 2004)
+!
+      real(r8), parameter :: albicei   = 0.36_r8
+!
+!   Cold snow albedo, visible; CESM2/CICE5.1 default
+!     (cf. 0.96 in Briegleb et al., 2004)
+!
+      real(r8), parameter :: albsnowv  = 0.98_r8
+!
+!   Cold snow albedo, near IR; CESM2/CICE5.1 default
+!     (cf. 0.68 in Briegleb et al., 2004)
+!
+      real(r8), parameter :: albsnowi  = 0.70_r8
+!
+!   Thickness above which ice albedo is const (m); CESM2/CICE5.1 default
+!     (cf. 0.5 m in Briegleb et al., 2004)
+!
+      real(r8), parameter :: ahmax     = 0.3_r8
+!
+!   Parameter for fractional snow area (m); CESM2/CICE5.1 default
+!     (cf. 0.02 m in Briegleb et al., 2004)
+!
+      real(r8), parameter :: snowpatch = 0.02_r8
+!
+!   Change in temp to give dalb_mlt albedo (C); CESM2/CICE5.1 default
+!     (cf. 1.0 C in Briegleb et al., 2004)
+!
+      real(r8), parameter :: dT_melt   = 1.0_r8
+!
+!   Albedo change per dT_melt in temp for ice; CESM2/CICE5.1 default
+!     (cf. -0.075 in Briegleb et al., 2004)
+!
+      real(r8), parameter :: dalb_mlt  = -0.075_r8
+!
+!   Albedo vis change per dT_melt in temp for snow; CESM2/CICE5.1 default
+!     (cf. -0.1 in Briegleb et al., 2004)
+!
+      real(r8), parameter :: dalb_mltv = -0.1_r8
+!
+!   Albedo ir change per dT_melt in temp for snow; CESM2/CICE5.1 default
+!     (cf. -0.15 in Briegleb et al., 2004)
+!
+      real(r8), parameter :: dalb_mlti = -0.15_r8
+!
+!   Melting temperature, ice top surface (C)
+!
+      real(r8), parameter :: Timelt    = 0.0_r8
+!
+!   Melting temperature, snow top surface (C)
+!
+      real(r8), parameter :: Tsmelt    = 0.0_r8
+      real(r8), parameter :: puny      = 1.0e-11_r8
+!
+!   Visual fraction of total shortwave (Aumont et al., 2015)
+!
+      real(r8), parameter :: fv        = 0.43_r8
+!
+!   Fraction of penetrating solar rad (visible); CESM2/CICE5.1 default
+!     (cf. 0.7 in Briegleb et al., 2004)
+!
+      real(r8), parameter :: i0vis     = 0.70_r8
 
-# ifdef ALBEDO_CSIM
-      real(r8), parameter :: alb_i_thick = 0.54_r8
-      real(r8), parameter :: alb_s_dry = 0.83_r8
-      real(r8), parameter :: alb_s_wet = 0.70_r8
+      real(r8) :: fh, alb, alvni, alini, dTs, fT
+      real(r8) :: alvns, alins, asnow, alvn, alin
+# elif defined ICE_ALB_EC92
+      real(r8) :: alb_s = 0.83_r8
 # else
       real(r8), parameter :: alb_i_dry = 0.65_r8
       real(r8), parameter :: alb_i_wet = 0.60_r8
@@ -145,17 +280,17 @@
       real(r8), parameter :: alb_s_wet = 0.72_r8
 # endif
 
-# ifdef ICE_ALB_EC92
-      real(r8) :: alb_ice, alb_snow, Hice, Hsnow
-# endif
-# if defined ALBEDO_SZO
-      real(r8) :: Dangle, Hangle, LatRad, zenith
-      real(dp) :: hour, yday
+      real(r8) :: i_thick, s_thick
+      real(r8) :: hours, days, dangle, hangle, langle
+      real(r8) :: sin2, cos2, cosz, alb_sr
+# ifdef ICE_ALB_DMEAN
+      integer,  parameter :: ifrac     = 24
+      real(r8), parameter :: absh2o    = 0.09_r8
+      real(r8), parameter :: fraci     = 1._r8/REAL(ifrac,r8)
+      integer  :: npart
+      real(r8) :: stot, sads, ssurf, sdir, sdif, altdeg, cfac
 # endif
       real(r8) :: cff, cff1, cff2, sfc_temp
-!
-      real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: ice_thick
-      real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: snow_thick
 
 # include "set_bounds.h"
 !
@@ -165,184 +300,298 @@
 !
 !  Set ice model time level.
 !
-      IF (PerfectRST(ng).and.(iic(ng).eq.ntstart(ng))) THEN
-        li_stp=liold
+      IF (PerfectRST(ng) .and. iic(ng).eq.ntstart(ng)) THEN
+        li_stp = liold
       ELSE
-        li_stp=linew
+        li_stp = linew
       END IF
 
-# if defined ALBEDO_SZO
+# if defined ICE_ALB_SANGLE || defined ICE_ALB_DMEAN
 !
-!  Calculate the solar zenith angle and approximate the  ocean albedo
-!  using Briegleb et al. (1986)  empirical formulation.
+!  Calculate solar angle.
+!    Iqbal (1992) Pg 7
 !
-      CALL caldate (tdays(ng), h_dp=hour, yd_dp=yday)
-!
-!  Estimate solar declination angle (radians).
-!
-      Dangle=23.44_r8*COS((172.0_r8-yday)*2.0_r8*pi/365.25_r8)
-      Dangle=Dangle*deg2rad
-!
-!  Compute hour angle (radians).
-!
-      Hangle=(12.0_r8-hour)*pi/12.0_r8
-# endif
-!
-!-----------------------------------------------------------------------
-!  Compute surface albedo.
-!-----------------------------------------------------------------------
-!
-      DO j=JstrT,JendT
-        DO i=IstrT,IendT
-!
-!  Compute the ice/snow albedo
-!
-          cff=1.0_r8/(Si(i,j,li_stp,isAice)+0.001_r8)
-          ice_thick (i,j)=cff*Si(i,j,li_stp,isHice)
-          snow_thick(i,j)=cff*Si(i,j,li_stp,isHsno)
-          sfc_temp=Fi(i,j,icIsst)
-
-# ifdef ICE_ALB_EC92
-!
-!  Ice and snow albedo is calculated from Ebert and Curry (1992).
-!
-          alb_ice=0.0_r8
-          alb_snow=0.0_r8
-
-          IF (Si(i,j,li_stp,isAice).gt.min_ai(ng)) THEN
-            Hice =ice_thick(i,j)
-            Hsnow=snow_thick(i,j)
-!
-!  The threshold test can still lead to a negative albedo, so we modify
-!  the minimum ice thickness for this estimate to something more
-!  reasonable (SMD).
-!
-            Hice=MAX(Hice, 0.01_r8)
-            IF (Hice.ge.2.0_r8) THEN
-              alb_ice=0.561632_r8
-            ELSE IF (Hice.ge.1.0_r8) THEN
-              alb_ice=0.07616_r8*Hice+0.414492_r8
-            ELSE
-              alb_ice=0.082409_r8*LOG(Hice)+0.485472_r8
-            END IF
-!
-!  Approximated values for alb_snow depends on COSZ, but small
-!  variation.
-!
-            IF (Si(i,j,li_stp,isHmel).gt.0.0_r8) THEN
-              IF (Hsnow.ge.0.1_r8) THEN
-                alb_snow=0.701009_r8
-              ELSE
-                alb_snow=alb_ice+(0.701009_r8-alb_ice)*Hsnow/0.1_r8
-              END IF
-            ELSE
-              alb_snow=0.83_r8
-            END IF
-!
-!  Ebert and Curry estimate the melt pond albedo to be between 0.14 and
-!  0.26, depending on the thickness of the meltwater ponds.  But of
-!  course, the meltwater ponds do not cover all the ice surface, except
-!  maybe effectively when the ice consists of small pieces with little
-!  freeboard. So let's try the idea that the effective albedo of the
-!  ice/melt pond/snow is that of ice for bare ice, that of snow
-!  (potentially modified by meltwater if snow is present), and the
-!  average of the high-end melt pond (0.26) and the low-end ice bare
-!  ice (0.56) when melt ponds of more than a few centimeters deep are
-!  present (SMD).
-!
-            IF (Si(i,j,li_stp,isHsno).gt.0.0_r8) THEN
-              albedo_ice(i,j)=alb_snow
-            ELSE IF (Si(i,j,li_stp,isHmel).gt.0.02_r8) THEN
-              albedo_ice(i,j)=0.42_r8
-            ELSE
-              albedo_ice(i,j)=alb_ice
-            END IF
-          ELSE
-            albedo_ice(i,j)=alb_w             ! water albedo
-          ENDIF
-
-# elif defined ALBEDO_CSIM
-!
-!  Community Sea Ice Model (CSIM) formulation.
-!
-          fhi=MIN(ATAN(4.0_r8*ice_thick(i,j))/ATAN(2.0_r8), 1.0_r8)
-          fsn=snow_thick(i,j)/(snow_thick(i,j)+0.02_r8)
-          alb_i_dry=alb_w*(1-fh)+alb_i_thick*fh
-          cff1=alb_s_wet-alb_s_dry
-          cff2=-0.075                            ! alb_i_wet - alb_i_dry
-          IF (Si(i,j,li_stp,isAice).gt.min_ai(ng)) THEN
-            IF (sfc_temp-273.16_r8.gt. -1.0_r8) THEN
-              alb_snow=cff1*(sfc_temp-272.16_r8)+alb_s_dry
-            ELSE
-              alb_snow=alb_s_dry
-            ENDIF
-            IF (sfc_temp-273.16_r8.gt. -1._r8) THEN
-              alb_ice=cff2*(sfc_temp-272.16_r8)+alb_i_dry
-            ELSE
-              alb_ice=alb_i_dry
-            END IF
-            albedo_ice(i,j)=fsn*alb_snow+(1-fsn)*alb_ice
-          ELSE
-            albedo_ice(i,j)=alb_w             ! water albedo
-          END IF
-# else
-!
-!  Default formulation.
-!
-          cff1=alb_s_wet-alb_s_dry
-          cff2=alb_i_wet-alb_i_dry
-          IF (Si(i,j,li_stp,isAice).gt.min_ai(ng)) THEN
-            IF (Si(i,j,li_stp,isHsno).gt.0.0_r8) THEN
-              IF ((sfc_temp-273.16_r8).gt.-1.0_r8) THEN
-                albedo_ice(i,j)=cff1*(sfc_temp-272.16_r8)+alb_s_dry
-              ELSE
-                albedo_ice(i,j)=alb_s_dry
-              END IF
-            ELSE
-              IF ((sfc_temp-273.16_r8).gt.-1.0_r8) THEN
-                albedo_ice(i,j)=cff2*(sfc_temp-272.16_r8)+alb_i_dry
-              ELSE
-                albedo_ice(i,j)=alb_i_dry
-              END IF
-            END IF
-          ELSE
-            albedo_ice(i,j)=alb_w             ! water albedo
-          END IF
+      CALL caldate (tdays(ng), yd_dp=days, h_dp=hours)
+      days   = MOD(days-1._r8,365._r8)
+      dangle = 2.0_r8*pi*days/365._r8
+      dangle = .006918_r8 +                                             &
+     &  .070257_r8*SIN(      dangle) - .399912_r8*COS(      dangle) +   &
+     &  .000907_r8*SIN(2._r8*dangle) - .006758_r8*COS(2._r8*dangle) +   &
+     &  .001480_r8*SIN(3._r8*dangle) - .002697_r8*COS(3._r8*dangle)
+      hangle = pi*(hours-12.0_r8)/12.0_r8
 # endif
 
-# ifdef ALBEDO_CURVE
+      DO j=Jstr-1,JendR
+        DO i=Istr-1,IendR
+# ifdef ICESHELF
+          IF (zice(i,j).ne.0.0_r8) THEN
 !
-!  Compute seawater albedo from curve.
+!  Zero out fluxes under iceshelf
 !
-          albedo(i,j)=0.069_r8-                                         &
-     &                0.011_r8*COS(2.0_r8*deg2rad*latr(i,j))
-
-# elif defined ALBEDO_SZO
+            albedo_ice(i,j) = 0.0_r8
+            albedo_ocn(i,j) = 0.0_r8
+            frswp(i,j)      = 0.0_r8
+#  ifdef ICE_LMD_SHORTWAVE
+            rfaci(i,j)      = 0.0_r8
+#  endif
+            srflx_ics(i,j)  = 0.0_r8
+            srflx_icb(i,j)  = 0.0_r8
+            srflx_ocn(i,j)  = 0.0_r8
+          ELSE
+# endif
 !
-!  Compute albedo over water based on the calendar day and time. It
-!  ASSUMES that the forcing file contains the TOTAL INCIDENT SHORTWAVE
-!  RADIATION (SMD).
+! Calculate ice/snow surface albedo
 !
-!  Local daylight is a function of the declination (Dangle) and hour
-!  angle adjusted for the local meridian (Hangle-lonr(i,j)/15.0).
-!  The 15.0 factor is because the sun moves 15 degrees every hour.
+          cff      = 1.0_r8 / (Si(i,j,li_stp,isAice) + 0.000001_r8)
+          i_thick  = cff    *  Si(i,j,li_stp,isHice)
+          s_thick  = cff    *  Si(i,j,li_stp,isHsno)
+          sfc_temp = Fi(i,j,icIsst)
+# ifdef ICE_ALB_CSIM
 !
-          LatRad=latr(i,j)*deg2rad
-          cff1=SIN(LatRad)*SIN(Dangle)
-          cff2=COS(LatRad)*COS(Dangle)
-          zenith=max(cff1+cff2*COS(Hangle-lonr(i,j)*deg2rad             &
-     &                             -pi/12.0_r8),0.0_r8)
+!  Follow ice_shortwave.F90/compute_albedos subroutine (CESM2/CICE5.1)
 !
-!  Use albedo formula from Briegleb et al. (1986).
+          IF (Si(i,j,li_stp,isAice) .gt. min_ai(ng)) THEN
 !
-          albedo(i,j)=0.026_r8/(zenith**1.7_r8+0.065_r8)+               &
-     &                0.15_r8*(zenith-0.1_r8)*                          &
-     &                (zenith-0.5_r8)*(zenith-1.0_r8)
+!  Bare ice, thickness dependence
+!    Briegleb (2004) Eqs 30, 31
+!
+            fh    = MIN(1.0_r8, ATAN(i_thick*4.0_r8)/ATAN(ahmax*4.0_r8))
+            alb   = alb_o*(1.0_r8-fh)
+            alvni = alb + albicev*fh
+            alini = alb + albicei*fh
+!
+!  Bare ice, temperature dependence
+!    Briegleb (2004) Eq 29
+!
+            dTs   = Timelt - sfc_temp
+!
+!  If dTs >= dT_melt, fT = 0; if dTs == 0, fT=-1;
+!    else follow Briegleb (2004) Eqs 29
+!
+            fT    = MIN(0.0_r8, dTs/dT_melt-1.0_r8)
+!
+!  Ice albedo decreases with warming, capped by ocean albedo
+!    Briegleb (2004) Eq 33
+!
+!  Note: the CESM2/CICE5.1 code (ice_shortwave.F90/compute_albedos) does
+!        not impose lower cap here, but it seems safer to do so for the
+!        case of tis>>Timelt (=> fT<<0)
+!
+            alvni = MAX(alb_o, alvni - dalb_mlt*fT)
+            alini = MAX(alb_o, alini - dalb_mlt*fT)
+!
+            IF (s_thick > puny) THEN
+!
+!  Snow on ice, temperature dependence, capped by ocean albedo
+!    Briegleb (2004) Eq 29
+!
+              alvns = MAX(alb_o, albsnowv - dalb_mltv*fT)
+              alins = MAX(alb_o, albsnowi - dalb_mlti*fT)
+!
+!  Combined ice/snow visual and near IR albedo
+!    Briegleb (2004) Eqs 34, 35
+!
+              asnow = s_thick / (s_thick + snowpatch)
+              alvn  = alvni*(1.0_r8-asnow) + alvns*asnow
+              alin  = alini*(1.0_r8-asnow) + alins*asnow
+            ELSE
+              asnow = 0.0_r8
+              alvn  = alvni
+              alin  = alini
+            END IF
+!
+!  Combined ice/snow albedo with respect to total incident SW
+!    (absorbed SW = (1-albedo_i)*SW)
+!
+            albedo_ice(i,j) = fv*alvn + (1.0_r8-fv)*alin
+          ELSE
+            albedo_ice(i,j) = alb_o
+          END IF
+# elif defined ICE_ALB_EC92
+!
+!  Ice and snow albedo is calculated from Ebert and Curry (1992)
+!
+          IF (Si(i,j,li_stp,isAice) .gt. min_ai(ng)) THEN
+            IF (s_thick .gt. 0._r8) THEN
+              albedo_ice(i,j) = alb_s
+            ELSE
+!
+!  Approximated values for ice alb (depend on COSZ, but small variation)
+!
+              i_thick = MAX(i_thick, 0.000001_r8)
+              IF (i_thick .ge. 2._r8) THEN
+                albedo_ice(i,j) = 0.561632_r8
+              ELSE IF (i_thick .ge. 1._r8) THEN
+                albedo_ice(i,j) = 0.07616_r8 *    i_thick  + 0.414492_r8
+              ELSE
+                albedo_ice(i,j) = 0.082409_r8*LOG(i_thick) + 0.485472_r8
+                albedo_ice(i,j) = MAX(alb_o, albi(i,j))
+              END IF
+            END IF
+          ELSE
+            albedo_ice(i,j) = alb_o
+          END IF
 # else
+          cff1 = alb_s_wet - alb_s_dry
+          cff2 = alb_i_wet - alb_i_dry
+          IF (Si(i,j,li_stp,isAice) .gt. min_ai(ng)) THEN
+            IF (s_thick .gt. 0._r8) THEN
+              IF (sfc_temp .gt. -1.0_r8) THEN
+                albedo_ice(i,j) = alb_s_dry + cff1*(sfc_temp+1.0_r8)
+              ELSE
+                albedo_ice(i,j) = alb_s_dry
+              END IF
+            ELSE
+              IF (sfc_temp .gt. -1.0_r8) THEN
+                albedo_ice(i,j) = alb_i_dry + cff2*(sfc_temp+1.0_r8)
+              ELSE
+                albedo_ice(i,j) = alb_i_dry
+              END IF
+            END IF
+          ELSE
+            albedo_ice(i,j) = alb_o
+          END IF
+# endif
+
+# ifdef ICE_ALB_DMEAN
 !
-!  Default constant seawater albedo.
+! ----------------------------------------------------------------------
+!  compute 24 hrs time-averaged albedo at ocean surface
+! ----------------------------------------------------------------------
 !
-          albedo(i,j)=alb_w
+          sin2 = SIN(latr(i,j)*deg2rad)*SIN(dangle)
+          cos2 = COS(latr(i,j)*deg2rad)*COS(dangle)
+          stot = 0._r8
+          sads = 0._r8
+          DO npart=1,ifrac
+!
+!  Hour angle, in radians
+!
+            hangle = pi*(REAL(npart,r8)/12._r8-1._r8)
+!
+!  Cosine of the zenith angle
+!
+            cosz   = MIN(1._r8, MAX(0._r8, sin2+cos2*COS(hangle)))
+!
+!  Direct radiation component
+!
+            sdir   = 0.7_r8**MIN(100._r8, 1._r8/(cosz+tol))
+!
+!  Diffusive radiation component
+!
+            sdif   = ((1._r8-absh2o)-sdir)*.5_r8
+!
+!  Solar noon altitude in degrees
+!
+            altdeg = MAX(0._r8, ASIN(sin2+cos2))*rad2deg
+!
+!  Cloudiness correction
+!
+            cfac   = 1._r8 - 0.62_r8*cloud(i,j) + 0.0019_r8*altdeg
+            ssurf  = (sdir + sdif)*cfac+tol
+            stot   = stot + ssurf
+!
+!  Albedo for direct light
+!
+            alb_sr = 0.03_r8*EXP(0.742_r8*ACOS(cosz)**2.866_r8)
+!
+!  Radiation weighted sum of direct albedo
+!
+            sads   = sads + alb_sr*ssurf
+          END DO
+!
+!  Daily mean co-albedo over ocean surface
+!
+          alb_sr = sads/stot
+!
+!  Daily mean albedo weighted by cloud fraction
+!
+          albedo_ocn(i,j) = 1._r8 -                                     &
+     &                      ((1.0_r8-cloud(i,j))*(1.0_r8-alb_sr) +      &
+     &                               cloud(i,j) *(1.0_r8-alb_oz))
+# elif defined ICE_ALB_SANGLE
+!
+! ----------------------------------------------------------------------
+!  Compute ocean surface albedo: Iqbal (1983) Pg 15
+! ----------------------------------------------------------------------
+!
+          sin2   = SIN(latr(i,j)*deg2rad)*SIN(dangle)
+          cos2   = COS(latr(i,j)*deg2rad)*COS(dangle)
+#  ifdef ICE_ALB_GREGORIAN
+!
+!  Correction for local time if Gregorian reference time is used
+!
+          langle = MOD(lonr(i,j), 360._r8)*rad2deg
+#  else
+          langle = 0.0_r8
+#  endif
+!
+!  Cosine of zenith angle
+!
+          cosz   = MIN(1._r8, MAX(0._r8, sin2+cos2*COS(hangle+langle)))
+!
+!  Albedo of direct sun light
+!
+          alb_sr = 0.03_r8*EXP(0.742_r8*ACOS(cosz)**2.866_r8)
+!
+!  Albedo weighted by cloud fraction
+!
+          albedo_ocn(i,j) = 1._r8 -                                     &
+     &                      ((1.0_r8-cloud(i,j))*(1.0_r8-alb_sr) +      &
+     &                               cloud(i,j) *(1.0_r8-alb_oz))
+# else
+          albedo_ocn(i,j) = alb_o
+# endif
+!
+! ----------------------------------------------------------------------
+!  Calculate shortwave ice penetration factor
+! ----------------------------------------------------------------------
+!
+          IF (Si(i,j,li_stp,isAice) .gt. min_ai(ng)) THEN
+# ifdef ICE_ALB_CSIM
+!
+!  Note: We assume that only the visual part incident on snow-uncovered
+!        ice can penetrate through the surface layer (if not reflected)
+!
+!  CICE 5.1 cice/source/ice_shortwave.F90 Ln 996
+!
+            frswp(i,j) = (1.0_r8-alvni)*(1.0_r8-asnow)*i0vis*fv /       &
+     &                   (1.0_r8-albedo_ice(i,j))
+# else
+            IF (i_thick .le. 0.1_r8) THEN
+              cff = i_thick*5._r8
+            ELSE
+              cff = 0.4_r8 + i_thick
+            END IF
+            cff = cff + s_thick*20._r8
+            frswp(i,j) = fv*EXP(-cff)
+# endif
+          ELSE
+            frswp(i,j) = 1.0_r8
+          END IF
+!
+! ----------------------------------------------------------------------
+!  Calculate net downward short-wave radiation at ocean surface, ice
+!    surface, and ice base
+! ----------------------------------------------------------------------
+!
+          srflx_ocn(i,j) = srflx(i,j)*(1.0_r8-albedo_ocn(i,j))
+          srflx_ics(i,j) = srflx(i,j)*(1.0_r8-albedo_ice(i,j))
+          srflx_icb(i,j) = srflx_ics(i,j)*frswp(i,j)
+# ifdef ICE_LMD_SHORTWAVE
+!
+! ----------------------------------------------------------------------
+!  Calculate correction factor for lmd_r1
+! ----------------------------------------------------------------------
+!
+          cff1       =  1.0_r8 - albedo_ocn(i,j)
+          cff2       = (1.0_r8 - albedo_ice(i,j))*frswp(i,j)
+          rfaci(i,j) =           (1.0_r8 - ai(i,j,li_stp))*cff1 /       &
+     &                 MAX(tol, ((1.0_r8 - ai(i,j,li_stp))*cff1 +       &
+     &                                     ai(i,j,li_stp) *cff2))
+# endif
+# ifdef ICESHELF
+          END IF
 # endif
         END DO
       END DO
@@ -354,24 +603,49 @@
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
-     &                          albedo_ice)
-
+     &                          albedo_ocn)
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
-     &                          albedo)
+     &                          albedo_ice)
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          frswp)
+# ifdef ICE_LMD_SHORTWAVE
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          rfaci)
+# endif
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          srflx_ics)
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          srflx_icb)
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          srflx_ocn)
       END IF
-
 # ifdef DISTRIBUTE
-!
-      CALL mp_exchange2d (ng, tile, model, 2,                           &
+      CALL mp_exchange2d (ng, tile, iNLM, 3,                            &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    albedo, albedo_ice)
+     &                    albedo_ocn, albedo_ice, frswp)
+#  ifdef ICE_LMD_SHORTWAVE
+      CALL mp_exchange2d (ng, tile, iNLM, 1,                            &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+     &                    rfaci)
+#  endif
+      CALL mp_exchange2d (ng, tile, iNLM, 3,                            &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+     &                    srflx_ics, srflx_icb, srflx_ocn)
 # endif
-!
       RETURN
-      END SUBROUTINE ice_albedo_tile
 !
+      END SUBROUTINE ice_albedo_tile
 #endif
       END module ice_albedo_mod
