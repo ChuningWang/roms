@@ -20,9 +20,6 @@
       USE mod_ice
       USE mod_ncparam
       USE mod_stepping
-# ifdef ICE_ALBEDO
-      USE mod_forces
-# endif
 !
       USE def_var_mod,     ONLY : def_var
 # ifdef STATIONS
@@ -257,71 +254,6 @@
             END IF
           END IF
         END DO
-# ifdef ICE_ALBEDO
-!
-!  Define ice surface albedo at RHO-points.
-!
-        IF (VarOut(idAlbi,ng)) THEN
-          vtype=NF_FOUT
-          Vinfo( 1)=Vname(1,idAlbi)
-          Vinfo( 2)=Vname(2,idAlbi)
-          Vinfo( 3)=Vname(3,idAlbi)
-          Vinfo(14)=Vname(4,idAlbi)
-          Vinfo(16)=Vname(1,idtime)
-#  if defined WRITE_WATER && defined MASKING
-          Vinfo(20)='mask_rho'
-#  endif
-          Vinfo(21)=Vname(6,idAlbi)
-          Vinfo(22)='coordinates'
-          Aval(5)=REAL(Iinfo(1,idAlbi,ng),r8)
-          status=def_var(ng, model, S(ng)%ncid,                         &
-     &                   S(ng)%Vid(idAlbi),                             &
-     &                   vtype, nvd3, t2dgrd, Aval, Vinfo, ncname)
-          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-        END IF
-!
-!  Define ocean surface albedo at RHO-points.
-!
-        IF (VarOut(idAlbo,ng)) THEN
-          vtype=NF_FOUT
-          Vinfo( 1)=Vname(1,idAlbo)
-          Vinfo( 2)=Vname(2,idAlbo)
-          Vinfo( 3)=Vname(3,idAlbo)
-          Vinfo(14)=Vname(4,idAlbo)
-          Vinfo(16)=Vname(1,idtime)
-#  if defined WRITE_WATER && defined MASKING
-          Vinfo(20)='mask_rho'
-#  endif
-          Vinfo(21)=Vname(6,idAlbo)
-          Vinfo(22)='coordinates'
-          Aval(5)=REAL(Iinfo(1,idAlbo,ng),r8)
-          status=def_var(ng, model, S(ng)%ncid,                         &
-     &                   S(ng)%Vid(idAlbo),                             &
-     &                   vtype, nvd3, t2dgrd, Aval, Vinfo, ncname)
-          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-        END IF
-!
-!  Define short-wave ppenetration fraction in ice at RHO-points.
-!
-        IF (VarOut(idFrsw,ng)) THEN
-          vtype=NF_FOUT
-          Vinfo( 1)=Vname(1,idFrsw)
-          Vinfo( 2)=Vname(2,idFrsw)
-          Vinfo( 3)=Vname(3,idFrsw)
-          Vinfo(14)=Vname(4,idFrsw)
-          Vinfo(16)=Vname(1,idtime)
-#  if defined WRITE_WATER && defined MASKING
-          Vinfo(20)='mask_rho'
-#  endif
-          Vinfo(21)=Vname(6,idFrsw)
-          Vinfo(22)='coordinates'
-          Aval(5)=REAL(Iinfo(1,idFrsw,ng),r8)
-          status=def_var(ng, model, S(ng)%ncid,                         &
-     &                   S(ng)%Vid(idFrsw),                             &
-     &                   vtype, nvd3, t2dgrd, Aval, Vinfo, ncname)
-          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-        END IF
-# endif
       END IF DEFINE
 !
 !-----------------------------------------------------------------------

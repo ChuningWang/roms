@@ -6159,6 +6159,39 @@ metadata:
     add_offset:     0.0d0
     scale:          1.0d0
 
+  - variable:       srflx_ics
+    standard_name:  net_shortwave_flux_at_sea_ice_surface
+    long_name:      net shortwave flux at sea ice surface
+    units:          watt meter-2
+    field:          net shortwave flux at sea ice surface
+    time:           ocean_time
+    index_code:     idSics
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       srflx_icb
+    standard_name:  net_shortwave_flux_at_sea_ice_base
+    long_name:      net shortwave flux at sea ice base
+    units:          watt meter-2
+    field:          net shortwave flux at sea ice base
+    time:           ocean_time
+    index_code:     idSicb
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       srflx_ocn
+    standard_name:  net_shortwave_flux_at_sea_surface
+    long_name:      net shortwave flux at sea surface
+    units:          watt meter-2
+    field:          net shortwave flux at sea surface
+    time:           ocean_time
+    index_code:     idSocn
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
   ##################################
   ###  Iceshelf State Variables  ###
   ##################################

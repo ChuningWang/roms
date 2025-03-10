@@ -130,6 +130,12 @@ Hout(idW_ai) == T     ! Fi(...,icW_ai)     melt/freeze rate at Air/Ice
 Hout(idW_ao) == T     ! Fi(...,icW_ao)     melt/freeze rate at Air/Ocean
 Hout(idW_io) == T     ! Fi(...,icW_io)     melt/freeze rate at Ice/Ocean
 Hout(idW_ro) == T     ! Fi(...,icW_ro)     melt/freeze rate runoff into ocean
+Hout(idAlbi) == F     ! Fi(...,icAlbi)     sea ice albedo
+Hout(idAlbo) == F     ! Fi(...,icAlbo)     sea surface albedo
+Hout(idFrsw) == F     ! Fi(...,icFrsw)     short-wave penetration fraction in sea ice
+Hout(idSics) == F     ! Fi(...,icSics)     net short-wave radiation at ice surface
+Hout(idSicb) == F     ! Fi(...,icSicb)     net short-wave radiation at ice base
+Hout(idSocn) == F     ! Fi(...,icSocn)     net short-wave radiation at sea surface
 
 ! Logical switches (TRUE/FALSE) to activate writing of ice prognostic
 ! variables into QUICKSAVE output file.
@@ -160,6 +166,12 @@ Qout(idW_ai) == T     ! Fi(...,icW_ai)     melt/freeze rate at Air/Ice
 Qout(idW_ao) == T     ! Fi(...,icW_ao)     melt/freeze rate at Air/Ocean
 Qout(idW_io) == T     ! Fi(...,icW_io)     melt/freeze rate at Ice/Ocean
 Qout(idW_ro) == T     ! Fi(...,icW_ro)     melt/freeze rate runoff into ocean
+Qout(idAlbi) == F     ! Fi(...,icAlbi)     sea ice albedo
+Qout(idAlbo) == F     ! Fi(...,icAlbo)     sea surface albedo
+Qout(idFrsw) == F     ! Fi(...,icFrsw)     short-wave penetration fraction in sea ice
+Qout(idSics) == F     ! Fi(...,icSics)     net short-wave radiation at ice surface
+Qout(idSicb) == F     ! Fi(...,icSicb)     net short-wave radiation at ice base
+Qout(idSocn) == F     ! Fi(...,icSocn)     net short-wave radiation at sea surface
 
 ! Logical switches (TRUE/FALSE) to activate writing of ice prognostic
 ! variables into AVERAGES output file.
@@ -190,6 +202,12 @@ Aout(idW_ai) == T     ! Fi_avg(...,icW_ai) melt/freeze rate at Air/Ice
 Aout(idW_ao) == T     ! Fi_avg(...,icW_ao) melt/freeze rate at Air/Ocean
 Aout(idW_io) == T     ! Fi_avg(...,icW_io) melt/freeze rate at Ice/Ocean
 Aout(idW_ro) == T     ! Fi_avg(...,icW_ro) melt/freeze rate runoff into ocean
+Aout(idAlbi) == F     ! Fi_avg(...,icAlbi) sea ice albedo
+Aout(idAlbo) == F     ! Fi_avg(...,icAlbo) sea surface albedo
+Aout(idFrsw) == F     ! Fi_avg(...,icFrsw) short-wave penetration fraction in sea ice
+Aout(idSics) == F     ! Fi_avg(...,icSics) net short-wave radiation at ice surface
+Aout(idSicb) == F     ! Fi_avg(...,icSicb) net short-wave radiation at ice base
+Aout(idSocn) == F     ! Fi_avg(...,icSocn) net short-wave radiation at sea surface
 
 
 !
@@ -278,6 +296,12 @@ Aout(idW_ro) == T     ! Fi_avg(...,icW_ro) melt/freeze rate runoff into ocean
 ! Hout(idW_ao)    Write out rate of melt/freeze at air/ocean interface.
 ! Hout(idW_io)    Write out rate of melt/freeze at ice/ocean interface.
 ! Hout(idW_ro)    Write out rate of melt/freeze runoff into ocean.
+! Hout(idAlbi)    Write out sea ice albedo.
+! Hout(idAlbo)    Write out sea surface albedo.
+! Hout(idFrsw)    Write out short-wave penetration fraction in sea ice.
+! Hout(idSics)    Write out net short-wave radiation at ice surface
+! Hout(idSicb)    Write out net short-wave radiation at ice base
+! Hout(idSocn)    Write out net short-wave radiation at sea surface
 !
 !------------------------------------------------------------------------------
 ! Logical switches (T/F) to activate writing of instantaneous ice fields into
@@ -310,6 +334,12 @@ Aout(idW_ro) == T     ! Fi_avg(...,icW_ro) melt/freeze rate runoff into ocean
 ! Qout(idW_ao)    Write out rate of melt/freeze at air/ocean interface.
 ! Qout(idW_io)    Write out rate of melt/freeze at ice/ocean interface.
 ! Qout(idW_ro)    Write out rate of melt/freeze runoff into ocean.
+! Qout(idAlbi)    Write out sea ice albedo.
+! Qout(idAlbo)    Write out sea surface albedo.
+! Qout(idFrsw)    Write out short-wave penetration fraction in sea ice.
+! Qout(idSics)    Write out net short-wave radiation at ice surface
+! Qout(idSicb)    Write out net short-wave radiation at ice base
+! Qout(idSocn)    Write out net short-wave radiation at sea surface
 !
 !------------------------------------------------------------------------------
 ! Logical switches (T/F) to activate writing of time-averaged ice fields into
@@ -342,4 +372,10 @@ Aout(idW_ro) == T     ! Fi_avg(...,icW_ro) melt/freeze rate runoff into ocean
 ! Aout(idW_io)    Write out rate of melt/freeze at ice/ocean interface.
 ! Aout(idW_ro)    Write out rate of melt/freeze runoff into ocean.
 ! Aout(idWdiv)    Write out rate of ice divergence.
+! Aout(idAlbi)    Write out sea ice albedo.
+! Aout(idAlbo)    Write out sea surface albedo.
+! Aout(idFrsw)    Write out short-wave penetration fraction in sea ice.
+! Aout(idSics)    Write out net short-wave radiation at ice surface
+! Aout(idSicb)    Write out net short-wave radiation at ice base
+! Aout(idSocn)    Write out net short-wave radiation at sea surface
 !

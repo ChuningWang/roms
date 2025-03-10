@@ -234,6 +234,24 @@
             CASE ('Sout(idW_ro)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idW_ro,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idAlbi)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idAlbi,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idAlbo)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idAlbo,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idFrsw)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idFrsw,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idSics)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idSics,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idSicb)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idSicb,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idSocn)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idSocn,1:Ngrids)=Lswitch(1:Ngrids)
 # endif
 # ifdef ICESHELF_DYNAM
 #  ifdef ICESHELF_MOM
@@ -842,6 +860,24 @@
             IF (Sout(idW_ro,ng)) WRITE (out,90) Sout(idW_ro,ng),        &
      &          'Sout(idW_ro)',                                         &
      &          'Write out rate of melt/freeze runoff into ocean.'
+            IF (Sout(idAlbi,ng)) WRITE (out,90) Sout(idAlbi,ng),        &
+     &          'Sout(idAlbi)',                                         &
+     &       'Write out sea ice albedo.'
+            IF (Sout(idAlbo,ng)) WRITE (out,90) Sout(idAlbo,ng),        &
+     &          'Sout(idAlbo)',                                         &
+     &       'Write out ocean surface albedo.'
+            IF (Sout(idFrsw,ng)) WRITE (out,90) Sout(idFrsw,ng),        &
+     &          'Sout(idFrsw)',                                         &
+     &       'Write out short-wave penetration fraction in sea ice.'
+            IF (Sout(idSics,ng)) WRITE (out,90) Sout(idSics,ng),        &
+     &          'Sout(idSics)',                                         &
+     &       'Write out net short-wave flux at sea ice surface.'
+            IF (Sout(idSicb,ng)) WRITE (out,90) Sout(idSicb,ng),        &
+     &          'Sout(idSicb)',                                         &
+     &       'Write out net short-wave flux at sea ice base.'
+            IF (Sout(idSocn,ng)) WRITE (out,90) Sout(idSocn,ng),        &
+     &          'Sout(idSocn)',                                         &
+     &       'Write out net short-wave flux at sea surface.'
 # endif
 # ifdef ICESHELF_DYNAM
 #  ifdef ICESHELF_MOM

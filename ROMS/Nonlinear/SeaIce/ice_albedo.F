@@ -93,9 +93,9 @@
      &                      FORCES(ng) % cloud,                         &
 #  endif
 # endif
+     &                      FORCES(ng) % srflx,                         &
      &                      ICE(ng) % Fi,                               &
      &                      ICE(ng) % Si,                               &
-     &                      FORCES(ng) % srflx,                         &
      &                      FORCES(ng) % albedo_ice,                    &
      &                      FORCES(ng) % albedo_ocn,                    &
      &                      FORCES(ng) % frswp,                         &
@@ -124,7 +124,7 @@
 #  ifdef CLOUDS
      &                            cloud,                                &
 #  endif
-     &                            Fi, Si, srflx,                        &
+     &                            srflx, Fi, Si,                        &
      &                            albedo_ice, albedo_ocn, frswp,        &
 # ifdef ICE_LMD_SHORTWAVE
      &                            rfaci,                                &
@@ -150,9 +150,9 @@
       real(r8), intent(in) :: cloud(LBi:,LBj:)
 #   endif
 #  endif
-      real(r8), intent(in) :: Fi(LBi:,LBj:,:)
-      real(r8), intent(in) :: Si(LBi:,LBj:,:,:)
       real(r8), intent(in) :: srflx(LBi:,LBj:)
+      real(r8), intent(inout) :: Fi(LBi:,LBj:,:)
+      real(r8), intent(inout) :: Si(LBi:,LBj:,:,:)
       real(r8), intent(out) :: albedo_ice(LBi:,LBj:)
       real(r8), intent(out) :: albedo_ocn(LBi:,LBj:)
       real(r8), intent(out) :: frswp(LBi:,LBj:)
@@ -174,9 +174,9 @@
       real(r8), intent(in) :: cloud(LBi:UBi,LBj:UBj)
 #   endif
 #  endif
-      real(r8), intent(in) :: Fi(LBi:UBi,LBj:UBj,nIceF)
-      real(r8), intent(in) :: Si(LBi:UBi,LBj:UBj,2,nIceS)
       real(r8), intent(in) :: srflx(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: Fi(LBi:UBi,LBj:UBj,nIceF)
+      real(r8), intent(inout) :: Si(LBi:UBi,LBj:UBj,2,nIceS)
       real(r8), intent(out) :: albedo_ice(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: albedo_ocn(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: frswp(LBi:UBi,LBj:UBj)
@@ -593,6 +593,15 @@
 # ifdef ICESHELF
           END IF
 # endif
+!
+!  Save values in Fi for easy IO
+!
+          Fi(i,j,icAlbi) = srflx_albedo_ice(i,j)
+          Fi(i,j,icAlbo) = srflx_albedo_ocn(i,j)
+          Fi(i,j,icFrsw) = srflx_frswp(i,j)
+          Fi(i,j,icSics) = srflx_ics(i,j)
+          Fi(i,j,icSicb) = srflx_icb(i,j)
+          Fi(i,j,icSocn) = srflx_ocn(i,j)
         END DO
       END DO
 !

@@ -74,6 +74,12 @@
 !    icW_fr    rate of ice accretion due to frazil growth (m3/s)       !
 !    icW_io    rate of melt/freeze at Ice/Ocean edge (m3/s)            !
 !    icW_ro    rate of melt/freeze runoff into ocean (m3/s)            !
+!    icAlbi    sea ice albedo                                          !
+!    icAlbo    sea surface albedo                                      !
+!    icFrsw    short-wave penetration fration in ice                   !
+!    icSics    net short-wave flux at sea ice surface (W/m2)           !
+!    icSicb    net short-wave flux at sea ice base (W/m2)              !
+!    icSocn    net short-wave flux at sea surface (W/m2)               !
 !    icIOmf    Ice-Ocean mass flux (m/s)                               !
 !    icIOvs    Ice-Ocean velocity shear magnitude (m/s)                !
 !    icIOfv    Ice-Ocean friction velocity (m/s)                       !
@@ -123,6 +129,12 @@
       integer :: idW_fr       ! rate of ice accretion by frazil growth
       integer :: idW_io       ! rate of melt/freeze at ice/ocean edge
       integer :: idW_ro       ! rate of melt/freeze runoff into ocean
+      integer :: idAlbi       ! sea ice albedo
+      integer :: idAlbo       ! ocean sufface albedo
+      integer :: idFrsw       ! short-wave penetration fraction
+      integer :: idSics       ! net short-wave flux at sea ice surface
+      integer :: idSicb       ! net short-wave flux at sea ice base
+      integer :: idSocn       ! net short-wave flux at sea surface
 !
 !  Ice model state prognostic variables indices.
 !
@@ -164,7 +176,7 @@
 !
 !  Ice model internal variables indices.
 !
-      integer, parameter :: nIceF = 24  ! number of ice field variables
+      integer, parameter :: nIceF = 30  ! number of ice field variables
 !
       integer :: iFice(nIceF)           ! internal fields I/O indices
 !
@@ -192,6 +204,12 @@
       integer, parameter :: icW_fr = 22 ! ice accretion rate by frazil
       integer, parameter :: icW_io = 23 ! melt/freeze rate at Ice/Ocean
       integer, parameter :: icW_ro = 24 ! melt/freeze rate runoff
+      integer, parameter :: icAlbi = 25 ! sea ice albedo
+      integer, parameter :: icAlbo = 26 ! ocean surface albedo
+      integer, parameter :: icFrsw = 27 ! SW penetration fraction in ice
+      integer, parameter :: icSics = 28 ! net SW flux at sea ice surface
+      integer, parameter :: icSicb = 29 ! net SW flux at sea ice base
+      integer, parameter :: icSocn = 30 ! net SW flux at sea surface
 !
 !-----------------------------------------------------------------------
 !  Ice model parameters.

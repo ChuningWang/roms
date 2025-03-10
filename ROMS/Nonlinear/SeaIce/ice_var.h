@@ -104,7 +104,25 @@
             iFice(icW_io)=idW_io
           CASE ('idW_ro')
             idW_ro=varid
-            iFice(icW_io)=idW_io
+            iFice(icW_ro)=idW_ro
+          CASE ('idAlbi')
+            idAlbi=varid
+            iFice(icAlbi)=idAlbi
+          CASE ('idAlbo')
+            idAlbo=varid
+            iFice(icAlbo)=idAlbo
+          CASE ('idFrsw')
+            idFrsw=varid
+            iFice(icFrsw)=idFrsw
+          CASE ('idSics')
+            idSics=varid
+            iFice(icSics)=idSics
+          CASE ('idSicb')
+            idSicb=varid
+            iFice(icSicb)=idSicb
+          CASE ('idSocn')
+            idSocn=varid
+            iFice(icSocn)=idSocn
 /*
 **  Ice model open boundary conditions.
 */

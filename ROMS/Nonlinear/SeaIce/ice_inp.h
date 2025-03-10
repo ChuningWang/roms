@@ -293,6 +293,48 @@
                 RETURN
               END IF
               Npts=load_l(Nval, Cval, Ngrids, Hout(idW_ro,:))
+            CASE ('Hout(idAlbi)')
+              IF (idAlbi.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idAlbi'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Hout(idAlbi,:))
+            CASE ('Hout(idAlbo)')
+              IF (idAlbo.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idAlbo'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Hout(idAlbo,:))
+            CASE ('Hout(idFrsw)')
+              IF (idFrsw.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idFrsw'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Hout(idFrsw,:))
+            CASE ('Hout(idSics)')
+              IF (idSics.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idSics'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Hout(idSics,:))
+            CASE ('Hout(idSicb)')
+              IF (idSicb.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idSicb'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Hout(idSicb,:))
+            CASE ('Hout(idSocn)')
+              IF (idSocn.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idSocn'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Hout(idSocn,:))
             CASE ('Qout(idUice)')
               Npts=load_l(Nval, Cval, Ngrids, Qout(idUice,:))
             CASE ('Qout(idVice)')
@@ -343,6 +385,18 @@
               Npts=load_l(Nval, Cval, Ngrids, Qout(idW_io,:))
             CASE ('Qout(idW_ro)')
               Npts=load_l(Nval, Cval, Ngrids, Qout(idW_ro,:))
+            CASE ('Qout(idAlbi)')
+              Npts=load_l(Nval, Cval, Ngrids, Qout(idAlbi,:))
+            CASE ('Qout(idAlbo)')
+              Npts=load_l(Nval, Cval, Ngrids, Qout(idAlbo,:))
+            CASE ('Qout(idFrsw)')
+              Npts=load_l(Nval, Cval, Ngrids, Qout(idFrsw,:))
+            CASE ('Qout(idSics)')
+              Npts=load_l(Nval, Cval, Ngrids, Qout(idSics,:))
+            CASE ('Qout(idSicb)')
+              Npts=load_l(Nval, Cval, Ngrids, Qout(idSicb,:))
+            CASE ('Qout(idSocn)')
+              Npts=load_l(Nval, Cval, Ngrids, Qout(idSocn,:))
 #ifdef AVERAGES
             CASE ('Aout(idUice)')
               Npts=load_l(Nval, Cval, Ngrids, Aout(idUice,:))
@@ -394,6 +448,18 @@
               Npts=load_l(Nval, Cval, Ngrids, Aout(idW_io,:))
             CASE ('Aout(idW_ro)')
               Npts=load_l(Nval, Cval, Ngrids, Aout(idW_ro,:))
+            CASE ('Aout(idAlbi)')
+              Npts=load_l(Nval, Cval, Ngrids, Aout(idAlbi,:))
+            CASE ('Aout(idAlbo)')
+              Npts=load_l(Nval, Cval, Ngrids, Aout(idAlbo,:))
+            CASE ('Aout(idFrsw)')
+              Npts=load_l(Nval, Cval, Ngrids, Aout(idFrsw,:))
+            CASE ('Aout(idSics)')
+              Npts=load_l(Nval, Cval, Ngrids, Aout(idSics,:))
+            CASE ('Aout(idSicb)')
+              Npts=load_l(Nval, Cval, Ngrids, Aout(idSicb,:))
+            CASE ('Aout(idSocn)')
+              Npts=load_l(Nval, Cval, Ngrids, Aout(idSocn,:))
 #endif
           END SELECT
         END IF
@@ -532,6 +598,24 @@
           IF (Hout(idW_ro,ng)) WRITE (out,70) Hout(idW_ro,ng),          &
      &       'Hout(idW_ro)',                                            &
      &       'Write out rate of melt/freeze runoff into ocean.'
+          IF (Hout(idAlbi,ng)) WRITE (out,70) Hout(idAlbi,ng),          &
+     &       'Hout(idAlbi)',                                            &
+     &       'Write out sea ice albedo.'
+          IF (Hout(idAlbo,ng)) WRITE (out,70) Hout(idAlbo,ng),          &
+     &       'Hout(idAlbo)',                                            &
+     &       'Write out sea surface albedo.'
+          IF (Hout(idFrsw,ng)) WRITE (out,70) Hout(idFrsw,ng),          &
+     &       'Hout(idFrsw)',                                            &
+     &       'Write out short-wave penetration fraction in sea ice.'
+          IF (Hout(idSics,ng)) WRITE (out,70) Hout(idSics,ng),          &
+     &       'Hout(idSics)',                                            &
+     &       'Write out net short-wave radiation at ice surafce.'
+          IF (Hout(idSicb,ng)) WRITE (out,70) Hout(idSicb,ng),          &
+     &       'Hout(idSicb)',                                            &
+     &       'Write out net short-wave radiation at ice base.'
+          IF (Hout(idSocn,ng)) WRITE (out,70) Hout(idSocn,ng),          &
+     &       'Hout(idSocn)',                                            &
+     &       'Write out net short-wave radiation at sea surface.'
 !
           IF (Qout(idUice,ng)) WRITE (out,70) Qout(idUice,ng),          &
      &       'Qout(idUice)',                                            &
@@ -608,6 +692,24 @@
           IF (Qout(idW_ro,ng)) WRITE (out,70) Qout(idW_ro,ng),          &
      &       'Qout(idW_ro)',                                            &
      &       'Write out rate of melt/freeze runoff into ocean.'
+          IF (Qout(idAlbi,ng)) WRITE (out,70) Qout(idAlbi,ng),          &
+     &       'Qout(idAlbi)',                                            &
+     &       'Write out sea ice albedo.'
+          IF (Qout(idAlbo,ng)) WRITE (out,70) Qout(idAlbo,ng),          &
+     &       'Qout(idAlbo)',                                            &
+     &       'Write out sea surface albedo.'
+          IF (Qout(idFrsw,ng)) WRITE (out,70) Qout(idFrsw,ng),          &
+     &       'Qout(idFrsw)',                                            &
+     &       'Write out short-wave penetration fraction in sea ice.'
+          IF (Qout(idSics,ng)) WRITE (out,70) Qout(idSics,ng),          &
+     &       'Qout(idSics)',                                            &
+     &       'Write out net short-wave radiation at ice surafce.'
+          IF (Qout(idSicb,ng)) WRITE (out,70) Qout(idSicb,ng),          &
+     &       'Qout(idSicb)',                                            &
+     &       'Write out net short-wave radiation at ice base.'
+          IF (Qout(idSocn,ng)) WRITE (out,70) Qout(idSocn,ng),          &
+     &       'Qout(idSocn)',                                            &
+     &       'Write out net short-wave radiation at sea surface.'
 #ifdef AVERAGES
 !
           IF (Aout(idUice,ng)) WRITE (out,70) Aout(idUice,ng),          &
@@ -685,6 +787,24 @@
           IF (Aout(idW_ro,ng)) WRITE (out,70) Aout(idW_ro,ng),          &
      &       'Aout(idW_ro)',                                            &
      &       'Write out rate of melt/freeze runoff into ocean.'
+          IF (Aout(idAlbi,ng)) WRITE (out,70) Aout(idAlbi,ng),          &
+     &       'Aout(idAlbi)',                                            &
+     &       'Write out sea ice albedo.'
+          IF (Aout(idAlbo,ng)) WRITE (out,70) Aout(idAlbo,ng),          &
+     &       'Aout(idAlbo)',                                            &
+     &       'Write out sea surface albedo.'
+          IF (Aout(idFrsw,ng)) WRITE (out,70) Aout(idFrsw,ng),          &
+     &       'Aout(idFrsw)',                                            &
+     &       'Write out short-wave penetration fraction in sea ice.'
+          IF (Aout(idSics,ng)) WRITE (out,70) Aout(idSics,ng),          &
+     &       'Aout(idSics)',                                            &
+     &       'Write out net short-wave radiation at ice surafce.'
+          IF (Aout(idSicb,ng)) WRITE (out,70) Aout(idSicb,ng),          &
+     &       'Aout(idSicb)',                                            &
+     &       'Write out net short-wave radiation at ice base.'
+          IF (Aout(idSocn,ng)) WRITE (out,70) Aout(idSocn,ng),          &
+     &       'Aout(idSocn)',                                            &
+     &       'Write out net short-wave radiation at sea surface.'
 #endif
         END DO
       END IF
