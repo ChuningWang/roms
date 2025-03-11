@@ -210,7 +210,7 @@ Aout(idFrsw) == F     ! Fi_avg(...,icFrsw) short-wave penetration fraction in se
 Aout(idSics) == T     ! Fi_avg(...,icSics) net short-wave radiation at ice surface
 Aout(idSicb) == T     ! Fi_avg(...,icSicb) net short-wave radiation at ice base
 Aout(idSocn) == T     ! Fi_avg(...,icSocn) net short-wave radiation at sea surface
-Aout(idRfac) == F     ! Fi(...,icRfac)     lmd_r1 scaling factor
+Aout(idRfac) == F     ! Fi_avg(...,icRfac) lmd_r1 scaling factor
 
 
 !
