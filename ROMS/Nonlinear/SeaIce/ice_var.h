@@ -123,6 +123,9 @@
           CASE ('idSocn')
             idSocn=varid
             iFice(icSocn)=idSocn
+          CASE ('idRfac')
+            idRfac=varid
+            iFice(icRfac)=idRfac
 /*
 **  Ice model open boundary conditions.
 */

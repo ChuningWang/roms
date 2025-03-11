@@ -41,8 +41,8 @@
       USE mod_param
       USE mod_mixing
       USE mod_scalars
-# if definied ICE_MODEL && defined ICE_LMD_SHORTWAVE
-      USE mod_forces
+# if defined ICE_MODEL && defined ICE_LMD_SHORTWAVE
+      USE mod_ice
 # endif
 !
       implicit none
@@ -77,11 +77,11 @@
           fac1(i)=Zscale/lmd_mu1(Jindex)
           fac2(i)=Zscale/lmd_mu2(Jindex)
           fac3(i)=lmd_r1(Jindex)
-# if definied ICE_MODEL && defined ICE_LMD_SHORTWAVE
+# if defined ICE_MODEL && defined ICE_LMD_SHORTWAVE
 !
 !  Apply correction introduced by sea ice cover
 !
-          fac3(i)=fac3(i)*FORCES(ng)%rfaci(i,j)
+          fac3(i)=fac3(i)*ICE(ng)%Fi(i,j,icRfac)
 # endif
         END DO
 !!DIR$ VECTOR ALWAYS

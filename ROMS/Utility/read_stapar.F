@@ -252,6 +252,9 @@
             CASE ('Sout(idSocn)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idSocn,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idRfac)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idRfac,1:Ngrids)=Lswitch(1:Ngrids)
 # endif
 # ifdef ICESHELF_DYNAM
 #  ifdef ICESHELF_MOM
@@ -878,6 +881,9 @@
             IF (Sout(idSocn,ng)) WRITE (out,90) Sout(idSocn,ng),        &
      &          'Sout(idSocn)',                                         &
      &       'Write out net short-wave flux at sea surface.'
+            IF (Sout(idRfac,ng)) WRITE (out,90) Sout(idRfac,ng),        &
+     &          'Sout(idRfac)',                                         &
+     &       'Write out lmd_r1 scaling factor.'
 # endif
 # ifdef ICESHELF_DYNAM
 #  ifdef ICESHELF_MOM

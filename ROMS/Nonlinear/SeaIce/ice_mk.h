@@ -157,9 +157,6 @@
      &                      FORCES(ng) % Qnet_ai,                       &
      &                      FORCES(ng) % snow,                          &
      &                      FORCES(ng) % rain,                          &
-#ifdef ICE_ALBEDO
-     &                      FORCES(ng) % srflx_icb,                     &
-#endif
      &                      FORCES(ng) % stflx,                         &
      &                      ICE(ng) % Fi,                               &
      &                      ICE(ng) % Si)
@@ -196,9 +193,6 @@
      &                            Qnet_ai,                              &
      &                            snow,                                 &
      &                            rain,                                 &
-#ifdef ICE_ALBEDO
-     &                            srflx_icb,                            &
-#endif
      &                            stflx,                                &
      &                            Fi, Si)
 !***********************************************************************
@@ -237,9 +231,6 @@
       real(r8), intent(in) :: Qnet_ai(LBi:,LBj:)
       real(r8), intent(in) :: snow(LBi:,LBj:)
       real(r8), intent(in) :: rain(LBi:,LBj:)
-# ifdef ICE_ALBEDO
-      real(r8), intent(in) :: srflx_icb(LBi:,LBj:)
-# endif
       real(r8), intent(inout) :: stflx(LBi:,LBj:,:)
       real(r8), intent(inout) :: Fi(LBi:,LBj:,:)
       real(r8), intent(inout) :: Si(LBi:,LBj:,:,:)
@@ -270,9 +261,6 @@
       real(r8), intent(in) :: Qnet_ai(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: snow(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: rain(LBi:UBi,LBj:UBj)
-# ifdef ICE_ALBEDO
-      real(r8), intent(in) :: srflx_icb(LBi:UBi,LBj:UBj)
-# endif
       real(r8), intent(inout) :: stflx(LBi:UBi,LBj:UBj,NT(ng))
       real(r8), intent(inout) :: Fi(LBi:UBi,LBj:UBj,nIceF)
       real(r8), intent(inout) :: Si(LBi:UBi,LBj:UBj,2,nIceS)
@@ -837,7 +825,7 @@
 !  Add short-wave radiation flux that penetrats sea ice.
 !
               stflx(i,j,itemp)=stflx(i,j,itemp) -                       &
-     &                         Si(i,j,linew,isAice)*srflx_icb(i,j) /    &
+     &                         Si(i,j,linew,isAice)*Fi(i,j,icSicb) /    &
      &                         RhoCpr
 #endif
             END IF

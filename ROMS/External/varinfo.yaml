@@ -6192,6 +6192,17 @@ metadata:
     add_offset:     0.0d0
     scale:          1.0d0
 
+  - variable:       lmd_r1_scaling_factor
+    standard_name:  lmd_r1_scaling_factor
+    long_name:      lmd r1 scaling factor
+    units:          nondimensional
+    field:          lmd r1 scaling factor
+    time:           ocean_time
+    index_code:     idRfac
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
   ##################################
   ###  Iceshelf State Variables  ###
   ##################################

@@ -80,6 +80,7 @@
 !    icSics    net short-wave flux at sea ice surface (W/m2)           !
 !    icSicb    net short-wave flux at sea ice base (W/m2)              !
 !    icSocn    net short-wave flux at sea surface (W/m2)               !
+!    icRfac    lmd_r1 scaling factor                                   !
 !    icIOmf    Ice-Ocean mass flux (m/s)                               !
 !    icIOvs    Ice-Ocean velocity shear magnitude (m/s)                !
 !    icIOfv    Ice-Ocean friction velocity (m/s)                       !
@@ -135,6 +136,7 @@
       integer :: idSics       ! net short-wave flux at sea ice surface
       integer :: idSicb       ! net short-wave flux at sea ice base
       integer :: idSocn       ! net short-wave flux at sea surface
+      integer :: idRfac       ! lmd_r1 scaling factor
 !
 !  Ice model state prognostic variables indices.
 !
@@ -176,7 +178,7 @@
 !
 !  Ice model internal variables indices.
 !
-      integer, parameter :: nIceF = 30  ! number of ice field variables
+      integer, parameter :: nIceF = 31  ! number of ice field variables
 !
       integer :: iFice(nIceF)           ! internal fields I/O indices
 !
@@ -210,6 +212,7 @@
       integer, parameter :: icSics = 28 ! net SW flux at sea ice surface
       integer, parameter :: icSicb = 29 ! net SW flux at sea ice base
       integer, parameter :: icSocn = 30 ! net SW flux at sea surface
+      integer, parameter :: icRfac = 31 ! lmd_r1 scaling factor
 !
 !-----------------------------------------------------------------------
 !  Ice model parameters.

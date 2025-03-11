@@ -167,11 +167,6 @@
       defined DRENNAN)
      &                     FORCES(ng) % Lwavep,                         &
 # endif
-# if defined ICE_MODEL && defined ICE_ALBEDO
-     &                     FORCES(ng) % srflx_ocn,                      &
-     &                     FORCES(ng) % srflx_ics,                      &
-     &                     FORCES(ng) % srflx_icb,                      &
-# endif
      &                     FORCES(ng) % rain,                           &
      &                     FORCES(ng) % lhflx,                          &
      &                     FORCES(ng) % lrflx,                          &
@@ -235,9 +230,6 @@
      (defined COARE_TAYLOR_YELLAND || defined COARE_OOST || \
       defined DRENNAN)
      &                           Lwavep,                                &
-# endif
-# if defined ICE_MODEL && defined ICE_ALBEDO
-     &                           srflx_ocn, srflx_ics, srflx_icb,       &
 # endif
      &                           rain, lhflx, lrflx, shflx, srflx,      &
 # if defined ICE_MODEL && defined ICE_BULK_FLUXES
@@ -304,11 +296,6 @@
       defined DRENNAN)
       real(r8), intent(in   ) :: Lwavep(LBi:,LBj:)
 # endif
-#  if defined ICE_MODEL && defined ICE_ALBEDO
-      real(r8), intent(in   ) :: srflx_ocn(LBi:,LBj:)
-      real(r8), intent(in   ) :: srflx_ics(LBi:,LBj:)
-      real(r8), intent(in   ) :: srflx_icb(LBi:,LBj:)
-#  endif
       real(r8), intent(in   ) :: rain(LBi:,LBj:)
       real(r8), intent(inout) :: lhflx(LBi:,LBj:)
       real(r8), intent(inout) :: lrflx(LBi:,LBj:)
@@ -372,11 +359,6 @@
       defined DRENNAN)
       real(r8), intent(in   ) :: Lwavep(LBi:UBi,LBj:UBj)
 # endif
-#  if defined ICE_MODEL && defined ICE_ALBEDO
-      real(r8), intent(in   ) :: srflx_ocn(LBi:UBi,LBj:UBj)
-      real(r8), intent(in   ) :: srflx_ics(LBi:UBi,LBj:UBj)
-      real(r8), intent(in   ) :: srflx_icb(LBi:UBi,LBj:UBj)
-#  endif
       real(r8), intent(in   ) :: rain(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: lhflx(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: lrflx(LBi:UBi,LBj:UBj)
@@ -578,7 +560,7 @@
           rhoSea(i)=rho(i,j,N(ng))+1000.0_r8
           RH=Hair(i,j)
 # if defined ICE_MODEL && defined ICE_ALBEDO
-          SRad(i,j)=srflx_ocn(i,j)*Hscale
+          SRad(i,j)=Fi(i,j,icSocn)*Hscale
 # else
           SRad(i,j)=srflx(i,j)*Hscale
 # endif
@@ -1110,7 +1092,7 @@
 !
 !  Short-wave radiation (W/m**2) to ice.
 !
-          Qsw_i=(srflx_ics(i,j)-srflx_icb(i,j))*Hscale
+          Qsw_i=(Fi(i,j,icSics)-Fi(i,j,icSicb))*Hscale
 !
 !  A question remains as to what fraction of the solar radiation should
 !  be considered to contribute to the surface temperature of the
@@ -1230,7 +1212,7 @@
           lhflx(i,j)=-LHeat(i,j)*Hscale                      ! C m/s
           shflx(i,j)=-SHeat(i,j)*Hscale                      ! C m/s
 # if defined ICE_MODEL && defined ICE_ALBEDO
-          stflux(i,j,itemp)=(srflx_ocn(i,j)+lrflx(i,j)+                 &
+          stflux(i,j,itemp)=(Fi(i,j,icSocn)+lrflx(i,j)+                 &
 # else
           stflux(i,j,itemp)=(srflx(i,j)+lrflx(i,j)+                     &
 # endif
@@ -1240,7 +1222,6 @@
           Fi(i,j,icQcon)=Coef_Ice(i,j)                       !(W/m2)/K
           Fi(i,j,icQrhs)=RHS_Ice(i,j)                        ! W/m2
           Qnet_ai(i,j)=Qai(i,j)                              ! W/m2
-#  endif
 # endif
 # ifdef MASKING
           stflux(i,j,itemp)=stflux(i,j,itemp)*rmask(i,j)

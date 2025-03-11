@@ -776,10 +776,10 @@
 ** Activate internal option for seaice model.
 */
 
-#if defined ICE_ADVECT      || \
-    defined ICE_MOMENTUM    || \
-    defined ICE_THERMO      || \
-    defined ICE_BULK_FLUXES
+#if (defined ICE_ADVECT      || \
+     defined ICE_MOMENTUM    || \
+     defined ICE_THERMO      || \
+     defined ICE_BULK_FLUXES) && !defined ICE_MODEL
 # define ICE_MODEL
 #endif
 
@@ -796,9 +796,6 @@
 # endif
 # if defined ICE_BULK_FLUXES
 #  define ICE_ALBEDO
-# endif
-# if defined ICE_ALBEDO
-#  define ALBEDO
 # endif
 # if defined LMD_SKPP
 #  define ICE_LMD_SHORTWAVE

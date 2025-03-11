@@ -335,6 +335,13 @@
                 RETURN
               END IF
               Npts=load_l(Nval, Cval, Ngrids, Hout(idSocn,:))
+            CASE ('Hout(idRfac)')
+              IF (idRfac.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idRfac'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Hout(idRfac,:))
             CASE ('Qout(idUice)')
               Npts=load_l(Nval, Cval, Ngrids, Qout(idUice,:))
             CASE ('Qout(idVice)')
@@ -397,6 +404,8 @@
               Npts=load_l(Nval, Cval, Ngrids, Qout(idSicb,:))
             CASE ('Qout(idSocn)')
               Npts=load_l(Nval, Cval, Ngrids, Qout(idSocn,:))
+            CASE ('Qout(idRfac)')
+              Npts=load_l(Nval, Cval, Ngrids, Qout(idRfac,:))
 #ifdef AVERAGES
             CASE ('Aout(idUice)')
               Npts=load_l(Nval, Cval, Ngrids, Aout(idUice,:))
@@ -460,6 +469,8 @@
               Npts=load_l(Nval, Cval, Ngrids, Aout(idSicb,:))
             CASE ('Aout(idSocn)')
               Npts=load_l(Nval, Cval, Ngrids, Aout(idSocn,:))
+            CASE ('Aout(idRfac)')
+              Npts=load_l(Nval, Cval, Ngrids, Aout(idRfac,:))
 #endif
           END SELECT
         END IF
@@ -616,6 +627,9 @@
           IF (Hout(idSocn,ng)) WRITE (out,70) Hout(idSocn,ng),          &
      &       'Hout(idSocn)',                                            &
      &       'Write out net short-wave radiation at sea surface.'
+          IF (Hout(idRfac,ng)) WRITE (out,70) Hout(idRfac,ng),          &
+     &       'Hout(idRfac)',                                            &
+     &       'Write out lmd_r1 scaling factor.'
 !
           IF (Qout(idUice,ng)) WRITE (out,70) Qout(idUice,ng),          &
      &       'Qout(idUice)',                                            &
@@ -710,6 +724,9 @@
           IF (Qout(idSocn,ng)) WRITE (out,70) Qout(idSocn,ng),          &
      &       'Qout(idSocn)',                                            &
      &       'Write out net short-wave radiation at sea surface.'
+          IF (Qout(idRfac,ng)) WRITE (out,70) Qout(idRfac,ng),          &
+     &       'Qout(idRfac)',                                            &
+     &       'Write out lmd_r1 scaling factor.'
 #ifdef AVERAGES
 !
           IF (Aout(idUice,ng)) WRITE (out,70) Aout(idUice,ng),          &
@@ -805,6 +822,9 @@
           IF (Aout(idSocn,ng)) WRITE (out,70) Aout(idSocn,ng),          &
      &       'Aout(idSocn)',                                            &
      &       'Write out net short-wave radiation at sea surface.'
+          IF (Aout(idRfac,ng)) WRITE (out,70) Aout(idRfac,ng),          &
+     &       'Aout(idRfac)',                                            &
+     &       'Write out lmd_r1 scaling factor.'
 #endif
         END DO
       END IF

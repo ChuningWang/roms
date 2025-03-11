@@ -2,9 +2,9 @@
       MODULE ice_albedo_mod
 
 #if defined ICE_MODEL && defined ICE_ALBEDO
-#define ICE_ALB_EC92
-#define ICE_ALB_SANGLE
-#define ICE_ALB_GREGORIAN
+# define ICE_ALB_EC92
+# define ICE_ALB_SANGLE
+# define ICE_ALB_GREGORIAN
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
@@ -17,10 +17,10 @@
 !  using selected formulation.                                         !
 !                                                                      !
 !  Additionally, it computes the fraction of shortwave radtion         !
-!    penetrating ice base (frswp), so that shortwave radiation         !
+!    penetrating ice base (Frsw), so that shortwave radiation          !
 !    reaching ice base is:                                             !
 !                                                                      !
-!      SW_ice_base = SW*(1-albedo_ice)*frswp                           !
+!      SW_ice_base = SW*(1-albedo_ice)*Frsw                            !
 !                                                                      !
 !  References:                                                         !
 !                                                                      !
@@ -94,17 +94,8 @@
 #  endif
 # endif
      &                      FORCES(ng) % srflx,                         &
-     &                      ICE(ng) % Fi,                               &
      &                      ICE(ng) % Si,                               &
-     &                      FORCES(ng) % albedo_ice,                    &
-     &                      FORCES(ng) % albedo_ocn,                    &
-     &                      FORCES(ng) % frswp,                         &
-# ifdef ICE_LMD_SHORTWAVE
-     &                      FORCES(ng) % rfaci,                         &
-# endif
-     &                      FORCES(ng) % srflx_ics,                     &
-     &                      FORCES(ng) % srflx_icb,                     &
-     &                      FORCES(ng) % srflx_ocn)
+     &                      ICE(ng) % Fi)
 # ifdef PROFILE
       CALL wclock_off (ng, iNLM, 17, __LINE__, __FILE__)
 # endif
@@ -124,12 +115,8 @@
 #  ifdef CLOUDS
      &                            cloud,                                &
 #  endif
-     &                            srflx, Fi, Si,                        &
-     &                            albedo_ice, albedo_ocn, frswp,        &
-# ifdef ICE_LMD_SHORTWAVE
-     &                            rfaci,                                &
 # endif
-     &                            srflx_ics, srflx_icb, srflx_ocn)
+     &                            srflx, Si, Fi)
 !***********************************************************************
 !
 !  Imported variable declarations.
@@ -151,18 +138,8 @@
 #   endif
 #  endif
       real(r8), intent(in) :: srflx(LBi:,LBj:)
+      real(r8), intent(in) :: Si(LBi:,LBj:,:,:)
       real(r8), intent(inout) :: Fi(LBi:,LBj:,:)
-      real(r8), intent(inout) :: Si(LBi:,LBj:,:,:)
-      real(r8), intent(out) :: albedo_ice(LBi:,LBj:)
-      real(r8), intent(out) :: albedo_ocn(LBi:,LBj:)
-      real(r8), intent(out) :: frswp(LBi:,LBj:)
-#  ifdef ICE_LMD_SHORTWAVE
-      real(r8), intent(out) :: rfaci(LBi:,LBj:)
-#  endif
-      real(r8), intent(out) :: srflx_ics(LBi:,LBj:)
-      real(r8), intent(out) :: srflx_icb(LBi:,LBj:)
-      real(r8), intent(out) :: srflx_ocn(LBi:,LBj:)
-
 # else
 #  ifdef ICESHELF
       real(r8), intent(in) :: zice(LBi:UBi,LBj:UBj)
@@ -175,17 +152,8 @@
 #   endif
 #  endif
       real(r8), intent(in) :: srflx(LBi:UBi,LBj:UBj)
+      real(r8), intent(in) :: Si(LBi:UBi,LBj:UBj,2,nIceS)
       real(r8), intent(inout) :: Fi(LBi:UBi,LBj:UBj,nIceF)
-      real(r8), intent(inout) :: Si(LBi:UBi,LBj:UBj,2,nIceS)
-      real(r8), intent(out) :: albedo_ice(LBi:UBi,LBj:UBj)
-      real(r8), intent(out) :: albedo_ocn(LBi:UBi,LBj:UBj)
-      real(r8), intent(out) :: frswp(LBi:UBi,LBj:UBj)
-#  ifdef ICE_LMD_SHORTWAVE
-      real(r8), intent(out) :: rfaci(LBi:UBi,LBj:UBj)
-#  endif
-      real(r8), intent(out) :: srflx_ics(LBi:UBi,LBj:UBj)
-      real(r8), intent(out) :: srflx_icb(LBi:UBi,LBj:UBj)
-      real(r8), intent(out) :: srflx_ocn(LBi:UBi,LBj:UBj)
 # endif
 !
 !  Local variable declarations.
@@ -195,7 +163,13 @@
 !  Default ocean surface albedo
 !
       real(r8), parameter :: alb_o  = 0.060_r8
-      real(r8), parameter :: alb_oz = 0.065_r8
+      real(r8), parameter :: alb_od = 0.065_r8
+!
+!   Visual fraction of total shortwave (Aumont et al., 2015)
+!
+      real(r8), parameter :: fv     = 0.43_r8
+!
+      real(r8), parameter :: tol    = 0.000001_r8
 !
 # ifdef ICE_ALB_CSIM
 !
@@ -259,10 +233,6 @@
 !
       real(r8), parameter :: Tsmelt    = 0.0_r8
       real(r8), parameter :: puny      = 1.0e-11_r8
-!
-!   Visual fraction of total shortwave (Aumont et al., 2015)
-!
-      real(r8), parameter :: fv        = 0.43_r8
 !
 !   Fraction of penetrating solar rad (visible); CESM2/CICE5.1 default
 !     (cf. 0.7 in Briegleb et al., 2004)
@@ -328,15 +298,15 @@
 !
 !  Zero out fluxes under iceshelf
 !
-            albedo_ice(i,j) = 0.0_r8
-            albedo_ocn(i,j) = 0.0_r8
-            frswp(i,j)      = 0.0_r8
+            Fi(i,j,icAlbi) = 0.0_r8
+            Fi(i,j,icAlbo) = 0.0_r8
+            Fi(i,j,icFrsw) = 0.0_r8
+            Fi(i,j,icSics) = 0.0_r8
+            Fi(i,j,icSicb) = 0.0_r8
+            Fi(i,j,icSocn) = 0.0_r8
 #  ifdef ICE_LMD_SHORTWAVE
-            rfaci(i,j)      = 0.0_r8
+            Fi(i,j,icRfac) = 0.0_r8
 #  endif
-            srflx_ics(i,j)  = 0.0_r8
-            srflx_icb(i,j)  = 0.0_r8
-            srflx_ocn(i,j)  = 0.0_r8
           ELSE
 # endif
 !
@@ -401,11 +371,11 @@
             END IF
 !
 !  Combined ice/snow albedo with respect to total incident SW
-!    (absorbed SW = (1-albedo_i)*SW)
+!    (absorbed SW = (1-albedo_ice)*SW)
 !
-            albedo_ice(i,j) = fv*alvn + (1.0_r8-fv)*alin
+            Fi(i,j,icAlbi) = fv*alvn + (1.0_r8-fv)*alin
           ELSE
-            albedo_ice(i,j) = alb_o
+            Fi(i,j,icAlbi) = alb_o
           END IF
 # elif defined ICE_ALB_EC92
 !
@@ -413,23 +383,23 @@
 !
           IF (Si(i,j,li_stp,isAice) .gt. min_ai(ng)) THEN
             IF (s_thick .gt. 0._r8) THEN
-              albedo_ice(i,j) = alb_s
+              Fi(i,j,icAlbi) = alb_s
             ELSE
 !
 !  Approximated values for ice alb (depend on COSZ, but small variation)
 !
               i_thick = MAX(i_thick, 0.000001_r8)
               IF (i_thick .ge. 2._r8) THEN
-                albedo_ice(i,j) = 0.561632_r8
+                Fi(i,j,icAlbi) = 0.561632_r8
               ELSE IF (i_thick .ge. 1._r8) THEN
-                albedo_ice(i,j) = 0.07616_r8 *    i_thick  + 0.414492_r8
+                Fi(i,j,icAlbi) = 0.07616_r8 *    i_thick  + 0.414492_r8
               ELSE
-                albedo_ice(i,j) = 0.082409_r8*LOG(i_thick) + 0.485472_r8
-                albedo_ice(i,j) = MAX(alb_o, albi(i,j))
+                Fi(i,j,icAlbi) = 0.082409_r8*LOG(i_thick) + 0.485472_r8
+                Fi(i,j,icAlbi) = MAX(alb_o, Fi(i,j,icAlbi))
               END IF
             END IF
           ELSE
-            albedo_ice(i,j) = alb_o
+            Fi(i,j,icAlbi) = alb_o
           END IF
 # else
           cff1 = alb_s_wet - alb_s_dry
@@ -437,19 +407,19 @@
           IF (Si(i,j,li_stp,isAice) .gt. min_ai(ng)) THEN
             IF (s_thick .gt. 0._r8) THEN
               IF (sfc_temp .gt. -1.0_r8) THEN
-                albedo_ice(i,j) = alb_s_dry + cff1*(sfc_temp+1.0_r8)
+                Fi(i,j,icAlbi) = alb_s_dry + cff1*(sfc_temp+1.0_r8)
               ELSE
-                albedo_ice(i,j) = alb_s_dry
+                Fi(i,j,icAlbi) = alb_s_dry
               END IF
             ELSE
               IF (sfc_temp .gt. -1.0_r8) THEN
-                albedo_ice(i,j) = alb_i_dry + cff2*(sfc_temp+1.0_r8)
+                Fi(i,j,icAlbi) = alb_i_dry + cff2*(sfc_temp+1.0_r8)
               ELSE
-                albedo_ice(i,j) = alb_i_dry
+                Fi(i,j,icAlbi) = alb_i_dry
               END IF
             END IF
           ELSE
-            albedo_ice(i,j) = alb_o
+            Fi(i,j,icAlbi) = alb_o
           END IF
 # endif
 
@@ -506,9 +476,9 @@
 !
 !  Daily mean albedo weighted by cloud fraction
 !
-          albedo_ocn(i,j) = 1._r8 -                                     &
-     &                      ((1.0_r8-cloud(i,j))*(1.0_r8-alb_sr) +      &
-     &                               cloud(i,j) *(1.0_r8-alb_oz))
+          Fi(i,j,icAlbo) = 1._r8 -                                      &
+     &                     ((1.0_r8-cloud(i,j))*(1.0_r8-alb_sr) +       &
+     &                              cloud(i,j) *(1.0_r8-alb_od))
 # elif defined ICE_ALB_SANGLE
 !
 ! ----------------------------------------------------------------------
@@ -536,11 +506,11 @@
 !
 !  Albedo weighted by cloud fraction
 !
-          albedo_ocn(i,j) = 1._r8 -                                     &
-     &                      ((1.0_r8-cloud(i,j))*(1.0_r8-alb_sr) +      &
-     &                               cloud(i,j) *(1.0_r8-alb_oz))
+          Fi(i,j,icAlbo) = 1._r8 -                                      &
+     &                     ((1.0_r8-cloud(i,j))*(1.0_r8-alb_sr) +       &
+     &                              cloud(i,j) *(1.0_r8-alb_od))
 # else
-          albedo_ocn(i,j) = alb_o
+          Fi(i,j,icAlbo) = alb_o
 # endif
 !
 ! ----------------------------------------------------------------------
@@ -555,8 +525,8 @@
 !
 !  CICE 5.1 cice/source/ice_shortwave.F90 Ln 996
 !
-            frswp(i,j) = (1.0_r8-alvni)*(1.0_r8-asnow)*i0vis*fv /       &
-     &                   (1.0_r8-albedo_ice(i,j))
+            Fi(i,j,icFrsw) = (1.0_r8-alvni)*(1.0_r8-asnow)*i0vis*fv /   &
+     &                       (1.0_r8-Fi(i,j,icAlbi))
 # else
             IF (i_thick .le. 0.1_r8) THEN
               cff = i_thick*5._r8
@@ -564,10 +534,13 @@
               cff = 0.4_r8 + i_thick
             END IF
             cff = cff + s_thick*20._r8
-            frswp(i,j) = fv*EXP(-cff)
+!
+!  Assume only visual part penetrates (Briegleb et al., 2004)
+!
+            Fi(i,j,icFrsw) = fv*EXP(-cff)
 # endif
           ELSE
-            frswp(i,j) = 1.0_r8
+            Fi(i,j,icFrsw) = 0.0_r8
           END IF
 !
 ! ----------------------------------------------------------------------
@@ -575,33 +548,25 @@
 !    surface, and ice base
 ! ----------------------------------------------------------------------
 !
-          srflx_ocn(i,j) = srflx(i,j)*(1.0_r8-albedo_ocn(i,j))
-          srflx_ics(i,j) = srflx(i,j)*(1.0_r8-albedo_ice(i,j))
-          srflx_icb(i,j) = srflx_ics(i,j)*frswp(i,j)
+          Fi(i,j,icSocn) = srflx(i,j)*(1.0_r8-Fi(i,j,icAlbo))
+          Fi(i,j,icSics) = srflx(i,j)*(1.0_r8-Fi(i,j,icAlbi))
+          Fi(i,j,icSicb) = Fi(i,j,icSics)*Fi(i,j,icFrsw)
 # ifdef ICE_LMD_SHORTWAVE
 !
 ! ----------------------------------------------------------------------
 !  Calculate correction factor for lmd_r1
 ! ----------------------------------------------------------------------
 !
-          cff1       =  1.0_r8 - albedo_ocn(i,j)
-          cff2       = (1.0_r8 - albedo_ice(i,j))*frswp(i,j)
-          rfaci(i,j) =           (1.0_r8 - ai(i,j,li_stp))*cff1 /       &
-     &                 MAX(tol, ((1.0_r8 - ai(i,j,li_stp))*cff1 +       &
-     &                                     ai(i,j,li_stp) *cff2))
+          cff1           =  1.0_r8 - Fi(i,j,icAlbo)
+          cff2           = (1.0_r8 - Fi(i,j,icAlbi))*Fi(i,j,icFrsw)
+          Fi(i,j,icRfac) =                                              &
+     &      (1.0_r8-Si(i,j,li_stp,isAice))*cff1 /                       &
+     &      MAX(tol, ((1.0_r8-Si(i,j,li_stp,isAice))*cff1 +             &
+     &                        Si(i,j,li_stp,isAice) *cff2))
 # endif
 # ifdef ICESHELF
           END IF
 # endif
-!
-!  Save values in Fi for easy IO
-!
-          Fi(i,j,icAlbi) = srflx_albedo_ice(i,j)
-          Fi(i,j,icAlbo) = srflx_albedo_ocn(i,j)
-          Fi(i,j,icFrsw) = srflx_frswp(i,j)
-          Fi(i,j,icSics) = srflx_ics(i,j)
-          Fi(i,j,icSicb) = srflx_icb(i,j)
-          Fi(i,j,icSocn) = srflx_ocn(i,j)
         END DO
       END DO
 !
@@ -612,46 +577,48 @@
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
-     &                          albedo_ocn)
+     &                          Fi(:,:,icAlbo))
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
-     &                          albedo_ice)
+     &                          Fi(:,:,icAlbi))
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
-     &                          frswp)
+     &                          Fi(:,:,icFrsw))
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fi(:,:,icSics))
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fi(:,:,icSicb))
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fi(:,:,icSocn))
 # ifdef ICE_LMD_SHORTWAVE
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
-     &                          rfaci)
+     &                          Fi(:,:,icRfac))
 # endif
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          srflx_ics)
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          srflx_icb)
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          srflx_ocn)
       END IF
 # ifdef DISTRIBUTE
       CALL mp_exchange2d (ng, tile, iNLM, 3,                            &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    albedo_ocn, albedo_ice, frswp)
+     &                    Fi(:,:,icAlbo), Fi(:,:,icAlbi),               &
+     &                    Fi(:,:,icFrsw))
+      CALL mp_exchange2d (ng, tile, iNLM, 3,                            &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+     &                    Fi(:,:,icSics), Fi(:,:,icSicb),               &
+     &                    Fi(:,:,icSocn))
 #  ifdef ICE_LMD_SHORTWAVE
       CALL mp_exchange2d (ng, tile, iNLM, 1,                            &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    rfaci)
+     &                    Fi(:,:,icRfac))
 #  endif
-      CALL mp_exchange2d (ng, tile, iNLM, 3,                            &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    NghostPoints,                                 &
-     &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    srflx_ics, srflx_icb, srflx_ocn)
 # endif
       RETURN
 !
