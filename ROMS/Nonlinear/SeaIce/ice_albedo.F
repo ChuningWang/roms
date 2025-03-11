@@ -42,6 +42,9 @@
 !=======================================================================
 !
       USE mod_param
+# ifdef ICE_LMD_SHORTWAVE
+      USE mod_mixing
+# endif
       USE mod_forces
       USE mod_grid
       USE mod_ice
@@ -562,7 +565,8 @@
           Fi(i,j,icRfac) =                                              &
      &      (1.0_r8-Si(i,j,li_stp,isAice))*cff1 /                       &
      &      MAX(tol, ((1.0_r8-Si(i,j,li_stp,isAice))*cff1 +             &
-     &                        Si(i,j,li_stp,isAice) *cff2))
+     &                        Si(i,j,li_stp,isAice) *cff2 *             &
+     &                        INT(MIXING(ng)%Jwtype(i,j))))
 # endif
 # ifdef ICESHELF
           END IF

@@ -1212,6 +1212,12 @@
           lhflx(i,j)=-LHeat(i,j)*Hscale                      ! C m/s
           shflx(i,j)=-SHeat(i,j)*Hscale                      ! C m/s
 # if defined ICE_MODEL && defined ICE_ALBEDO
+!
+!  Update area weighted mean downward short-wave radiation
+!
+          srflx(i,j)=(1.0_r8-Si(i,j,li_stp,isAice))*Fi(i,j,icSocn) +    &
+     &                       Si(i,j,li_stp,isAice) *Fi(i,j,icSicb)
+!
           stflux(i,j,itemp)=(Fi(i,j,icSocn)+lrflx(i,j)+                 &
 # else
           stflux(i,j,itemp)=(srflx(i,j)+lrflx(i,j)+                     &
@@ -1344,6 +1350,10 @@
 
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
+     &                          srflx)
+
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
      &                          sustr_ai)
 
         CALL exchange_r2d_tile (ng, tile,                               &
@@ -1399,6 +1409,12 @@
      &                    Fi(:,:,icQrhs),                               &
      &                    Qnet_ai, snow)
 #   endif
+
+      CALL mp_exchange2d (ng, tile, iNLM, 1,                            &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+     &                    srflx)
 
       CALL mp_exchange2d (ng, tile, iNLM, 4,                            &
      &                    LBi, UBi, LBj, UBj,                           &
