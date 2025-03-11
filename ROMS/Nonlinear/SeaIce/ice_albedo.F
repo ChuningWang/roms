@@ -77,7 +77,7 @@
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 42, __LINE__, MyFile)
+      CALL wclock_on (ng, model, 42, __LINE__, MyFile)
 # endif
       CALL ice_albedo_tile (ng, tile, model,                            &
      &                      LBi, UBi, LBj, UBj,                         &
@@ -97,7 +97,7 @@
      &                      ICE(ng) % Si,                               &
      &                      ICE(ng) % Fi)
 # ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 17, __LINE__, __FILE__)
+      CALL wclock_off (ng, model, 42, __LINE__, MyFile)
 # endif
       RETURN
       END SUBROUTINE ice_albedo
