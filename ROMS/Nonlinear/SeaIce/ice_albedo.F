@@ -245,7 +245,7 @@
       real(r8) :: fh, alb, alvni, alini, dTs, fT
       real(r8) :: alvns, alins, asnow, alvn, alin
 # elif defined ICE_ALB_EC92
-      real(r8) :: alb_s = 0.83_r8
+      real(r8) :: alb_ice, alb_snow
 # else
       real(r8), parameter :: alb_i_dry = 0.65_r8
       real(r8), parameter :: alb_i_wet = 0.60_r8
@@ -385,21 +385,50 @@
 !  Ice and snow albedo is calculated from Ebert and Curry (1992)
 !
           IF (Si(i,j,li_stp,isAice) .gt. min_ai(ng)) THEN
-            IF (s_thick .gt. 0._r8) THEN
-              Fi(i,j,icAlbi) = alb_s
+!
+!  The threshold test can still lead to a negative albedo, so we modify
+!  the minimum ice thickness for this estimate to something more
+!  reasonable (SMD).
+!
+            i_thick=MAX(i_thick, 0.01_r8)
+            IF (i_thick.ge.2.0_r8) THEN
+              alb_ice =                              0.561632_r8
+            ELSE IF (i_thick.ge.1.0_r8) THEN
+              alb_ice = 0.07616_r8  *     i_thick  + 0.414492_r8
             ELSE
+              alb_ice = 0.082409_r8 * LOG(i_thick) + 0.485472_r8
+            END IF
 !
-!  Approximated values for ice alb (depend on COSZ, but small variation)
+!  Approximated values for snow albedo depending on COSZ, but small
+!  variation.
 !
-              i_thick = MAX(i_thick, 0.000001_r8)
-              IF (i_thick .ge. 2._r8) THEN
-                Fi(i,j,icAlbi) = 0.561632_r8
-              ELSE IF (i_thick .ge. 1._r8) THEN
-                Fi(i,j,icAlbi) = 0.07616_r8 *    i_thick  + 0.414492_r8
+            IF (Si(i,j,li_stp,isHmel).gt.0.0_r8) THEN
+              IF (s_thick.ge.0.1_r8) THEN
+                alb_snow = 0.701009_r8
               ELSE
-                Fi(i,j,icAlbi) = 0.082409_r8*LOG(i_thick) + 0.485472_r8
-                Fi(i,j,icAlbi) = MAX(alb_o, Fi(i,j,icAlbi))
+                alb_snow = alb_ice+(0.701009_r8-alb_ice)*s_thick/0.1_r8
               END IF
+            ELSE
+              alb_snow = 0.83_r8
+            END IF
+!
+!  Ebert and Curry estimate the melt pond albedo to be between 0.14 and
+!  0.26, depending on the thickness of the meltwater ponds.  But of
+!  course, the meltwater ponds do not cover all the ice surface, except
+!  maybe effectively when the ice consists of small pieces with little
+!  freeboard. So let's try the idea that the effective albedo of the
+!  ice/melt pond/snow is that of ice for bare ice, that of snow
+!  (potentially modified by meltwater if snow is present), and the
+!  average of the high-end melt pond (0.26) and the low-end ice bare
+!  ice (0.56) when melt ponds of more than a few centimeters deep are
+!  present (SMD).
+!
+            IF (Si(i,j,li_stp,isHsno).gt.0.0_r8) THEN
+              albedo_ice(i,j) = alb_snow
+            ELSE IF (Si(i,j,li_stp,isHmel).gt.0.02_r8) THEN
+              albedo_ice(i,j) = 0.42_r8
+            ELSE
+              albedo_ice(i,j) = alb_ice
             END IF
           ELSE
             Fi(i,j,icAlbi) = alb_o
