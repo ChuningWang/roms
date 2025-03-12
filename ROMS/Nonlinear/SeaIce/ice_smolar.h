@@ -389,7 +389,7 @@
      &                    LBC(:,ibICE(isIage),ng))
 #endif
 
-#if defined ICE_THERMO && defined ICE_BIO
+#ifdef ICE_BIO
 !
 !-----------------------------------------------------------------------
 !  Advect the ice algae concentration, IcePhL.
