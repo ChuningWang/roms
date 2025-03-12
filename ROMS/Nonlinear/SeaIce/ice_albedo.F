@@ -4,7 +4,7 @@
 #if defined ICE_MODEL && defined ICE_ALBEDO
 # define ICE_ALB_EC92
 # define ICE_ALB_SANGLE
-# define ICE_ALB_GREGORIAN
+# define ICE_ALB_BRIEGLEB
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
@@ -37,7 +37,12 @@
 !      cloud optical properties for climate models, J. Geophys.        !
 !      Res., 97, 3831-3836, doi: doi.org/10.1029/91jD02472.            !
 !                                                                      !
-!    Iqbal, M.,1983 An Introduction to Solar Radiation [Book]          !
+!    Iqbal, M. ,1983 An Introduction to Solar Radiation [Book]         !
+!                                                                      !
+!    Taylor, J.P., et al., 1996: Studies with a flexible new radiation !
+!      code: Comarisions with aircraft short-wave observations         !
+!                                                                      !
+!    Enomoto T., 2007: Ocean surface albedo in AFES                    !
 !                                                                      !
 !=======================================================================
 !
@@ -254,7 +259,7 @@
 # endif
 
       real(r8) :: i_thick, s_thick
-      real(r8) :: hours, days, dangle, hangle, langle
+      real(r8) :: hour, yday, dangle, hangle
       real(r8) :: sin2, cos2, cosz, alb_sr
 # ifdef ICE_ALB_DMEAN
       integer,  parameter :: ifrac     = 24
@@ -284,14 +289,13 @@
 !  Calculate solar angle.
 !    Iqbal (1992) Pg 7
 !
-      CALL caldate (tdays(ng), yd_dp=days, h_dp=hours)
-      days   = MOD(days-1._r8,365._r8)
-      dangle = 2.0_r8*pi*days/365._r8
+      CALL caldate (tdays(ng), yd_dp=yday, h_dp=hour)
+      dangle = 2.0_r8*pi*yday/365._r8
       dangle = .006918_r8 +                                             &
      &  .070257_r8*SIN(      dangle) - .399912_r8*COS(      dangle) +   &
      &  .000907_r8*SIN(2._r8*dangle) - .006758_r8*COS(2._r8*dangle) +   &
      &  .001480_r8*SIN(3._r8*dangle) - .002697_r8*COS(3._r8*dangle)
-      hangle = pi*(hours-12.0_r8)/12.0_r8
+      hangle = pi*(12.0_r8-hour)/12.0_r8
 # endif
 
       DO j=Jstr-1,JendR
@@ -424,11 +428,11 @@
 !  present (SMD).
 !
             IF (Si(i,j,li_stp,isHsno).gt.0.0_r8) THEN
-              albedo_ice(i,j) = alb_snow
+              Fi(i,j,icAlbi) = alb_snow
             ELSE IF (Si(i,j,li_stp,isHmel).gt.0.02_r8) THEN
-              albedo_ice(i,j) = 0.42_r8
+              Fi(i,j,icAlbi) = 0.42_r8
             ELSE
-              albedo_ice(i,j) = alb_ice
+              Fi(i,j,icAlbi) = alb_ice
             END IF
           ELSE
             Fi(i,j,icAlbi) = alb_o
@@ -514,27 +518,39 @@
 # elif defined ICE_ALB_SANGLE
 !
 ! ----------------------------------------------------------------------
-!  Compute ocean surface albedo: Iqbal (1983) Pg 15
+!  Compute ocean surface albedo
 ! ----------------------------------------------------------------------
+!
+!  Calculate Cosine of zenith angle: Iqbal (1983) Pg 15
 !
           sin2   = SIN(latr(i,j)*deg2rad)*SIN(dangle)
           cos2   = COS(latr(i,j)*deg2rad)*COS(dangle)
-#  ifdef ICE_ALB_GREGORIAN
 !
-!  Correction for local time if Gregorian reference time is used
+!  Correction for local time if time is given in UTC
 !
-          langle = MOD(lonr(i,j), 360._r8)*rad2deg
-#  else
-          langle = 0.0_r8
-#  endif
+          hangle = hangle - lonr(i,j)*deg2rad
 !
 !  Cosine of zenith angle
 !
-          cosz   = MIN(1._r8, MAX(0._r8, sin2+cos2*COS(hangle+langle)))
+          cosz   = MIN(1._r8, MAX(0._r8, sin2+cos2*COS(hangle)))
+#  ifdef ICE_ALB_BRIEGLEB
 !
-!  Albedo of direct sun light
+!  Albedo of direct sun light: Briegleb et al. (1986) (default)
 !
-          alb_sr = 0.03_r8*EXP(0.742_r8*ACOS(cosz)**2.866_r8)
+          alb_sr = 0.026_r8 / (       cosz**1.7_r8 + 0.065_r8) +        &
+     &             0.150_r8 * (cosz-0.1_r8)*(cosz-0.5_r8)*(cosz-1.0_r8)
+#  elif defined ICE_ALB_ENOMOTO
+!
+!  Albedo of direct sun light: Enomoto et al. (2007)
+!
+          alb_sr = 0.026_r8 / (1.1_r8*cosz**1.7_r8 + 0.065_r8) +        &
+     &             0.150_r8 * (cosz-0.1_r8)*(cosz-0.5_r8)*(cosz-1.0_r8)
+#  elif defined ICE_ALB_TAYLOR
+!
+!  Albedo of direct sun light: Taylor et al. (1996)
+!
+          alb_sr = 0.037_r8 / (1.1_r8*cosz**1.4_r8 + 0.150_r8)
+#  endif
 !
 !  Albedo weighted by cloud fraction
 !
