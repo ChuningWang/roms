@@ -57,6 +57,20 @@
           CASE ('idVice')
             idVice=varid
             iSice(isVice)=idVice
+#if defined ICE_BIO
+          CASE ('idIphy')
+            isIphy=varid
+            iSice(isIphy)=idIphy
+          CASE ('idINO3')
+            isINO3=varid
+            iSice(isINO3)=idINO3
+          CASE ('idINH4')
+            isINH4=varid
+            iSice(isINH4)=idINH4
+          CASE ('idIlog')
+            isIlog=varid
+            iSice(isIlog)=idIlog
+#endif
           CASE ('idAiCL')
             idAiCL=varid
           CASE ('idHiCL')
@@ -105,6 +119,7 @@
           CASE ('idW_ro')
             idW_ro=varid
             iFice(icW_ro)=idW_ro
+#if defined ICE_BULK_FLUXES
           CASE ('idAlbi')
             idAlbi=varid
             iFice(icAlbi)=idAlbi
@@ -126,6 +141,10 @@
           CASE ('idRfac')
             idRfac=varid
             iFice(icRfac)=idRfac
+          CASE ('idSnof')
+            idSnof=varid
+            iFice(icSnof)=idSnof
+#endif
 /*
 **  Ice model open boundary conditions.
 */

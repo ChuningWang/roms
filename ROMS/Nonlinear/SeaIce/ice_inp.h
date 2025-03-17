@@ -209,6 +209,36 @@
                 RETURN
               END IF
               Npts=load_l(Nval, Cval, Ngrids, Hout(idISyy,:))
+#if defined ICE_BIO
+            CASE ('Hout(idIphy)')
+              IF (idIphy.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIphy'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Hout(idIphy,:))
+            CASE ('Hout(idINO3)')
+              IF (idINO3.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idINO3'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Hout(idINO3,:))
+            CASE ('Hout(idINH4)')
+              IF (idINH4.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idINH4'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Hout(idINH4,:))
+            CASE ('Hout(idIlog)')
+              IF (idIlog.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIlog'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Hout(idIlog,:))
+#endif
             CASE ('Hout(idIsst)')
               IF (idIsst.eq.0) THEN
                 IF (Master) WRITE (out,80) 'idIsst'
@@ -293,6 +323,7 @@
                 RETURN
               END IF
               Npts=load_l(Nval, Cval, Ngrids, Hout(idW_ro,:))
+#if defined ICE_BULK_FLUXES
             CASE ('Hout(idAlbi)')
               IF (idAlbi.eq.0) THEN
                 IF (Master) WRITE (out,80) 'idAlbi'
@@ -342,6 +373,14 @@
                 RETURN
               END IF
               Npts=load_l(Nval, Cval, Ngrids, Hout(idRfac,:))
+            CASE ('Hout(idSnof)')
+              IF (idSnof.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idSnof'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Hout(idSnof,:))
+#endif
             CASE ('Qout(idUice)')
               Npts=load_l(Nval, Cval, Ngrids, Qout(idUice,:))
             CASE ('Qout(idVice)')
@@ -368,6 +407,16 @@
               Npts=load_l(Nval, Cval, Ngrids, Qout(idISxy,:))
             CASE ('Qout(idISyy)')
               Npts=load_l(Nval, Cval, Ngrids, Qout(idISyy,:))
+#if defined ICE_BIO
+            CASE ('Qout(idIphy)')
+              Npts=load_l(Nval, Cval, Ngrids, Qout(idIphy,:))
+            CASE ('Qout(idINO3)')
+              Npts=load_l(Nval, Cval, Ngrids, Qout(idINO3,:))
+            CASE ('Qout(idINH4)')
+              Npts=load_l(Nval, Cval, Ngrids, Qout(idINH4,:))
+            CASE ('Qout(idIlog)')
+              Npts=load_l(Nval, Cval, Ngrids, Qout(idIlog,:))
+#endif
             CASE ('Qout(idIsst)')
               Npts=load_l(Nval, Cval, Ngrids, Qout(idIsst,:))
             CASE ('Qout(idIOmf)')
@@ -392,6 +441,7 @@
               Npts=load_l(Nval, Cval, Ngrids, Qout(idW_io,:))
             CASE ('Qout(idW_ro)')
               Npts=load_l(Nval, Cval, Ngrids, Qout(idW_ro,:))
+#if defined ICE_BULK_FLUXES
             CASE ('Qout(idAlbi)')
               Npts=load_l(Nval, Cval, Ngrids, Qout(idAlbi,:))
             CASE ('Qout(idAlbo)')
@@ -406,6 +456,9 @@
               Npts=load_l(Nval, Cval, Ngrids, Qout(idSocn,:))
             CASE ('Qout(idRfac)')
               Npts=load_l(Nval, Cval, Ngrids, Qout(idRfac,:))
+            CASE ('Qout(idSnof)')
+              Npts=load_l(Nval, Cval, Ngrids, Qout(idSnof,:))
+#endif
 #ifdef AVERAGES
             CASE ('Aout(idUice)')
               Npts=load_l(Nval, Cval, Ngrids, Aout(idUice,:))
@@ -431,6 +484,16 @@
               Npts=load_l(Nval, Cval, Ngrids, Aout(idISxy,:))
             CASE ('Aout(idISyy)')
               Npts=load_l(Nval, Cval, Ngrids, Aout(idISyy,:))
+# if defined ICE_BIO
+            CASE ('Aout(idIphy)')
+              Npts=load_l(Nval, Cval, Ngrids, Aout(idIphy,:))
+            CASE ('Aout(idINO3)')
+              Npts=load_l(Nval, Cval, Ngrids, Aout(idINO3,:))
+            CASE ('Aout(idINH4)')
+              Npts=load_l(Nval, Cval, Ngrids, Aout(idINH4,:))
+            CASE ('Aout(idIlog)')
+              Npts=load_l(Nval, Cval, Ngrids, Aout(idIlog,:))
+# endif
             CASE ('Aout(idIsst)')
               Npts=load_l(Nval, Cval, Ngrids, Aout(idIsst,:))
             CASE ('Aout(idIOmf)')
@@ -457,6 +520,7 @@
               Npts=load_l(Nval, Cval, Ngrids, Aout(idW_io,:))
             CASE ('Aout(idW_ro)')
               Npts=load_l(Nval, Cval, Ngrids, Aout(idW_ro,:))
+# if defined ICE_BULK_FLUXES
             CASE ('Aout(idAlbi)')
               Npts=load_l(Nval, Cval, Ngrids, Aout(idAlbi,:))
             CASE ('Aout(idAlbo)')
@@ -471,6 +535,9 @@
               Npts=load_l(Nval, Cval, Ngrids, Aout(idSocn,:))
             CASE ('Aout(idRfac)')
               Npts=load_l(Nval, Cval, Ngrids, Aout(idRfac,:))
+            CASE ('Aout(idSnof)')
+              Npts=load_l(Nval, Cval, Ngrids, Aout(idSnof,:))
+# endif
 #endif
           END SELECT
         END IF
@@ -573,6 +640,20 @@
           IF (Hout(idISyy,ng)) WRITE (out,70) Hout(idISyy,ng),          &
      &       'Hout(idISyy)',                                            &
      &       'Write out internal ice stress tensor, yy-component.'
+#if defined ICE_BIO
+          IF (Hout(idIphy,ng)) WRITE (out,70) Hout(idIphy,ng),          &
+     &       'Hout(idIphy)',                                            &
+     &       'Write out ice biology, algae.'
+          IF (Hout(idINO3,ng)) WRITE (out,70) Hout(idINO3,ng),          &
+     &       'Hout(idINO3)',                                            &
+     &       'Write out ice biology, nitrate.'
+          IF (Hout(idINH4,ng)) WRITE (out,70) Hout(idINH4,ng),          &
+     &       'Hout(idINH4)',                                            &
+     &       'Write out ice biology, ammonia.'
+          IF (Hout(idIlog,ng)) WRITE (out,70) Hout(idIlog,ng),          &
+     &       'Hout(idIlog)',                                            &
+     &       'Write out ice biology log.'
+#endif
           IF (Hout(idIsst,ng)) WRITE (out,70) Hout(idIsst,ng),          &
      &       'Hout(idIsst)',                                            &
      &       'Write out ice/snow surface temperature.'
@@ -609,6 +690,7 @@
           IF (Hout(idW_ro,ng)) WRITE (out,70) Hout(idW_ro,ng),          &
      &       'Hout(idW_ro)',                                            &
      &       'Write out rate of melt/freeze runoff into ocean.'
+#if defined ICE_BULK_FLUXES
           IF (Hout(idAlbi,ng)) WRITE (out,70) Hout(idAlbi,ng),          &
      &       'Hout(idAlbi)',                                            &
      &       'Write out sea ice albedo.'
@@ -630,6 +712,10 @@
           IF (Hout(idRfac,ng)) WRITE (out,70) Hout(idRfac,ng),          &
      &       'Hout(idRfac)',                                            &
      &       'Write out lmd_r1 scaling factor.'
+          IF (Hout(idSnof,ng)) WRITE (out,70) Hout(idSnof,ng),          &
+     &       'Hout(idSnof)',                                            &
+     &       'Write out snowfall rate.'
+#endif
 !
           IF (Qout(idUice,ng)) WRITE (out,70) Qout(idUice,ng),          &
      &       'Qout(idUice)',                                            &
@@ -670,6 +756,20 @@
           IF (Qout(idISyy,ng)) WRITE (out,70) Qout(idISyy,ng),          &
      &       'Qout(idISyy)',                                            &
      &       'Write out internal ice stress tensor, yy-component.'
+#if defined ICE_BIO
+          IF (Qout(idIphy,ng)) WRITE (out,70) Qout(idIphy,ng),          &
+     &       'Qout(idIphy)',                                            &
+     &       'Write out ice biology, algae.'
+          IF (Qout(idINO3,ng)) WRITE (out,70) Qout(idINO3,ng),          &
+     &       'Qout(idINO3)',                                            &
+     &       'Write out ice biology, nitrate.'
+          IF (Qout(idINH4,ng)) WRITE (out,70) Qout(idINH4,ng),          &
+     &       'Qout(idINH4)',                                            &
+     &       'Write out ice biology, ammonia.'
+          IF (Qout(idIlog,ng)) WRITE (out,70) Qout(idIlog,ng),          &
+     &       'Qout(idIlog)',                                            &
+     &       'Write out ice biology log.'
+#endif
           IF (Qout(idIsst,ng)) WRITE (out,70) Qout(idIsst,ng),          &
      &       'Qout(idIsst)',                                            &
      &       'Write out ice/snow surface temperature.'
@@ -706,6 +806,7 @@
           IF (Qout(idW_ro,ng)) WRITE (out,70) Qout(idW_ro,ng),          &
      &       'Qout(idW_ro)',                                            &
      &       'Write out rate of melt/freeze runoff into ocean.'
+#if defined ICE_BULK_FLUXES
           IF (Qout(idAlbi,ng)) WRITE (out,70) Qout(idAlbi,ng),          &
      &       'Qout(idAlbi)',                                            &
      &       'Write out sea ice albedo.'
@@ -727,6 +828,10 @@
           IF (Qout(idRfac,ng)) WRITE (out,70) Qout(idRfac,ng),          &
      &       'Qout(idRfac)',                                            &
      &       'Write out lmd_r1 scaling factor.'
+          IF (Qout(idSnof,ng)) WRITE (out,70) Qout(idSnof,ng),          &
+     &       'Qout(idSnof)',                                            &
+     &       'Write out snowfall rate.'
+#endif
 #ifdef AVERAGES
 !
           IF (Aout(idUice,ng)) WRITE (out,70) Aout(idUice,ng),          &
@@ -768,6 +873,20 @@
           IF (Aout(idISyy,ng)) WRITE (out,70) Aout(idISyy,ng),          &
      &       'Aout(idISyy)',                                            &
      &       'Write out internal ice stress tensor, yy-component.'
+# if defined ICE_BIO
+          IF (Aout(idIphy,ng)) WRITE (out,70) Aout(idIphy,ng),          &
+     &       'Aout(idIphy)',                                            &
+     &       'Write out ice biology, algae.'
+          IF (Aout(idINO3,ng)) WRITE (out,70) Aout(idINO3,ng),          &
+     &       'Aout(idINO3)',                                            &
+     &       'Write out ice biology, nitrate.'
+          IF (Aout(idINH4,ng)) WRITE (out,70) Aout(idINH4,ng),          &
+     &       'Aout(idINH4)',                                            &
+     &       'Write out ice biology, ammonia.'
+          IF (Aout(idIlog,ng)) WRITE (out,70) Aout(idIlog,ng),          &
+     &       'Aout(idIlog)',                                            &
+     &       'Write out ice biology log.'
+# endif
           IF (Aout(idIsst,ng)) WRITE (out,70) Aout(idisst,ng),          &
      &       'Aout(idIsst)',                                            &
      &       'Write out ice/snow surface temperature.'
@@ -804,6 +923,7 @@
           IF (Aout(idW_ro,ng)) WRITE (out,70) Aout(idW_ro,ng),          &
      &       'Aout(idW_ro)',                                            &
      &       'Write out rate of melt/freeze runoff into ocean.'
+# if defined ICE_BULK_FLUXES
           IF (Aout(idAlbi,ng)) WRITE (out,70) Aout(idAlbi,ng),          &
      &       'Aout(idAlbi)',                                            &
      &       'Write out sea ice albedo.'
@@ -825,6 +945,10 @@
           IF (Aout(idRfac,ng)) WRITE (out,70) Aout(idRfac,ng),          &
      &       'Aout(idRfac)',                                            &
      &       'Write out lmd_r1 scaling factor.'
+          IF (Aout(idSnof,ng)) WRITE (out,70) Aout(idSnof,ng),          &
+     &       'Aout(idSnof)',                                            &
+     &       'Write out snowfall rate.'
+# endif
 #endif
         END DO
       END IF

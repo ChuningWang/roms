@@ -284,6 +284,7 @@
       integer  :: idRwet        ! wet/dry mask on RHO-points
       integer  :: idRzet        ! RHS of free-surface
       integer  :: idrain        ! rainfall rate
+      integer  :: idsnow        ! snowfall rate
       integer  :: idragL        ! bottom linear drag coefficient
       integer  :: idragQ        ! bottom quadratic drag coefficient
       integer  :: idSdif        ! vertical S-diffusion coefficient
@@ -1745,6 +1746,10 @@
             idShea=varid
           CASE ('idrain')
             idrain=varid
+#if defined ICE_MODEL && defined ICE_SNOWFALL
+          CASE ('idsnow')
+            idsnow=varid
+#endif
           CASE ('idEmPf')
             idEmPf=varid
           CASE ('idevap')

@@ -1,6 +1,10 @@
 #include "cppdefs.h"
       MODULE bulk_flux_mod
 #ifdef BULK_FLUXES
+# if defined ICE_MODEL && defined ICE_BULK_FLUXES && \
+     defined ICE_SNOWFALL
+#  define ICE_USE_SNOW
+# endif
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
@@ -175,14 +179,16 @@
 # if defined ICE_MODEL && defined ICE_BULK_FLUXES
      &                     ICE(ng) % Fi,                                &
      &                     ICE(ng) % Si,                                &
+#  if defined ICE_SNOWFALL || defined ICE_THERMO
+     &                     FORCES(ng) % snow,                           &
+#  endif
+#  ifdef ICE_THERMO
+     &                     FORCES(ng) % Qnet_ai,                        &
+#  endif
      &                     FORCES(ng) % sustr_ai,                       &
      &                     FORCES(ng) % svstr_ai,                       &
      &                     FORCES(ng) % sustr_ao,                       &
      &                     FORCES(ng) % svstr_ao,                       &
-#  ifdef ICE_THERMO
-     &                     FORCES(ng) % Qnet_ai,                        &
-     &                     FORCES(ng) % snow,                           &
-#  endif
 # endif
 # ifdef EMINUSP
      &                     FORCES(ng) % evap,                           &
@@ -234,12 +240,14 @@
      &                           rain, lhflx, lrflx, shflx, srflx,      &
 # if defined ICE_MODEL && defined ICE_BULK_FLUXES
      &                           Fi, Si,                                &
-     &                           sustr_ai, svstr_ai,                    &
-     &                           sustr_ao, svstr_ao,                    &
-#  ifdef ICE_THERMO
-     &                           Qnet_ai,                               &
+#  if defined ICE_SNOWFALL || defined ICE_THERMO
      &                           snow,                                  &
 #  endif
+#  ifdef ICE_THERMO
+     &                           Qnet_ai,                               &
+#  endif
+     &                           sustr_ai, svstr_ai,                    &
+     &                           sustr_ao, svstr_ao,                    &
 # endif
 # ifdef EMINUSP
      &                           evap,                                  &
@@ -305,14 +313,16 @@
 #  if defined ICE_MODEL && defined ICE_BULK_FLUXES
       real(r8), intent(inout) :: Fi(LBi:,LBj:,:)
       real(r8), intent(inout) :: Si(LBi:,LBj:,:,:)
+#   if defined ICE_SNOWFALL || defined ICE_THERMO
+      real(r8), intent(inout) :: snow(LBi:,LBj:)
+#   endif
+#   ifdef ICE_THERMO
+      real(r8), intent(out  ) :: Qnet_ai(LBi:,LBj:)
+#   endif
       real(r8), intent(out  ) :: sustr_ai(LBi:,LBj:)
       real(r8), intent(out  ) :: svstr_ai(LBi:,LBj:)
       real(r8), intent(out  ) :: sustr_ao(LBi:,LBj:)
       real(r8), intent(out  ) :: svstr_ao(LBi:,LBj:)
-#   ifdef ICE_THERMO
-      real(r8), intent(out  ) :: Qnet_ai(LBi:,LBj:)
-      real(r8), intent(out  ) :: snow(LBi:,LBj:)
-#   endif
 #  endif
 #  ifdef EMINUSP
       real(r8), intent(out  ) :: evap(LBi:,LBj:)
@@ -368,14 +378,16 @@
 #  if defined ICE_MODEL && defined ICE_BULK_FLUXES
       real(r8), intent(inout) :: Fi(LBi:UBi,LBj:UBj,nIceF)
       real(r8), intent(inout) :: Si(LBi:UBi,LBj:UBj,2,nIceS)
+#   if defined ICE_SNOWFALL || defined ICE_THERMO
+      real(r8), intent(inout) :: snow(LBi:UBi,LBj:UBj)
+#   endif
+#   ifdef ICE_THERMO
+      real(r8), intent(out  ) :: Qnet_ai(LBi:UBi,LBj:UBj)
+#   endif
       real(r8), intent(out  ) :: sustr_ai(LBi:UBi,LBj:UBj)
       real(r8), intent(out  ) :: svstr_ai(LBi:UBi,LBj:UBj)
       real(r8), intent(out  ) :: sustr_ao(LBi:UBi,LBj:UBj)
       real(r8), intent(out  ) :: svstr_ao(LBi:UBi,LBj:UBj)
-#   ifdef ICE_THERMO
-      real(r8), intent(out  ) :: Qnet_ai(LBi:UBi,LBj:UBj)
-      real(r8), intent(out  ) :: snow(LBi:UBi,LBj:UBj)
-#   endif
 #  endif
 #  ifdef EMINUSP
       real(r8), intent(out  ) :: evap(LBi:UBi,LBj:UBj)
@@ -948,7 +960,11 @@
           cff=Qair(i)*Hlv(i,j)/(blk_Rgas*TairK(i)*TairK(i))
           wet_bulb=1.0_r8/(1.0_r8+0.622_r8*(cff*Hlv(i,j)*diffw)/        &
      &                                     (blk_Cpa*diffh))
+# ifdef ICE_USE_SNOW
+          Hsr=ABS(rain(i,j)+snow(i,j))*wet_bulb*blk_Cpw*                &
+# else
           Hsr=ABS(rain(i,j))*wet_bulb*blk_Cpw*                          &
+# endif
      &        ((TseaC(i)-TairC(i))+(Qsea(i)-Q(i))*Hlv(i,j)/blk_Cpa)
 # ifndef REGCM_COUPLING
           SHeat(i,j)=(Hs+Hsr)
@@ -963,15 +979,20 @@
 !  Compute turbulent latent heat flux (W/m2), Hl.
 !
           Hl=-Hlv(i,j)*rhoAir(i)*Wstar(i)*Qstar(i)
-
-# if defined ICE_MODEL && defined ICE_BULK_FLUXES && defined ICE_THERMO
+# if defined ICE_MODEL && defined ICE_BULK_FLUXES
 !
 !  Subtract loss of heat associated with latent heat flux from ocean to
 !  melting snow (SMD).
 !
+#  ifdef ICE_USE_SNOW
+          IF (snow(i,j).gt.0.0_r8) THEN
+            Hl=Hl-hfus*snow(i,j)
+          END IF
+#  else
           IF (rain(i,j).lt.0.0_r8) THEN
             Hl=Hl+hfus*rain(i,j)
           END IF
+#  endif
 # endif
 !
 !  Compute Webb correction (Webb effect) to latent heat flux, Hlw.
@@ -992,7 +1013,11 @@
 !  Horizontal momentum flux (N/m2) due to rain (kg/m2/s) impact
 !  traveling at 85% of air velocity
 !
+# ifdef ICE_USE_SNOW
+          Taur=0.85_r8*(rain(i,j)+snow(i,j))*Wmag(i)
+# else
           Taur=0.85_r8*ABS(rain(i,j))*Wmag(i)
+# endif
 !
 !  Sum of stresses (N/m2) expressed as friction velocities.
 !  Normalization by Wmag (m/s) so that stress components (Taux,
@@ -1052,16 +1077,28 @@
 !
           cff=wet_bulb*2093.0_r8
           Qsh_i=Qsh_i+                                                  &
+#   ifdef ICE_SNOWFALL
+     &          (rain(i,j)+snow(i,j))*cff*                              &
+#   else
      &          ABS(rain(i,j))*cff*                                     &
+#   endif
      &          (TiceK-TairC(i)+(Qsea(i)-Q(i))*Hlv(i,j)/blk_Cpa)
           Coef_Ice(i,j)=Coef_Ice(i,j) -                                 &
+#   ifdef ICE_SNOWFALL
+     &                  (rain(i,j)+snow(i,j))*cff
+#   else
      &                  ABS(rain(i,j))*cff
+#   endif
 !
 !  Use TairK here, unlike in above calculation of Hsr, since
 !  Fi(:,:,icIsst) will be calculated in Kelvin (SMD, 10.20.20).
 !
           RHS_Ice(i,j)=RHS_Ice(i,j)+                                    &
+#   ifdef ICE_SNOWFALL
+     &                 (rain(i,j)+snow(i,j))*cff*                       &
+#   else
      &                 ABS(rain(i,j))*cff*                              &
+#   endif
      &                 (-TairK(i)+(Qsea(i)-Q(i))*Hlv(i,j)/blk_Cpa)
 !
 !  Latent heat flux over ice.
@@ -1101,9 +1138,9 @@
 !  probably be something less (SMD).
 !
 !  The algorithm ICE_I_O from the code of Wang et al. (2024) is ported
-!    here to address the issue of penetrated/preserved SWR. Computations
-!    of related fields are carried out in subroutine ice_albedo_tile
-!    (CW, 03/2025)
+!    here to partly address the issue of penetrated/preserved SWR.
+!    Computations of related fields are carried out in subroutine
+!    ice_albedo_tile (CW, 03/2025)
 !
           RHS_Ice(i,j)=RHS_Ice(i,j)+Qsw_i
 !
@@ -1192,18 +1229,22 @@
       cff=1.0_r8/rhow
       DO j=JstrR,JendR
         DO i=IstrR,IendR
-# if defined ICE_MODEL && defined ICE_BULK_FLUXES && defined ICE_THERMO
+# if defined ICE_MODEL  &&  defined ICE_BULK_FLUXES
 !
 !  Net precipitation (m/s). Negative values of 'rain' indicate frozen
 !  precipitation (SMD).
 !
-!  May need to reforge the treatment of rain/snow here (CW 03/2025).
+!  The treatment of snowfall is rewritten. Now it is allowed to use
+!    liquid and solid precipitation at the same time (CW).
 !
+#  if defined ICE_THERMO && !defined ICE_SNOWFALL
           IF (rain(i,j).ge.0.0_r8) THEN
             snow(i,j)=0.0_r8
           ELSE
-            snow(i,j)=ABS(rain(i,j))/SnowDryRho(ng)
+            snow(i,j)=ABS(rain(i,j))
           END IF
+#  endif
+          Fi(i,j,icSnof)=snow(i,j)
 # endif
 !
 !  Load surface fluxes to state arrays.
@@ -1225,9 +1266,9 @@
      &                       lhflx(i,j)+shflx(i,j))          ! C m/s
 
 # if defined ICE_MODEL && defined ICE_BULK_FLUXES && defined ICE_THERMO
-          Fi(i,j,icQcon)=Coef_Ice(i,j)                       !(W/m2)/K
-          Fi(i,j,icQrhs)=RHS_Ice(i,j)                        ! W/m2
-          Qnet_ai(i,j)=Qai(i,j)                              ! W/m2
+          Fi(i,j,icQcon)=Coef_Ice(i,j)                       ! (W/m2)/K
+          Fi(i,j,icQrhs)=RHS_Ice(i,j)                        !  W/m2
+          Qnet_ai(i,j)=Qai(i,j)                              !  W/m2
 # endif
 # ifdef MASKING
           stflux(i,j,itemp)=stflux(i,j,itemp)*rmask(i,j)
@@ -1244,7 +1285,12 @@
           evap(i,j)=evap(i,j)*rmask_wet(i,j)
 #  endif
 #  ifdef SALINITY
+#   ifdef ICE_USE_SNOW
+          stflux(i,j,isalt)=cff*(evap(i,j)-rain(i,j)                    &
+     &                                    -snow(i,j))        ! m/s
+#   else
           stflux(i,j,isalt)=cff*(evap(i,j)-rain(i,j))        ! m/s
+#   endif
 #   ifdef MASKING
           stflux(i,j,isalt)=stflux(i,j,isalt)*rmask(i,j)
 #   endif
@@ -1333,10 +1379,6 @@
 #  ifdef ICE_THERMO
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
-     &                          Qnet_ai)
-
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
      &                          Fi(:,:,icQcon))
 
         CALL exchange_r2d_tile (ng, tile,                               &
@@ -1346,6 +1388,10 @@
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          snow)
+
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Qnet_ai)
 #  endif
 
         CALL exchange_r2d_tile (ng, tile,                               &
@@ -1407,7 +1453,7 @@
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    Fi(:,:,icQcon),                               &
      &                    Fi(:,:,icQrhs),                               &
-     &                    Qnet_ai, snow)
+     &                    snow, Qnet_ai)
 #   endif
 
       CALL mp_exchange2d (ng, tile, iNLM, 1,                            &

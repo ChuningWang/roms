@@ -198,6 +198,20 @@
             CASE ('Sout(idISyy)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idISyy,1:Ngrids)=Lswitch(1:Ngrids)
+#  if defined ICE_BIO
+            CASE ('Sout(idIphy)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idIphy,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idINO3)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idINO3,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idINH4)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idINH4,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idIlog)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idIlog,1:Ngrids)=Lswitch(1:Ngrids)
+#  endif
             CASE ('Sout(idIsst)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idIsst,1:Ngrids)=Lswitch(1:Ngrids)
@@ -234,6 +248,7 @@
             CASE ('Sout(idW_ro)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idW_ro,1:Ngrids)=Lswitch(1:Ngrids)
+#  if defined ICE_BULK_FLUXES
             CASE ('Sout(idAlbi)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idAlbi,1:Ngrids)=Lswitch(1:Ngrids)
@@ -255,6 +270,10 @@
             CASE ('Sout(idRfac)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idRfac,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idSnof)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idSnof,1:Ngrids)=Lswitch(1:Ngrids)
+#  endif
 # endif
 # ifdef ICESHELF_DYNAM
 #  ifdef ICESHELF_MOM
@@ -827,6 +846,20 @@
             IF (Sout(idISyy,ng)) WRITE (out,90) Sout(idISyy,ng),        &
      &          'Sout(idISyy)',                                         &
      &          'Write out internal ice stress tensor, yy-component.'
+#  if defined ICE_BIO
+            IF (Sout(idIphy,ng)) WRITE (out,90) Sout(idIphy,ng),        &
+     &          'Sout(idIphy)',                                         &
+     &          'Write out ice biology, algae.'
+            IF (Sout(idINO3,ng)) WRITE (out,90) Sout(idINO3,ng),        &
+     &          'Sout(idINO3)',                                         &
+     &          'Write out ice biology, nitrate.'
+            IF (Sout(idINH4,ng)) WRITE (out,90) Sout(idINH4,ng),        &
+     &          'Sout(idINH4)',                                         &
+     &          'Write out ice biology, ammonia.'
+            IF (Sout(idIlog,ng)) WRITE (out,90) Sout(idIlog,ng),        &
+     &          'Sout(idIlog)',                                         &
+     &          'Write out ice biology log.'
+#  endif
             IF (Sout(idIsst,ng)) WRITE (out,90) Sout(idIsst,ng),        &
      &          'Sout(idIsst)',                                         &
      &          'Write out ice/snow surface temperature.'
@@ -863,6 +896,7 @@
             IF (Sout(idW_ro,ng)) WRITE (out,90) Sout(idW_ro,ng),        &
      &          'Sout(idW_ro)',                                         &
      &          'Write out rate of melt/freeze runoff into ocean.'
+#  if defined ICE_BULK_FLUXES
             IF (Sout(idAlbi,ng)) WRITE (out,90) Sout(idAlbi,ng),        &
      &          'Sout(idAlbi)',                                         &
      &       'Write out sea ice albedo.'
@@ -884,6 +918,10 @@
             IF (Sout(idRfac,ng)) WRITE (out,90) Sout(idRfac,ng),        &
      &          'Sout(idRfac)',                                         &
      &       'Write out lmd_r1 scaling factor.'
+            IF (Sout(idSnof,ng)) WRITE (out,90) Sout(idSnof,ng),        &
+     &          'Sout(idSnof)',                                         &
+     &       'Write out snowfall rate.'
+#  endif
 # endif
 # ifdef ICESHELF_DYNAM
 #  ifdef ICESHELF_MOM

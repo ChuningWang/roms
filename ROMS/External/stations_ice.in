@@ -139,6 +139,10 @@ Sout(idTice) == T       ! Si(...,isTice)     ice interior temperature
 Sout(idISxx) == T       ! Si(...,isISxx)     internal ice stress xx-component
 Sout(idISxy) == T       ! Si(...,isISxy)     internal ice stress xy-component
 Sout(idISyy) == T       ! Si(...,isISyy)     internal ice stress yy-component
+Sout(idIphy) == T       ! Si(...,isIphy)     ice biology, algae
+Sout(idINO3) == T       ! Si(...,isINO3)     ice biology, nitrate
+Sout(idINH4) == T       ! Si(...,isINH4)     ice biology, ammonia
+Sout(idIlog) == T       ! Si(...,isIlog)     ice biology log
 
 Sout(idIsst) == T       ! Fi(...,icIsst)     ice surface temperature
 Sout(idIOmf) == T       ! Fi(...,icIOmf)     ice-ocean mass flux
@@ -159,6 +163,7 @@ Sout(idSics) == T       ! Fi(...,icSics)     net short-wave radiation at ice sur
 Sout(idSicb) == T       ! Fi(...,icSicb)     net short-wave radiation at ice base
 Sout(idSocn) == T       ! Fi(...,icSocn)     net short-wave radiation at sea surface
 Sout(idRfac) == T       ! Fi(...,icRfac)     lmd_r1 scaling factor
+Sout(idSnof) == T       ! Fi(...,icSnof)     snowfall rate
 
 ! Number of stations to process in each nested grid.  These values are
 ! essential because the station arrays are dynamically allocated using
@@ -306,6 +311,10 @@ POS =  GRID  FLAG      X-POS       Y-POS     COMMENT
 !  Sout(idISxx)  Write out internal ice stress tensor, xx-component.
 !  Sout(idISxy)  Write out internal ice stress tensor, xy-component.
 !  Sout(idISyy)  Write out internal ice stress tensor, yy-component.
+!  Sout(idIphy)  Write out ice biology, algae
+!  Sout(idINO3)  Write out ice biology, nitrate
+!  Sout(idINH4)  Write out ice biology, ammonia
+!  Sout(idIlog)  Write out ice biology log
 !
 !  Sout(idIsst)  Write out ice interior temperature (at ice mid-layer).
 !  Sout(idIOmf)  Write out ice-ocean mass flux.
@@ -322,10 +331,11 @@ POS =  GRID  FLAG      X-POS       Y-POS     COMMENT
 !  Sout(idAlbi)  Write out sea ice albedo.
 !  Sout(idAlbo)  Write out sea surface albedo.
 !  Sout(idFrsw)  Write out short-wave penetration fraction in sea ice.
-!  Sout(idSics)  Write out net short-wave radiation at ice surface
+S  Sout(idSics)  Write out net short-wave radiation at ice surface
 !  Sout(idSicb)  Write out net short-wave radiation at ice base
 !  Sout(idSocn)  Write out net short-wave radiation at sea surface
 !  Sout(idRfac)  Write out lmd_r1 scaling factor
+!  Sout(idSnof)  Write out snowfall rate
 !
 !
 !------------------------------------------------------------------------------

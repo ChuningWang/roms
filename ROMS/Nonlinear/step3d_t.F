@@ -159,6 +159,9 @@
 # endif
       USE mod_scalars
       USE mod_sources
+# ifdef ICE_THERMO
+      USE ice_frazil_mod,  ONLY : ice_frazil
+# endif
 !
       USE exchange_3d_mod, ONLY : exchange_r3d_tile
 # ifdef DISTRIBUTE
@@ -1831,6 +1834,14 @@
           END DO
         END DO
       END DO
+# endif
+# ifdef ICE_THERMO
+!
+!-----------------------------------------------------------------------
+!  Compute ice frazil growth rate.
+!-----------------------------------------------------------------------
+!
+      CALL ice_frazil (ng, tile, iNLM)
 # endif
 !
 !-----------------------------------------------------------------------

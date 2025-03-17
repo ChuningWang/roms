@@ -154,9 +154,9 @@
      &                      OCEAN(ng) % t,                              &
      &                      FORCES(ng) % sustr,                         &
      &                      FORCES(ng) % svstr,                         &
-     &                      FORCES(ng) % Qnet_ai,                       &
-     &                      FORCES(ng) % snow,                          &
      &                      FORCES(ng) % rain,                          &
+     &                      FORCES(ng) % snow,                          &
+     &                      FORCES(ng) % Qnet_ai,                       &
      &                      FORCES(ng) % stflx,                         &
      &                      ICE(ng) % Fi,                               &
      &                      ICE(ng) % Si)
@@ -190,9 +190,9 @@
 #endif
      &                            t,                                    &
      &                            sustr, svstr,                         &
-     &                            Qnet_ai,                              &
-     &                            snow,                                 &
      &                            rain,                                 &
+     &                            snow,                                 &
+     &                            Qnet_ai,                              &
      &                            stflx,                                &
      &                            Fi, Si)
 !***********************************************************************
@@ -228,9 +228,9 @@
       real(r8), intent(in) :: t(LBi:,LBj:,:,:,:)
       real(r8), intent(in) :: sustr(LBi:,LBj:)
       real(r8), intent(in) :: svstr(LBi:,LBj:)
-      real(r8), intent(in) :: Qnet_ai(LBi:,LBj:)
-      real(r8), intent(in) :: snow(LBi:,LBj:)
       real(r8), intent(in) :: rain(LBi:,LBj:)
+      real(r8), intent(in) :: snow(LBi:,LBj:)
+      real(r8), intent(in) :: Qnet_ai(LBi:,LBj:)
       real(r8), intent(inout) :: stflx(LBi:,LBj:,:)
       real(r8), intent(inout) :: Fi(LBi:,LBj:,:)
       real(r8), intent(inout) :: Si(LBi:,LBj:,:,:)
@@ -258,9 +258,9 @@
       real(r8), intent(in) :: t(LBi:UBi,LBj:UBj,N(ng),3,NT(ng))
       real(r8), intent(in) :: sustr(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: svstr(LBi:UBi,LBj:UBj)
-      real(r8), intent(in) :: Qnet_ai(LBi:UBi,LBj:UBj)
-      real(r8), intent(in) :: snow(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: rain(LBi:UBi,LBj:UBj)
+      real(r8), intent(in) :: snow(LBi:UBi,LBj:UBj)
+      real(r8), intent(in) :: Qnet_ai(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: stflx(LBi:UBi,LBj:UBj,NT(ng))
       real(r8), intent(inout) :: Fi(LBi:UBi,LBj:UBj,nIceF)
       real(r8), intent(inout) :: Si(LBi:UBi,LBj:UBj,2,nIceS)
@@ -272,22 +272,22 @@
 !
       integer :: i, j
 !
-      real(r8), parameter :: AlphIc = 2.034_r8          ! [W m-1 K-1]
-      real(r8), parameter :: AlphSn = 0.31_r8           ! [W m-1 K-1]
-      real(r8), parameter :: Cp_i = 2093.0_r8           ! [J kg-1 K-1]
-      real(r8), parameter :: Cp_w = 3990.0_r8           ! [J kg-1 K-1]
-      real(r8), parameter :: eps = 1.0E-4_r8            ! zero division
-      real(r8), parameter :: frln = -0.0543_r8          ! [psu C-1]
-      real(r8), parameter :: hfus = 3.347E+5_r8         ! [J kg-1]
-      real(r8), parameter :: kappa = 0.4_r8             ! von Karman
-      real(r8), parameter :: nu = 1.8E-6_r8             ! m2/s
-      real(r8), parameter :: prs = 2432.0_r8            ! S Schmidt Num.
-      real(r8), parameter :: prt = 13.0_r8              ! T Prandtl Num.
-      real(r8), parameter :: RhoCpr = 0.2442754E-6_r8   ! [m s2 K kg-1]
-      real(r8), parameter :: RhoSW = 1026.0_r8          ! [kg m-3]
+      real(r8), parameter :: AlphIc   = 2.034_r8        ! [W m-1 K-1]
+      real(r8), parameter :: AlphSn   = 0.31_r8         ! [W m-1 K-1]
+      real(r8), parameter :: Cp_i     = 2093.0_r8       ! [J kg-1 K-1]
+      real(r8), parameter :: Cp_w     = 3990.0_r8       ! [J kg-1 K-1]
+      real(r8), parameter :: eps      = 1.0E-4_r8       ! zero division
+      real(r8), parameter :: frln     = -0.0543_r8      ! [psu C-1]
+      real(r8), parameter :: hfus     = 3.347E+5_r8     ! [J kg-1]
+      real(r8), parameter :: kappa    = 0.4_r8          ! von Karman
+      real(r8), parameter :: nu       = 1.8E-6_r8       ! m2/s
+      real(r8), parameter :: prs      = 2432.0_r8       ! S Schmidt Num.
+      real(r8), parameter :: prt      = 13.0_r8         ! T Prandtl Num.
+      real(r8), parameter :: RhoCpr   = 0.2442754E-6_r8 ! [J k-1 m-3]
+      real(r8), parameter :: RhoSW    = 1026.0_r8       ! [kg m-3]
       real(r8), parameter :: sice_ref = 3.2_r8          ! [psu]
-      real(r8), parameter :: tpr = 0.85_r8              ! Turb. Prandtl
-      real(r8), parameter :: ykf = 3.14                 ! Yaglom/Kader
+      real(r8), parameter :: tpr      = 0.85_r8         ! Turb. Prandtl
+      real(r8), parameter :: ykf      = 3.14            ! Yaglom/Kader
 !
 !  (CW) In MK89, z0ii is 0.05/3 (Table 1)
 !       We also add ocean roughness following MK89 PG 10,941
@@ -523,7 +523,7 @@
 !
       DO j=Jstr,Jend
         DO i=Istr,Iend
-          ws(i,j)=MAX(snow(i,j), 0.0_r8)
+          ws(i,j)=MAX(snow(i,j)/SnowDryRho(ng), 0.0_r8)
         END DO
       END DO
 !
@@ -559,7 +559,7 @@
             IF ((Si(i,j,linew,isHsno).gt.eps).and.                      &
      &          (Fi(i,j,icIsst).ge.0.0_r8)) THEN
 !
-!  (CW) snow>0 -> sfw -> Tis>0a -> Qsurf>0, snow melt (1, 7)
+!  (CW) snow>0 -> sfw -> Tis>0 -> Qsurf>0, snow melt (1, 7)
 !       Alternatively, Qsurf<0, no snow melt (2, 8)
 !       Note that because it is snow melting, the density scaling factor
 !       should be SnowWetRho/1003.1_r8 instead of SnowWetRho/RhoSW
@@ -569,9 +569,8 @@
      &                             MAX(Qsur, 0.0_r8)*dtice(ng)
               Si(i,j,linew,isHmel)=Si(i,j,linew,isHmel)+                &
      &                             Si(i,j,linew,isAice)*                &
-     &                             MAX(Qsur, 0.0_r8)*                   &
-     &                             SnowWetRho(ng)/1003.1_r8*            &
-     &                             dtice(ng)
+     &                             MAX(Qsur, 0.0_r8)*dtice(ng)*         &
+     &                             SnowWetRho(ng)/1003.1_r8
             ELSE IF ((Si(i,j,linew,isHmel).gt.eps).and.                 &
      &               (Fi(i,j,icIsst).le.tfrz)) THEN
 !
@@ -609,43 +608,74 @@
 !  (CW) Otherwise no surface phase change, only ice cooling
 !       (3, 4, 9, 20, 21)
 !
-
-            IF (rain(i,j).le.0.0_r8) THEN
+!  (CW) Update snow thickness with snowfall rate
+!
+            IF (ws(i,j).gt.0.0_r8) THEN
               Si(i,j,linew,isHsno)=Si(i,j,linew,isHsno)+                &
      &                             Si(i,j,linew,isAice)*                &
      &                             ws(i,j)*dtice(ng)
-            ELSE IF ((Si(i,j,linew,isHsno).gt.0.0_r8).and.              &
-     &               (Si(i,j,linew,isHmel).eq.0.0_r8)) THEN
-              Si(i,j,linew,isHsno)=MAX(0.0_r8, Si(i,j,linew,isHsno)-    &
-     &                             Si(i,j,linew,isAice)*rain(i,j)/      &
-     &                             SnowDryRho(ng))
-              Fi(i,j,icW_ai)=Fi(i,j,icW_ai)-                            &
-     &                       2.0_r8*Si(i,j,linew,isAice)*               &
-     &                       rain(i,j)/IceRho(ng)
-            ELSE IF ((Si(i,j,linew,isHsno).gt.0.0_r8).and.              &
-     &               (Si(i,j,linew,isHmel).gt.0.0_r8)) THEN
+            END IF
 !
-!  (CW) This is code block looks buggy... Mass balance is wrong.
+!  (CW) Process phase change associated with rainfall
+!
+            IF (rain(i,j).gt.0.0_r8) THEN
+              IF (Si(i,j,linew,isHmel).eq.0.0_r8) THEN
+                Si(i,j,linew,isHmel)=Si(i,j,linew,isHmel)+              &
+     &                               Si(i,j,linew,isAice)*              &
+     &                               rain(i,j)/RhoSW*dtice(ng)
+              ELSE
+                Fi(i,j,icW_ai)=Fi(i,j,icW_ai)-                          &
+     &                         Si(i,j,linew,isAice)*                    &
+     &                         rain(i,j)/IceRho(ng)
+              END IF
+            END IF
+!
+!  (CW) SMD's formula. I cannot find the reference of these codes - thus
+!       I decide to comment it out and use my own formula (above).
+!
+!           IF (ws(i,j).gt.0.0_r8) THEN
+!             Si(i,j,linew,isHsno)=Si(i,j,linew,isHsno)+                &
+!    &                             Si(i,j,linew,isAice)*                &
+!    &                             ws(i,j)*dtice(ng)
+!           ELSE IF ((Si(i,j,linew,isHsno).gt.eps).and.                 &
+!    &               (Si(i,j,linew,isHmel).lt.eps)) THEN
+!             cff=Si(i,j,linew,isHsno)
+!             Si(i,j,linew,isHsno)=MAX(0.0_r8,                          &
+!    &          Si(i,j,linew,isHsno)-                                   &
+!    &          Si(i,j,linew,isAice)*rain(i,j)/SnowDryRho(ng)*dtice(ng))
+!             Fi(i,j,icW_ai)=Fi(i,j,icW_ai)-                            &
+!    &                       Si(i,j,linew,isAice)*                      &
+!    &                       rain(i,j)/IceRho(ng)-                      &
+!    &                       (cff-Si(i,j,linew,isHsno))*                &
+!    &                       SnowDryRho(ng)/IceRho(ng)/dtice(ng)
+!           ELSE IF ((Si(i,j,linew,isHsno).gt.eps).and.                 &
+!    &               (Si(i,j,linew,isHmel).gt.eps)) THEN
+!
+!  (CW) This code block looks buggy... Mass balance is wrong.
 !       I assume in this condition it is a half and half formula of the
 !       conditions above and below this code block.
 !
-              Si(i,j,linew,isHsno)=MAX(0.0_r8, Si(i,j,linew,isHsno)-    &
-     &                             0.5_r8*Si(i,j,linew,isAice)*         &
-     &                             rain(i,j)/SnowDryRho(ng))
-              Fi(i,j,icW_ai)=Fi(i,j,icW_ai)-                            &
-     &                       Si(i,j,linew,isAice)*                      &
-     &                       rain(i,j)/IceRho(ng)
-              Si(i,j,linew,isHmel)=Si(i,j,linew,isHmel)+                &
-     &                             Si(i,j,linew,isAice)*                &
-     &                             0.5_r8*rain(i,j)/RhoSW*dtice(ng)
-            ELSE IF (Si(i,j,linew,isHmel).gt.0.0_r8) THEN
-              Si(i,j,linew,isHmel)=Si(i,j,linew,isHmel)+                &
-     &                             Si(i,j,linew,isAice)*                &
-     &                             rain(i,j)/RhoSW*dtice(ng)
-            ELSE
-              Fi(i,j,icW_ai)=Fi(i,j,icW_ai)-                            &
-     &                       Si(i,j,linew,isAice)*rain(i,j)/IceRho(ng)
-            END IF
+!             cff=Si(i,j,linew,isHsno)
+!             Si(i,j,linew,isHsno)=MAX(0.0_r8,                          &
+!    &          Si(i,j,linew,isHsno)-                                   &
+!    &          0.5_r8*Si(i,j,linew,isAice)*rain(i,j)/SnowDryRho(ng)*   &
+!    &          dtice(ng))
+!             Fi(i,j,icW_ai)=Fi(i,j,icW_ai)-                            &
+!    &                       0.5*Si(i,j,linew,isAice)*                  &
+!    &                       rain(i,j)/IceRho(ng)-                      &
+!    &                       0.5*(cff-Si(i,j,linew,isHsno))*            &
+!    &                       SnowDryRho(ng)/IceRho(ng)/dtice(ng)
+!             Si(i,j,linew,isHmel)=Si(i,j,linew,isHmel)+                &
+!    &                             Si(i,j,linew,isAice)*                &
+!    &                             0.5_r8*rain(i,j)/RhoSW*dtice(ng)
+!           ELSE IF (Si(i,j,linew,isHmel).gt.0.0_r8) THEN
+!             Si(i,j,linew,isHmel)=Si(i,j,linew,isHmel)+                &
+!    &                             Si(i,j,linew,isAice)*                &
+!    &                             rain(i,j)/RhoSW*dtice(ng)
+!           ELSE
+!             Fi(i,j,icW_ai)=Fi(i,j,icW_ai)-                            &
+!    &                       Si(i,j,linew,isAice)*rain(i,j)/IceRho(ng)
+!           END IF
 !
 !  Limit the amount of surface water by the smaller of a max limit and
 !  the ice thickness (SMD).
@@ -931,10 +961,17 @@
           ai_tmp=Si(i,j,linew,isAice)            ! old ice concentration
           cff=cff1*(phi*Fi(i,j,icW_ao)+Fi(i,j,icW_fr))/ice_thick(i,j)
           Si(i,j,linew,isAice)=(cff+Si(i,j,linew,isAice))/(1.0_r8+cff)
+!
+!  This is the old formula used by SMD (CW).
+!
 !         Si(i,j,linew,isAice)=Si(i,j,linew,isAice)+                    &
 !    &                         dtice(ng)*                               &
 !    &                         (1.0_r8-Si(i,j,linew,isAice))*           &
 !    &                         (phi*Fi(i,j,icW_ao)+Fi(i,j,icW_fr))
+!
+!  Limit sea ice concentration and modify snow thickness if sea ice
+!    reduces
+!
           Si(i,j,linew,isAice)= MIN(Si(i,j,linew,isAice), max_ai(ng))
           IF (Si(i,j,linew,isAice).lt.ai_tmp) THEN
             Si(i,j,linew,isHsno)=Si(i,j,linew,isHsno)*                  &

@@ -74,6 +74,7 @@
 !    icW_fr    rate of ice accretion due to frazil growth (m3/s)       !
 !    icW_io    rate of melt/freeze at Ice/Ocean edge (m3/s)            !
 !    icW_ro    rate of melt/freeze runoff into ocean (m3/s)            !
+#if defined ICE_BULK_FLUXES
 !    icAlbi    sea ice albedo                                          !
 !    icAlbo    sea surface albedo                                      !
 !    icFrsw    short-wave penetration fration in ice                   !
@@ -81,6 +82,8 @@
 !    icSicb    net short-wave flux at sea ice base (W/m2)              !
 !    icSocn    net short-wave flux at sea surface (W/m2)               !
 !    icRfac    lmd_r1 scaling factor                                   !
+!    icSnof    snowfall rate (kg/m2/s)                                 !
+#endif
 !    icIOmf    Ice-Ocean mass flux (m/s)                               !
 !    icIOvs    Ice-Ocean velocity shear magnitude (m/s)                !
 !    icIOfv    Ice-Ocean friction velocity (m/s)                       !
@@ -115,6 +118,10 @@
       integer :: idISxx       ! internal ice stress xx-component
       integer :: idISxy       ! internal ice stress xy-component
       integer :: idISyy       ! internal ice stress yy-component
+      integer :: idIphy       ! ice biology, algae
+      integer :: idINO3       ! ice biology, nitrate
+      integer :: idINH4       ! ice biology, ammonia
+      integer :: idIlog       ! ice biology log
       integer :: idS0mk       ! under ice molecular sublayer salinity
       integer :: idT0mk       ! under ice molecular sublayer temperature
       integer :: idTice       ! ice interior temperature
@@ -137,6 +144,7 @@
       integer :: idSicb       ! net short-wave flux at sea ice base
       integer :: idSocn       ! net short-wave flux at sea surface
       integer :: idRfac       ! lmd_r1 scaling factor
+      integer :: idSnof       ! snowfall rate
 !
 !  Ice model state prognostic variables indices.
 !
@@ -178,7 +186,11 @@
 !
 !  Ice model internal variables indices.
 !
-      integer, parameter :: nIceF = 31  ! number of ice field variables
+#if defined ICE_BULK_FLUXES
+      integer, parameter :: nIceF = 32  ! number of ice field variables
+#else
+      integer, parameter :: nIceF = 24  ! number of ice field variables
+#endif
 !
       integer :: iFice(nIceF)           ! internal fields I/O indices
 !
@@ -206,6 +218,7 @@
       integer, parameter :: icW_fr = 22 ! ice accretion rate by frazil
       integer, parameter :: icW_io = 23 ! melt/freeze rate at Ice/Ocean
       integer, parameter :: icW_ro = 24 ! melt/freeze rate runoff
+#if defined ICE_BULK_FLUXES
       integer, parameter :: icAlbi = 25 ! sea ice albedo
       integer, parameter :: icAlbo = 26 ! ocean surface albedo
       integer, parameter :: icFrsw = 27 ! SW penetration fraction in ice
@@ -213,6 +226,8 @@
       integer, parameter :: icSicb = 29 ! net SW flux at sea ice base
       integer, parameter :: icSocn = 30 ! net SW flux at sea surface
       integer, parameter :: icRfac = 31 ! lmd_r1 scaling factor
+      integer, parameter :: icSnof = 32 ! snowfall rate
+#endif
 !
 !-----------------------------------------------------------------------
 !  Ice model parameters.

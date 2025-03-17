@@ -402,6 +402,24 @@
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #   endif
       END IF
+#   if defined ICE_MODEL && defined ICE_SNOWFALL
+!
+!  Set snow fall rate (kg/m2/s).
+!
+      IF (Lprocess) THEN
+#    ifdef ANA_SNOW
+        CALL ana_snow (ng, tile, iNLM)
+#    elif (defined FRC_COUPLING && defined TIME_INTERP) || \
+         !defined FRC_COUPLING
+        CALL set_2dfld_tile (ng, tile, iNLM, idsnow,                    &
+     &                       LBi, UBi, LBj, UBj,                        &
+     &                       FORCES(ng)%snowG,                          &
+     &                       FORCES(ng)%snow,                           &
+     &                       update)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#    endif
+      END IF
+#   endif
 #  endif
 
 #  ifndef BULK_FLUXES

@@ -139,7 +139,11 @@
 !                                                                      !
 # ifdef ICE_THERMO
 !  Qnet_ai      Surface net heat flux at the Air/Ice inteface          !
-!  snow         Snow fall rate on ice                                  !
+!  snow         Snow fall rate (kg/m2/s).                              !
+#  ifdef ICE_SNOWFALL
+!  snowG        Latest two-time snapshots of input "snow" grided       !
+!                 data used for interpolation.                         !
+#  endif
 # endif
 !  sustr_ai     Surface U-momentum stress at the Air/Ice interface     !
 !  svstr_ai     Surface V-momentum stress at the Air/Ice interface     !
@@ -400,6 +404,9 @@
 #  ifdef ICE_THERMO
           real(r8), pointer :: Qnet_ai(:,:)
           real(r8), pointer :: snow(:,:)
+#   if defined ICE_SNOWFALL && !defined ANA_SNOW
+          real(r8), pointer :: snowG(:,:,:)
+#   endif
 #  endif
           real(r8), pointer :: sustr_ao(:,:)
           real(r8), pointer :: svstr_ao(:,:)
@@ -870,6 +877,11 @@
 
       allocate ( FORCES(ng) % snow(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
+#   if defined ICE_SNOWFALL && !defined ANA_SNOW
+
+      allocate ( FORCES(ng) % snowG(LBi:UBi,LBj:UBj,2) )
+      Dmem(ng)=Dmem(ng)+size2d
+#   endif
 #  endif
 
       allocate ( FORCES(ng) % sustr_ao(LBi:UBi,LBj:UBj) )
@@ -1435,6 +1447,11 @@
 
       IF (.not.destroy(ng, FORCES(ng)%snow, MyFile,                     &
      &                 __LINE__, 'FORCES(ng)%snow')) RETURN
+#   if defined ICE_SNOWFALL && !defined ANA_SNOW
+
+      IF (.not.destroy(ng, FORCES(ng)%snowG, MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%snowG')) RETURN
+#   endif
 #  endif
 
       IF (.not.destroy(ng, FORCES(ng)%sustr_ai, MyFile,                 &
@@ -1968,6 +1985,10 @@
 #  ifdef ICE_THERMO
             FORCES(ng) % Qnet_ai(i,j) = IniVal
             FORCES(ng) % snow(i,j) = IniVal
+#   if defined ICE_SNOWFALL && !defined ANA_SNOW
+            FORCES(ng) % snowG(i,j,1) = IniVal
+            FORCES(ng) % snowG(i,j,2) = IniVal
+#   endif
 #  endif
             FORCES(ng) % sustr_ai(i,j) = IniVal
             FORCES(ng) % svstr_ai(i,j) = IniVal

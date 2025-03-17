@@ -117,6 +117,10 @@ Hout(idTice) == T     ! Si(...,isTice)     ice interior temperature
 Hout(idISxx) == T     ! Si(...,isISxx)     internal ice stress xx-component
 Hout(idISxy) == T     ! Si(...,isISxy)     internal ice stress xy-component
 Hout(idISyy) == T     ! Si(...,isISyy)     internal ice stress yy-component
+Hout(idIphy) == T     ! Si(...,isIphy)     ice biology, algae
+Hout(idINO3) == T     ! Si(...,isINO3)     ice biology, nitrate
+Hout(idINH4) == T     ! Si(...,isINH4)     ice biology, ammonia
+Hout(idIlog) == T     ! Si(...,isIlog)     ice biology log
 
 Hout(idIsst) == T     ! Fi(...,icIsst)     ice surface temperature
 Hout(idIOmf) == T     ! Fi(...,icIOmf)     ice-ocean mass flux
@@ -137,6 +141,7 @@ Hout(idSics) == T     ! Fi(...,icSics)     net short-wave radiation at ice surfa
 Hout(idSicb) == T     ! Fi(...,icSicb)     net short-wave radiation at ice base
 Hout(idSocn) == T     ! Fi(...,icSocn)     net short-wave radiation at sea surface
 Hout(idRfac) == F     ! Fi(...,icRfac)     lmd_r1 scaling factor
+Hout(idSnof) == F     ! Fi(...,icSnof)     snowfall rate
 
 ! Logical switches (TRUE/FALSE) to activate writing of ice prognostic
 ! variables into QUICKSAVE output file.
@@ -154,6 +159,10 @@ Qout(idTice) == T     ! Si(...,isTice)     ice interior temperature
 Qout(idISxx) == T     ! Si(...,isISxx)     internal ice stress xx-component
 Qout(idISxy) == T     ! Si(...,isISxy)     internal ice stress xy-component
 Qout(idISyy) == T     ! Si(...,isISyy)     internal ice stress yy-component
+Qout(idIphy) == T     ! Si(...,isIphy)     ice biology, algae
+Qout(idINO3) == T     ! Si(...,isINO3)     ice biology, nitrate
+Qout(idINH4) == T     ! Si(...,isINH4)     ice biology, ammonia
+Qout(idIlog) == T     ! Si(...,isIlog)     ice biology log
 
 Qout(idIsst) == T     ! Fi(...,icIsst)     ice surface temperature
 Qout(idIOmf) == T     ! Fi(...,icIOmf)     ice-ocean mass flux
@@ -174,6 +183,7 @@ Qout(idSics) == T     ! Fi(...,icSics)     net short-wave radiation at ice surfa
 Qout(idSicb) == T     ! Fi(...,icSicb)     net short-wave radiation at ice base
 Qout(idSocn) == T     ! Fi(...,icSocn)     net short-wave radiation at sea surface
 Qout(idRfac) == F     ! Fi(...,icRfac)     lmd_r1 scaling factor
+Qout(idSnof) == F     ! Fi(...,icSnof)     snowfall rate
 
 ! Logical switches (TRUE/FALSE) to activate writing of ice prognostic
 ! variables into AVERAGES output file.
@@ -191,6 +201,10 @@ Aout(idTice) == T     ! Si_avg(...,isTice) ice interior temperature
 Aout(idISxx) == T     ! Si_avg(...,isISxx) internal ice stress xx-component
 Aout(idISxy) == T     ! Si_avg(...,isISxy) internal ice stress xy-component
 Aout(idISyy) == T     ! Si_avg(...,isISyy) internal ice stress yy-component
+Aout(idIphy) == T     ! Si_avg(...,isIphy) ice biology, algae
+Aout(idINO3) == T     ! Si_avg(...,isINO3) ice biology, nitrate
+Aout(idINH4) == T     ! Si_avg(...,isINH4) ice biology, ammonia
+Aout(idIlog) == T     ! Si_avg(...,isIlog) ice biology log
 
 Aout(idIsst) == T     ! Fi_avg(...,icIsst) ice surface temperature
 Aout(idIOmf) == T     ! Fi_avg(...,icIOmf) ice-ocean mass flux
@@ -211,6 +225,7 @@ Aout(idSics) == T     ! Fi_avg(...,icSics) net short-wave radiation at ice surfa
 Aout(idSicb) == T     ! Fi_avg(...,icSicb) net short-wave radiation at ice base
 Aout(idSocn) == T     ! Fi_avg(...,icSocn) net short-wave radiation at sea surface
 Aout(idRfac) == F     ! Fi_avg(...,icRfac) lmd_r1 scaling factor
+Aout(idSnof) == F     ! Fi_avg(...,icSnof) snowfall rate
 
 
 !
@@ -286,6 +301,10 @@ Aout(idRfac) == F     ! Fi_avg(...,icRfac) lmd_r1 scaling factor
 ! Hout(idISxx)    Write out internal ice stress tensor, xx-component.
 ! Hout(idISxy)    Write out internal ice stress tensor, xy-component.
 ! Hout(idISyy)    Write out internal ice stress tensor, yy-component.
+! Hout(idIphy)    Write out ice biology, algae
+! Hout(idINO3)    Write out ice biology, nitrate
+! Hout(idINH4)    Write out ice biology, ammonia
+! Hout(idIlog)    Write out ice biology log
 !
 ! Hout(idIsst)    Write out ice interior temperature (at ice mid-layer).
 ! Hout(idIOmf)    Write out ice-ocean mass flux.
@@ -306,6 +325,7 @@ Aout(idRfac) == F     ! Fi_avg(...,icRfac) lmd_r1 scaling factor
 ! Hout(idSicb)    Write out net short-wave radiation at ice base
 ! Hout(idSocn)    Write out net short-wave radiation at sea surface
 ! Hout(idRfac)    Write out lmd_r1 scaling factor
+! Hout(idSnof)    Write out snowfall rate
 !
 !------------------------------------------------------------------------------
 ! Logical switches (T/F) to activate writing of instantaneous ice fields into
@@ -325,6 +345,10 @@ Aout(idRfac) == F     ! Fi_avg(...,icRfac) lmd_r1 scaling factor
 ! Qout(idISxx)    Write out internal ice stress tensor, xx-component.
 ! Qout(idISxy)    Write out internal ice stress tensor, xy-component.
 ! Qout(idISyy)    Write out internal ice stress tensor, yy-component.
+! Qout(idIphy)    Write out ice biology, algae
+! Qout(idINO3)    Write out ice biology, nitrate
+! Qout(idINH4)    Write out ice biology, ammonia
+! Qout(idIlog)    Write out ice biology log
 !
 ! Qout(idIsst)    Write out ice interior temperature (at ice mid-layer).
 ! Qout(idIOmf)    Write out ice-ocean mass flux.
@@ -345,6 +369,7 @@ Aout(idRfac) == F     ! Fi_avg(...,icRfac) lmd_r1 scaling factor
 ! Qout(idSicb)    Write out net short-wave radiation at ice base
 ! Qout(idSocn)    Write out net short-wave radiation at sea surface
 ! Qout(idRfac)    Write out lmd_r1 scaling factor
+! Qout(idSnof)    Write out snowfall rate
 !
 !------------------------------------------------------------------------------
 ! Logical switches (T/F) to activate writing of time-averaged ice fields into
@@ -364,6 +389,10 @@ Aout(idRfac) == F     ! Fi_avg(...,icRfac) lmd_r1 scaling factor
 ! Aout(idISxx)    Write out internal ice stress tensor, xx-component.
 ! Aout(idISxy)    Write out internal ice stress tensor, xy-component.
 ! Aout(idISyy)    Write out internal ice stress tensor, yy-component.
+! Aout(idIphy)    Write out ice biology, algae
+! Aout(idINO3)    Write out ice biology, nitrate
+! Aout(idINH4)    Write out ice biology, ammonia
+! Aout(idIlog)    Write out ice biology log
 !
 ! Aout(idIsst)    Write out ice interior temperature (at ice mid-layer).
 ! Aout(idIOmf)    Write out ice-ocean mass flux.
@@ -384,4 +413,5 @@ Aout(idRfac) == F     ! Fi_avg(...,icRfac) lmd_r1 scaling factor
 ! Aout(idSicb)    Write out net short-wave radiation at ice base
 ! Aout(idSocn)    Write out net short-wave radiation at sea surface
 ! Aout(idRfac)    Write out lmd_r1 scaling factor
+! Aout(idSnof)    Write out snowfall rate
 !

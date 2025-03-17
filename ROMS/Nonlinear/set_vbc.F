@@ -371,8 +371,7 @@
 #   endif
         END DO
       END DO
-#  endif
-#  ifdef QCORRECTION
+#  elif defined QCORRECTION
 !
 !-----------------------------------------------------------------------
 !  Add in flux correction to surface net heat flux (degC m/s).

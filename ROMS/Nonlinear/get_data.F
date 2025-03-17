@@ -554,6 +554,26 @@
       END IF
 # endif
 
+# if !(defined ANA_SNOW || defined FRC_COUPLING) && \
+      (defined BULK_FLUXES && defined ICE_MODEL && defined ICE_SNOWFALL)
+!
+!  Snow fall rate.
+!
+      IF (Lprocess) THEN
+        CALL get_2dfld (ng, iNLM, idsnow, FRCncid(idsnow,ng),           &
+#  if defined PIO_LIB && defined DISTRIBUTE
+     &                  FRCpioFile(idsnow,ng),                          &
+#  endif
+     &                  nFfiles(ng), FRC(1,ng), update(1),              &
+     &                  LBi, UBi, LBj, UBj, 2, 1,                       &
+#  ifdef MASKING
+     &                  GRID(ng) % rmask,                               &
+#  endif
+     &                  FORCES(ng) % snowG)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+      END IF
+# endif
+
 # if !(defined ANA_STFLUX || defined FRC_COUPLING || \
        defined BULK_FLUXES)
 !

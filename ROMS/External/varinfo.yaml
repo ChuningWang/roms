@@ -1712,6 +1712,17 @@ metadata:
     add_offset:     0.0d0
     scale:          1.0d0                                            # 1/rhow (0.001 m3/kg) if m/s
 
+  - variable:       snow                                             # Input
+    standard_name:  snowfall_flux
+    long_name:      snow fall rate
+    units:          kilogram meter-2 second-1                        # [kg m2/s]
+    field:          snow fall
+    time:           snow_time
+    index_code:     idsnow
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0                                            # 1/rhosnow (0.0011 m3/kg) if m/s
+
   - variable:       evaporation                                      # Input
     standard_name:  water_evaporation_flux_out_of_sea_water
     long_name:      evaporation rate
