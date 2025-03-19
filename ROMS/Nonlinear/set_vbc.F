@@ -304,7 +304,9 @@
       integer :: i, j, itrc
 
       real(r8) :: EmP
+#  if defined ICE_MODEL && defined ICE_NO_CORRECTION
       real(r8) :: fac_ice
+#  endif
 #  if !defined BBL_MODEL || defined ICESHELF || \
        defined LIMIT_STFLX_COOLING
       real(r8) :: cff, cff1, cff2, cff3
@@ -357,8 +359,6 @@
           ELSE
             fac_ice=10.0_r8*(0.1_r8-Si(i,j,liold,isAice))
           END IF
-#   else
-          fac_ice=1.0_r8
 #   endif
           stflx(i,j,itemp)=stflx(i,j,itemp)-                            &
 #   if defined ICE_MODEL && defined ICE_NO_CORRECTION
@@ -387,8 +387,6 @@
           ELSE
             fac_ice=10.0_r8*(0.1_r8-Si(i,j,liold,isAice))
           END IF
-#   else
-          fac_ice=1.0_r8
 #   endif
           stflx(i,j,itemp)=stflx(i,j,itemp)+                            &
 #   if defined ICE_MODEL && defined ICE_NO_CORRECTION
