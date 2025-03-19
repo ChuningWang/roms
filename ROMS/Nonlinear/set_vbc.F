@@ -452,8 +452,6 @@
           ELSE
             fac_ice=10.0_r8*(0.1_r8-Si(i,j,liold,isAice))
           END IF
-#    else
-          fac_ice=1.0_r8
 #    endif
           stflx(i,j,isalt)=EmP*t(i,j,N(ng),nrhs,isalt)-                 &
 #   if defined ICE_MODEL && defined ICE_NO_CORRECTION
