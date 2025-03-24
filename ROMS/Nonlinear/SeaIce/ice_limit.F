@@ -193,7 +193,7 @@
      &                    Si(:,:,:,isINO3),                             &
      &                    LBC(:,ibICE(isINO3),ng))
 
-      CALL ice_bc2d_tile (ng, tile, iNLM, isINH4,                       &
+      CALL ice_bc2d_tile (ng, tile, model, isINH4,                      &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    IminS, ImaxS, JminS, JmaxS,                   &
      &                    liold, linew,                                 &
@@ -258,7 +258,7 @@
 
 # ifdef DISTRIBUTE
 !
-      CALL mp_exchange2d (ng, tile, iNLM, 4,                            &
+      CALL mp_exchange2d (ng, tile, model, 4,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
      &                    Si(:,:,linew,isAice),                         &
@@ -266,13 +266,13 @@
      &                    Si(:,:,linew,isHsno),                         &
      &                    Si(:,:,linew,isHmel))
 
-      CALL mp_exchange2d (ng, tile, iNLM, 1,                            &
+      CALL mp_exchange2d (ng, tile, model, 1,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
      &                    Si(:,:,linew,isTice))
 
 #  ifdef ICE_BIO
-      CALL mp_exchange2d (ng, tile, iNLM, 3,                            &
+      CALL mp_exchange2d (ng, tile, model, 3,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
      &                    Si(:,:,linew,isIphy),                         &

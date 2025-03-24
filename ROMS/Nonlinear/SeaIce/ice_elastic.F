@@ -15,14 +15,8 @@
 !=======================================================================
 !
       USE mod_param
-# ifdef MICLM_NUDGING
-      USE mod_clima
-# endif
 # if defined ICE_SHOREFAST || defined ICE_KEEL
       USE mod_coupling
-# endif
-# ifdef FASTICE_CLIMATOLOGY
-      USE mod_forces
 # endif
       USE mod_grid
       USE mod_ice
@@ -91,13 +85,8 @@
      &                       GRID(ng) % h,                              &
      &                       COUPLING(ng) % Zt_avg1,                    &
 # endif
-# ifdef FASTICE_CLIMATOLOGY
-     &                       FORCES(ng) % fastice_clm,                  &
-# endif
-# ifdef MICLM_NUDGING
-     &                       CLIMA(ng) % uiclm,                         &
-     &                       CLIMA(ng) % viclm,                         &
-     &                       CLIMA(ng) % MInudgcof,                     &
+# ifdef ICE_FASTCOEF
+     &                       GRID(ng) % fastcoef,                       &
 # endif
      &                       ICE(ng) % Fi,                              &
      &                       ICE(ng) % Si)
@@ -128,11 +117,8 @@
      &                             h,                                   &
      &                             Zt_avg1,                             &
 # endif
-# ifdef FASTICE_CLIMATOLOGY
-     &                             fastice_clm,                         &
-# endif
-# ifdef MICLM_NUDGING
-     &                             uiclm, viclm, MInudgcof,             &
+# ifdef ICE_FASTCOEF
+     &                             fastcoef,                            &
 # endif
      &                             Fi, Si)
 !***********************************************************************
@@ -169,13 +155,8 @@
       real(r8), intent(in) :: h(LBi:,LBj:)
       real(r8), intent(in) :: Zt_avg1(LBi:,LBj:)
 # endif
-# ifdef FASTICE_CLIMATOLOGY
-      real(r8), intent(in) :: fastice_clm(LBi:,LBj:)
-# endif
-# ifdef MICLM_NUDGING
-      real(r8), intent(in) :: uiclm(LBi:,LBj:)
-      real(r8), intent(in) :: viclm(LBi:,LBj:)
-      real(r8), intent(in) :: MInudgcof(LBi:,LBj:)
+# ifdef ICE_FASTCOEF
+      real(r8), intent(in) :: fastcoef(LBi:,LBj:)
 # endif
       real(r8), intent(in) :: Fi(LBi:,LBj:,:)
       real(r8), intent(inout) :: Si(LBi:,LBj:,:,:)
@@ -204,13 +185,8 @@
       real(r8), intent(in) :: h(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: Zt_avg1(LBi:UBi,LBj:UBj)
 # endif
-# ifdef FASTICE_CLIMATOLOGY
-      real(r8), intent(in) :: fastice_clm(LBi:UBi,LBj:UBj)
-# endif
-# ifdef MICLM_NUDGING
-      real(r8), intent(in) :: uiclm(LBi:UBi,LBj:UBj)
-      real(r8), intent(in) :: viclm(LBi:UBi,LBj:UBj)
-      real(r8), intent(in) :: MInudgcof(LBi:UBi,LBj:UBj)
+# ifdef ICE_FASTCOEF
+      real(r8), intent(in) :: fastcoef(LBi:UBi,LBj:UBj)
 # endif
       real(r8), intent(in) :: Fi(LBi:UBi,LBj:UBj,nIceF)
       real(r8), intent(inout) :: Si(LBi:UBi,LBj:UBj,2,nIceS)
@@ -443,14 +419,8 @@
 !  Solving the ice U-momentum equation.
 !
           Si(i,j,lienw,isUevp)=(masu*Si(i,j,lieol,isUevp)+              &
-    &                           dtevp(ng)*uforce)/alfa
+     &                          dtevp(ng)*uforce)/alfa
 !
-# ifdef MICLM_NUDGING
-          cff = 0.5*(MInudgcof(i,j)+MInudgcof(i-1,j))
-          Si(i,j,lienw,isUevp)=Si(i,j,lienw,isUevp)+                    &
-     &                         dtevp(ng)*cff*(uiclm(i,j)-               &
-     &                                        Si(i,j,lienw,isUevp))
-# endif
 # ifdef ICE_SHOREFAST
           hu=0.5_r8*(h(i-1,j)+MIN(Zt_avg1(i-1,j), 0.0_r8)+              &
      &               h(i  ,j)+MIN(Zt_avg1(i  ,j), 0.0_r8))
@@ -462,9 +432,9 @@
      &      Si(i,j,lienw,isUevp)=MAX(clear-1.0_r8, 0.0_r8)/             &
      &                           4.0_r8*Si(i,j,lienw,isUevp)
 # endif
-# ifdef FASTICE_CLIMATOLOGY
-          Si(i,j,lienw,isUevp)=0.5_r8*(fastice_clm(i-1,j)+              &
-     &                                 fastice_clm(i  ,j))*             &
+# ifdef ICE_FASTCOEF
+          Si(i,j,lienw,isUevp)=0.5_r8*(fastcoef(i-1,j)+                 &
+     &                                 fastcoef(i  ,j))*                &
      &                         Si(i,j,lienw,isUevp)
 # endif
 # ifdef MASKING
@@ -687,12 +657,6 @@
           Si(i,j,lienw,isVevp)=(masv*Si(i,j,lieol,isVevp)+              &
      &                          dtevp(ng)*vforce)/alfa
 !
-# ifdef MICLM_NUDGING
-          cff=0.5*(MInudgcof(i,j)+MInudgcof(i,j-1))
-          Si(i,j,lienw,isVevp)=Si(i,j,lienw,isVevp)+                    &
-     &                         dtevp(ng)*cff*(viclm(i,j)-               &
-     &                                        Si(i,j,lienw,isVevp))
-# endif
 # ifdef ICE_SHOREFAST
           hv=0.5_r8*(h(i,j-1)+MIN(Zt_avg1(i,j-1), 0.0_r8) +             &
      &               h(i,j  )+MIN(Zt_avg1(i,j  ), 0.0_r8))
@@ -704,9 +668,9 @@
      &       Si(i,j,lienw,isVevp)=MAX(clear-1.0_r8, 0.0_r8)/            &
      &                            4.0_r8*Si(i,j,lienw,isVevp)
 # endif
-# ifdef FASTICE_CLIMATOLOGY
-          Si(i,j,lienw,isVevp)=0.5*(fastice_clm(i,j-1)+                 &
-     &                              fastice_clm(i,j  ))*
+# ifdef ICE_FASTCOEF
+          Si(i,j,lienw,isVevp)=0.5*(fastcoef(i,j-1)+                    &
+     &                              fastcoef(i,j  ))*                   &
      &                         Si(i,j,lienw,isVevp)
 # endif
 # ifdef MASKING
@@ -869,7 +833,7 @@
 
 # ifdef DISTRIBUTE
 !
-      CALL mp_exchange2d (ng, tile, iNLM, 2,                            &
+      CALL mp_exchange2d (ng, tile, model, 2,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
      &                    Si(:,:,liunw,isUice),                         &

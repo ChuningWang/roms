@@ -18,7 +18,6 @@
 # endif
 !  Huon       Total U-momentum flux term, Hz*u/pn.                     !
 !  Hvom       Total V-momentum flux term, Hz*v/pm.                     !
-!  IcePress   Pressure under the ice shelf at RHO-points.              !
 !  Rscope     Adjoint sensitivity spatial scope mask at RHO-points.    !
 !  Tcline     Width (m) of surface or bottom boundary layer where      !
 !               higher vertical resolution is required during          !
@@ -255,10 +254,12 @@
           real(r8), pointer :: z_r(:,:,:)
           real(r8), pointer :: z_v(:,:,:)
           real(r8), pointer :: z_w(:,:,:)
-# ifdef ICESHELF
-          real(r8), pointer :: IcePress(:,:)
+#endif
+#ifdef ICESHELF
           real(r8), pointer :: zice(:,:)
-# endif
+#endif
+#ifdef ICE_FASTCOEF
+          real(r8), pointer :: fastcoef(:,:)
 #endif
 #ifdef MASKING
           real(r8), pointer :: pmask(:,:)
@@ -601,14 +602,16 @@
       allocate ( GRID(ng) % z_w(LBi:UBi,LBj:UBj,0:N(ng)) )
       Dmem(ng)=Dmem(ng)+REAL(N(ng)+1,r8)*size2d
 
-# ifdef ICESHELF
-      allocate ( GRID(ng) % IcePress(LBi:UBi,LBj:UBj) )
-      Dmem(ng)=Dmem(ng)+size2d
+#endif
 
+#ifdef ICESHELF
       allocate ( GRID(ng) % zice(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
-# endif
+#endif
 
+#ifdef ICE_FASTCOEF
+      allocate ( GRID(ng) % fastcoef(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
 #endif
 
 #ifdef MASKING
@@ -1066,14 +1069,16 @@
       IF (.not.destroy(ng, GRID(ng)%z_w, MyFile,                        &
      &                 __LINE__, 'GRID(ng)%z_w')) RETURN
 
-#  ifdef ICESHELF
-      IF (.not.destroy(ng, GRID(ng)%IcePress, MyFile,                   &
-     &                 __LINE__, 'GRID(ng)%IcePress')) RETURN
+# endif
 
+# ifdef ICESHELF
       IF (.not.destroy(ng, GRID(ng)%zice, MyFile,                       &
      &                 __LINE__, 'GRID(ng)%zice')) RETURN
-#  endif
+# endif
 
+# ifdef ICE_FASTCOEF
+      IF (.not.destroy(ng, GRID(ng)%fastcoef, MyFile,                   &
+     &                 __LINE__, 'GRID(ng)%fastcoef')) RETURN
 # endif
 
 # ifdef MASKING
@@ -1393,9 +1398,12 @@
             GRID(ng) % yu(i,j) = IniMetricVal
             GRID(ng) % yv(i,j) = IniMetricVal
 
-#if defined ICESHELF && defined SOLVE3D
-            GRID(ng) % IcePress(i,j) = IniVal
+#ifdef ICESHELF
             GRID(ng) % zice(i,j) = IniVal
+#endif
+
+#ifdef ICE_FASTCOEF
+            GRID(ng) % fastcoef(i,j) = IniVal
 #endif
 
 #ifdef MASKING

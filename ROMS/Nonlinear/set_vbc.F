@@ -31,6 +31,9 @@
       USE mod_grid
       USE mod_forces
       USE mod_ocean
+#  if defined ICE_MODEL && defined ICE_NO_CORRECTION
+      USE mod_ice
+#  endif
       USE mod_stepping
 !
 !  Imported variable declarations.
@@ -173,6 +176,9 @@
 !
       USE mod_param
       USE mod_scalars
+#  if defined ICE_MODEL && defined ICE_NO_CORRECTION
+      USE mod_ice
+#  endif
 !
       USE bc_2d_mod
 #  ifdef DISTRIBUTE

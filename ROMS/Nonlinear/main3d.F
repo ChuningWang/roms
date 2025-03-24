@@ -76,7 +76,7 @@
 # if defined DIFF_3DCOEF || defined VISC_3DCOEF
       USE hmixing_mod,          ONLY : hmixing
 # endif
-# if defined ICE_MODEL && defined ALBEDO && defined SHORTWAVE
+# if defined ICE_MODEL && defined ICE_ALBEDO && defined SHORTWAVE
       USE ice_albedo_mod,       ONLY : ice_albedo
 # endif
       USE ini_fields_mod,       ONLY : ini_fields, ini_zeta
@@ -421,7 +421,7 @@
               ng=GridNumber(ig,nl)
               DO tile=first_tile(ng),last_tile(ng),+1
 # ifdef BULK_FLUXES
-#  if defined ICE_MODEL && defined ALBEDO && defined SHORTWAVE
+#  if defined ICE_MODEL && defined ICE_ALBEDO && defined SHORTWAVE
                 CALL ice_albedo (ng, tile, iNLM)
 #  endif
 #  if defined FOUR_DVAR && defined PRIOR_BULK_FLUXES

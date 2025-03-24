@@ -213,6 +213,13 @@
         RETURN
       END IF
 # endif
+# ifdef ICE_FASTCOEF
+      IF (.not.find_string(var_name,n_var,'fastcoef',vindex)) THEN
+        IF (Master) WRITE (stdout,20) 'fastcoef', TRIM(ncname)
+        exit_flag=2
+        RETURN
+      END IF
+# endif
       IF (.not.find_string(var_name,n_var,'f',vindex)) THEN
         IF (Master) WRITE (stdout,20) 'f', TRIM(ncname)
         exit_flag=2
@@ -677,6 +684,52 @@
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
      &                          GRID(ng) % zice)
+#  endif
+# endif
+# ifdef ICE_FASTCOEF
+!
+!  Read in fast ice velocity scaling factor.
+!
+          CASE ('fastcoef')
+            gtype=r2dvar
+            status=nf_fread2d(ng, model, ncname, GRD(ng)%ncid,          &
+     &                        var_name(i), var_id(i),                   &
+     &                        0, gtype, Vsize,                          &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Fscl, Fmin, Fmax,                         &
+#  ifdef MASKING
+     &                        GRID(ng) % rmask,                         &
+#  endif
+#  ifdef CHECKSUM
+     &                        GRID(ng) % fastcoef,                      &
+     &                        checksum = Fhash)
+#  else
+     &                        GRID(ng) % fastcoef)
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+              exit_flag=2
+              ioerror=status
+              EXIT
+            ELSE
+              IF (Master) THEN
+                WRITE (stdout,30) 'fast ice velocity factor: fastcoef', &
+     &                            ng, TRIM(ncname), Fmin, Fmax
+#  ifdef CHECKSUM
+                WRITE (stdout,60) Fhash
+#  endif
+              END IF
+            END IF
+            IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+              CALL exchange_r2d_tile (ng, tile,                         &
+     &                                LBi, UBi, LBj, UBj,               &
+     &                                GRID(ng) % fastcoef)
+            END IF
+#  ifdef DISTRIBUTE
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          GRID(ng) % fastcoef)
 #  endif
 # endif
 # if defined WTYPE_GRID && \
@@ -2620,6 +2673,13 @@
         RETURN
       END IF
 #  endif
+#  ifdef ICE_FASTCOEF
+      IF (.not.find_string(var_name,n_var,'fastcoef',vindex)) THEN
+        IF (Master) WRITE (stdout,20) 'fastcoef', TRIM(ncname)
+        exit_flag=2
+        RETURN
+      END IF
+#  endif
       IF (.not.find_string(var_name,n_var,'f',vindex)) THEN
         IF (Master) WRITE (stdout,20) 'f', TRIM(ncname)
         exit_flag=2
@@ -3141,6 +3201,61 @@
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
      &                          GRID(ng) % zice)
+#   endif
+#  endif
+#  ifdef ICE_FASTCOEF
+!
+!  Read in fast ice velocity scaling factor.
+!
+          CASE ('fastcoef')
+            pioVar%vd=var_desc(i)
+            pioVar%gtype=r2dvar
+            IF (KIND(GRID(ng)%fastcoef).eq.8) THEN
+              pioVar%dkind=PIO_double
+              ioDesc => ioDesc_dp_r2dvar(ng)
+            ELSE
+              pioVar%dkind=PIO_real
+              ioDesc => ioDesc_sp_r2dvar(ng)
+            END IF
+!
+            status=nf_fread2d(ng, model, ncname, GRD(ng)%pioFile,       &
+     &                        var_name(i), pioVar,                      &
+     &                        0, ioDesc, Vsize,                         &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Fscl, Fmin, Fmax,                         &
+#   ifdef MASKING
+     &                        GRID(ng) % rmask,                         &
+#   endif
+#   ifdef CHECKSUM
+     &                        GRID(ng) % fastcoef,                      &
+     &                        checksum = Fhash)
+#   else
+     &                        GRID(ng) % fastcoef)
+#   endif
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+              exit_flag=2
+              ioerror=status
+              EXIT
+            ELSE
+              IF (Master) THEN
+                WRITE (stdout,30) 'fast ice velocity factor: fastcoef', &
+     &                            ng, TRIM(ncname), Fmin, Fmax
+#   ifdef CHECKSUM
+                WRITE (stdout,60) Fhash
+#   endif
+              END IF
+            END IF
+            IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+              CALL exchange_r2d_tile (ng, tile,                         &
+     &                                LBi, UBi, LBj, UBj,               &
+     &                                GRID(ng) % fastcoef)
+            END IF
+#   ifdef DISTRIBUTE
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          GRID(ng) % fastcoef)
 #   endif
 #  endif
 #  if defined WTYPE_GRID && \

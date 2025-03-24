@@ -41,7 +41,8 @@
       USE mod_param
       USE mod_mixing
       USE mod_scalars
-# if defined ICE_MODEL && defined ICE_LMD_SHORTWAVE
+# if defined ICE_MODEL && defined ICE_LMD_SHORTWAVE && \
+     defined ICE_ALBEDO
       USE mod_ice
 # endif
 !
@@ -77,7 +78,8 @@
           fac1(i)=Zscale/lmd_mu1(Jindex)
           fac2(i)=Zscale/lmd_mu2(Jindex)
           fac3(i)=lmd_r1(Jindex)
-# if defined ICE_MODEL && defined ICE_LMD_SHORTWAVE
+# if defined ICE_MODEL && defined ICE_LMD_SHORTWAVE && \
+     defined ICE_ALBEDO
 !
 !  Apply correction introduced by sea ice cover
 !

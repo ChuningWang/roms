@@ -255,9 +255,9 @@
       DO j=Jstr,Jend
         DO i=Istr,Iend
           eps_xx(i,j)=(Si(i+1,j,lieol,isUevp)-                          &
-     &                Si(i  ,j,lieol,isUevp))*pm(i,j)
+     &                 Si(i  ,j,lieol,isUevp))*pm(i,j)
           eps_yy(i,j)=(Si(i,j+1,lieol,isVevp)-                          &
-     &                Si(i,j  ,lieol,isVevp))*pn(i,j)
+     &                 Si(i,j  ,lieol,isVevp))*pn(i,j)
           epx=0.25_r8*(Si(i+1,j+1,lieol,isVevp)+                        &
      &                 Si(i+1,j  ,lieol,isVevp)-                        &
      &                 Si(i-1,j+1,lieol,isVevp)-                        &

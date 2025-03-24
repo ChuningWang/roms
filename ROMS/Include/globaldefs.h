@@ -796,6 +796,7 @@
 # endif
 # if defined ICE_BULK_FLUXES
 #  define ICE_ALBEDO
+#  define ALBEDO
 # endif
 # if defined LMD_SKPP
 #  define ICE_LMD_SHORTWAVE

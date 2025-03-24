@@ -415,7 +415,7 @@
 #   endif
           IF (.not.IceCavity) THEN
             tauiwu=0.5_r8*(spdiw(i,j)+spdiw(i-1,j))*                    &
-     &             (Si(i,j,liuol,IsUice)-Fi(i,j,icUavg))*IceRho(ng)/rhoO
+     &             (Si(i,j,liuol,isUice)-Fi(i,j,icUavg))*IceRho(ng)/rhoO
             sustr(i,j)=tauiwu +                                         &
      &                 (1.0_r8-aix)*                                    &
      &                  0.5_r8*(sustr_ao(i,j)+sustr_ao(i-1,j))
@@ -517,7 +517,7 @@
 
 # ifdef DISTRIBUTE
 !
-      CALL mp_exchange2d (ng, tile, iNLM, 3,                            &
+      CALL mp_exchange2d (ng, tile, model, 3,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
      &                    Fi(:,:,icHsse),                               &
@@ -525,7 +525,7 @@
      &                    Fi(:,:,icAIvs))
 
 #  ifdef ICE_MK
-      CALL mp_exchange2d (ng, tile, iNLM, 2,                            &
+      CALL mp_exchange2d (ng, tile, model, 2,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
      &                    Fi(:,:,icIOmt),                               &
@@ -533,7 +533,7 @@
 #  endif
 
 #  ifdef ICE_BULK_FLUXES
-      CALL mp_exchange2d (ng, tile, iNLM, 2,                            &
+      CALL mp_exchange2d (ng, tile, model, 2,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
      &                    sustr, svstr)

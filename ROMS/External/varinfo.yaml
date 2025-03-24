@@ -2591,7 +2591,7 @@ metadata:
     scale:          1.0d0
 
   ###############################
-  ###  Climatotogy variables  ###
+  ###  Climatology variables  ###
   ###############################
 
   - variable:       zeta                                             # Input

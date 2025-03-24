@@ -41,6 +41,9 @@
 # if defined ICE_ADVECT || defined ICE_THERMO
       USE ice_limit_mod,    ONLY : ice_limit
 # endif
+# ifdef ICE_FIXED
+      USE ice_set_data_mod, ONLY : ice_set_data
+# endif
       USE strings_mod,      ONLY : FoundError, uppercase
 !
       implicit none
@@ -82,6 +85,15 @@
 !  grid application (NestLayers = 1).
 !
       NEST_LAYER : DO nl=1,NestLayers
+# ifdef ICE_FIXED
+        DO ig=1,GridsInLayer(nl)
+          ng=GridNumber(ig,nl)
+          DO tile=first_tile(ng),last_tile(ng),+1
+            CALL ice_set_data (ng, tile, model)
+          END DO
+!$OMP BARRIER
+        END DO
+# endif
 !
 !-----------------------------------------------------------------------
 !  Compute the ice-ocean shear.
@@ -109,8 +121,9 @@
 !$OMP BARRIER
         END DO
 
-# ifdef ICE_MOMENTUM
-#  ifdef ICE_EVP
+# ifndef ICE_FIXED
+#  ifdef ICE_MOMENTUM
+#   ifdef ICE_EVP
 !
 !-----------------------------------------------------------------------
 !  Compute the internal ice stresses according to the
@@ -152,16 +165,16 @@
           END DO
         END DO
 
-#  else
+#   else
         WRITE (stdout,'(4a)') 'SEAICE: An ice rheology must be '        &
      &                        'defined if ', uppercase('ice_momentum'), &
      &                        ' option is specified'
         exit_flag=5
         IF ((FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#   endif
 #  endif
-# endif
 
-# ifdef ICE_ADVECT
+#  ifdef ICE_ADVECT
 !
 !-----------------------------------------------------------------------
 !  Compute the enthalpy of the combined ice/brine system.
@@ -188,6 +201,7 @@
           END DO
 !$OMP BARRIER
         END DO
+#  endif
 # endif
 
 # ifdef ICE_THERMO
@@ -200,7 +214,7 @@
           ng=GridNumber(ig,nl)
           DO tile=first_tile(ng),last_tile(ng),+1
             CALL ice_thermo (ng, tile, model)
-            CALL ice_limit(ng, tile, model)
+            CALL ice_limit (ng, tile, model)
           END DO
 !$OMP BARRIER
         END DO

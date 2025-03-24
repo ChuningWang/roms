@@ -39,6 +39,9 @@
     defined TL_RBL4DVAR
       USE mod_ocean
 #endif
+#if defined ICE_MODEL && defined ICE_FIXED
+      USE mod_ice
+#endif
       USE mod_scalars
       USE mod_sources
       USE mod_stepping
@@ -570,6 +573,110 @@
      &                  GRID(ng) % rmask,                               &
 #  endif
      &                  FORCES(ng) % snowG)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+      END IF
+# endif
+
+# if !(defined ANA_ICE || defined FRC_COUPLING) && \
+      (defined ICE_MODEL && defined ICE_FIXED)
+      IF (Lprocess) THEN
+!
+!  Sea ice concentration.
+!
+        CALL get_2dfld (ng, iNLM, idAice, FRCncid(idAice,ng),           &
+#  if defined PIO_LIB && defined DISTRIBUTE
+     &                  FRCpioFile(idAice,ng),                          &
+#  endif
+     &                  nFfiles(ng), FRC(1,ng), update(1),              &
+     &                  LBi, UBi, LBj, UBj, 2, 1,                       &
+#  ifdef MASKING
+     &                  GRID(ng) % rmask,                               &
+#  endif
+     &                  FORCES(ng) % aiceG)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+!  Cell averaged sea ice thickness.
+!
+        CALL get_2dfld (ng, iNLM, idHice, FRCncid(idHice,ng),           &
+#  if defined PIO_LIB && defined DISTRIBUTE
+     &                  FRCpioFile(idHice,ng),                          &
+#  endif
+     &                  nFfiles(ng), FRC(1,ng), update(1),              &
+     &                  LBi, UBi, LBj, UBj, 2, 1,                       &
+#  ifdef MASKING
+     &                  GRID(ng) % rmask,                               &
+#  endif
+     &                  FORCES(ng) % hiceG)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+!  Cell averaged snow thickness above ice.
+!
+        CALL get_2dfld (ng, iNLM, idHsno, FRCncid(idHsno,ng),           &
+#  if defined PIO_LIB && defined DISTRIBUTE
+     &                  FRCpioFile(idHsno,ng),                          &
+#  endif
+     &                  nFfiles(ng), FRC(1,ng), update(1),              &
+     &                  LBi, UBi, LBj, UBj, 2, 1,                       &
+#  ifdef MASKING
+     &                  GRID(ng) % rmask,                               &
+#  endif
+     &                  FORCES(ng) % hsnoG)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+!  Cell averaged melt pond thickness above ice.
+!
+        CALL get_2dfld (ng, iNLM, idHmel, FRCncid(idHmel,ng),           &
+#  if defined PIO_LIB && defined DISTRIBUTE
+     &                  FRCpioFile(idHmel,ng),                          &
+#  endif
+     &                  nFfiles(ng), FRC(1,ng), update(1),              &
+     &                  LBi, UBi, LBj, UBj, 2, 1,                       &
+#  ifdef MASKING
+     &                  GRID(ng) % rmask,                               &
+#  endif
+     &                  FORCES(ng) % hmelG)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+!  Sea ice interior temperature.
+!
+        CALL get_2dfld (ng, iNLM, idTice, FRCncid(idTice,ng),           &
+#  if defined PIO_LIB && defined DISTRIBUTE
+     &                  FRCpioFile(idTice,ng),                          &
+#  endif
+     &                  nFfiles(ng), FRC(1,ng), update(1),              &
+     &                  LBi, UBi, LBj, UBj, 2, 1,                       &
+#  ifdef MASKING
+     &                  GRID(ng) % rmask,                               &
+#  endif
+     &                  FORCES(ng) % ticeG)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+!  Sea ice u-velocity.
+!
+        CALL get_2dfld (ng, iNLM, idUice, FRCncid(idUice,ng),           &
+#  if defined PIO_LIB && defined DISTRIBUTE
+     &                  FRCpioFile(idUice,ng),                          &
+#  endif
+     &                  nFfiles(ng), FRC(1,ng), update(1),              &
+     &                  LBi, UBi, LBj, UBj, 2, 1,                       &
+#  ifdef MASKING
+     &                  GRID(ng) % rmask,                               &
+#  endif
+     &                  FORCES(ng) % uiceG)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+!  Sea ice v-velocity.
+!
+        CALL get_2dfld (ng, iNLM, idVice, FRCncid(idVice,ng),           &
+#  if defined PIO_LIB && defined DISTRIBUTE
+     &                  FRCpioFile(idVice,ng),                          &
+#  endif
+     &                  nFfiles(ng), FRC(1,ng), update(1),              &
+     &                  LBi, UBi, LBj, UBj, 2, 1,                       &
+#  ifdef MASKING
+     &                  GRID(ng) % rmask,                               &
+#  endif
+     &                  FORCES(ng) % viceG)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       END IF
 # endif

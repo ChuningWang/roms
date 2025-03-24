@@ -57,6 +57,9 @@
       USE mod_mixing
       USE mod_ncparam
       USE mod_ocean
+# if defined ICE_MODEL && defined ICE_FIXED
+      USE mod_ice
+# endif
       USE mod_stepping
       USE mod_scalars
       USE mod_sources
@@ -420,6 +423,67 @@
 #    endif
       END IF
 #   endif
+#  endif
+
+#  if defined ICE_MODEL && defined ICE_FIXED
+!
+!  Set sea ice variables.
+!
+      IF (Lprocess) THEN
+#   ifdef ANA_ICE
+        CALL ana_ice (ng, tile, iNLM)
+#   elif (defined FRC_COUPLING && defined TIME_INTERP) || \
+         !defined FRC_COUPLING
+        CALL set_2dfld_tile (ng, tile, iNLM, idAice,                    &
+     &                       LBi, UBi, LBj, UBj,                        &
+     &                       FORCES(ng)%aiceG,                          &
+     &                       FORCES(ng)%aice,                           &
+     &                       update)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+        CALL set_2dfld_tile (ng, tile, iNLM, idHice,                    &
+     &                       LBi, UBi, LBj, UBj,                        &
+     &                       FORCES(ng)%hiceG,                          &
+     &                       FORCES(ng)%hice,                           &
+     &                       update)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+        CALL set_2dfld_tile (ng, tile, iNLM, idHsno,                    &
+     &                       LBi, UBi, LBj, UBj,                        &
+     &                       FORCES(ng)%hsnoG,                          &
+     &                       FORCES(ng)%hsno,                           &
+     &                       update)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+        CALL set_2dfld_tile (ng, tile, iNLM, idHmel,                    &
+     &                       LBi, UBi, LBj, UBj,                        &
+     &                       FORCES(ng)%hmelG,                          &
+     &                       FORCES(ng)%hmel,                           &
+     &                       update)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+        CALL set_2dfld_tile (ng, tile, iNLM, idTice,                    &
+     &                       LBi, UBi, LBj, UBj,                        &
+     &                       FORCES(ng)%ticeG,                          &
+     &                       FORCES(ng)%tice,                           &
+     &                       update)
+!
+        CALL set_2dfld_tile (ng, tile, iNLM, idUice,                    &
+     &                       LBi, UBi, LBj, UBj,                        &
+     &                       FORCES(ng)%uiceG,                          &
+     &                       FORCES(ng)%uice,                           &
+     &                       update)
+!
+        CALL set_2dfld_tile (ng, tile, iNLM, idVice,                    &
+     &                       LBi, UBi, LBj, UBj,                        &
+     &                       FORCES(ng)%viceG,                          &
+     &                       FORCES(ng)%vice,                           &
+     &                       update)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#   endif
+      END IF
 #  endif
 
 #  ifndef BULK_FLUXES

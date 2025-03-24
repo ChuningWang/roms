@@ -133,22 +133,47 @@
 !                                                                      !
 !  tflux        Surface tracer flux adjustments (:,:,Nfrec,2,itrc)     !
 #endif
-#if defined ICE_MODEL && defined ICE_BULK_FLUXES && defined BULK_FLUXES
+#ifdef ICE_MODEL
+# if defined ICE_BULK_FLUXES && defined BULK_FLUXES
 !                                                                      !
-!  Seaice fluxes.                                                      !
+!  Sea ice variables.                                                  !
 !                                                                      !
-# ifdef ICE_THERMO
+#  ifdef ICE_THERMO
 !  Qnet_ai      Surface net heat flux at the Air/Ice inteface          !
 !  snow         Snow fall rate (kg/m2/s).                              !
-#  ifdef ICE_SNOWFALL
+#   ifdef ICE_SNOWFALL
 !  snowG        Latest two-time snapshots of input "snow" grided       !
 !                 data used for interpolation.                         !
+#   endif
 #  endif
-# endif
-!  sustr_ai     Surface U-momentum stress at the Air/Ice interface     !
-!  svstr_ai     Surface V-momentum stress at the Air/Ice interface     !
 !  sustr_ao     Surface U-momentum stress at the Air/Ocean interface   !
 !  svstr_ao     Surface V-momentum stress at the Air/Ocean interface   !
+!  sustr_ai     Surface U-momentum stress at the Air/Ice interface     !
+!  svstr_ai     Surface V-momentum stress at the Air/Ice interface     !
+# endif
+# ifdef ICE_FIXED
+!  aice         Sea ice concentration                                  !
+!  aiceG        Latest two-time snapshots of input "aice" grided       !
+!                 data used for interpolation.                         !
+!  hice         Sea ice thickness                                      !
+!  hiceG        Latest two-time snapshots of input "hice" grided       !
+!                 data used for interpolation.                         !
+!  hsno         Snow thickness above ice                               !
+!  hsnoG        Latest two-time snapshots of input "hsno" grided       !
+!                 data used for interpolation.                         !
+!  hmel         Melt pond thickness above ice                          !
+!  hmelG        Latest two-time snapshots of input "hmel" grided       !
+!                 data used for interpolation.                         !
+!  tice         Sea ice thickness                                      !
+!  ticeG        Latest two-time snapshots of input "tice" grided       !
+!                 data used for interpolation.                         !
+!  uice         Sea ice u-velocity                                     !
+!  uiceG        Latest two-time snapshots of input "uice" grided       !
+!                 data used for interpolation.                         !
+!  vice         Sea ice v-velocity                                     !
+!  viceG        Latest two-time snapshots of input "vice" grided       !
+!                 data used for interpolation.                         !
+# endif
 #endif
 !                                                                      !
 !  Bottom tracer fluxes.                                               !
@@ -399,19 +424,38 @@
 #  endif
 # endif
 
-# if defined ICE_MODEL       && \
-     defined ICE_BULK_FLUXES && defined BULK_FLUXES
-#  ifdef ICE_THERMO
+# ifdef ICE_MODEL
+#  if defined ICE_BULK_FLUXES && defined BULK_FLUXES
+#   ifdef ICE_THERMO
           real(r8), pointer :: Qnet_ai(:,:)
           real(r8), pointer :: snow(:,:)
-#   if defined ICE_SNOWFALL && !defined ANA_SNOW
+#    if defined ICE_SNOWFALL && !defined ANA_SNOW
           real(r8), pointer :: snowG(:,:,:)
+#    endif
 #   endif
-#  endif
           real(r8), pointer :: sustr_ao(:,:)
           real(r8), pointer :: svstr_ao(:,:)
           real(r8), pointer :: sustr_ai(:,:)
           real(r8), pointer :: svstr_ai(:,:)
+#  endif
+#  ifdef ICE_FIXED
+          real(r8), pointer :: aice(:,:)
+          real(r8), pointer :: hice(:,:)
+          real(r8), pointer :: hsno(:,:)
+          real(r8), pointer :: hmel(:,:)
+          real(r8), pointer :: tice(:,:)
+          real(r8), pointer :: uice(:,:)
+          real(r8), pointer :: vice(:,:)
+#   ifndef ANA_ICE
+          real(r8), pointer :: aiceG(:,:,:)
+          real(r8), pointer :: hiceG(:,:,:)
+          real(r8), pointer :: hsnoG(:,:,:)
+          real(r8), pointer :: hmelG(:,:,:)
+          real(r8), pointer :: ticeG(:,:,:)
+          real(r8), pointer :: uiceG(:,:,:)
+          real(r8), pointer :: viceG(:,:,:)
+#   endif
+#  endif
 # endif
 
           real(r8), pointer :: stflux(:,:,:)
@@ -869,20 +913,20 @@
 #  endif
 # endif
 
-# if defined ICE_MODEL       && \
-     defined ICE_BULK_FLUXES && defined BULK_FLUXES
-#  ifdef ICE_THERMO
+# ifdef ICE_MODEL
+#  if defined ICE_BULK_FLUXES && defined BULK_FLUXES
+#   ifdef ICE_THERMO
       allocate ( FORCES(ng) % Qnet_ai(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
 
       allocate ( FORCES(ng) % snow(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
-#   if defined ICE_SNOWFALL && !defined ANA_SNOW
+#    if defined ICE_SNOWFALL && !defined ANA_SNOW
 
       allocate ( FORCES(ng) % snowG(LBi:UBi,LBj:UBj,2) )
       Dmem(ng)=Dmem(ng)+size2d
+#    endif
 #   endif
-#  endif
 
       allocate ( FORCES(ng) % sustr_ao(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
@@ -895,6 +939,53 @@
 
       allocate ( FORCES(ng) % svstr_ai(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
+#  endif
+#  ifdef ICE_FIXED
+
+      allocate ( FORCES(ng) % aice(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
+
+      allocate ( FORCES(ng) % hice(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
+
+      allocate ( FORCES(ng) % hsno(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
+
+      allocate ( FORCES(ng) % hmel(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
+
+      allocate ( FORCES(ng) % tice(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
+
+      allocate ( FORCES(ng) % uice(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
+
+      allocate ( FORCES(ng) % vice(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
+#   ifndef ANA_ICE
+
+      allocate ( FORCES(ng) % aiceG(LBi:UBi,LBj:UBj,2) )
+      Dmem(ng)=Dmem(ng)+2.0_r8*size2d
+
+      allocate ( FORCES(ng) % hiceG(LBi:UBi,LBj:UBj,2) )
+      Dmem(ng)=Dmem(ng)+2.0_r8*size2d
+
+      allocate ( FORCES(ng) % hsnoG(LBi:UBi,LBj:UBj,2) )
+      Dmem(ng)=Dmem(ng)+2.0_r8*size2d
+
+      allocate ( FORCES(ng) % hmelG(LBi:UBi,LBj:UBj,2) )
+      Dmem(ng)=Dmem(ng)+2.0_r8*size2d
+
+      allocate ( FORCES(ng) % ticeG(LBi:UBi,LBj:UBj,2) )
+      Dmem(ng)=Dmem(ng)+2.0_r8*size2d
+
+      allocate ( FORCES(ng) % uiceG(LBi:UBi,LBj:UBj,2) )
+      Dmem(ng)=Dmem(ng)+2.0_r8*size2d
+
+      allocate ( FORCES(ng) % viceG(LBi:UBi,LBj:UBj,2) )
+      Dmem(ng)=Dmem(ng)+2.0_r8*size2d
+#   endif
+#  endif
 # endif
 
       allocate ( FORCES(ng) % stflux(LBi:UBi,LBj:UBj,NT(ng)) )
@@ -1439,32 +1530,67 @@
 #   endif
 #  endif
 
-#  if defined ICE_MODEL       && \
-      defined ICE_BULK_FLUXES && defined BULK_FLUXES
-#  ifdef ICE_THERMO
+#  ifdef ICE_MODEL
+#   if defined ICE_BULK_FLUXES && defined BULK_FLUXES
+#    ifdef ICE_THERMO
       IF (.not.destroy(ng, FORCES(ng)%Qnet_ai, MyFile,                  &
      &                 __LINE__, 'FORCES(ng)%Qnet_ai')) RETURN
 
       IF (.not.destroy(ng, FORCES(ng)%snow, MyFile,                     &
      &                 __LINE__, 'FORCES(ng)%snow')) RETURN
-#   if defined ICE_SNOWFALL && !defined ANA_SNOW
+#     if defined ICE_SNOWFALL && !defined ANA_SNOW
 
       IF (.not.destroy(ng, FORCES(ng)%snowG, MyFile,                    &
      &                 __LINE__, 'FORCES(ng)%snowG')) RETURN
+#     endif
+#    endif
 #   endif
-#  endif
-
-      IF (.not.destroy(ng, FORCES(ng)%sustr_ai, MyFile,                 &
-     &                 __LINE__, 'FORCES(ng)%sustr_ai')) RETURN
-
-      IF (.not.destroy(ng, FORCES(ng)%svstr_ai, MyFile,                 &
-     &                 __LINE__, 'FORCES(ng)%svstr_ai')) RETURN
 
       IF (.not.destroy(ng, FORCES(ng)%sustr_ao, MyFile,                 &
      &                 __LINE__, 'FORCES(ng)%sustr_ao')) RETURN
 
       IF (.not.destroy(ng, FORCES(ng)%svstr_ao, MyFile,                 &
      &                 __LINE__, 'FORCES(ng)%svstr_ao')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%sustr_ai, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%sustr_ai')) RETURN
+
+      IF (.not.destroy(ng, FORCES(ng)%svstr_ai, MyFile,                 &
+     &                 __LINE__, 'FORCES(ng)%svstr_ai')) RETURN
+#   ifdef ICE_FIXED
+
+      IF (.not.destroy(ng, FORCES(ng)%aice , MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%aice')) RETURN
+      IF (.not.destroy(ng, FORCES(ng)%hice , MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%hice')) RETURN
+      IF (.not.destroy(ng, FORCES(ng)%hsno , MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%hsno')) RETURN
+      IF (.not.destroy(ng, FORCES(ng)%hmel , MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%hmel')) RETURN
+      IF (.not.destroy(ng, FORCES(ng)%tice , MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%tice')) RETURN
+      IF (.not.destroy(ng, FORCES(ng)%uice , MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%uice')) RETURN
+      IF (.not.destroy(ng, FORCES(ng)%vice , MyFile,                    &
+     &                 __LINE__, 'FORCES(ng)%vice')) RETURN
+#    ifndef ANA_ICE
+
+      IF (.not.destroy(ng, FORCES(ng)%aiceG , MyFile,                   &
+     &                 __LINE__, 'FORCES(ng)%aiceG')) RETURN
+      IF (.not.destroy(ng, FORCES(ng)%hiceG , MyFile,                   &
+     &                 __LINE__, 'FORCES(ng)%hiceG')) RETURN
+      IF (.not.destroy(ng, FORCES(ng)%hsnoG , MyFile,                   &
+     &                 __LINE__, 'FORCES(ng)%hsnoG')) RETURN
+      IF (.not.destroy(ng, FORCES(ng)%hmelG , MyFile,                   &
+     &                 __LINE__, 'FORCES(ng)%hmelG')) RETURN
+      IF (.not.destroy(ng, FORCES(ng)%ticeG , MyFile,                   &
+     &                 __LINE__, 'FORCES(ng)%ticeG')) RETURN
+      IF (.not.destroy(ng, FORCES(ng)%uiceG , MyFile,                   &
+     &                 __LINE__, 'FORCES(ng)%uiceG')) RETURN
+      IF (.not.destroy(ng, FORCES(ng)%viceG , MyFile,                   &
+     &                 __LINE__, 'FORCES(ng)%viceG')) RETURN
+#    endif
+#   endif
 #  endif
 
       IF (.not.destroy(ng, FORCES(ng)%stflux, MyFile,                   &
@@ -1980,21 +2106,48 @@
             FORCES(ng) % evap(i,j) = IniVal
 #  endif
 # endif
-# if defined ICE_MODEL       && \
-     defined ICE_BULK_FLUXES && defined BULK_FLUXES
-#  ifdef ICE_THERMO
+# ifdef ICE_MODEL
+#  if defined ICE_BULK_FLUXES && defined BULK_FLUXES
+#   ifdef ICE_THERMO
             FORCES(ng) % Qnet_ai(i,j) = IniVal
             FORCES(ng) % snow(i,j) = IniVal
-#   if defined ICE_SNOWFALL && !defined ANA_SNOW
+#    if defined ICE_SNOWFALL && !defined ANA_SNOW
             FORCES(ng) % snowG(i,j,1) = IniVal
             FORCES(ng) % snowG(i,j,2) = IniVal
+#    endif
 #   endif
-#  endif
-            FORCES(ng) % sustr_ai(i,j) = IniVal
-            FORCES(ng) % svstr_ai(i,j) = IniVal
             FORCES(ng) % sustr_ao(i,j) = IniVal
             FORCES(ng) % svstr_ao(i,j) = IniVal
+            FORCES(ng) % sustr_ai(i,j) = IniVal
+            FORCES(ng) % svstr_ai(i,j) = IniVal
+#  endif
+#  ifdef ICE_FIXED
+            FORCES(ng) % aice(i,j) = IniVal
+            FORCES(ng) % hice(i,j) = IniVal
+            FORCES(ng) % hsno(i,j) = IniVal
+            FORCES(ng) % hmel(i,j) = IniVal
+            FORCES(ng) % tice(i,j) = IniVal
+            FORCES(ng) % uice(i,j) = IniVal
+            FORCES(ng) % vice(i,j) = IniVal
+#   ifndef ANA_ICE
+            FORCES(ng) % aiceG(i,j,1) = IniVal
+            FORCES(ng) % aiceG(i,j,2) = IniVal
+            FORCES(ng) % hiceG(i,j,1) = IniVal
+            FORCES(ng) % hiceG(i,j,2) = IniVal
+            FORCES(ng) % hsnoG(i,j,1) = IniVal
+            FORCES(ng) % hsnoG(i,j,2) = IniVal
+            FORCES(ng) % hmelG(i,j,1) = IniVal
+            FORCES(ng) % hmelG(i,j,2) = IniVal
+            FORCES(ng) % ticeG(i,j,1) = IniVal
+            FORCES(ng) % ticeG(i,j,2) = IniVal
+            FORCES(ng) % uiceG(i,j,1) = IniVal
+            FORCES(ng) % uiceG(i,j,2) = IniVal
+            FORCES(ng) % viceG(i,j,1) = IniVal
+            FORCES(ng) % viceG(i,j,2) = IniVal
+#   endif
+#  endif
 # endif
+
 # if !defined LONGWAVE && defined BULK_FLUXES
             FORCES(ng) % lrflxG(i,j,1) = IniVal
             FORCES(ng) % lrflxG(i,j,2) = IniVal
