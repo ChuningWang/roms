@@ -89,6 +89,13 @@
 !    icIOfv    Ice-Ocean friction velocity (m/s)                       !
 !    icIOmt    Ice-Ocean momentum transfer coefficient (m/s)           !
 !                                                                      !
+#if defined ICE_TRACER
+!  The ice model internal 'tracer' arrays are declares in compact form !
+!  in the derived-type structure as:                                   !
+!                                                                      !
+!    ICE(ng) % tracer(:,:,TimeLevel,NAT+1,NT(ng)) (TracerUnits m)      !
+!                                                                      !
+#endif
 !=======================================================================
 !
       USE mod_kinds
@@ -304,6 +311,12 @@
       real(r8) :: spec_heat_air   ! specific heat of air (J/kg/K)
       real(r8) :: trans_coeff     ! heat transfer coefficient (unitless)
       real(r8) :: sublimation     ! latent heat of sublimation (J/kg)
+#ifdef ICE_TRACER
+!
+!  Logical switches
+!
+      logical, allocatable :: LtracerIce(:,:)   ! tracer source switch
+#endif
 !
 !-----------------------------------------------------------------------
 !  Define derived-type structure ice model state and internal arrays.
@@ -311,8 +324,11 @@
 !
       TYPE T_ICE
 
-        real(r8), pointer :: Fi(:,:,:)               ! [i,j,1:nIceF]
         real(r8), pointer :: Si(:,:,:,:)             ! [i,j,1:2,1:nIceS]
+        real(r8), pointer :: Fi(:,:,:)               ! [i,j,1:nIceF]
+#ifdef ICE_TRACER
+        real(r8), pointer :: Ti(:,:,:,:)             ! [i,j,2,NAT+1:NT]
+#endif
 
       END TYPE T_ICE
 !
@@ -459,6 +475,11 @@
 
         IF (.not.allocated(ellip_sq))                                   &
      &    allocate ( ellip_sq(Ngrids) )
+#ifdef ICE_TRACER
+
+        IF (.not.allocated(LtracerIce))                                 &
+     &    allocate ( LtracerIce(3:MT,Ngrids) )
+#endif
 
       END IF
 !
@@ -477,6 +498,11 @@
 !
         allocate ( ICE(ng) % Fi(LBi:UBi,LBj:UBj,nIceF) )
         Dmem(ng)=Dmem(ng)+REAL(nIceF,r8)*size2d
+#ifdef ICE_TRACER
+!
+        allocate ( ICE(ng) % Ti(LBi:UBi,LBj:UBj,2,NAT+1:NT(ng)) )
+        Dmem(ng)=Dmem(ng)+REAL(NT(ng)-NAT,r8)*size2d
+#endif
       END IF
 !
 !-----------------------------------------------------------------------
@@ -610,6 +636,11 @@
 !
       IF (.not.destroy(ng, ICE(ng)%Fi, MyFile,                          &
      &                 __LINE__, 'ICE(ng)%Fi')) RETURN
+# ifdef ICE_TRACER
+!
+      IF (.not.destroy(ng, ICE(ng)%Ti, MyFile,                          &
+     &                 __LINE__, 'ICE(ng)%Ti')) RETURN
+# endif
 !
 !  Nonlinear ice model state lateral boundary arrays.
 !
@@ -700,7 +731,7 @@
 !
 !  Local variable declarations.
 !
-      integer :: i, j, nf, ns
+      integer :: i, j, nf, ns, itrc
       integer :: Imin, Imax, Jmin, Jmax
 
       real(r8), parameter :: IniVal = 0.0_r8
@@ -751,6 +782,13 @@
           DO nf=1,nIceF
             ICE(ng) % Fi(i,j,nf) = IniVal
           END DO
+#ifdef ICE_TRACER
+!
+          DO itrc=NAT+1,NT(ng)
+            ICE(ng) % Ti(i,j,1,itrc) = IniVal
+            ICE(ng) % Ti(i,j,2,itrc) = IniVal
+          END DO
+#endif
         END DO
       END DO
 !

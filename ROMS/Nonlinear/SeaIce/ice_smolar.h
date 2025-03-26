@@ -320,6 +320,56 @@
      &                    ICE(ng) % Si(:,:,:,isHice),                   &
      &                    ICE(ng) % Si(:,:,:,isTice),                   &
      &                    ICE(ng) % Si(:,:,:,isEnth))
+# ifdef ICE_TRACER
+!
+!-----------------------------------------------------------------------
+!  Advect tracers.
+!-----------------------------------------------------------------------
+!
+      DO itrc=NAT+1,NT(ng)
+        IF (LtracerIce(itrc,ng)) THEN
+          CALL ice_mpdata_tile (ng, tile, model,                        &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          IminS, ImaxS, JminS, JmaxS,             &
+     &                          linew, liold, liunw,                    &
+# ifdef MASKING
+     &                          GRID(ng) % rmask,                       &
+     &                          GRID(ng) % umask,                       &
+     &                          GRID(ng) % vmask,                       &
+# endif
+# ifdef WET_DRY
+     &                          GRID(ng) % rmask_wet,                   &
+     &                          GRID(ng) % umask_wet,                   &
+     &                          GRID(ng) % vmask_wet,                   &
+# endif
+# ifdef ICESHELF
+     &                          GRID(ng) % zice,                        &
+# endif
+# ifndef ICE_UPWIND
+     &                          GRID(ng) % pm,                          &
+     &                          GRID(ng) % pn,                          &
+# endif
+     &                          GRID(ng) % on_u,                        &
+     &                          GRID(ng) % om_v,                        &
+     &                          GRID(ng) % omn,                         &
+     &                          ICE(ng) % Si(:,:,:,isUice),             &
+     &                          ICE(ng) % Si(:,:,:,isVice),             &
+     &                          ICE(ng) % Ti(:,:,:,itrc))
+!
+          DO j=JstrT,JendT
+            DO i=IstrT,IendT
+              IF (ICE(ng)%Si(i,j,linew,isHice).le.min_hi(ng)) THEN
+                ICE(ng)%Ti(i,j,linew,itrc)=0.0_r8
+              END IF
+            END DO
+          END DO
+!
+          CALL bc_r2d_tile (ng, tile,                                   &
+     &                      LBi, UBi, LBj, UBj,                         &
+     &                      ICE(ng) % Ti(:,:,linew,itrc))
+        END IF
+      END DO
+# endif
 !
 !-----------------------------------------------------------------------
 !  Advect thickness associated with age of ice, isHage. Then, compute
@@ -552,6 +602,16 @@
      &                          LBi, UBi, LBj, UBj,                     &
      &                          ICE(ng)%Si(:,:,linew,isHage))
 
+# ifdef ICE_TRACER
+        DO itrc=NAT+1,NT(ng)
+          IF (LtracerIce(itrc,ng)) THEN
+            CALL exchange_r2d_tile (ng, tile,                           &
+     &                              LBi, UBi, LBj, UBj,                 &
+     &                              ICE(ng)%Ti(:,:,linew,itrc))
+          END IF
+        END DO
+# endif
+
 # ifdef ICE_BIO
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
@@ -590,6 +650,18 @@
      &                    ICE(ng)%Si(:,:,linew,isEnth),                 &
      &                    ICE(ng)%Si(:,:,linew,isIage),                 &
      &                    ICE(ng)%Si(:,:,linew,isHage))
+
+# ifdef ICE_TRACER
+      DO itrc=NAT+1,NT(ng)
+        IF (LtracerIce(itrc,ng)) THEN
+          CALL mp_exchange2d (ng, tile, model, 1,                       &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        NghostPoints,                             &
+     &                        EWperiodic(ng), NSperiodic(ng),           &
+     &                        ICE(ng)%Ti(:,:,linew,itrc))
+        END IF
+      END DO
+#  endif
 
 #  if defined ICE_BIO
       CALL mp_exchange2d (ng, tile, model, 3,                           &

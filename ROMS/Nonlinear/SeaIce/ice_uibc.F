@@ -438,12 +438,11 @@
      &                          MAX(Cx,0.0_r8)*grad(i-1,Jend+1)-        &
      &                          MIN(Cx,0.0_r8)*grad(i  ,Jend+1))/       &
      &                         (cff+Ce)
-# ifdef NORTH_MINUDGING
             IF (LBC(inorth,ibICE(isUice),ng)%nudging) THEN
               ui(i,Jend+1,liunw)=ui(i,Jend+1,liunw)+                    &
-     &                           tau*(ICE_LOBC(isUice.ng)%ice_north(i)- &
+     &                           tau*(ICE_LOBC(isUice,ng)%ice_north(i)- &
      &                                ui(i,Jend+1,know))
-# endif
+            END IF
 # ifdef MASKING
             ui(i,Jend+1,liunw)=ui(i,Jend+1,liunw)*                      &
      &                         GRID(ng)%umask(i,Jend+1)

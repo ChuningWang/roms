@@ -29,6 +29,7 @@
 !  Local variable declarations.
 !
       integer :: Npts, Nval, ng, status
+      integer :: ioff, nline, igrid
 #ifdef AVERAGES
       integer :: nf, ns
 #endif
@@ -43,6 +44,13 @@
 
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__
+!
+!-----------------------------------------------------------------------
+!  Initialize.
+!-----------------------------------------------------------------------
+!
+      igrid=1                            ! nested grid counter
+      nline=0                            ! LBC multi-line counter
 !
 !-----------------------------------------------------------------------
 !  Allocate ice model parameters that depend on Ngrids/
@@ -71,6 +79,50 @@
         status=decode_line(line, KeyWord, Nval, Cval, Rval)
         IF (status.gt.0) THEN
           SELECT CASE (TRIM(KeyWord))
+            CASE ('LBC(isAice)')
+              ioff = isAice+(nLBCvar-11)
+              Npts=load_lbc(Nval, Cval, line, nline, ioff, igrid,       &
+     &                      0, 0, Vname(1,idAice), LBC)
+            CASE ('LBC(isHice)')
+              ioff = isHice+(nLBCvar-11)
+              Npts=load_lbc(Nval, Cval, line, nline, ioff, igrid,       &
+     &                      0, 0, Vname(1,idHice), LBC)
+            CASE ('LBC(isHsno)')
+              ioff = isHsno+(nLBCvar-11)
+              Npts=load_lbc(Nval, Cval, line, nline, ioff, igrid,       &
+     &                      0, 0, Vname(1,idHsno), LBC)
+            CASE ('LBC(isTice)')
+              ioff = isTice+(nLBCvar-11)
+              Npts=load_lbc(Nval, Cval, line, nline, ioff, igrid,       &
+     &                      0, 0, Vname(1,idTice), LBC)
+            CASE ('LBC(isHmel)')
+              ioff = isHmel+(nLBCvar-11)
+              Npts=load_lbc(Nval, Cval, line, nline, ioff, igrid,       &
+     &                      0, 0, Vname(1,idHmel), LBC)
+            CASE ('LBC(isIage)')
+              ioff = isIage+(nLBCvar-11)
+              Npts=load_lbc(Nval, Cval, line, nline, ioff, igrid,       &
+     &                      0, 0, Vname(1,idIage), LBC)
+            CASE ('LBC(isISxx)')
+              ioff = isISxx+(nLBCvar-11)
+              Npts=load_lbc(Nval, Cval, line, nline, ioff, igrid,       &
+     &                      0, 0, Vname(1,idISxx), LBC)
+            CASE ('LBC(isISxy)')
+              ioff = isISxy+(nLBCvar-11)
+              Npts=load_lbc(Nval, Cval, line, nline, ioff, igrid,       &
+     &                      0, 0, Vname(1,idISxy), LBC)
+            CASE ('LBC(isISyy)')
+              ioff = isISyy+(nLBCvar-11)
+              Npts=load_lbc(Nval, Cval, line, nline, ioff, igrid,       &
+     &                      0, 0, Vname(1,idISyy), LBC)
+            CASE ('LBC(isUice)')
+              ioff = isUice+(nLBCvar-11)
+              Npts=load_lbc(Nval, Cval, line, nline, ioff, igrid,       &
+     &                      0, 0, Vname(1,idUice), LBC)
+            CASE ('LBC(isVice)')
+              ioff = isVice+(nLBCvar-11)
+              Npts=load_lbc(Nval, Cval, line, nline, ioff, igrid,       &
+     &                      0, 0, Vname(1,idVice), LBC)
             CASE ('nEVP')
               Npts=load_i(Nval, Rval, Ngrids, nEVP)
             CASE ('AirRho')
@@ -118,6 +170,15 @@
             CASE ('sublimation')
               Npts=load_r(Nval, Rval, 1, Rvalue)
               sublimation=Rvalue(1)
+#ifdef ICE_TRACER
+            CASE ('LtracerIce')
+              Npts=load_l(Nval, Cval, MT-NAT, Ngrids, Linert)
+              DO ng=1,Ngrids
+                DO itrc=NAT+1,MT
+                  LtracerIce(itrc,ng)=Linert(itrc-NAT,ng)
+                END DO
+              END DO
+#endif
             CASE ('Hout(idUice)')
               IF (idUice.eq.0) THEN
                 IF (Master) WRITE (out,80) 'idUice'
@@ -600,6 +661,19 @@
      &          'Heat transfer coefficient (nondimensional).'
           WRITE (out,60) sublimation, 'sublimation',                    &
      &          'Latent heat of sublimation (J/kg).'
+#ifdef ICE_TRACER
+          DO itrc=NAT+1,MT
+            IF (LtracerIce(itrc,ng)) THEN
+              WRITE (out,185) LtracerIce(itrc,ng), 'LtracerIce', itrc,  &
+     &            'Turning ON  ice-ocean tracer exchange on tracer ',   &
+     &            itrc, TRIM(Vname(1,idItrc(itrc)))
+            ELSE
+              WRITE (out,185) LtracerIce(itrc,ng), 'LtracerIce', itrc,  &
+     &            'Turning OFF ice-ocean tracer exchange on tracer ',   &
+     &            itrc, TRIM(Vname(1,idItrc(itrc)))
+            END IF
+          END DO
+#endif
 !
           IF (Hout(idUice,ng)) WRITE (out,70) Hout(idUice,ng),          &
      &       'Hout(idUice)',                                            &

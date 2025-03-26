@@ -74,16 +74,16 @@
 
 ! Iceshelf Ustar scaling factor [non-dimensional].
 
-      gamU    == 1.0d0
+        gamU == 1.0d0
 
 ! Iceshelf Ustar minimum value [m/s]. 8.0d-6 for diffusion only,
 ! 1.0d-3 for diffusion + tidal forcing.
 
-      min_ustar == 8.0d-6
+   min_ustar == 8.0d-6
 
 ! Logical switches for iceshelf melt water passive tracers.
 
-     LtracerIsf == T       ! dye_01, ...        inert passive tracers
+  LtracerIsf == T     ! dye_01, ...        inert passive tracers
 
 ! Logical switches (TRUE/FALSE) to activate writing of iceshelf prognostic
 ! variables into HISTORY output file.

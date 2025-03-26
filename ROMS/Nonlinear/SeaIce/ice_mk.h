@@ -76,13 +76,6 @@
 !
       USE mod_param
       USE mod_boundary
-#ifdef AICLM_NUDGING
-!
-!  (CW) TODO: CPP flags with '_NUDGING' are obselete now. Need to
-!             rewrite this.
-!
-      USE mod_clima
-#endif
 #ifdef ICE_SHOREFAST
       USE mod_coupling
 #endif
@@ -146,11 +139,6 @@
      &                      GRID(ng) % h,                               &
      &                      COUPLING(ng) % Zt_avg1,                     &
 #endif
-#ifdef AICLM_NUDGING
-     &                      CLIMA(ng) % aiclm,                          &
-     &                      CLIMA(ng) % hiclm,                          &
-     &                      CLIMA(ng) % AInudgcof,                      &
-#endif
      &                      OCEAN(ng) % t,                              &
      &                      FORCES(ng) % sustr,                         &
      &                      FORCES(ng) % svstr,                         &
@@ -158,6 +146,9 @@
      &                      FORCES(ng) % snow,                          &
      &                      FORCES(ng) % Qnet_ai,                       &
      &                      FORCES(ng) % stflx,                         &
+#ifdef ICE_TRACER
+     &                      ICE(ng) % Ti,                               &
+#endif
      &                      ICE(ng) % Fi,                               &
      &                      ICE(ng) % Si)
 #ifdef PROFILE
@@ -185,15 +176,15 @@
 #ifdef ICE_SHOREFAST
      &                            h, Zt_avg1,                           &
 #endif
-#ifdef AICLM_NUDGING
-     &                            aiclm, hiclm, AInudgcof,              &
-#endif
      &                            t,                                    &
      &                            sustr, svstr,                         &
      &                            rain,                                 &
      &                            snow,                                 &
      &                            Qnet_ai,                              &
      &                            stflx,                                &
+#ifdef ICE_TRACER
+     &                            Ti,                                   &
+#endif
      &                            Fi, Si)
 !***********************************************************************
 !
@@ -218,11 +209,6 @@
       real(r8), intent(in) :: h(LBi:,LBj:)
       real(r8), intent(in) :: Zt_avg1(LBi:,LBj:)
 # endif
-# ifdef AICLM_NUDGING
-      real(r8), intent(in) :: aiclm(LBi:,LBj:)
-      real(r8), intent(in) :: hiclm(LBi:,LBj:)
-      real(r8), intent(in) :: AInudgcof(LBi:,LBj:)
-# endif
       real(r8), intent(in) :: z_r(LBi:,LBj:,:)
       real(r8), intent(in) :: z_w(LBi:,LBj:,0:)
       real(r8), intent(in) :: t(LBi:,LBj:,:,:,:)
@@ -232,6 +218,9 @@
       real(r8), intent(in) :: snow(LBi:,LBj:)
       real(r8), intent(in) :: Qnet_ai(LBi:,LBj:)
       real(r8), intent(inout) :: stflx(LBi:,LBj:,:)
+#ifdef ICE_TRACER
+      real(r8), intent(inout) :: Ti(LBi:,LBj:,:,3:)
+#endif
       real(r8), intent(inout) :: Fi(LBi:,LBj:,:)
       real(r8), intent(inout) :: Si(LBi:,LBj:,:,:)
 #else
@@ -248,11 +237,6 @@
       real(r8), intent(in) :: h(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: Zt_avg1(LBi:UBi,LBj:UBj)
 # endif
-# ifdef AICLM_NUDGING
-      real(r8), intent(in) :: aiclm(LBi:UBi,LBj:UBj)
-      real(r8), intent(in) :: hiclm(LBi:UBi,LBj:UBj)
-      real(r8), intent(in) :: AInudgcof(LBi:UBi,LBj:UBj)
-# endif
       real(r8), intent(in) :: z_r(LBi:UBi,LBj:UBj,N(ng))
       real(r8), intent(in) :: z_w(LBi:UBi,LBj:UBj,0:N(ng))
       real(r8), intent(in) :: t(LBi:UBi,LBj:UBj,N(ng),3,NT(ng))
@@ -262,6 +246,9 @@
       real(r8), intent(in) :: snow(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: Qnet_ai(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: stflx(LBi:UBi,LBj:UBj,NT(ng))
+#ifdef ICE_TRACER
+      real(r8), intent(inout) :: Ti(LBi:UBi,LBj:UBj,2,3:NT(ng))
+#endif
       real(r8), intent(inout) :: Fi(LBi:UBi,LBj:UBj,nIceF)
       real(r8), intent(inout) :: Si(LBi:UBi,LBj:UBj,2,nIceS)
 #endif
@@ -270,7 +257,7 @@
 !
       logical :: IceCavity
 !
-      integer :: i, j
+      integer :: i, j, itrc
 !
       real(r8), parameter :: AlphIc   = 2.034_r8        ! [W m-1 K-1]
       real(r8), parameter :: AlphSn   = 0.31_r8         ! [W m-1 K-1]
@@ -934,6 +921,36 @@
           END IF
         END DO
       END DO
+#ifdef ICE_TRACER
+!
+!-----------------------------------------------------------------------
+!  Calculate tracer fluxes in sea ice.
+!-----------------------------------------------------------------------
+!
+      DO itrc=NAT+1,NT(ng)
+        IF (LtracerIce(itrc,ng)) THEN
+          DO j=Jstr,Jend
+            DO i=Istr,Iend
+              IF (Si(i,j,linew,isAice).gt.min_ai(ng)) THEN
+                IF (Fi(i,j,icIomf).le.0.0_r8) THEN
+                  cff=Ti(i,j,linew,itrc)/Si(i,j,linew,isHice)
+                  stflx(i,j,itrc)=stflx(i,j,itrc)-Fi(i,j,icIomf)*cff
+                  Ti(i,j,linew,itrc)=Ti(i,j,linew,itrc)+                &
+     &                               Fi(i,j,icIomf)*cff*dtice(ng)
+                ELSE
+                  stflx(i,j,itrc)=stflx(i,j,itrc)-                      &
+     &                            Fi(i,j,icIomf)*t(i,j,N(ng),nrhs,itrc)
+                  Ti(i,j,linew,itrc)=Ti(i,j,linew,itrc)+                &
+     &                         Fi(i,j,icIomf)*t(i,j,N(ng),nrhs,itrc)*   &
+     &                         dtice(ng)
+                ENDIF
+                Ti(i,j,linew,itrc)=MAX(Ti(i,j,linew,itrc), 0.0_r8)
+              END IF
+            END DO
+          END DO
+        END IF
+      END DO
+#endif
 !
 !-----------------------------------------------------------------------
 !  Update ice properties.
@@ -993,15 +1010,6 @@
             Si(i,j,linew,isHice)=Si(i,j,linew,isHice)+                  &
      &                           SnowDryRho(ng)*cff
           END IF
-#endif
-#ifdef AICLM_NUDGING
-          cff=AInudgcof(i,j)
-          Si(i,j,linew,isAice)=Si(i,j,linew,isAice)+                    &
-     &                         dtice(ng)*cff*                           &
-     &                         (aiclm(i,j)-Si(i,j,linew,isAice))
-          Si(i,j,linew,isHice)=Si(i,j,linew,isHice)+                    &
-     &                         dtice(ng)*cff*                           &
-     &                         (hiclm(i,j)-Si(i,j,linew,isHice))
 #endif
 !
 !  Determine age of the sea ice. Any new ice production reduces the
@@ -1132,6 +1140,16 @@
      &                    Si(:,:,:,isHice),                             &
      &                    Si(:,:,:,isTice),                             &
      &                    Si(:,:,:,isEnth))
+
+#ifdef ICE_TRACER
+      DO itrc=NAT+1,NT(ng)
+        IF (LtracerIce(itrc,ng)) THEN
+          CALL bc_r2d_tile (ng, tile,                                   &
+     &                      LBi, UBi, LBj, UBj,                         &
+     &                      ICE(ng) % Ti(:,:,linew,itrc))
+        END IF
+      END DO
+#endif
 !
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
         CALL exchange_r2d_tile (ng, tile,                               &
@@ -1165,6 +1183,16 @@
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          Si(:,:,linew,isTice))
+
+# ifdef ICE_TRACER
+        DO itrc=NAT+1,NT(ng)
+          IF (LtracerIce(itrc,ng)) THEN
+            CALL exchange_r2d_tile (ng, tile,                           &
+     &                              LBi, UBi, LBj, UBj,                 &
+     &                              ICE(ng)%Ti(:,:,linew,itrc))
+          END IF
+        END DO
+# endif
       END IF
 
 #ifdef DISTRIBUTE
@@ -1184,6 +1212,18 @@
      &                    Si(:,:,linew,isIage),                         &
      &                    Si(:,:,linew,isEnth),                         &
      &                    Si(:,:,linew,isTice))
+
+# ifdef ICE_TRACER
+      DO itrc=NAT+1,NT(ng)
+        IF (LtracerIce(itrc,ng)) THEN
+          CALL mp_exchange2d (ng, tile, model, 1,                       &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        NghostPoints,                             &
+     &                        EWperiodic(ng), NSperiodic(ng),           &
+     &                        ICE(ng)%Ti(:,:,linew,itrc))
+        END IF
+      END DO
+#  endif
 #endif
 !
       RETURN
