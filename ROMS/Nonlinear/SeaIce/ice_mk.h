@@ -932,16 +932,20 @@
           DO j=Jstr,Jend
             DO i=Istr,Iend
               IF (Si(i,j,linew,isAice).gt.min_ai(ng)) THEN
-                IF (Fi(i,j,icIomf).le.0.0_r8) THEN
+                IF (Fi(i,j,icIOmf).le.0.0_r8) THEN
                   cff=Ti(i,j,linew,itrc)/Si(i,j,linew,isHice)
-                  stflx(i,j,itrc)=stflx(i,j,itrc)-Fi(i,j,icIomf)*cff
-                  Ti(i,j,linew,itrc)=Ti(i,j,linew,itrc)+                &
-     &                               Fi(i,j,icIomf)*cff*dtice(ng)
-                ELSE
                   stflx(i,j,itrc)=stflx(i,j,itrc)-                      &
-     &                            Fi(i,j,icIomf)*t(i,j,N(ng),nrhs,itrc)
+     &                            Fi(i,j,icIOmf)*                       &
+     &                            (cff-t(i,j,N(ng),nrhs,itrc))
+!                 stflx(i,j,itrc)=stflx(i,j,itrc)-                      &
+!    &                            Fi(i,j,icIOmf)*cff
                   Ti(i,j,linew,itrc)=Ti(i,j,linew,itrc)+                &
-     &                         Fi(i,j,icIomf)*t(i,j,N(ng),nrhs,itrc)*   &
+     &                               Fi(i,j,icIOmf)*cff*dtice(ng)
+                ELSE
+!                 stflx(i,j,itrc)=stflx(i,j,itrc)-                      &
+!    &                            Fi(i,j,icIOmf)*t(i,j,N(ng),nrhs,itrc)
+                  Ti(i,j,linew,itrc)=Ti(i,j,linew,itrc)+                &
+     &                         Fi(i,j,icIOmf)*t(i,j,N(ng),nrhs,itrc)*   &
      &                         dtice(ng)
                 ENDIF
                 Ti(i,j,linew,itrc)=MAX(Ti(i,j,linew,itrc), 0.0_r8)
