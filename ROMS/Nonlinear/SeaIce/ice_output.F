@@ -550,7 +550,16 @@
 # endif
             END IF
 !
+# ifdef ICE_BULK_FLUXES
+            IF ((ifld.eq.icSics).or.(ifld.eq.icSicb).or.                &
+     &          (ifld.eq.icSocn)) THEN
+              scale=rho0*Cp
+            ELSE
+              scale=1.0_dp
+            END IF
+# else
             scale=1.0_dp
+# endif
             gtype=gfactor*r2dvar
             status=nf_fwrite2d(ng, model, S(ng)%ncid, ifield,           &
      &                         S(ng)%Vid(ifield),                       &
