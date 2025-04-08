@@ -937,13 +937,9 @@
                   stflx(i,j,itrc)=stflx(i,j,itrc)-                      &
      &                            Fi(i,j,icIOmf)*                       &
      &                            (cff-t(i,j,N(ng),nrhs,itrc))
-!                 stflx(i,j,itrc)=stflx(i,j,itrc)-                      &
-!    &                            Fi(i,j,icIOmf)*cff
                   Ti(i,j,linew,itrc)=Ti(i,j,linew,itrc)+                &
      &                               Fi(i,j,icIOmf)*cff*dtice(ng)
                 ELSE
-!                 stflx(i,j,itrc)=stflx(i,j,itrc)-                      &
-!    &                            Fi(i,j,icIOmf)*t(i,j,N(ng),nrhs,itrc)
                   Ti(i,j,linew,itrc)=Ti(i,j,linew,itrc)+                &
      &                         Fi(i,j,icIOmf)*t(i,j,N(ng),nrhs,itrc)*   &
      &                         dtice(ng)

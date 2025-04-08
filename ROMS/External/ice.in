@@ -147,7 +147,7 @@ spec_heat_air =  1004.d0
 
 ! Logical switches for ice-ocean tracer exchange.
 
-  LtracerIsf == T     ! dye_01, ...        passive/bio/sed tracers
+  LtracerIce == T     ! dye_01, ...        passive/bio/sed tracers
 
 ! Logical switches (TRUE/FALSE) to activate writing of ice prognostic
 ! variables into HISTORY output file.
