@@ -934,16 +934,14 @@
               IF (Si(i,j,linew,isAice).gt.min_ai(ng)) THEN
                 IF (Fi(i,j,icIOmf).le.0.0_r8) THEN
                   cff=Ti(i,j,linew,itrc)/Si(i,j,linew,isHice)
-                  stflx(i,j,itrc)=stflx(i,j,itrc)-                      &
-     &                            Fi(i,j,icIOmf)*                       &
-     &                            (cff-t(i,j,N(ng),nrhs,itrc))
-                  Ti(i,j,linew,itrc)=Ti(i,j,linew,itrc)+                &
-     &                               Fi(i,j,icIOmf)*cff*dtice(ng)
                 ELSE
-                  Ti(i,j,linew,itrc)=Ti(i,j,linew,itrc)+                &
-     &                         Fi(i,j,icIOmf)*t(i,j,N(ng),nrhs,itrc)*   &
-     &                         dtice(ng)
+                  cff=t(i,j,N(ng),nrhs,itrc)
                 ENDIF
+                stflx(i,j,itrc)=stflx(i,j,itrc)-                        &
+     &                          Fi(i,j,icIOmf)*                         &
+     &                          (cff-t(i,j,N(ng),nrhs,itrc))
+                Ti(i,j,linew,itrc)=Ti(i,j,linew,itrc)+                  &
+     &                             Fi(i,j,icIOmf)*cff*dtice(ng)
                 Ti(i,j,linew,itrc)=MAX(Ti(i,j,linew,itrc), 0.0_r8)
               END IF
             END DO
