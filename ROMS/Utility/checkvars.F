@@ -47,6 +47,9 @@
 #if defined ICE_MODEL && defined SOLVE3D
       USE mod_ice
 #endif
+#if defined ICESHELF_DYNAM && defined SOLVE3D
+      USE mod_isf
+#endif
       USE mod_iounits
       USE mod_ncparam
 #if defined SEDIMENT || defined BBL_MODEL
@@ -243,6 +246,23 @@
             get_var(iSice(i))=.TRUE.
           END IF
         END DO
+# endif
+# ifdef ICESHELF_DYNAM
+        DO i=1,nIsfS
+          IF (iSisf(i).gt.0) THEN
+            get_var(iSisf(i))=.TRUE.
+          END IF
+        END DO
+#  ifdef ICESHELF_TRACER
+        IF (Lisftrc(ng)) THEN
+          get_var(idIvol)=.TRUE.
+          DO itrc=1,NT(ng)
+            IF (LtracerIsf(itrc)) THEN
+              get_var(idItrc(itrc))=.TRUE.
+            END IF
+          END DO
+        END IF
+#  endif
 # endif
 #endif
 #ifdef PERFECT_RESTART

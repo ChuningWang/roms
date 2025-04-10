@@ -83,7 +83,7 @@
 !
 !  Local variable declarations.
 !
-      integer :: i, ifield, j, nf, ns, itrc
+      integer :: i, ifield, j, nf, ns, k, ic, itrc
 !
       real(r8) :: fac
 !
@@ -148,32 +148,39 @@
           END IF
         END DO
 # ifdef ICESHELF_TRACER
+        IF (Lisftrc(ng)) THEN
 !
-        IF (Aout(idIvol,ng)) THEN
-          DO j=JstrR,JendR
-            DO i=IstrR,IendR
-              ISF_VAVG(ng)%var(i,j)=ISF(ng)%vol(i,j)
-#  ifdef MASKING
-              ISF_VAVG(ng)%var(i,j)=ISF_VAVG(ng)%var(i,j)*              &
-     &                              GRID(ng)%rmask_full(i,j)
-#  endif
-            END DO
-          END DO
-        END IF
-!
-        DO itrc=1,NPT
-          IF (Aout(idItrc(itrc),ng)) THEN
+          IF (Aout(idIvol,ng)) THEN
             DO j=JstrR,JendR
               DO i=IstrR,IendR
-                ISF_TAVG(itrc,ng)%var(i,j)=ISF(ng)%trc(itrc,i,j)
+                ISF_VAVG(ng)%var(i,j)=ISF(ng)%vol(i,j)
 #  ifdef MASKING
-                ISF_TAVG(itrc,ng)%var(i,j)=ISF_TAVG(itrc,ng)%var(i,j) * &
-     &                                     GRID(ng)%rmask_full(i,j)
+                ISF_VAVG(ng)%var(i,j)=ISF_VAVG(ng)%var(i,j)*            &
+     &                                GRID(ng)%rmask_full(i,j)
 #  endif
               END DO
             END DO
           END IF
-        END DO
+!
+          DO k=1,NPT
+            itrc=inert(k)
+            IF (LtracerIsf(ng)) THEN
+              ic=ic+1
+              IF (Aout(idItrc(itrc),ng)) THEN
+                DO j=JstrR,JendR
+                  DO i=IstrR,IendR
+                    ISF_TAVG(itrc,ng)%var(i,j)=ISF(ng)%trc(ic,i,j)
+#  ifdef MASKING
+                    ISF_TAVG(itrc,ng)%var(i,j)=                         &
+     &                ISF_TAVG(itrc,ng)%var(i,j) *                      &
+     &                GRID(ng)%rmask_full(i,j)
+#  endif
+                  END DO
+                END DO
+              END IF
+            END IF
+          END DO
+        END IF
 # endif
 !
 !-----------------------------------------------------------------------
@@ -233,7 +240,8 @@
           END DO
         END IF
 !
-        DO itrc=1,NPT
+        DO k=1,NPT
+          itrc=inert(k)
           IF (Aout(idItrc(itrc),ng)) THEN
             DO j=JstrR,JendR
               DO i=IstrR,IendR
@@ -368,7 +376,8 @@
           END IF
         END IF
 !
-        DO itrc=1,NPT
+        DO k=1,NPT
+          itrc=inert(k)
           IF (Aout(idItrc(itrc),ng)) THEN
             DO j=JstrR,JendR
               DO i=IstrR,IendR

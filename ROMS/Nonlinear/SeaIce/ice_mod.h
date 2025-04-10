@@ -152,6 +152,9 @@
       integer :: idSocn       ! net short-wave flux at sea surface
       integer :: idRfac       ! lmd_r1 scaling factor
       integer :: idSnof       ! snowfall rate
+#ifdef ICE_TRACER
+      integer, allocatable :: idStrc(:)  ! Tracer variables
+#endif
 !
 !  Ice model state prognostic variables indices.
 !
@@ -408,6 +411,13 @@
 !-----------------------------------------------------------------------
 !
       IF (.not.ice_kernel) THEN
+#ifdef ICE_TRACER
+
+        IF (.not.allocated(idStrc))                                     &
+     &    allocate ( idStrc(MT) )
+        Dmem(1)=Dmem(1)+REAL(MT,r8)
+        idStrc(1:MT)=-1
+#endif
 
 #ifdef AVERAGES
         IF (.not.allocated(LiceFavg))                                   &
@@ -695,6 +705,9 @@
       END DO
 # endif
 #endif
+# ifdef ICESHELF_TRACER
+      IF (allocated(idStrc))   deallocate ( idStrc )
+# endif
 !
 !-----------------------------------------------------------------------
 !  Deallocate derived-type ICE and ICE_LOBC structures.

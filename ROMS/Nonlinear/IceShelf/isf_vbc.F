@@ -1,7 +1,7 @@
 #include "cppdefs.h"
       MODULE isf_vbc_mod
 #ifdef ICESHELF_THERMO
-# define GAMMAS_MC1987 
+# define GAMMAS_MC1987
 # undef GAMMAS_KY1972
 !
 !================================================== Hernan G. Arango ===
@@ -24,16 +24,16 @@
 !   Ocean             Tm, Sm, sustr, svstr                             !
 !                                                                      !
 !                                                                      !
-! References:                                                          ! 
+! References:                                                          !
 !                                                                      !
 ! Hellmer, H. H., and D. Olbers, A two-dimensional model for the       !
 !  thermohaline circulation under an ice shelf, Antarctic Science,     !
-!  1, 325–33, 1989.                                                    ! 
+!  1, 325–33, 1989.                                                    !
 !                                                                      !
 ! Scheduikat, M., and D. J. Olbers, A one-dimensional mixed layer      !
 !  model beneath the Ross Ice Shelf with tidally induced vertical      !
 !  mixing, Antarctic Science, 2(1), 29–42, 1990.                       !
-!                                                                      !  
+!                                                                      !
 ! Holland, D. M., and A. Jenkins, Modeling thermodynamic ice-ocean     !
 !  interactions at the base of an ice shelf, Journal of Physical       !
 !  Oceanography, 29, 1787–1800, 1999.                                  !
@@ -118,7 +118,7 @@
      &                         t,                                       &
 # ifdef ICESHELF_3EQN_VBC
      &                         sustr, svstr,                            &
-# endif 
+# endif
 # ifdef ICESHELF_TRACER
      &                         vol, trc,                                &
 # endif
@@ -179,7 +179,7 @@
 #  endif
 #  ifdef ICESHELF_TRACER
       real(r8), intent(inout) :: vol(LBi:UBi,LBj:UBj)
-      real(r8), intent(inout) :: trc(LBi:UBi,LBj:UBj,1:NPT)
+      real(r8), intent(inout) :: trc(LBi:UBi,LBj:UBj,1:NTISF(ng))
 #  endif
       real(r8), intent(out) :: Fi(LBi:UBi,LBj:UBj,nIsfF)
       real(r8), intent(out) :: stflx(LBi:UBi,LBj:UBj,NT(ng))
@@ -187,7 +187,7 @@
 !
 !  Local variable declarations.
 !
-      integer :: i, j, itrc
+      integer :: i, j, k, ic, itrc
       real(r8) :: Pradj, Scadj, cp_i
       real(r8) :: Sm, Tm, TFb, turb, rhoi_on_rho0, ct
       real(r8) :: cff, cff1, cff2, cff3
@@ -243,7 +243,7 @@
             Fi(i,j,icImel)   = stflx(i,j,isalt)/Sm
 # elif defined ICESHELF_3EQN_VBC
 !
-!  Calculate exchange coefficients. Note that this assumes log profile 
+!  Calculate exchange coefficients. Note that this assumes log profile.
 !
             cff = gamU(ng)*SQRT(SQRT(                                   &
      &                          (0.5_r8*(sustr(i,j)+sustr(i+1,j)))**2+  &
@@ -263,7 +263,7 @@
             IF (Fi(i,j,icIust).gt.min_ustar(ng).and.                    &
      &          ABS(f(i,j)).gt.1.0E-8) THEN
               turb = 2.5_r8*LOG(5300.0_r8*Fi(i,j,icIust)**2 /           &
-     &                          ABS(f(i,j))) + 7.12_r8  
+     &                          ABS(f(i,j))) + 7.12_r8
             ELSE
               turb = 0.0_r8
             END IF
@@ -327,45 +327,49 @@
 !
 !  Calculate melting/freezing passive tracer fluxes.
 !
-      DO itrc=1,NPT
-        IF (LtracerIsf(itrc,ng)) THEN
-          DO j=Jstr,Jend
-            DO i=Istr,Iend
-              IF ((Fi(i,j,icImel)*dt(ng)).gt.vol(i,j)) THEN
+      IF (Lisftrc(ng)) THEN
+        ic=0
+        DO k=1,NPT
+          itrc=inert(k)
+          IF (LtracerIsf(itrc,ng)) THEN
+            ic=ic+1
+            DO j=Jstr,Jend
+              DO i=Istr,Iend
+                IF ((Fi(i,j,icImel)*dt(ng)).gt.vol(i,j)) THEN
 !
 !  Melt, use refreezed ice as well as iceshelf ice.
 !
-                stflx(i,j,inert(itrc)) = trc(i,j,itrc) +                &
-     &            (Fi(i,j,icImel)-vol(i,j)/dt(ng))*trcIsf
-                trc(i,j,itrc) = 0.0_r8
-              ELSE
+                  stflx(i,j,itrc) = trc(i,j,ic) +                       &
+     &              (Fi(i,j,icImel)-vol(i,j)/dt(ng))*trcIsf
+                  trc(i,j,ic) = 0.0_r8
+                ELSE
 !
 !  Melt or refreeze of refreezed ice only.
 !
-                stflx(i,j,inert(itrc)) =                                &
-     &  MIN(Fi(i,j,icImel),0.0_r8)*t(i,j,N(ng),nrhs,inert(itrc))
-                IF (vol(i,j).gt.0.0_r8) THEN
-                  stflx(i,j,inert(itrc)) = stflx(i,j,inert(itrc)) +     &
-     &  MAX(Fi(i,j,icImel),0.0_r8)*trc(i,j,itrc)/vol(i,j)
+                  stflx(i,j,itrc) =                                     &
+     &              MIN(Fi(i,j,icImel),0.0_r8)*t(i,j,N(ng),nrhs,itrc)
+                  IF (vol(i,j).gt.0.0_r8) THEN
+                    stflx(i,j,itrc) = stflx(i,j,itrc) +                 &
+     &                MAX(Fi(i,j,icImel),0.0_r8)*trc(i,j,ic)/vol(i,j)
+                  END IF
+                  trc(i,j,ic) = trc(i,j,ic) - stflx(i,j,itrc)*dt(ng)
                 END IF
-                trc(i,j,itrc) = trc(i,j,itrc) -                         &
-     &                          stflx(i,j,inert(itrc))*dt(ng)
-              END IF
+              END DO
             END DO
-          END DO
-        END IF
-      END DO
+          END IF
+        END DO
 !
 !  Update refreezed water total volume.
 !
-      DO j=Jstr,Jend
-        DO i=Istr,Iend
-          IF ((Fi(i,j,icImel)*dt(ng)).gt.vol(i,j)) THEN
-            vol(i,j) = 0.0_r8
-          ELSE
-            vol(i,j) = vol(i,j)-Fi(i,j,icImel)*dt(ng)
-          END IF
-        END DO
+        DO j=Jstr,Jend
+          DO i=Istr,Iend
+            IF ((Fi(i,j,icImel)*dt(ng)).gt.vol(i,j)) THEN
+              vol(i,j) = 0.0_r8
+            ELSE
+              vol(i,j) = vol(i,j)-Fi(i,j,icImel)*dt(ng)
+            END IF
+          END DO
+        END IF
       END DO
 # endif
 !
@@ -449,7 +453,7 @@
 !   ct               : conservative temperature  (deg C, ITS-90)
 !   theta_from_ct    : potential temperature     (deg C, ITS-90)
 !   calls            : cp0_F and ct_from_theta
-!   check value      : theta_from_ct(20,20) = 19.55627910604363 
+!   check value      : theta_from_ct(20,20) = 19.55627910604363
 !   DRJ on 03/06/05
 !
       implicit real*8(a-h,o-z)
@@ -490,7 +494,7 @@
       REAL FUNCTION theta_from_t(s,t,p,pr)
 ! *********************************************************************
 !
-!   potential temperature from in-situ temperature, as in 
+!   potential temperature from in-situ temperature, as in
 !   Jackett, McDougall, Feistel, Wright and Griffies (2004), submitted
 !   JAOT
 !   s                : salinity                           (psu)
@@ -552,7 +556,7 @@
 !   t                : in-situ temperature                (deg C,
 !   ITS-90)
 !   th0              : potential temperature              (deg C,
-!   ITS-90) 
+!   ITS-90)
 !   p                : gauge pressure                     (dbar)
 !                      (absolute pressure - 10.1325 dbar)
 !   pr               : reference pressure                 (dbar)
@@ -778,7 +782,7 @@
 !   p                : gauge pressure                         (dbar)
 !                      (absolute pressure - 10.1325 dbar)
 !   sat              : string variable
-!                       'air-sat'  - air saturated water       
+!                       'air-sat'  - air saturated water
 !                       'air-free' - air free water
 !   fp_theta         : potential freezing temperature         (deg C,
 !   ITS-90)
@@ -822,7 +826,7 @@
       SUBROUTINE potit(Sal,theta,Pres,RPres,Temp,i,j)
 ! *********************************************************************
 !
-! Calculates from the salinity (sal, psu), potential temperature 
+! Calculates from the salinity (sal, psu), potential temperature
 ! (theta, degC) and in-situ pressure (Pres, dbar) the in-situ temperaure
 ! (Temp_insitu, degC) related to the reference pressure (RPres, dbar)
 ! with the help of an iterative method.
@@ -899,7 +903,7 @@
 ! *********************************************************************
 !
 ! Calculates from the salinity (Sal,psu), the in-situ Temperature
-! (Temp, degC) and the in-situ pressure (Pres, dbar) the adiabatic 
+! (Temp, degC) and the in-situ pressure (Pres, dbar) the adiabatic
 ! temperature gradient (dTemp, K Dbar^-1).
 !
 ! Check values: dTemp  =     3.255976E-4 K dbar^-1

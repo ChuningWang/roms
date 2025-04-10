@@ -329,7 +329,7 @@
               Npts=load_l(Nval, Cval, NPT, Ngrids, Linert)
               DO ng=1,Ngrids
                 DO itrc=1,NPT
-                  Sout(idItrc(itrc),ng)=Linert(itrc,ng)
+                  Sout(idItrc(inert(itrc)),ng)=Linert(itrc,ng)
                 END DO
               END DO
 #   endif
@@ -974,10 +974,10 @@
      &          'Sout(idIvol)',                                         &
      &          'Write out iceshelf refreezed volume.'
             DO itrc=1,NPT
-              IF (Sout(idItrc(itrc),ng)) WRITE (out,180)                &
-     &            Sout(idItrc(itrc),ng), 'Sout(idItrc)',                &
+              IF (Sout(idItrc(inert(itrc)),ng)) WRITE (out,180)         &
+     &            Sout(idItrc(inert(itrc)),ng), 'Sout(idItrc)',         &
      &            'Write out iceshelf refreezed passive tracer ', itrc, &
-     &            TRIM(Vname(1,idItrc(itrc)))
+     &            TRIM(Vname(1,idItrc(inert(itrc))))
             END DO
 #   endif
 #  endif

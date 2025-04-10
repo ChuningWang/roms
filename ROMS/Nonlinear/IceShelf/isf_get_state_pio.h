@@ -183,12 +183,14 @@
 !
 !  Read in integrated tracer (m Tunits).
 !
-        DO itrc=1,NPT
-          ifield=idItrc(itrc)
+        itrc=0
+        DO i=1,NPT
+          ifield=idItrc(inert(i))
           IF (get_var(ifield)) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,ifield)), vindex)
             IF (foundit) THEN
+              itrc=itrc+1
               scale=1.0_dp
               my_pioVar%vd=var_desc(vindex)
               my_pioVar%gtype=r2dvar
@@ -209,10 +211,10 @@
      &                          GRID(ng) % rmask,                       &
 #     endif
 #     ifdef CHECKSUM
-     &                          ISF(ng)% trc(:,:,itrc),                 &
+     &                          ISF(ng) % trc(:,:,itrc),                &
      &                          checksum = Fhash)
 #     else
-     &                          ISF(ng)% trc(:,:,itrc))
+     &                          ISF(ng) % trc(:,:,itrc))
 #     endif
               IF (FoundError(status, PIO_noerr, __LINE__, MyFile))      &
      &          THEN

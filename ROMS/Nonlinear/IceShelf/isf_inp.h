@@ -33,7 +33,7 @@
 #ifdef AVERAGES
       integer :: nf, ns
 #endif
-      integer :: itrc
+      integer :: i, itrc
 #ifdef ICESHELF_TRACER
       logical, allocatable :: Linert(:,:)
 #endif
@@ -49,7 +49,7 @@
      &  __FILE__
 !
 !-----------------------------------------------------------------------
-!  Allocate ice model parameters that depend on Ngrids/
+!  Allocate ice model parameters that depend on Ngrids.
 !-----------------------------------------------------------------------
 !
 #ifdef ICESHELF_TRACER
@@ -97,8 +97,9 @@
             CASE ('LtracerIsf')
               Npts=load_l(Nval, Cval, NPT, Ngrids, Linert)
               DO ng=1,Ngrids
-                DO itrc=1,NPT
-                  LtracerIsf(itrc,ng)=Linert(itrc,ng)
+                DO i=1,NPT
+                  itrc=inert(i)
+                  LtracerIsf(itrc,ng)=Linert(i,ng)
                 END DO
               END DO
 # endif
@@ -220,8 +221,9 @@
               END IF
               Npts=load_l(Nval, Cval, NPT, Ngrids, Linert)
               DO ng=1,Ngrids
-                DO itrc=1,NPT
-                  Hout(itrc,ng)=Linert(itrc,ng)
+                DO i=1,NPT
+                  itrc=inert(i)
+                  Hout(idItrc(itrc),ng)=Linert(i,ng)
                 END DO
               END DO
 # endif
@@ -263,8 +265,9 @@
             CASE ('Qout(idItrc)')
               Npts=load_l(Nval, Cval, NPT, Ngrids, Linert)
               DO ng=1,Ngrids
-                DO itrc=1,NPT
-                  Qout(itrc,ng)=Linert(itrc,ng)
+                DO i=1,NPT
+                  itrc=inert(i)
+                  Qout(idItrc(itrc),ng)=Linert(i,ng)
                 END DO
               END DO
 # endif
@@ -307,8 +310,9 @@
             CASE ('Aout(idItrc)')
               Npts=load_l(Nval, Cval, NPT, Ngrids, Linert)
               DO ng=1,Ngrids
-                DO itrc=1,NPT
-                  Aout(itrc,ng)=Linert(itrc,ng)
+                DO i=1,NPT
+                  itrc=inert(i)
+                  Aout(idItrc(itrc),ng)=Linert(i,ng)
                 END DO
               END DO
 #  endif
@@ -341,15 +345,16 @@
           WRITE (out,60) min_ustar(ng), 'min_ustar',                    &
      &          'Iceshelf minimum Ustar value.'
 # ifdef ICESHELF_TRACER
-          DO itrc=1,NPT
+          DO i=1,NPT
+            itrc=inert(i)
             IF (LtracerIsf(itrc,ng)) THEN
-              WRITE (out,185) LtracerIsf(itrc,ng), 'LtracerIsf', itrc,  &
+              WRITE (out,185) LtracerIsf(itrc,ng), 'LtracerIsf', i,     &
      &            'Turning ON  point Sources/Sinks on iceshelf tracer ',&
-     &            itrc, TRIM(Vname(1,idItrc(itrc)))
+     &            i, TRIM(Vname(1,idItrc(itrc)))
             ELSE
-              WRITE (out,185) LtracerIsf(itrc,ng), 'LtracerIsf', itrc,  &
+              WRITE (out,185) LtracerIsf(itrc,ng), 'LtracerIsf', i,     &
      &            'Turning OFF point Sources/Sinks on iceshelf tracer ',&
-     &            itrc, TRIM(Vname(1,idItrc(itrc)))
+     &            i, TRIM(Vname(1,idItrc(itrc)))
             END IF
           END DO
 # endif
@@ -404,11 +409,12 @@
           IF (Hout(idIvol,ng)) WRITE (out,70) Hout(idIvol,ng),          &
      &       'Hout(idIvol)',                                            &
      &       'Write out iceshelf refreezed volume.'
-          DO itrc=1,NPT
+          DO i=1,NPT
+            itrc=inert(i)
             IF (Hout(idItrc(itrc),ng)) WRITE (out,180)                  &
      &         Hout(idItrc(itrc),ng), 'Hout(idItrc)',                   &
-     &         'Write out iceshelf refreezed passive tracer ', itrc,    &
-     &         TRIM(Vname(1,idItrc(itrc)))                       
+     &         'Write out iceshelf refreezed passive tracer ', i,       &
+     &         TRIM(Vname(1,idItrc(itrc)))
           END DO
 # endif
 #endif
@@ -462,10 +468,11 @@
           IF (Qout(idIvol,ng)) WRITE (out,70) Qout(idIvol,ng),          &
      &       'Qout(idIvol)',                                            &
      &       'Write out iceshelf refreezed volume.'
-          DO itrc=1,NPT
+          DO i=1,NPT
+            itrc=inert(i)
             IF (Qout(idItrc(itrc),ng)) WRITE (out,180)                  &
      &          Qout(idItrc(itrc),ng), 'Qout(idItrc)',                  &
-     &          'Write out iceshelf refreezed passive tracer ', itrc,   &
+     &          'Write out iceshelf refreezed passive tracer ', i,      &
      &          TRIM(Vname(1,idItrc(itrc)))
           END DO
 # endif
@@ -521,10 +528,11 @@
           IF (Aout(idIvol,ng)) WRITE (out,70) Aout(idIvol,ng),          &
      &       'Aout(idIvol)',                                            &
      &       'Write out iceshelf refreezed volume.'
-          DO itrc=1,NPT
+          DO i=1,NPT
+            itrc=inert(i)
             IF (Aout(idItrc(itrc),ng)) WRITE (out,180)                  &
      &          Aout(idItrc(itrc),ng), 'Aout(idItrc)',                  &
-     &          'Write out iceshelf refreezed passive tracer ', itrc,   &
+     &          'Write out iceshelf refreezed passive tracer ', i,      &
      &          TRIM(Vname(1,idItrc(itrc)))
           END DO
 #  endif
@@ -569,7 +577,8 @@
           LisfVavg(ng)=.TRUE.
         END IF
 !
-        DO itrc=1,NPT
+        DO i=1,NPT
+          itrc=inert(i)
           IF (Aout(idItrc(itrc),ng)) THEN
             LisfTavg(itrc,ng)=.TRUE.
           END IF

@@ -150,12 +150,14 @@
 !
 !  Read in integrated tracer (m Tunits).
 !
-        DO itrc=1,NPT
-          ifield=idItrc(itrc)
+        itrc=0
+        DO i=1,NPT
+          ifield=idItrc(inert(i))
           IF (get_var(ifield)) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,ifield)), varid)
             IF (foundit) THEN
+              itrc=itrc+1
               gtype=var_flag(varid)*r2dvar
               scale=1.0_dp
               status=nf_fread2d(ng, IDmod, ncname, ncINPid,             &
@@ -167,10 +169,10 @@
      &                          GRID(ng) % rmask,                       &
 #    endif
 #    ifdef CHECKSUM
-     &                          ISF(ng)% trc(:,:,itrc),                 &
+     &                          ISF(ng) % trc(:,:,itrc),                &
      &                          checksum = Fhash)
 #    else
-     &                          ISF(ng)% trc(:,:,itrc))
+     &                          ISF(ng) % trc(:,:,itrc))
 #    endif
               IF (FoundError(status, nf90_noerr, __LINE__, MyFile))     &
      &          THEN

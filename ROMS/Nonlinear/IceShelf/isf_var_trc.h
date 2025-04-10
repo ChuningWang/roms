@@ -29,7 +29,7 @@
                 DO i=1,NPT,2
                   varid=varid+1
                   ic=ic+1
-                  idItrc(i)=varid
+                  idItrc(inert(i))=varid
                   DO ng=1,Ngrids
                     Fscale(varid,ng)=scale
                     Iinfo(1,varid,ng)=gtype
@@ -52,7 +52,7 @@
                 DO i=2,NPT,2
                   varid=varid+1
                   ic=ic+1
-                  idItrc(i)=varid
+                  idItrc(inert(i))=varid
                   DO ng=1,Ngrids
                     Fscale(varid,ng)=scale
                     Iinfo(1,varid,ng)=gtype
@@ -73,7 +73,7 @@
 # else
                 DO i=1,NPT
                   varid=varid+1
-                  idItrc(i)=varid
+                  idItrc(inert(i))=varid
                   DO ng=1,Ngrids
                     Fscale(varid,ng)=scale
                     Iinfo(1,varid,ng)=gtype

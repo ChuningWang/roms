@@ -33,6 +33,9 @@
 #ifdef AVERAGES
       integer :: nf, ns
 #endif
+#ifdef ICE_TRACER
+      integer :: i, itrc
+#endif
       integer :: tile, LBi, UBi, LBj, UBj
 !
       real(r8) :: Rvalue(1)
@@ -174,8 +177,9 @@
             CASE ('LtracerIce')
               Npts=load_l(Nval, Cval, MT-NAT, Ngrids, Linert)
               DO ng=1,Ngrids
-                DO itrc=NAT+1,MT
-                  LtracerIce(itrc,ng)=Linert(itrc-NAT,ng)
+                DO i=1,NPT
+                  itrc=inert(i)
+                  LtracerIce(itrc,ng)=Linert(i,ng)
                 END DO
               END DO
 #endif

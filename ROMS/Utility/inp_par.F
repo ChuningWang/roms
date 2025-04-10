@@ -828,6 +828,19 @@
         END IF
 #endif
 
+#ifdef ICESHELF_TRACER
+        IF (ANY(LtracerIsf(:,ng))) THEN
+          Lisftrc(ng)=.TRUE.
+          ic=0
+          DO itrc=1,NT(ng)
+            IF (LtracerIsf(itrc,ng)) THEN
+              ic=ic+1
+            END IF
+          END DO
+          NTISF(ng)=ic
+        END IF
+#endif
+
 #if defined TANGENT || defined TL_IOMS
 !
 !  Set lateral boundary condition switches for the tangent linear
