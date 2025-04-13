@@ -77,7 +77,7 @@
 !
       integer, parameter :: Natt = 25
 
-      integer :: i, ifield, j, nf, nvd3, status, vtype, k, ic, itrc
+      integer :: i, ifield, j, nf, nvd3, status, vtype, ic, itrc
 
       integer :: isfgrd(3)
 !
@@ -99,32 +99,32 @@
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       ncname=S(ng)%name
 !
+!  Set number of dimensions for output variables.
+!
+# if defined WRITE_WATER && defined MASKING
+      nvd3=2
+# else
+      nvd3=3
+# endif
+!
+!  Initialize local information variable arrays.
+!
+      DO i=1,Natt
+        DO j=1,LEN(Vinfo(1))
+          Vinfo(i)(j:j)=' '
+        END DO
+      END DO
+      DO i=1,6
+        Aval(i)=0.0_r8
+      END DO
+!
 !-----------------------------------------------------------------------
 !  Define iceshelf model state prognostic variables.
 !-----------------------------------------------------------------------
 !
       DEFINE : IF (ldef) THEN
-!
-!  Set number of dimensions for output variables.
-!
-# if defined WRITE_WATER && defined MASKING
-        nvd3=2
-# else
-        nvd3=3
-# endif
-!
-!  Initialize local information variable arrays.
-!
-        DO i=1,Natt
-          DO j=1,LEN(Vinfo(1))
-            Vinfo(i)(j:j)=' '
-          END DO
-        END DO
-        DO i=1,6
-          Aval(i)=0.0_r8
-        END DO
 
-#ifdef ICESHELF_MOM
+# ifdef ICESHELF_MOM
         DO nf=1,nIsfS
           IF (iSisf(nf).gt.0) THEN
             ifield=iSisf(nf)
@@ -138,7 +138,6 @@
             IF (Ldefvar) THEN
               Vinfo( 1)=Vname(1,ifield)
               Vinfo( 2)=Vname(2,ifield)
-              vtype=NF_FOUT
               Vinfo( 3)=Vname(3,ifield)
               Vinfo(14)=Vname(4,ifield)
               Vinfo(16)=Vname(1,idtime)
@@ -149,19 +148,19 @@
               SELECT CASE (nf)
                 CASE (isIuis)
                   isfgrd(1:3)=u2dgrd(1:3)
-# if defined WRITE_WATER && defined MASKING
+#  if defined WRITE_WATER && defined MASKING
                   Vinfo(20)='mask_u'
-# endif
+#  endif
                 CASE (isIvis)
                   isfgrd(1:3)=v2dgrd(1:3)
-# if defined WRITE_WATER && defined MASKING
+#  if defined WRITE_WATER && defined MASKING
                   Vinfo(20)='mask_v'
-# endif
+#  endif
                 CASE DEFAULT
                   isfgrd(1:3)=t2dgrd(1:3)
-# if defined WRITE_WATER && defined MASKING
+#  if defined WRITE_WATER && defined MASKING
                   Vinfo(20)='mask_rho'
-# endif
+#  endif
               END SELECT
 !
               status=def_var(ng, model, S(ng)%ncid,                     &
@@ -182,9 +181,9 @@
           Vinfo( 3)=Vname(3,idIuer)
           Vinfo(14)=Vname(4,idIuer)
           Vinfo(16)=Vname(1,idtime)
-# if defined WRITE_WATER && defined MASKING
+#  if defined WRITE_WATER && defined MASKING
           Vinfo(20)='mask_rho'
-# endif
+#  endif
           Vinfo(21)=Vname(6,idIuer)
           Vinfo(22)='coordinates'
           Aval(5)=REAL(Iinfo(1,idIuer,ng),r8)
@@ -203,9 +202,9 @@
           Vinfo( 3)=Vname(3,idIvnr)
           Vinfo(14)=Vname(4,idIvnr)
           Vinfo(16)=Vname(1,idtime)
-# if defined WRITE_WATER && defined MASKING
+#  if defined WRITE_WATER && defined MASKING
           Vinfo(20)='mask_rho'
-# endif
+#  endif
           Vinfo(21)=Vname(6,idIvnr)
           Vinfo(22)='coordinates'
           Aval(5)=REAL(Iinfo(1,idIvnr,ng),r8)
@@ -214,8 +213,8 @@
      &                   vtype, nvd3, t2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
-#endif
-#ifdef ICESHELF_THERMO
+# endif
+# ifdef ICESHELF_THERMO
 !
 !-----------------------------------------------------------------------
 !  Define iceshelf model internal variables.
@@ -231,9 +230,9 @@
               Vinfo( 3)=Vname(3,ifield)
               Vinfo(14)=Vname(4,ifield)
               Vinfo(16)=Vname(1,idtime)
-# if defined WRITE_WATER && defined MASKING
+#  if defined WRITE_WATER && defined MASKING
               Vinfo(20)='mask_rho'
-# endif
+#  endif
               Vinfo(21)=Vname(6,ifield)
               Vinfo(22)='coordinates'
               Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
@@ -246,7 +245,7 @@
             END IF
           END IF
         END DO
-# ifdef ICESHELF_TRACER
+#  ifdef ICESHELF_TRACER
         IF (Lisftrc(ng)) THEN
 !
 !-----------------------------------------------------------------------
@@ -267,9 +266,9 @@
             Vinfo( 3)=Vname(3,ifield)
             Vinfo(14)=Vname(4,ifield)
             Vinfo(16)=Vname(1,idtime)
-#  if defined WRITE_WATER && defined MASKING
+#   if defined WRITE_WATER && defined MASKING
             Vinfo(20)='mask_rho'
-#  endif
+#   endif
             Vinfo(21)=Vname(6,ifield)
             Vinfo(22)='coordinates'
             Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
@@ -283,9 +282,8 @@
 !  Define iceshelf refreezed tracer amounts.
 !-----------------------------------------------------------------------
 !
-          DO k=1,NPT
-            itrc=inert(k)
-            IF (LtracerIsf(ng)) THEN
+          DO itrc=NAT+1,NT(ng)
+            IF (LtracerIsf(itrc,ng)) THEN
               ifield=idItrc(itrc)
               IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
                 LdefVar=.TRUE.
@@ -300,9 +298,9 @@
                 Vinfo( 3)=Vname(3,ifield)
                 Vinfo(14)=Vname(4,ifield)
                 Vinfo(16)=Vname(1,idtime)
-#  if defined WRITE_WATER && defined MASKING
+#   if defined WRITE_WATER && defined MASKING
                 Vinfo(20)='mask_rho'
-#  endif
+#   endif
                 Vinfo(21)=Vname(6,ifield)
                 Vinfo(22)='coordinates'
                 Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
@@ -315,8 +313,8 @@
             END IF
           END DO
         END IF
+#  endif
 # endif
-#endif
       END IF DEFINE
 !
 !-----------------------------------------------------------------------
@@ -336,7 +334,7 @@
 !  iceshelf variables. Get variable IDs.
 !
         DO i=1,n_var
-#ifdef ICESHELF_MOM
+# ifdef ICESHELF_MOM
           DO nf=1,nIsfS
             IF (iSisf(nf).gt.0) THEN
               ifield=iSisf(nf)
@@ -355,8 +353,8 @@
             got_var(idIvnr)=.TRUE.
             S(ng)%Vid(idIvnr)=var_id(i)
           END IF
-#endif
-#ifdef ICESHELF_THERMO
+# endif
+# ifdef ICESHELF_THERMO
 !
           DO nf=1,nIsfF
             IF (iFisf(nf).gt.0) THEN
@@ -368,7 +366,7 @@
               END IF
             END IF
           END DO
-# ifdef ICESHELF_TRACER
+#  ifdef ICESHELF_TRACER
           IF (Lisftrc(ng)) THEN
 !
             ifield=idIvol
@@ -378,9 +376,8 @@
               CYCLE
             END IF
 !
-            DO k=1,NPT
-              itrc=inert(k)
-              IF (LtracerIsf(ng)) THEN
+            DO itrc=NAT+1,NT(ng)
+              IF (LtracerIsf(itrc, ng)) THEN
                 ifield=idItrc(itrc)
                 IF (TRIM(var_name(i)).eq.TRIM(Vname(1,ifield))) THEN
                   got_var(ifield)=.TRUE.
@@ -390,13 +387,13 @@
               END IF
             END DO
           END IF
+#  endif
 # endif
-#endif
         END DO
 !
 !  Check if output variables are available in input NetCDF file.
 !
-#ifdef ICESHELF_MOM
+# ifdef ICESHELF_MOM
         DO nf=1,nIsfS
           IF (iSisf(nf).gt.0) THEN
             ifield=iSisf(nf)
@@ -421,8 +418,8 @@
           exit_flag=3
           RETURN
         END IF
-#endif
-#ifdef ICESHELF_THERMO
+# endif
+# ifdef ICESHELF_THERMO
 !
         DO nf=1,nIsfF
           IF (iFisf(nf).gt.0) THEN
@@ -435,7 +432,7 @@
             END IF
           END IF
         END DO
-# ifdef ICESHELF_TRACER
+#  ifdef ICESHELF_TRACER
         IF (Lisftrc(ng)) THEN
 !
           ifield=idIvol
@@ -446,9 +443,8 @@
             RETURN
           END IF
 !
-          DO k=1,NPT
-            itrc=inert(k)
-            IF (LtracerIsf(ng)) THEN
+          DO itrc=NAT+1,NT(ng)
+            IF (LtracerIsf(itrc, ng)) THEN
               ifield=idItrc(itrc)
               IF (.not.got_var(ifield).and.VarOut(ifield,ng)) THEN
                 IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),    &
@@ -459,8 +455,8 @@
             END IF
           END DO
         END IF
+#  endif
 # endif
-#endif
       END IF QUERY
 !
   10  FORMAT (/,' ICESHELF_DEF_NF90 - unable to find variable: ',a,2x,  &
@@ -489,7 +485,7 @@
 !
       logical :: LwrtVar
 !
-      integer :: ifield, ifld, k, ic, itrc
+      integer :: ifield, ifld, ic, itrc
       integer :: gfactor, gtype, status
 !
       real(dp) :: scale
@@ -520,7 +516,7 @@
 # else
       gfactor=1
 # endif
-#ifdef ICESHELF_MOM
+# ifdef ICESHELF_MOM
 !
 !-----------------------------------------------------------------------
 !  write out iceshelf model state prognostic variables.
@@ -541,28 +537,28 @@
      &           (S(ng)%ncid.eq.QCK(ng)%ncid).or.                       &
      &           (S(ng)%ncid.eq.RST(ng)%ncid))) THEN
               isfField => ISF(ng) % Si(LBi:UBi,LBj:UBj,lsnew(ng),ifld)
-# ifdef AVERAGES
+#  ifdef AVERAGES
             ELSE IF (S(ng)%ncid.eq.AVG(ng)%ncid) THEN
               isfField => ISF_SAVG(ifld,ng) % var(LBi:UBi,LBj:UBj)
-# endif
+#  endif
             END IF
 !
             SELECT CASE (ifld)
               CASE (isIuis)
                 gtype=gfactor*u2dvar
-# ifdef MASKING
+#  ifdef MASKING
                 isfMask => GRID(ng) % umask_full
-# endif
+#  endif
               CASE (isIvis)
                 gtype=gfactor*v2dvar
-# ifdef MASKING
+#  ifdef MASKING
                 isfMask => GRID(ng) % vmask_full
-# endif
+#  endif
               CASE DEFAULT
                 gtype=gfactor*r2dvar
-# ifdef MASKING
+#  ifdef MASKING
                 isfMask => GRID(ng) % rmask_full
-# endif
+#  endif
             END SELECT
             scale=1.0_dp
 !
@@ -570,9 +566,9 @@
      &                         S(ng)%Vid(ifield),                       &
      &                         S(ng)%Rindex, gtype,                     &
      &                         LBi, UBi, LBj, UBj, scale,               &
-# ifdef MASKING
+#  ifdef MASKING
      &                         isfMask,                                 &
-# endif
+#  endif
      &                         isfField)
             IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),      &
@@ -602,9 +598,9 @@
      &                    LBi, UBi, LBj, UBj,                           &
      &                    GRID(ng) % CosAngler,                         &
      &                    GRID(ng) % SinAngler,                         &
-# ifdef MASKING
+#  ifdef MASKING
      &                    GRID(ng) % rmask_full,                        &
-# endif
+#  endif
      &                    ISF(ng) % Si(:,:,lsnew(ng),isIuis),           &
      &                    ISF(ng) % Si(:,:,lsnew(ng),isIvis),           &
      &                    Ur2d, Vr2d)
@@ -615,9 +611,9 @@
      &                     S(ng)%Vid(idIuer),                           &
      &                     S(ng)%Rindex, gtype,                         &
      &                     LBi, UBi, LBj, UBj, scale,                   &
-# ifdef MASKING
+#  ifdef MASKING
      &                     GRID(ng) % rmask_full,                       &
-# endif
+#  endif
      &                     Ur2d)
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) WRITE (stdout,10) TRIM(Vname(1,idIuer)),          &
@@ -631,9 +627,9 @@
      &                     S(ng)%Vid(idIvnr),                           &
      &                     S(ng)%Rindex, gtype,                         &
      &                     LBi, UBi, LBj, UBj, scale,                   &
-# ifdef MASKING
+#  ifdef MASKING
      &                     GRID(ng) % rmask_full,                       &
-# endif
+#  endif
      &                     Vr2d)
         IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
           IF (Master) WRITE (stdout,10) TRIM(Vname(1,idIvnr)),          &
@@ -645,8 +641,8 @@
         deallocate (Ur2d)
         deallocate (Vr2d)
       END IF
-#endif
-#ifdef ICESHELF_THERMO
+# endif
+# ifdef ICESHELF_THERMO
 !
 !-----------------------------------------------------------------------
 !  write out iceshelf model internal variables.
@@ -667,10 +663,10 @@
      &           (S(ng)%ncid.eq.QCK(ng)%ncid).or.                       &
      &           (S(ng)%ncid.eq.RST(ng)%ncid))) THEN
               isfField => ISF(ng) % Fi(LBi:UBi,LBj:UBj,ifld)
-# ifdef AVERAGES
+#  ifdef AVERAGES
             ELSE IF (S(ng)%ncid.eq.AVG(ng)%ncid) THEN
               isfField => ISF_FAVG(ifld,ng) % var(LBi:UBi,LBj:UBj)
-# endif
+#  endif
             END IF
 !
             scale=1.0_dp
@@ -679,9 +675,9 @@
      &                         S(ng)%Vid(ifield),                       &
      &                         S(ng)%Rindex, gtype,                     &
      &                         LBi, UBi, LBj, UBj, scale,               &
-# ifdef MASKING
+#  ifdef MASKING
      &                         GRID(ng) % rmask_full,                   &
-# endif
+#  endif
      &                         isfField)
             IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),      &
@@ -694,7 +690,7 @@
           END IF
         END IF
       END DO
-# ifdef ICESHELF_TRACER
+#  ifdef ICESHELF_TRACER
       IF (Lisftrc(ng)) THEN
 !
 !-----------------------------------------------------------------------
@@ -713,11 +709,11 @@
               ((S(ng)%ncid.eq.HIS(ng)%ncid).or.                         &
      &         (S(ng)%ncid.eq.QCK(ng)%ncid).or.                         &
      &         (S(ng)%ncid.eq.RST(ng)%ncid))) THEN
-            isfField => ISF(ng) % vol(LBi:UBi,LBj:UBj)
-#  ifdef AVERAGES
+            isfField => ISF(ng) % Vi(LBi:UBi,LBj:UBj,lsnew(ng))
+#   ifdef AVERAGES
           ELSE IF (S(ng)%ncid.eq.AVG(ng)%ncid) THEN
             isfField => ISF_VAVG(ng) % var(LBi:UBi,LBj:UBj)
-#  endif
+#   endif
           END IF
 !
           scale=1.0_dp
@@ -726,9 +722,9 @@
      &                       S(ng)%Vid(ifield),                         &
      &                       S(ng)%Rindex, gtype,                       &
      &                       LBi, UBi, LBj, UBj, scale,                 &
-#  ifdef MASKING
+#   ifdef MASKING
      &                       GRID(ng) % rmask_full,                     &
-#  endif
+#   endif
      &                       isfField)
           IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
             IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),        &
@@ -745,9 +741,8 @@
 !-----------------------------------------------------------------------
 !
         ic=0
-        DO k=1,NPT
-          itrc=inert(k)
-          IF (LtracerIsf(ng)) THEN
+        DO itrc=NAT+1,NT(ng)
+          IF (LtracerIsf(itrc, ng)) THEN
             ic=ic+1
             ifield=idItrc(itrc)
             IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
@@ -761,11 +756,11 @@
                   ((S(ng)%ncid.eq.HIS(ng)%ncid).or.                     &
      &             (S(ng)%ncid.eq.QCK(ng)%ncid).or.                     &
      &             (S(ng)%ncid.eq.RST(ng)%ncid))) THEN
-                isfField => ISF(ng) % trc(LBi:UBi,LBj:UBj,ic)
-#  ifdef AVERAGES
+                isfField => ISF(ng) % Ti(LBi:UBi,LBj:UBj,lsnew(ng),ic)
+#   ifdef AVERAGES
               ELSE IF (S(ng)%ncid.eq.AVG(ng)%ncid) THEN
                 isfField => ISF_TAVG(itrc,ng) % var(LBi:UBi,LBj:UBj)
-#  endif
+#   endif
               END IF
 !
               scale=1.0_dp
@@ -774,9 +769,9 @@
      &                           S(ng)%Vid(ifield),                     &
      &                           S(ng)%Rindex, gtype,                   &
      &                           LBi, UBi, LBj, UBj, scale,             &
-#  ifdef MASKING
+#   ifdef MASKING
      &                           GRID(ng) % rmask_full,                 &
-#  endif
+#   endif
      &                           isfField)
               IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
                 IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),    &
@@ -790,8 +785,8 @@
           END IF
         END DO
       END IF
+#  endif
 # endif
-#endif
 !
   10  FORMAT (/," ICESHELF_WRT_NF90 - error while writing variable '",a,&
      &        "', time record = ",i0,/,11x,'into file: ',a)
@@ -823,7 +818,7 @@
 !
       integer, parameter :: Natt = 25
 
-      integer :: i, ifield, j, nf, status, k, ic, itrc
+      integer :: i, ifield, j, nf, status, ic, itrc
 !
       real(r8) :: Aval(6)
 !
@@ -859,7 +854,7 @@
 !
       DEFINE : IF (ldef) THEN
 
-#ifdef ICESHELF_MOM
+#  ifdef ICESHELF_MOM
         DO nf=1,nIsfS
           IF (iSisf(nf).gt.0) THEN
             ifield=iSisf(nf)
@@ -880,8 +875,8 @@
             END IF
           END IF
         END DO
-#endif
-#ifdef ICESHELF_THERMO
+#  endif
+#  ifdef ICESHELF_THERMO
 !
 !-----------------------------------------------------------------------
 !  Define iceshelf model internal variables.
@@ -907,7 +902,7 @@
             END IF
           END IF
         END DO
-# ifdef ICESHELF_TRACER
+#   ifdef ICESHELF_TRACER
         IF (Lisftrc(ng)) THEN
 !
 !-----------------------------------------------------------------------
@@ -935,9 +930,8 @@
 !  Define iceshelf refreezed tracer amounts.
 !-----------------------------------------------------------------------
 !
-          DO k=1,NPT
-            itrc=inert(k)
-            IF (LtracerIsf(ng)) THEN
+          DO itrc=NAT+1,NT(ng)
+            IF (LtracerIsf(itrc, ng)) THEN
               ifield=idItrc(itrc)
               IF (VarOut(ifield,ng)) THEN
                 Vinfo( 1)=Vname(1,ifield)
@@ -957,8 +951,8 @@
             END IF
           END DO
         END IF
-# endif
-#endif
+#   endif
+#  endif
       END IF DEFINE
 !
 !-----------------------------------------------------------------------
@@ -978,7 +972,7 @@
 !  iceshelf variables. Get variable IDs.
 !
         DO i=1,n_var
-#ifdef ICESHELF_MOM
+#  ifdef ICESHELF_MOM
           DO nf=1,nIsfS
             IF (iSisf(nf).gt.0) THEN
               ifield=iSisf(nf)
@@ -989,8 +983,8 @@
               END IF
             END IF
           END DO
-#endif
-#ifdef ICESHELF_THERMO
+#  endif
+#  ifdef ICESHELF_THERMO
 !
           DO nf=1,nIsfF
             IF (iFisf(nf).gt.0) THEN
@@ -1002,7 +996,7 @@
               END IF
             END IF
           END DO
-# ifdef ICESHELF_TRACER
+#   ifdef ICESHELF_TRACER
           IF (Lisftrc(ng)) THEN
 !
             ifield=idIvol
@@ -1012,9 +1006,8 @@
               CYCLE
             END IF
 !
-            DO k=1,NPT
-              itrc=inert(k)
-              IF (LtracerIsf(ng)) THEN
+            DO itrc=NAT+1,NT(ng)
+              IF (LtracerIsf(itrc, ng)) THEN
                 ifield=idItrc(itrc)
                 IF (TRIM(var_name(i)).eq.TRIM(Vname(1,ifield))) THEN
                   got_var(ifield)=.TRUE.
@@ -1024,13 +1017,13 @@
               END IF
             END DO
           END IF
-# endif
-#endif
+#   endif
+#  endif
         END DO
 !
 !  Check if output variables are available in input NetCDF file.
 !
-#ifdef ICESHELF_MOM
+#  ifdef ICESHELF_MOM
         DO nf=1,nIsfS
           IF (iSisf(nf).gt.0) THEN
             ifield=iSisf(nf)
@@ -1042,8 +1035,8 @@
             END IF
           END IF
         END DO
-#endif
-#ifdef ICESHELF_THERMO
+#  endif
+#  ifdef ICESHELF_THERMO
 !
         DO nf=1,nIsfF
           IF (iFisf(nf).gt.0) THEN
@@ -1056,7 +1049,7 @@
             END IF
           END IF
         END DO
-# ifdef ICESHELF_TRACER
+#   ifdef ICESHELF_TRACER
         IF (Lisftrc(ng)) THEN
 !
           ifield=idIvol
@@ -1067,9 +1060,8 @@
             RETURN
           END IF
 !
-          DO k=1,NPT
-            itrc=inert(k)
-            IF (LtracerIsf(ng)) THEN
+          DO itrc=NAT+1,NT(ng)
+            IF (LtracerIsf(itrc, ng)) THEN
               ifield=idItrc(itrc)
               IF (.not.got_var(ifield).and.VarOut(ifield,ng)) THEN
                 IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),    &
@@ -1080,8 +1072,8 @@
             END IF
           END DO
         END IF
-# endif
-#endif
+#   endif
+#  endif
       END IF QUERY
 !
   10  FORMAT (/,                                                        &
@@ -1111,7 +1103,7 @@
 !
       logical :: Cgrid
 !
-      integer :: i, ifield, ifld, k, ic, itrc
+      integer :: i, ifield, ifld, ic, itrc
 !
       real(dp) :: scale
 !
@@ -1132,11 +1124,11 @@
 !  Set switch to extract station data at native C-grid position (TRUE)
 !  or at RHO-points (FALSE).
 !
-# ifdef STATIONS_CGRID
+#  ifdef STATIONS_CGRID
       Cgrid=.TRUE.
-# else
+#  else
       Cgrid=.FALSE.
-# endif
+#  endif
 !
 !  Set positions for generic extraction routine.
 !
@@ -1144,7 +1136,7 @@
         Xpos(i)=SCALARS(ng)%SposX(i)
         Ypos(i)=SCALARS(ng)%SposY(i)
       END DO
-#ifdef ICESHELF_MOM
+#  ifdef ICESHELF_MOM
 !
 !-----------------------------------------------------------------------
 !  write out iceshelf model state prognostic variables.
@@ -1170,8 +1162,8 @@
           END IF
         END IF
       END DO
-#endif
-#ifdef ICESHELF_THERMO
+#  endif
+#  ifdef ICESHELF_THERMO
 !
 !-----------------------------------------------------------------------
 !  write out iceshelf model internal variables.
@@ -1197,7 +1189,7 @@
           END IF
         END IF
       END DO
-# ifdef ICESHELF_TRACER
+#   ifdef ICESHELF_TRACER
       IF (Lisftrc(ng)) THEN
 !
 !-----------------------------------------------------------------------
@@ -1209,7 +1201,7 @@
           scale=1.0_dp
           CALL extract_sta2d (ng, model, Cgrid, ifield, r2dvar,         &
      &                        LBi, UBi, LBj, UBj,                       &
-     &                        scale, ISF(ng)%vol(:,:),                  &
+     &                        scale, ISF(ng)%Vi(:,:,lsnew(ng)),         &
      &                        Nstation(ng), Xpos, Ypos, psta)
 !
           CALL netcdf_put_fvar (ng, model, S(ng)%name,                  &
@@ -1226,15 +1218,14 @@
 !-----------------------------------------------------------------------
 !
         ic=0
-        DO k=1,NPT
-          itrc=inert(k)
-          IF (LtracerIsf(ng)) THEN
+        DO itrc=NAT+1,NT(ng)
+          IF (LtracerIsf(itrc, ng)) THEN
             ifield=idItrc(itrc)
             IF (VarOut(ifield,ng)) THEN
               scale=1.0_dp
               CALL extract_sta2d (ng, model, Cgrid, ifield, r2dvar,     &
      &                            LBi, UBi, LBj, UBj,                   &
-     &                            scale, ISF(ng)%trc(:,:,ic),           &
+     &                            scale, ISF(ng)%Ti(:,:,lsnew(ng),ic),  &
      &                            Nstation(ng), Xpos, Ypos, psta)
 !
               CALL netcdf_put_fvar (ng, model, S(ng)%name,              &
@@ -1249,8 +1240,8 @@
           END IF
         END DO
       END IF
-# endif
-#endif
+#   endif
+#  endif
 !
   10  FORMAT (/,' ICESHELF_WRT_STATION_NF90 - error while writing ',    &
      &        "variable '",a,"', time record = ",i0,/,11x,              &
@@ -1284,7 +1275,7 @@
 !
       integer, parameter :: Natt = 25
 
-      integer :: i, ifield, j, nf, nvd3, status, vtype, k, ic, itrc
+      integer :: i, ifield, j, nf, nvd3, status, vtype, ic, itrc
 
       integer :: isfgrd(3)
 !
@@ -1304,16 +1295,16 @@
 !
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       ncname=S(ng)%name
-!!
+!
       DEFINE : IF (ldef) THEN
 !
 !  Set number of dimensions for output variables.
 !
-# if defined WRITE_WATER && defined MASKING
+#  if defined WRITE_WATER && defined MASKING
         nvd3=2
-# else
+#  else
         nvd3=3
-# endif
+#  endif
 !
 !  Initialize local information variable arrays.
 !
@@ -1325,7 +1316,7 @@
         DO i=1,6
           Aval(i)=0.0_r8
         END DO
-#ifdef ICESHELF_MOM
+#  ifdef ICESHELF_MOM
 !
 !  Define iceshelf model state prognostic variables.
 !
@@ -1354,21 +1345,21 @@
               SELECT CASE (nf)
                 CASE (isIuis)
                   isfgrd(1:3)=u2dgrd(1:3)
-# if defined WRITE_WATER && defined MASKING
+#   if defined WRITE_WATER && defined MASKING
                   Vinfo(20)='mask_u'
-# endif
+#   endif
                   S(ng)%pioVar(ifield)%gtype=u2dvar
                 CASE (isIvis)
                   isfgrd(1:3)=v2dgrd(1:3)
-# if defined WRITE_WATER && defined MASKING
+#   if defined WRITE_WATER && defined MASKING
                   Vinfo(20)='mask_v'
-# endif
+#   endif
                   S(ng)%pioVar(ifield)%gtype=v2dvar
                 CASE DEFAULT
                   isfgrd(1:3)=t2dgrd(1:3)
-# if defined WRITE_WATER && defined MASKING
+#   if defined WRITE_WATER && defined MASKING
                   Vinfo(20)='mask_rho'
-# endif
+#   endif
                   S(ng)%pioVar(ifield)%gtype=r2dvar
               END SELECT
 !
@@ -1391,9 +1382,9 @@
           Vinfo( 3)=Vname(3,idIuer)
           Vinfo(14)=Vname(4,idIuer)
           Vinfo(16)=Vname(1,idtime)
-# if defined WRITE_WATER && defined MASKING
+#   if defined WRITE_WATER && defined MASKING
           Vinfo(20)='mask_rho'
-# endif
+#   endif
           Vinfo(21)=Vname(6,idIuer)
           Vinfo(22)='coordinates'
           Aval(5)=REAL(Iinfo(1,idIuer,ng),r8)
@@ -1415,9 +1406,9 @@
           Vinfo( 3)=Vname(3,idIvnr)
           Vinfo(14)=Vname(4,idIvnr)
           Vinfo(16)=Vname(1,idtime)
-# if defined WRITE_WATER && defined MASKING
+#   if defined WRITE_WATER && defined MASKING
           Vinfo(20)='mask_rho'
-# endif
+#   endif
           Vinfo(21)=Vname(6,idIvnr)
           Vinfo(22)='coordinates'
           Aval(5)=REAL(Iinfo(1,idIvnr,ng),r8)
@@ -1429,8 +1420,8 @@
      &                   vtype, nvd3, t2dgrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
-#endif
-#ifdef ICESHELF_THERMO
+#  endif
+#  ifdef ICESHELF_THERMO
 !
 !-----------------------------------------------------------------------
 !  Define iceshelf model internal variables.
@@ -1446,9 +1437,9 @@
               Vinfo( 3)=Vname(3,ifield)
               Vinfo(14)=Vname(4,ifield)
               Vinfo(16)=Vname(1,idtime)
-# if defined WRITE_WATER && defined MASKING
+#   if defined WRITE_WATER && defined MASKING
               Vinfo(20)='mask_rho'
-# endif
+#   endif
               Vinfo(21)=Vname(6,ifield)
               Vinfo(22)='coordinates'
               Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
@@ -1464,7 +1455,7 @@
             END IF
           END IF
         END DO
-# ifdef ICESHELF_TRACER
+#   ifdef ICESHELF_TRACER
         IF (Lisftrc(ng)) THEN
 !
 !-----------------------------------------------------------------------
@@ -1485,9 +1476,9 @@
             Vinfo( 3)=Vname(3,ifield)
             Vinfo(14)=Vname(4,ifield)
             Vinfo(16)=Vname(1,idtime)
-#  if defined WRITE_WATER && defined MASKING
+#    if defined WRITE_WATER && defined MASKING
             Vinfo(20)='mask_rho'
-#  endif
+#    endif
             Vinfo(21)=Vname(6,ifield)
             Vinfo(22)='coordinates'
             Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
@@ -1506,9 +1497,8 @@
 !  Define iceshelf refreezed tracer amounts.
 !-----------------------------------------------------------------------
 !
-          DO k=1,NPT
-            itrc=inert(k)
-            IF (LtracerIsf(ng)) THEN
+          DO itrc=NAT+1,NT(ng)
+            IF (LtracerIsf(itrc, ng)) THEN
               ifield=idItrc(itrc)
               IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
                 LdefVar=.TRUE.
@@ -1523,9 +1513,9 @@
                 Vinfo( 3)=Vname(3,ifield)
                 Vinfo(14)=Vname(4,ifield)
                 Vinfo(16)=Vname(1,idtime)
-#  if defined WRITE_WATER && defined MASKING
+#    if defined WRITE_WATER && defined MASKING
                 Vinfo(20)='mask_rho'
-#  endif
+#    endif
                 Vinfo(21)=Vname(6,ifield)
                 Vinfo(22)='coordinates'
                 Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
@@ -1542,8 +1532,8 @@
             END IF
           END DO
         END IF
-# endif
-#endif
+#   endif
+#  endif
       END IF DEFINE
 !
 !-----------------------------------------------------------------------
@@ -1569,7 +1559,7 @@
         END IF
 !
         DO i=1,n_var
-#ifdef ICESHELF_MOM
+#  ifdef ICESHELF_MOM
           DO nf=1,nIsfS
             IF (iSisf(nf).gt.0) THEN
               ifield=iSisf(nf)
@@ -1603,8 +1593,8 @@
             S(ng)%pioVar(idIvnr)%dkind=PIO_FOUT
             S(ng)%pioVar(idIvnr)%gtype=r2dvar
           END IF
-#endif
-#ifdef ICESHELF_THERMO
+#  endif
+#  ifdef ICESHELF_THERMO
 !
           DO nf=1,nIsfF
             IF (iFisf(nf).gt.0) THEN
@@ -1618,7 +1608,7 @@
               END IF
             END IF
           END DO
-# ifdef ICESHELF_TRACER
+#   ifdef ICESHELF_TRACER
           IF (Lisftrc(ng)) THEN
 !
             ifield=idIvol
@@ -1630,9 +1620,8 @@
               CYCLE
             END IF
 !
-            DO k=1,NPT
-              itrc=inert(k)
-              IF (LtracerIsf(ng)) THEN
+            DO itrc=NAT+1,NT(ng)
+              IF (LtracerIsf(itrc, ng)) THEN
                 ifield=idItrc(itrc)
                 IF (TRIM(var_name(i)).eq.TRIM(Vname(1,ifield))) THEN
                   got_var(ifield)=.TRUE.
@@ -1644,13 +1633,13 @@
               END IF
             END DO
           END IF
-# endif
-#endif
+#   endif
+#  endif
         END DO
 !
 !  Check if output variables are available in input NetCDF file.
 !
-#ifdef ICESHELF_MOM
+#  ifdef ICESHELF_MOM
         DO nf=1,nIsfS
           IF (iSisf(nf).gt.0) THEN
             ifield=iSisf(nf)
@@ -1675,8 +1664,8 @@
           exit_flag=3
           RETURN
         END IF
-#endif
-#ifdef ICESHELF_THERMO
+#  endif
+#  ifdef ICESHELF_THERMO
 !
         DO nf=1,nIsfF
           IF (iFisf(nf).gt.0) THEN
@@ -1689,7 +1678,7 @@
             END IF
           END IF
         END DO
-# ifdef ICESHELF_TRACER
+#   ifdef ICESHELF_TRACER
         IF (Lisftrc(ng)) THEN
 !
           ifield=idIvol
@@ -1700,9 +1689,8 @@
             RETURN
           END IF
 !
-          DO k=1,NPT
-            itrc=inert(k)
-            IF (LtracerIsf(ng)) THEN
+          DO itrc=NAT+1,NT(ng)
+            IF (LtracerIsf(itrc, ng)) THEN
               ifield=idItrc(itrc)
               IF (.not.got_var(ifield).and.VarOut(ifield,ng)) THEN
                 IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),    &
@@ -1713,8 +1701,8 @@
             END IF
           END DO
         END IF
-# endif
-#endif
+#   endif
+#  endif
       END IF QUERY
 !
   10  FORMAT (/,' ICESHELF_DEF_PIO - unable to find variable: ',a,2x,   &
@@ -1744,7 +1732,7 @@
 !
       logical :: LwrtVar
 !
-      integer :: ifield, ifld, k, ic, itrc
+      integer :: ifield, ifld, ic, itrc
       integer :: gfactor, gtype, status
 !
       real(dp) :: scale
@@ -1772,17 +1760,17 @@
 !  Set grid type factor to write full (gfactor=1) fields or water
 !  points (gfactor=-1) fields only.
 !
-# if defined WRITE_WATER && defined MASKING
+#  if defined WRITE_WATER && defined MASKING
       gfactor=-1
-# else
+#  else
       gfactor=1
-# endif
+#  endif
 !
 !-----------------------------------------------------------------------
 !  write out iceshelf model state prognostic variables.
 !-----------------------------------------------------------------------
 !
-#ifdef ICESHELF_MOM
+#  ifdef ICESHELF_MOM
       DO ifld=1,nIsfS
         IF (iSisf(ifld).gt.0) THEN
           ifield=iSisf(ifld)
@@ -1798,10 +1786,10 @@
      &           (S(ng)%ncid.eq.QCK(ng)%ncid).or.                       &
      &           (S(ng)%ncid.eq.RST(ng)%ncid))) THEN
               isfField => ISF(ng) % Si(LBi:UBi,LBj:UBj,lsnew(ng),ifld)
-# ifdef AVERAGES
+#   ifdef AVERAGES
             ELSE IF (S(ng)%ncid.eq.AVG(ng)%ncid) THEN
               isfField => ISF_SAVG(ifld,ng) % var(LBi:UBi,LBj:UBj)
-# endif
+#   endif
             END IF
 !
             SELECT CASE (ifld)
@@ -1811,27 +1799,27 @@
                 ELSE
                   ioDesc => ioDesc_sp_u2dvar(ng)
                 END IF
-# ifdef MASKING
+#   ifdef MASKING
                 isfMask => GRID(ng) % umask_full
-# endif
+#   endif
               CASE (isIvis)
                 IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
                   ioDesc => ioDesc_dp_v2dvar(ng)
                 ELSE
                   ioDesc => ioDesc_sp_v2dvar(ng)
                 END IF
-# ifdef MASKING
+#   ifdef MASKING
                 isfMask => GRID(ng) % vmask_full
-# endif
+#   endif
               CASE DEFAULT
                 IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
                   ioDesc => ioDesc_dp_r2dvar(ng)
                 ELSE
                   ioDesc => ioDesc_sp_r2dvar(ng)
                 END IF
-# ifdef MASKING
+#   ifdef MASKING
                 isfMask => GRID(ng) % rmask_full
-# endif
+#   endif
             END SELECT
             scale=1.0_dp
 !
@@ -1839,9 +1827,9 @@
      &                         S(ng)%pioVar(ifield), S(ng)%Rindex,      &
      &                         ioDesc,                                  &
      &                         LBi, UBi, LBj, UBj, scale,               &
-# ifdef MASKING
+#   ifdef MASKING
      &                         isfMask,                                 &
-# endif
+#   endif
      &                         isfField)
             IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),      &
@@ -1871,9 +1859,9 @@
      &                    LBi, UBi, LBj, UBj,                           &
      &                    GRID(ng) % CosAngler,                         &
      &                    GRID(ng) % SinAngler,                         &
-# ifdef MASKING
+#   ifdef MASKING
      &                    GRID(ng) % rmask_full,                        &
-# endif
+#   endif
      &                    ISF(ng) % Si(:,:,lsnew(ng),isIuis),           &
      &                    ISF(ng) % Si(:,:,lsnew(ng),isIvis),           &
      &                    Ur2d, Vr2d)
@@ -1888,9 +1876,9 @@
      &                     S(ng)%pioVAR(idIuer), S(ng)%Rindex,          &
      &                     ioDesc,                                      &
      &                     LBi, UBi, LBj, UBj, scale,                   &
-# ifdef MASKING
+#   ifdef MASKING
      &                     GRID(ng) % rmask_full,                       &
-# endif
+#   endif
      &                     Ur2d)
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) WRITE (stdout,10) TRIM(Vname(1,idIuer)),          &
@@ -1909,9 +1897,9 @@
      &                     S(ng)%pioVar(idIvnr), S(ng)%Rindex,          &
      &                     ioDesc,                                      &
      &                     LBi, UBi, LBj, UBj, scale,                   &
-# ifdef MASKING
+#   ifdef MASKING
      &                     GRID(ng) % rmask_full,                       &
-# endif
+#   endif
      &                     Vr2d)
         IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
           IF (Master) WRITE (stdout,10) TRIM(Vname(1,idIvnr)),          &
@@ -1923,8 +1911,8 @@
         deallocate (Ur2d)
         deallocate (Vr2d)
       END IF
-#endif
-#ifdef ICESHELF_THERMO
+#  endif
+#  ifdef ICESHELF_THERMO
 !
 !-----------------------------------------------------------------------
 !  write out iceshelf model internal variables.
@@ -1945,10 +1933,10 @@
      &           (S(ng)%ncid.eq.QCK(ng)%ncid).or.                       &
      &           (S(ng)%ncid.eq.RST(ng)%ncid))) THEN
               isfField => ISF(ng) % Fi(LBi:UBi,LBj:UBj,ifld)
-# ifdef AVERAGES
+#   ifdef AVERAGES
             ELSE IF (S(ng)%ncid.eq.AVG(ng)%ncid) THEN
               isfField => ISF_FAVG(ifld,ng) % var(LBi:UBi,LBj:UBj)
-# endif
+#   endif
             END IF
 !
             scale=1.0_dp
@@ -1961,9 +1949,9 @@
      &                         S(ng)%pioVar(ifield), S(ng)%Rindex,      &
      &                         ioDesc,                                  &
      &                         LBi, UBi, LBj, UBj, scale,               &
-# ifdef MASKING
+#   ifdef MASKING
      &                         GRID(ng) % rmask_full,                   &
-# endif
+#   endif
      &                         isfField)
             IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),      &
@@ -1976,7 +1964,7 @@
           END IF
         END IF
       END DO
-# ifdef ICESHELF_TRACER
+#   ifdef ICESHELF_TRACER
       IF (Lisftrc(ng)) THEN
 !
 !-----------------------------------------------------------------------
@@ -1995,11 +1983,11 @@
               ((S(ng)%ncid.eq.HIS(ng)%ncid).or.                         &
      &         (S(ng)%ncid.eq.QCK(ng)%ncid).or.                         &
      &         (S(ng)%ncid.eq.RST(ng)%ncid))) THEN
-            isfField => ISF(ng) % vol(LBi:UBi,LBj:UBj)
-#  ifdef AVERAGES
+            isfField => ISF(ng) % Vi(LBi:UBi,LBj:UBj,lsnew(ng))
+#    ifdef AVERAGES
           ELSE IF (S(ng)%ncid.eq.AVG(ng)%ncid) THEN
             isfField => ISF_VAVG(ng) % var(LBi:UBi,LBj:UBj)
-#  endif
+#    endif
           END IF
 !
           scale=1.0_dp
@@ -2012,9 +2000,9 @@
      &                       S(ng)%pioVar(ifield), S(ng)%Rindex,        &
      &                       ioDesc,                                    &
      &                       LBi, UBi, LBj, UBj, scale,                 &
-#  ifdef MASKING
+#    ifdef MASKING
      &                       GRID(ng) % rmask_full,                     &
-#  endif
+#    endif
      &                       isfField)
           IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
             IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),        &
@@ -2031,9 +2019,8 @@
 !-----------------------------------------------------------------------
 !
         ic=0
-        DO k=1,NPT
-          itrc=inert(k)
-          IF (LtracerIsf(ng)) THEN
+        DO itrc=NAT+1,NT(ng)
+          IF (LtracerIsf(itrc, ng)) THEN
             ifield=idItrc(itrc)
             IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
               LwrtVar=.TRUE.
@@ -2046,11 +2033,11 @@
                   ((S(ng)%ncid.eq.HIS(ng)%ncid).or.                     &
      &             (S(ng)%ncid.eq.QCK(ng)%ncid).or.                     &
      &             (S(ng)%ncid.eq.RST(ng)%ncid))) THEN
-                isfField => ISF(ng) % trc(LBi:UBi,LBj:UBj,ic)
-#  ifdef AVERAGES
+                isfField => ISF(ng) % Ti(LBi:UBi,LBj:UBj,lsnew(ng),ic)
+#    ifdef AVERAGES
               ELSE IF (S(ng)%ncid.eq.AVG(ng)%ncid) THEN
                 isfField => ISF_TAVG(itrc,ng) % var(LBi:UBi,LBj:UBj)
-#  endif
+#    endif
               END IF
 !
               scale=1.0_dp
@@ -2063,9 +2050,9 @@
      &                           S(ng)%pioVar(ifield), S(ng)%Rindex,    &
      &                           ioDesc,                                &
      &                           LBi, UBi, LBj, UBj, scale,             &
-#  ifdef MASKING
+#    ifdef MASKING
      &                           GRID(ng) % rmask_full,                 &
-#  endif
+#    endif
      &                           isfField)
               IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
                 IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),    &
@@ -2079,8 +2066,8 @@
           END IF
         END DO
       END IF
-# endif
-#endif
+#   endif
+#  endif
 !
   10  FORMAT (/," ICESHELF_WRT - error while writing variable '",a,     &
      &        "', time record = ",i0,/,11x,'into file: ',a)

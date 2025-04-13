@@ -119,7 +119,7 @@
         END DO
 #    ifdef ICESHELF_TRACER
 !
-!  Read in iceshelf volume (m).
+!  Read in iceshelf refreezed volume (m).
 !
         ifield=idIvol
         IF (get_var(ifield)) THEN
@@ -128,7 +128,7 @@
           IF (foundit) THEN
             my_pioVar%vd=var_desc(vindex)
             my_pioVar%gtype=r2dvar
-            IF (KIND(ISF(ng)%vol).eq.8) THEN
+            IF (KIND(ISF(ng)%Vi).eq.8) THEN
               my_pioVar%dkind=PIO_double
               ioDesc => ioDesc_dp_r2dvar(ng)
             ELSE
@@ -144,10 +144,10 @@
      &                        GRID(ng) % rmask,                         &
 #     endif
 #     ifdef CHECKSUM
-     &                        ISF(ng) % vol,                            &
+     &                        ISF(ng) % Vi(:,:,Tindex),                 &
      &                        checksum = Fhash)
 #     else
-     &                        ISF(ng) % vol)
+     &                        ISF(ng) % Vi(:,:,Tindex))
 #     endif
             IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
               IF (Master) THEN
@@ -184,8 +184,8 @@
 !  Read in integrated tracer (m Tunits).
 !
         itrc=0
-        DO i=1,NPT
-          ifield=idItrc(inert(i))
+        DO i=NAT+1,NT(ng)
+          ifield=idItrc(i)
           IF (get_var(ifield)) THEN
             foundit=find_string(var_name, n_var,                        &
      &                          TRIM(Vname(1,ifield)), vindex)
@@ -194,7 +194,7 @@
               scale=1.0_dp
               my_pioVar%vd=var_desc(vindex)
               my_pioVar%gtype=r2dvar
-              IF (KIND(ISF(ng)%trc).eq.8) THEN
+              IF (KIND(ISF(ng)%Ti).eq.8) THEN
                 my_pioVar%dkind=PIO_double
                 ioDesc => ioDesc_dp_r2dvar(ng)
               ELSE
@@ -211,10 +211,10 @@
      &                          GRID(ng) % rmask,                       &
 #     endif
 #     ifdef CHECKSUM
-     &                          ISF(ng) % trc(:,:,itrc),                &
+     &                          ISF(ng) % Ti(:,:,Tindex,itrc),          &
      &                          checksum = Fhash)
 #     else
-     &                          ISF(ng) % trc(:,:,itrc))
+     &                          ISF(ng) % Ti(:,:,Tindex,itrc))
 #     endif
               IF (FoundError(status, PIO_noerr, __LINE__, MyFile))      &
      &          THEN

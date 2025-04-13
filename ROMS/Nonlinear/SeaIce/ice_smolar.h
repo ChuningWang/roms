@@ -26,6 +26,7 @@
       USE mod_ocean
       USE mod_scalars
 !
+      USE bc_2d_mod,       ONLY : bc_r2d_tile
       USE exchange_2d_mod, ONLY : exchange_r2d_tile
 #ifdef DISTRIBUTE
       USE mp_exchange_mod, ONLY : mp_exchange2d
@@ -89,7 +90,7 @@
 !
 !  Local variable declarations.
 !
-      integer :: i, j
+      integer :: i, j, ic, itrc
 
 #include "set_bounds.h"
 !
@@ -326,8 +327,10 @@
 !  Advect tracers.
 !-----------------------------------------------------------------------
 !
+      ic=0
       DO itrc=NAT+1,NT(ng)
         IF (LtracerIce(itrc,ng)) THEN
+          ic=ic+1
           CALL ice_mpdata_tile (ng, tile, model,                        &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          IminS, ImaxS, JminS, JmaxS,             &
@@ -354,19 +357,19 @@
      &                          GRID(ng) % omn,                         &
      &                          ICE(ng) % Si(:,:,:,isUice),             &
      &                          ICE(ng) % Si(:,:,:,isVice),             &
-     &                          ICE(ng) % Ti(:,:,:,itrc))
+     &                          ICE(ng) % Ti(:,:,:,ic))
 !
           DO j=JstrT,JendT
             DO i=IstrT,IendT
               IF (ICE(ng)%Si(i,j,linew,isHice).le.min_hi(ng)) THEN
-                ICE(ng)%Ti(i,j,linew,itrc)=0.0_r8
+                ICE(ng)%Ti(i,j,linew,ic)=0.0_r8
               END IF
             END DO
           END DO
 !
           CALL bc_r2d_tile (ng, tile,                                   &
      &                      LBi, UBi, LBj, UBj,                         &
-     &                      ICE(ng) % Ti(:,:,linew,itrc))
+     &                      ICE(ng) % Ti(:,:,linew,ic))
         END IF
       END DO
 # endif
@@ -603,11 +606,13 @@
      &                          ICE(ng)%Si(:,:,linew,isHage))
 
 # ifdef ICE_TRACER
+        ic=0
         DO itrc=NAT+1,NT(ng)
           IF (LtracerIce(itrc,ng)) THEN
+          ic=ic+1
             CALL exchange_r2d_tile (ng, tile,                           &
      &                              LBi, UBi, LBj, UBj,                 &
-     &                              ICE(ng)%Ti(:,:,linew,itrc))
+     &                              ICE(ng)%Ti(:,:,linew,ic))
           END IF
         END DO
 # endif
@@ -652,13 +657,15 @@
      &                    ICE(ng)%Si(:,:,linew,isHage))
 
 # ifdef ICE_TRACER
+      ic=0
       DO itrc=NAT+1,NT(ng)
         IF (LtracerIce(itrc,ng)) THEN
+          ic=ic+1
           CALL mp_exchange2d (ng, tile, model, 1,                       &
      &                        LBi, UBi, LBj, UBj,                       &
      &                        NghostPoints,                             &
      &                        EWperiodic(ng), NSperiodic(ng),           &
-     &                        ICE(ng)%Ti(:,:,linew,itrc))
+     &                        ICE(ng)%Ti(:,:,linew,ic))
         END IF
       END DO
 #  endif

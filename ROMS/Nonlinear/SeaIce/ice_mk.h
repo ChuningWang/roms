@@ -218,9 +218,9 @@
       real(r8), intent(in) :: snow(LBi:,LBj:)
       real(r8), intent(in) :: Qnet_ai(LBi:,LBj:)
       real(r8), intent(inout) :: stflx(LBi:,LBj:,:)
-#ifdef ICE_TRACER
+# ifdef ICE_TRACER
       real(r8), intent(inout) :: Ti(LBi:,LBj:,:,3:)
-#endif
+# endif
       real(r8), intent(inout) :: Fi(LBi:,LBj:,:)
       real(r8), intent(inout) :: Si(LBi:,LBj:,:,:)
 #else
@@ -246,9 +246,9 @@
       real(r8), intent(in) :: snow(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: Qnet_ai(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: stflx(LBi:UBi,LBj:UBj,NT(ng))
-#ifdef ICE_TRACER
+# ifdef ICE_TRACER
       real(r8), intent(inout) :: Ti(LBi:UBi,LBj:UBj,2,3:NT(ng))
-#endif
+# endif
       real(r8), intent(inout) :: Fi(LBi:UBi,LBj:UBj,nIceF)
       real(r8), intent(inout) :: Si(LBi:UBi,LBj:UBj,2,nIceS)
 #endif

@@ -17,6 +17,9 @@
 #ifdef BIOLOGY
       USE mod_biology
 #endif
+#ifdef ICE_MODEL
+      USE mod_ice,       ONLY : allocate_ice
+#endif
 #ifdef ICESHELF_DYNAM
       USE mod_isf,       ONLY : allocate_isf
 #endif
@@ -409,6 +412,9 @@
               CALL initialize_param    ! Continue allocating/initalizing
               CALL allocate_scalars    ! variables since the application
               CALL initialize_scalars  ! number of nested grids and
+#ifdef ICE_MODEL
+              CALL allocate_ice (ng, 0, 0, 0, 0, .FALSE.)
+#endif
 #ifdef ICESHELF_DYNAM
               CALL allocate_isf (ng, 0, 0, 0, 0, .FALSE.)
 #endif
@@ -4252,11 +4258,13 @@
                 fposnam(i:i)=blank
               END DO
               fposnam=TRIM(ADJUSTL(Cval(Nval)))
+# ifdef ICE_MODEL
             CASE ('IPARNAM')
               DO i=1,LEN(iparnam)
                 iparnam(i:i)=blank
               END DO
               iparnam=TRIM(ADJUSTL(Cval(Nval)))
+# endif
 # ifdef ICESHELF_DYNAM
             CASE ('ISFPNAM')
               DO i=1,LEN(isfpnam)
@@ -6753,7 +6761,7 @@
             DO itrc=1,NPT
               IF (Aout(idTvar(inert(itrc)),ng)) WRITE (out,180)         &
      &            Aout(idTvar(inert(itrc)),ng), 'Aout(inert)',          &
-     &            'Write out  averaged inert passive tracer ', itrc,    &
+     &            'Write out averaged inert passive tracer ', itrc,     &
      &            TRIM(Vname(1,idTvar(inert(itrc))))
             END DO
 # endif

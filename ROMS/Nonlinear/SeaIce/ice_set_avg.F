@@ -83,7 +83,7 @@
 !
 !  Local variable declarations.
 !
-      integer :: i, ifield, j, nf, ns
+      integer :: i, ifield, j, nf, ns, ic, itrc
 !
       real(r8) :: fac
 !
@@ -147,6 +147,28 @@
             END IF
           END IF
         END DO
+# ifdef ICE_TRACER
+        IF (Licetrc(ng)) THEN
+          ic=0
+          DO itrc=NAT+1,NT(ng)
+            IF (LtracerIce(itrc,ng)) THEN
+              ic=ic+1
+              IF (Aout(idStrc(itrc),ng)) THEN
+                DO j=JstrR,JendR
+                  DO i=IstrR,IendR
+                    ICE_TAVG(itrc,ng)%var(i,j)=ICE(ng)%Ti(i,j,Iout,ic)
+#  ifdef MASKING
+                    ICE_TAVG(itrc,ng)%var(i,j)=                         &
+     &                ICE_TAVG(itrc,ng)%var(i,j) *                      &
+     &                GRID(ng)%rmask_full(i,j)
+#  endif
+                  END DO
+                END DO
+              END IF
+            END IF
+          END DO
+        END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Accumulate time-averaged fields.
@@ -191,6 +213,28 @@
             END IF
           END IF
         END DO
+# ifdef ICE_TRACER
+        IF (Licetrc(ng)) THEN
+          ic=0
+          DO itrc=NAT+1,NT(ng)
+            IF (LtracerIce(itrc,ng)) THEN
+              ic=ic+1
+              IF (Aout(idStrc(itrc),ng)) THEN
+                DO j=JstrR,JendR
+                  DO i=IstrR,IendR
+                    ICE_TAVG(itrc,ng)%var(i,j)=                         &
+     &                ICE_TAVG(itrc,ng)%var(i,j)+                       &
+#  ifdef MASKING
+     &                GRID(ng)%rmask_full(i,j)*                         &
+#  endif
+     &                ICE(ng)%Ti(i,j,Iout,ic)
+                  END DO
+                END DO
+              END IF
+            END IF
+          END DO
+        END IF
+# endif
       END IF
 !
 !-----------------------------------------------------------------------
@@ -288,6 +332,34 @@
           END IF
         END DO
       END IF
+# ifdef ICE_TRACER
+      IF (Licetrc(ng)) THEN
+        DO itrc=NAT+1,NT(ng)
+          IF (LtracerIce(itrc,ng)) THEN
+            IF (Aout(idStrc(itrc),ng)) THEN
+              DO j=JstrR,JendR
+                DO i=IstrR,IendR
+                  ICE_TAVG(itrc,ng)%var(i,j)=rfac(i,j) *                &
+     &                                       ICE_TAVG(itrc,ng)%var(i,j)
+                END DO
+              END DO
+              IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+                CALL exchange_r2d_tile (ng, tile,                       &
+     &                                  LBi, UBi, LBj, UBj,             &
+     &                                  ICE_TAVG(itrc,ng)%var)
+#  ifdef DISTRIBUTE
+                CALL mp_exchange2d (ng, tile, model, 1,                 &
+     &                              LBi, UBi, LBj, UBj,                 &
+     &                              NghostPoints,                       &
+     &                              EWperiodic(ng), NSperiodic(ng),     &
+     &                              ICE_TAVG(itrc,ng)%var)
+#  endif
+              END IF
+            END IF
+          END IF
+        END DO
+      END IF
+# endif
 !
       RETURN
       END SUBROUTINE ice_set_avg_tile

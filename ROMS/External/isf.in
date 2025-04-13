@@ -85,7 +85,7 @@
 
   LtracerIsf == T     ! dye_01, ...        inert passive tracers
 
-! Logical switches (TRUE/FALSE) to activate writing of iceshelf prognostic
+! Logical switches (TRUE/FALSE) to activate writing of iceshelf
 ! variables into HISTORY output file.
 
 Hout(idIhis) == T     ! Si(...,isIhis)     iceshelf thickness
@@ -104,7 +104,10 @@ Hout(idIust) == T     ! Fi(...,icIust)     iceshelf Ustar
 Hout(idItbo) == T     ! Fi(...,icItbo)     iceshelf boundary layer temperature
 Hout(idIsbo) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
 
-! Logical switches (TRUE/FALSE) to activate writing of ice prognostic
+Hout(idIvol) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
+Hout(idItrc) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
+
+! Logical switches (TRUE/FALSE) to activate writing of iceshelf
 ! variables into QUICKSAVE output file.
 
 Qout(idIhis) == T     ! Si(...,isIhis)     iceshelf thickness
@@ -123,7 +126,10 @@ Qout(idIust) == T     ! Fi(...,icIust)     iceshelf Ustar
 Qout(idItbo) == T     ! Fi(...,icItbo)     iceshelf boundary layer temperature
 Qout(idIsbo) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
 
-! Logical switches (TRUE/FALSE) to activate writing of ice prognostic
+Qout(idIvol) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
+Qout(idItrc) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
+
+! Logical switches (TRUE/FALSE) to activate writing of iceshelf
 ! variables into AVERAGES output file.
 
 Aout(idIhis) == T     ! Si(...,isIhis)     iceshelf thickness
@@ -142,10 +148,71 @@ Aout(idIust) == T     ! Fi(...,icIust)     iceshelf Ustar
 Aout(idItbo) == T     ! Fi(...,icItbo)     iceshelf boundary layer temperature
 Aout(idIsbo) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
 
+Aout(idIvol) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
+Aout(idItrc) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
+
+! Logical switches (TRUE/FALSE) to activate writing of iceshelf
+! variables into STATION output file.
+
+Sout(idIhis) == T     ! Si(...,isIhis)     iceshelf thickness
+Sout(idIuis) == T     ! Si(...,isIuis)     iceshelf U-velocity
+Sout(idIvis) == T     ! Si(...,isIvis)     iceshelf V-velocity
+Sout(idIuer) == T     !                    iceshelf eastward velocity
+Sout(idIvnr) == T     !                    iceshelf northward velocity
+Sout(idItis) == T     ! Si(...,isItis)     iceshelf temperature
+Sout(idIeis) == T     ! Si(...,isIeis)     iceshelf enthalpy
+
+Sout(idImel) == T     ! Fi(...,icImel)     iceshelf basal melt rate
+Sout(idIgat) == T     ! Fi(...,icItat)     iceshelf gammaT
+Sout(idIgas) == T     ! Fi(...,icIgas)     iceshelf gammaS
+Sout(idItst) == T     ! Fi(...,icItst)     iceshelf Tstar
+Sout(idIust) == T     ! Fi(...,icIust)     iceshelf Ustar
+Sout(idItbo) == T     ! Fi(...,icItbo)     iceshelf boundary layer temperature
+Sout(idIsbo) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
+
+Sout(idIvol) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
+Sout(idItrc) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
+
 
 !
 !  GLOSSARY:
 !  =========
+!
+!------------------------------------------------------------------------------
+! Lateral boundary conditions parameters.
+!------------------------------------------------------------------------------
+!
+! The lateral boundary conditions are now specified with logical switches
+! instead of CPP flags to allow nested grid configurations. Their values are
+! loaded into structured array:
+!
+!    LBC(1:4, nLBCvar, Ngrids)
+!
+! where 1:4 are the number of boundary edges, nLBCvar are the number of LBC
+! state variables, and Ngrids is the number of nested grids. For Example, to
+! apply gradient boundary conditions we use:
+!
+!    LBC(iwest,  isAice, ng) % gradient
+!    LBC(ieast,  ...   , ng) % gradient
+!    LBC(isouth, ...   , ng) % gradient
+!    LBC(inorth, ...   , ng) % gradient
+!
+! The lateral boundary conditions are entered with a keyword. This keyword
+! is case insensitive and usually has three characters. However, it is
+! possible to have compound keywords, if applicable. For example, the
+! keyword "RadNud" implies radiation boundary condition with nudging. This
+! combination is usually used in active/passive radiation conditions.
+!
+!   Keyword    Lateral Boundary Condition Type
+!
+!   Clo        Closed                                 _____N_____     j=Mm
+!   Clo        Clamped                               |     4     |
+!   Gra        Gradient                              |           |
+!   Rad        Radiation                           1 W           E 3
+!   RadNud     Radiation Nudging                     |           |
+!   Mix        Mixed (clamped/gradient)              |_____S_____|
+!   Per        Periodic                                    2          j=1
+!   Nes        Nested (refinement, not avail yet)   i=1         i=Lm
 !
 !------------------------------------------------------------------------------
 !  Iceshelf model parameters.
@@ -157,4 +224,100 @@ Aout(idIsbo) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
 !                   1.0d-3 for diffusion + tidal forcing.
 !
 !  LtracerIsf     Logical switches for iceshelf melt water passive tracers.
+!
+!------------------------------------------------------------------------------
+! Logical switches (T/F) to activate writing of instantaneous ice fields into
+! HISTORY file.
+!------------------------------------------------------------------------------
+!
+! Hout(idIhis)    Write out iceshelf thickness.
+! Hout(idIuis)    Write out iceshelf U-velocity.
+! Hout(idIvis)    Write out iceshelf V-velocity.
+! Hout(idIuer)    Write out iceshelf eastward velocity.
+! Hout(idIvnr)    Write out iceshelf northward velocity.
+! Hout(idItis)    Write out iceshelf temperature.
+! Hout(idIeis)    Write out iceshelf enthalpy.
+!
+! Hout(idImel)    Write out iceshelf basal melt rate.
+! Hout(idIgat)    Write out iceshelf gammaT.
+! Hout(idIgas)    Write out iceshelf gammaS.
+! Hout(idItst)    Write out iceshelf Tstar.
+! Hout(idIust)    Write out iceshelf Ustar.
+! Hout(idItbo)    Write out iceshelf boundary layer temperature.
+! Hout(idIsbo)    Write out iceshelf boundary layer salinity.
+!
+! Hout(idIvol)    Write out iceshelf refreezed volume.
+! Hout(idItrc)    Write out iceshelf refreezed passive tracer.
+!
+!------------------------------------------------------------------------------
+! Logical switches (T/F) to activate writing of instantaneous ice fields into
+! QUICKSAVE file.
+!------------------------------------------------------------------------------
+!
+! Qout(idIhis)    Write out iceshelf thickness.
+! Qout(idIuis)    Write out iceshelf U-velocity.
+! Qout(idIvis)    Write out iceshelf V-velocity.
+! Qout(idIuer)    Write out iceshelf eastward velocity.
+! Qout(idIvnr)    Write out iceshelf northward velocity.
+! Qout(idItis)    Write out iceshelf temperature.
+! Qout(idIeis)    Write out iceshelf enthalpy.
+!
+! Qout(idImel)    Write out iceshelf basal melt rate.
+! Qout(idIgat)    Write out iceshelf gammaT.
+! Qout(idIgas)    Write out iceshelf gammaS.
+! Qout(idItst)    Write out iceshelf Tstar.
+! Qout(idIust)    Write out iceshelf Ustar.
+! Qout(idItbo)    Write out iceshelf boundary layer temperature.
+! Qout(idIsbo)    Write out iceshelf boundary layer salinity.
+!
+! Qout(idIvol)    Write out iceshelf refreezed volume.
+! Qout(idItrc)    Write out iceshelf refreezed passive tracer.
+!
+!------------------------------------------------------------------------------
+! Logical switches (T/F) to activate writing of time-averaged ice fields into
+! AVERAGE file.
+!------------------------------------------------------------------------------
+!
+! Aout(idIhis)    Write out iceshelf thickness.
+! Aout(idIuis)    Write out iceshelf U-velocity.
+! Aout(idIvis)    Write out iceshelf V-velocity.
+! Aout(idIuer)    Write out iceshelf eastward velocity.
+! Aout(idIvnr)    Write out iceshelf northward velocity.
+! Aout(idItis)    Write out iceshelf temperature.
+! Aout(idIeis)    Write out iceshelf enthalpy.
+!
+! Aout(idImel)    Write out iceshelf basal melt rate.
+! Aout(idIgat)    Write out iceshelf gammaT.
+! Aout(idIgas)    Write out iceshelf gammaS.
+! Aout(idItst)    Write out iceshelf Tstar.
+! Aout(idIust)    Write out iceshelf Ustar.
+! Aout(idItbo)    Write out iceshelf boundary layer temperature.
+! Aout(idIsbo)    Write out iceshelf boundary layer salinity.
+!
+! Aout(idIvol)    Write out iceshelf refreezed volume.
+! Aout(idItrc)    Write out iceshelf refreezed passive tracer.
+!
+!------------------------------------------------------------------------------
+! Logical switches (T/F) to activate writing of time-averaged ice fields into
+! STATION file.
+!------------------------------------------------------------------------------
+!
+! Sout(idIhis)    Write out iceshelf thickness.
+! Sout(idIuis)    Write out iceshelf U-velocity.
+! Sout(idIvis)    Write out iceshelf V-velocity.
+! Sout(idIuer)    Write out iceshelf eastward velocity.
+! Sout(idIvnr)    Write out iceshelf northward velocity.
+! Sout(idItis)    Write out iceshelf temperature.
+! Sout(idIeis)    Write out iceshelf enthalpy.
+!
+! Sout(idImel)    Write out iceshelf basal melt rate.
+! Sout(idIgat)    Write out iceshelf gammaT.
+! Sout(idIgas)    Write out iceshelf gammaS.
+! Sout(idItst)    Write out iceshelf Tstar.
+! Sout(idIust)    Write out iceshelf Ustar.
+! Sout(idItbo)    Write out iceshelf boundary layer temperature.
+! Sout(idIsbo)    Write out iceshelf boundary layer salinity.
+!
+! Sout(idIvol)    Write out iceshelf refreezed volume.
+! Sout(idItrc)    Write out iceshelf refreezed passive tracer.
 !

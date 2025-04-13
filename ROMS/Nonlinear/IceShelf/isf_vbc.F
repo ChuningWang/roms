@@ -92,8 +92,8 @@
      &                   FORCES(ng) % svstr,                            &
 # endif
 # ifdef ICESHELF_TRACER
-     &                   ISF(ng) % vol,                                 &
-     &                   ISF(ng) % trc,                                 &
+     &                   ISF(ng) % Vi,                                  &
+     &                   ISF(ng) % Ti,                                  &
 # endif
      &                   ISF(ng) % Fi,                                  &
      &                   FORCES(ng) % stflx)
@@ -120,7 +120,7 @@
      &                         sustr, svstr,                            &
 # endif
 # ifdef ICESHELF_TRACER
-     &                         vol, trc,                                &
+     &                         Vi, Ti,                                  &
 # endif
      &                         Fi,                                      &
      &                         stflx)
@@ -157,8 +157,8 @@
       real(r8), intent(in) :: svstr(LBi:,LBj:)
 #  endif
 #  ifdef ICESHELF_TRACER
-      real(r8), intent(inout) :: vol(LBi:,LBj:)
-      real(r8), intent(inout) :: trc(LBi:,LBj:,:)
+      real(r8), intent(inout) :: Vi(LBi:,LBj:,:)
+      real(r8), intent(inout) :: Ti(LBi:,LBj:,:,:)
 #  endif
       real(r8), intent(out) :: Fi(LBi:,LBj:,:)
       real(r8), intent(out) :: stflx(LBi:,LBj:,:)
@@ -178,8 +178,8 @@
       real(r8), intent(in) :: svstr(LBi:UBi,LBj:UBj)
 #  endif
 #  ifdef ICESHELF_TRACER
-      real(r8), intent(inout) :: vol(LBi:UBi,LBj:UBj)
-      real(r8), intent(inout) :: trc(LBi:UBi,LBj:UBj,1:NTISF(ng))
+      real(r8), intent(inout) :: Vi(LBi:UBi,LBj:UBj,2)
+      real(r8), intent(inout) :: Ti(LBi:UBi,LBj:UBj,2,NTISF(ng))
 #  endif
       real(r8), intent(out) :: Fi(LBi:UBi,LBj:UBj,nIsfF)
       real(r8), intent(out) :: stflx(LBi:UBi,LBj:UBj,NT(ng))
@@ -328,49 +328,53 @@
 !  Calculate melting/freezing passive tracer fluxes.
 !
       IF (Lisftrc(ng)) THEN
-        ic=0
-        DO k=1,NPT
-          itrc=inert(k)
-          IF (LtracerIsf(itrc,ng)) THEN
-            ic=ic+1
-            DO j=Jstr,Jend
-              DO i=Istr,Iend
-                IF ((Fi(i,j,icImel)*dt(ng)).gt.vol(i,j)) THEN
-!
-!  Melt, use refreezed ice as well as iceshelf ice.
-!
-                  stflx(i,j,itrc) = trc(i,j,ic) +                       &
-     &              (Fi(i,j,icImel)-vol(i,j)/dt(ng))*trcIsf
-                  trc(i,j,ic) = 0.0_r8
-                ELSE
-!
-!  Melt or refreeze of refreezed ice only.
-!
-                  stflx(i,j,itrc) =                                     &
-     &              MIN(Fi(i,j,icImel),0.0_r8)*t(i,j,N(ng),nrhs,itrc)
-                  IF (vol(i,j).gt.0.0_r8) THEN
-                    stflx(i,j,itrc) = stflx(i,j,itrc) +                 &
-     &                MAX(Fi(i,j,icImel),0.0_r8)*trc(i,j,ic)/vol(i,j)
-                  END IF
-                  trc(i,j,ic) = trc(i,j,ic) - stflx(i,j,itrc)*dt(ng)
-                END IF
-              END DO
-            END DO
-          END IF
-        END DO
-!
-!  Update refreezed water total volume.
-!
         DO j=Jstr,Jend
           DO i=Istr,Iend
-            IF ((Fi(i,j,icImel)*dt(ng)).gt.vol(i,j)) THEN
-              vol(i,j) = 0.0_r8
-            ELSE
-              vol(i,j) = vol(i,j)-Fi(i,j,icImel)*dt(ng)
+# ifdef WET_DRY
+            IF (zice(i,j).ne.0.0_r8.and.rmask_wet(i,j).gt.0.0_r8) THEN
+# elif defined MASKING
+            IF (zice(i,j).ne.0.0_r8.and.rmask(i,j).gt.0.0_r8) THEN
+# else
+            IF (zice(i,j).ne.0.0_r8) THEN
+# endif
+              IF (Fi(i,j,icImel).gt.0.0_r8 .and.                        &
+     &            Vi(i,j,lsnew(ng)).gt.0.0_r8) THEN
+                cff=MIN(Fi(i,j,icImel)*dt(ng), Vi(i,j,lsnew(ng)))
+              ELSE IF (Fi(i,j,icImel).gt.0.0_r8 .and.                   &
+     &                 Vi(i,j,lsnew(ng)).eq.0.0_r8) THEN
+                cff=0.0_r8
+              ELSE
+                cff=Fi(i,j,icImel)*dt(ng)
+              END IF
+              ic=0
+              DO itrc=NAT+1,NT(ng)
+                IF (LtracerIsf(itrc,ng)) THEN
+                  ic=ic+1
+                  IF (Fi(i,j,icImel).gt.0.0_r8 .and.                    &
+     &                Vi(i,j,lsnew(ng)).gt.0.0_r8) THEN
+                    cff1=Ti(i,j,lsnew(ng),ic)/Vi(i,j,lsnew(ng))
+                    cff2=MIN(Ti(i,j,lsnew(ng),ic) /                     &
+     &                      (Fi(i,j,icImel)*dt(ng)), cff1)
+                  ELSE IF (Fi(i,j,icImel).gt.0.0_r8 .and.               &
+     &                     Vi(i,j,lsnew(ng)).eq.0.0_r8) THEN
+                    cff1=0.0_r8
+                    cff2=0.0_r8
+                  ELSE
+                    cff1=t(i,j,N(ng),nrhs,itrc)
+                    cff2=cff1
+                  END IF
+                  stflx(i,j,itrc)=stflx(i,j,itrc)+                      &
+     &                            Fi(i,j,icImel)*                       &
+     &                            (cff2-t(i,j,N(ng),nrhs,itrc))
+                  Ti(i,j,lsnew(ng),ic)=Ti(i,j,lsnew(ng),ic)-cff1*cff
+                  Ti(i,j,lsnew(ng),ic)=MAX(Ti(i,j,lsnew(ng),ic), 0.0_r8)
+                END IF
+              END DO
+              Vi(i,j,lsnew(ng))=MAX(Vi(i,j,lsnew(ng))-cff, 0.0_r8)
             END IF
           END DO
-        END IF
-      END DO
+        END DO
+      END IF
 # endif
 !
       RETURN

@@ -90,12 +90,12 @@
 !    icIOmt    Ice-Ocean momentum transfer coefficient (m/s)           !
 !                                                                      !
 #if defined ICE_TRACER
-!  The ice model internal 'tracer' arrays are declares in compact form !
-!  in the derived-type structure as:                                   !
 !                                                                      !
-!    ICE(ng) % tracer(:,:,TimeLevel,NAT+1,NT(ng)) (TracerUnits m)      !
+!  The ice model internal 'tracer' arrays:                             !
 !                                                                      !
+!    Ti        tracer concentration in sea ice (m TU)                  !
 #endif
+!                                                                      !
 !=======================================================================
 !
       USE mod_kinds
@@ -250,6 +250,9 @@
 !
       logical, allocatable :: LiceFavg(:,:)     ! internal variables
       logical, allocatable :: LiceSavg(:,:)     ! state variables
+# ifdef ICE_TRACER
+      logical, allocatable :: LiceTavg(:,:)     ! tracer
+# endif
 #endif
 !
 !  Counter and number of Elastic-Viscous-Plastic (EVP) rheology
@@ -318,7 +321,9 @@
 !
 !  Logical switches
 !
-      logical, allocatable :: LtracerIce(:,:)   ! tracer source switch
+      integer, allocatable :: NTICE(:)
+      logical, allocatable :: Licetrc(:)
+      logical, allocatable :: LtracerIce(:,:)   ! tracer switch
 #endif
 !
 !-----------------------------------------------------------------------
@@ -330,7 +335,7 @@
         real(r8), pointer :: Si(:,:,:,:)             ! [i,j,1:2,1:nIceS]
         real(r8), pointer :: Fi(:,:,:)               ! [i,j,1:nIceF]
 #ifdef ICE_TRACER
-        real(r8), pointer :: Ti(:,:,:,:)             ! [i,j,2,NAT+1:NT]
+        real(r8), pointer :: Ti(:,:,:,:)             ! [i,j,1:2,1:NTICE]
 #endif
 
       END TYPE T_ICE
@@ -373,6 +378,9 @@
 !
       TYPE (T_ICE_AVG), allocatable :: ICE_FAVG(:,:) ! [nIceF,Ngrids]
       TYPE (T_ICE_AVG), allocatable :: ICE_SAVG(:,:) ! [nIceS,Ngrids]
+# ifdef ICE_TRACER
+      TYPE (T_ICE_AVG), allocatable :: ICE_TAVG(:,:) ! [MT,Ngrids]
+# endif
 #endif
 !
       CONTAINS
@@ -386,7 +394,7 @@
 !                                                                      !
 !=======================================================================
 !
-      USE mod_param,   ONLY : Dmem, LBC, Ngrids
+      USE mod_param,   ONLY : Dmem, LBC, Ngrids, NT, MT
       USE mod_scalars, ONLY : iwest, ieast, isouth, inorth
 !
 !  Imported variable declarations.
@@ -397,7 +405,9 @@
 !
 !  Local variable declarations.
 !
-      integer :: i
+      integer :: i, ic, itrc
+!
+      real(r8), parameter :: IniVal = 0.0_r8
 !
       real(r8) :: size2d, Xsize, Ysize
 !
@@ -416,88 +426,151 @@
         IF (.not.allocated(idStrc))                                     &
      &    allocate ( idStrc(MT) )
         Dmem(1)=Dmem(1)+REAL(MT,r8)
-        idStrc(1:MT)=-1
+        idStrc(1:MT)=0
 #endif
 
 #ifdef AVERAGES
+
         IF (.not.allocated(LiceFavg))                                   &
           allocate ( LiceFavg(nIceF,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(nIceF*Ngrids,r8)
+        LiceFavg(1:nIceF,1:Ngrids)=.FALSE.
 
         IF (.not.allocated(LiceSavg))                                   &
           allocate ( LiceSavg(nIceS,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(nIceS*Ngrids,r8)
+        LiceSavg(1:nIceS,1:Ngrids)=.FALSE.
+# ifdef ICE_TRACER
+
+        IF (.not.allocated(LiceTavg))                                   &
+          allocate ( LiceTavg(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        LiceTavg(1:Ngrids)=.FALSE.
+# endif
 #endif
         IF (.not.allocated(iEVP))                                       &
      &    allocate ( iEVP(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        iEVP(1:Ngrids)=0
 
         IF (.not.allocated(nEVP))                                       &
      &    allocate ( nEVP(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        nEVP(1:Ngrids)=0
 
         IF (.not.allocated(dtice))                                      &
      &    allocate ( dtice(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        dtice(1:Ngrids)=IniVal
 
         IF (.not.allocated(dtevp))                                      &
      &    allocate ( dtevp(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        dtevp(1:Ngrids)=IniVal
 
         IF (.not.allocated(AirRho))                                     &
      &    allocate ( AirRho(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        AirRho(1:Ngrids)=IniVal
 
         IF (.not.allocated(IceRho))                                     &
      &    allocate ( IceRho(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        IceRho(1:Ngrids)=IniVal
 
         IF (.not.allocated(SnowDryRho))                                &
      &    allocate ( SnowDryRho(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        SnowDryRho(1:Ngrids)=IniVal
 
         IF (.not.allocated(SnowWetRho))                                &
      &    allocate ( SnowWetRho(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        SnowWetRho(1:Ngrids)=IniVal
 
         IF (.not.allocated(Cd_ai))                                      &
      &    allocate ( Cd_ai(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        Cd_ai(1:Ngrids)=IniVal
 
         IF (.not.allocated(Cd_io))                                      &
      &    allocate ( Cd_io(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        Cd_io(1:Ngrids)=IniVal
 
         IF (.not.allocated(Astrength))                                  &
      &    allocate ( Astrength(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        Astrength(1:Ngrids)=IniVal
 
         IF (.not.allocated(Pstar))                                      &
      &    allocate ( Pstar(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        Pstar(1:Ngrids)=IniVal
 
         IF (.not.allocated(min_ai))                                     &
      &    allocate ( min_ai(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        min_ai(1:Ngrids)=IniVal
 
         IF (.not.allocated(max_ai))                                     &
      &    allocate ( max_ai(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        max_ai(1:Ngrids)=IniVal
 
         IF (.not.allocated(min_hi))                                     &
      &    allocate ( min_hi(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        min_hi(1:Ngrids)=IniVal
 
         IF (.not.allocated(max_hmelt))                                  &
      &    allocate ( max_hmelt(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        max_hmelt(1:Ngrids)=IniVal
 
         IF (.not.allocated(zetaMin))                                    &
      &    allocate ( zetaMin(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        zetaMin(1:Ngrids)=IniVal
 
         IF (.not.allocated(zetaMax))                                    &
      &    allocate ( zetaMax(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        zetaMax(1:Ngrids)=IniVal
 
         IF (.not.allocated(stressAng))                                  &
      &    allocate ( stressAng(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        stressAng(1:Ngrids)=IniVal
 
         IF (.not.allocated(ellip_sq))                                   &
      &    allocate ( ellip_sq(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        ellip_sq(1:Ngrids)=IniVal
 #ifdef ICE_TRACER
 
+        IF (.not.allocated(NTICE))                                      &
+     &    allocate ( NTICE(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        NTICE(1:Ngrids)=0
+
+        IF (.not.allocated(Licetrc))                                    &
+     &    allocate ( Licetrc(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        Licetrc(1:Ngrids)=.FALSE.
+
         IF (.not.allocated(LtracerIce))                                 &
-     &    allocate ( LtracerIce(3:MT,Ngrids) )
+     &    allocate ( LtracerIce(MT,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
+        LtracerIce(1:MT,1:Ngrids)=.FALSE.
 #endif
 
-      END IF
+      ELSE
 !
 !-----------------------------------------------------------------------
 !  Allocate derived-type structure ice model kernel variables.
 !-----------------------------------------------------------------------
 !
-      IF (ice_kernel) THEN
         IF (ng.eq.1) allocate ( ICE(Ngrids) )
 !
 !  Nonlinear ice model state variables (Si) and internal kernel field
@@ -510,16 +583,16 @@
         Dmem(ng)=Dmem(ng)+REAL(nIceF,r8)*size2d
 #ifdef ICE_TRACER
 !
-        allocate ( ICE(ng) % Ti(LBi:UBi,LBj:UBj,2,NAT+1:NT(ng)) )
-        Dmem(ng)=Dmem(ng)+REAL(NT(ng)-NAT,r8)*size2d
+        IF (Licetrc(ng)) THEN
+          allocate ( ICE(ng) % Ti(LBi:UBi,LBj:UBj,2,NTICE(ng)) )
+          Dmem(ng)=Dmem(ng)+2.0_r8*REAL(NTICE(ng),r8)*size2d
+        END IF
 #endif
-      END IF
 !
 !-----------------------------------------------------------------------
 !  Allocate derived-type structure ice model lateral boundary variables.
 !-----------------------------------------------------------------------
 !
-      IF (ice_kernel) THEN
         IF (ng.eq.1) allocate ( ICE_LOBC(nIceS,Ngrids) )
 !
 !  Nonlinear ice model 'state' lateral boundary arrays.
@@ -557,8 +630,6 @@
             Dmem(ng)=Dmem(ng)+2.0_r8*Xsize
           END IF
         END DO
-      END IF
-
 #ifdef AVERAGES
 !
 !-----------------------------------------------------------------------
@@ -566,7 +637,6 @@
 !  time-averaged variables.
 !-----------------------------------------------------------------------
 !
-      IF (ice_kernel) THEN
         IF (ng.eq.1) THEN
           allocate ( ICE_FAVG(nIceF,Ngrids) )
           allocate ( ICE_SAVG(nIceS,Ngrids) )
@@ -595,6 +665,21 @@
             END IF
           END IF
         END DO
+# ifdef ICE_TRACER
+!
+!  Time-averaged tracer fields.
+!
+        IF (ng.eq.1) THEN
+          allocate ( ICE_TAVG(MT,Ngrids) )
+        END IF
+!
+        DO itrc=1,NT(ng)
+          IF (LiceTavg(itrc,ng)) THEN
+            allocate ( ICE_TAVG(itrc,ng) % var(LBi:UBi,LBj:UBj) )
+            Dmem(ng)=Dmem(ng)+size2d
+          END IF
+        END DO
+# endif
       END IF
 #endif
 !
@@ -703,9 +788,18 @@
      &                     __LINE__, 'ICE_SAVG(i,ng)%var')) RETURN
         END IF
       END DO
+#  ifdef ICE_TRACER
+!
+      DO itrc=1,NT(ng)
+        IF (LiceTavg(itrc,ng)) THEN
+          IF (.not.destroy(ng, ICE_TAVG(itrc,ng)%var, MyFile,           &
+     &                     __LINE__,'ICE_TAVG(itrc,ng)%var')) RETURN
+        END IF
+      END DO
+#  endif
 # endif
 #endif
-# ifdef ICESHELF_TRACER
+# ifdef ICE_TRACER
       IF (allocated(idStrc))   deallocate ( idStrc )
 # endif
 !
@@ -718,6 +812,9 @@
 #ifdef AVERAGES
       IF (allocated(ICE_FAVG)) deallocate ( ICE_FAVG )
       IF (allocated(ICE_SAVG)) deallocate ( ICE_SAVG )
+# ifdef ICE_TRACER
+      IF (allocated(LiceTavg)) deallocate ( LiceTavg )
+# endif
 #endif
 !
       RETURN
@@ -735,7 +832,7 @@
 !                                                                      !
 !=======================================================================
 !
-      USE mod_param,   ONLY : BOUNDS, DOMAIN, LBC, iNLM
+      USE mod_param,   ONLY : BOUNDS, DOMAIN, LBC, iNLM, NT, MT
       USE mod_scalars, ONLY : iwest, ieast, isouth, inorth
 !
 !  Imported variable declarations.
@@ -744,7 +841,7 @@
 !
 !  Local variable declarations.
 !
-      integer :: i, j, nf, ns, itrc
+      integer :: i, j, nf, ns, ic, itrc
       integer :: Imin, Imax, Jmin, Jmax
 
       real(r8), parameter :: IniVal = 0.0_r8
@@ -795,15 +892,25 @@
           DO nf=1,nIceF
             ICE(ng) % Fi(i,j,nf) = IniVal
           END DO
-#ifdef ICE_TRACER
-!
-          DO itrc=NAT+1,NT(ng)
-            ICE(ng) % Ti(i,j,1,itrc) = IniVal
-            ICE(ng) % Ti(i,j,2,itrc) = IniVal
-          END DO
-#endif
         END DO
       END DO
+#ifdef ICE_TRACER
+!
+      IF (Licetrc(ng)) THEN
+        ic=0
+        DO itrc=1,NT(ng)
+          IF (LtracerIce(itrc,ng)) THEN
+            ic=ic+1
+            DO j=Jmin,Jmax
+              DO i=Imin,Imax
+                ICE(ng) % Ti(i,j,1,ic) = IniVal
+                ICE(ng) % Ti(i,j,2,ic) = IniVal
+              END DO
+            END DO
+          END IF
+        END DO
+      END IF
+#endif
 !
 !-----------------------------------------------------------------------
 !  Initialize ice model lateral boundary arrays.
@@ -876,6 +983,20 @@
           END IF
         END IF
       END DO
+# ifdef ICE_TRACER
+!
+!  Time-averaged tracer fields.
+!
+      DO itrc=1,NT(ng)
+        IF (LiceTavg(itrc,ng)) THEN
+          DO j=Jmin,Jmax
+            DO i=Imin,Imax
+              ICE_TAVG(itrc,ng) % var(i,j) = IniVal
+            END DO
+          END DO
+        END IF
+      END DO
+# endif
 #endif
 !
       RETURN

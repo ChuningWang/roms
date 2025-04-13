@@ -1746,10 +1746,6 @@
             idShea=varid
           CASE ('idrain')
             idrain=varid
-#if defined ICE_MODEL && defined ICE_SNOWFALL
-          CASE ('idsnow')
-            idsnow=varid
-#endif
           CASE ('idEmPf')
             idEmPf=varid
           CASE ('idevap')
@@ -2486,6 +2482,9 @@
 # endif
               END IF
 
+#ifdef SEAICE
+# include <ice_var_trc.h>
+#endif
 #ifdef ICESHELF_DYNAM
 # include <isf_var_trc.h>
 #endif

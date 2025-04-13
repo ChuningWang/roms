@@ -6214,6 +6214,17 @@ metadata:
     add_offset:     0.0d0
     scale:          1.0d0
 
+  - variable:       ice_dye_
+    standard_name:  mass_concentration_of_dye_in_sea_ice
+    long_name:      ice dye concentration
+    units:          kilogram meter-2
+    field:          ice dye_
+    time:           ocean_time
+    index_code:     idStrc(inert(i))
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
   ##################################
   ###  Iceshelf State Variables  ###
   ##################################
@@ -6386,7 +6397,7 @@ metadata:
   - variable:       is_dye_
     standard_name:  mass_concentration_of_dye_in_refreezed_draft
     long_name:      icesehlf runoff dye concentration
-    units:          kilogram meter-3
+    units:          kilogram meter-2
     field:          iceshelf dye_
     time:           ocean_time
     index_code:     idItrc(inert(i))

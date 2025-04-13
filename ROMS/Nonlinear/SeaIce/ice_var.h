@@ -21,6 +21,8 @@
 **  Ice state variables.
 */
 
+          CASE ('idsnow')
+            idsnow=varid
           CASE ('idAice')
             idAice=varid
             iSice(isAice)=idAice
@@ -144,6 +146,10 @@
           CASE ('idSnof')
             idSnof=varid
             iFice(icSnof)=idSnof
+#endif
+#ifdef ICE_TRACER
+          CASE ('idStrc(inert(i))')
+            load=.TRUE.
 #endif
 /*
 **  Ice model open boundary conditions.

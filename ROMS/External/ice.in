@@ -275,10 +275,88 @@ Aout(idSocn) == T     ! Fi_avg(...,icSocn) net short-wave radiation at sea surfa
 Aout(idRfac) == F     ! Fi_avg(...,icRfac) lmd_r1 scaling factor
 Aout(idSnof) == F     ! Fi_avg(...,icSnof) snowfall rate
 
+! Logical switches (TRUE/FALSE) to activate writing of ice prognostic
+! variables into STATION output file.
+
+Sout(idUice) == T     ! Si_avg(...,isUice) ice U-velocity
+Sout(idVice) == T     ! Si_avg(...,isVice) ice V-velocity
+Sout(idUiER) == F     !                    ice U-eastward  at RHO-points
+Sout(idViNR) == F     !                    ice V-northward at RHO-points
+Sout(idAice) == T     ! Si_avg(...,isAice) ice concentration
+Sout(idIage) == T     ! Si_avg(...,isIage) age of ice
+Sout(idHice) == T     ! Si_avg(...,isHice) ice thickness
+Sout(idHmel) == T     ! Si_avg(...,isHmel) melt pond water thickness
+Sout(idHsno) == T     ! Si_avg(...,isHsno) snow cover thickness
+Sout(idTice) == T     ! Si_avg(...,isTice) ice interior temperature
+Sout(idISxx) == T     ! Si_avg(...,isISxx) internal ice stress xx-component
+Sout(idISxy) == T     ! Si_avg(...,isISxy) internal ice stress xy-component
+Sout(idISyy) == T     ! Si_avg(...,isISyy) internal ice stress yy-component
+Sout(idIphy) == T     ! Si_avg(...,isIphy) ice biology, algae
+Sout(idINO3) == T     ! Si_avg(...,isINO3) ice biology, nitrate
+Sout(idINH4) == T     ! Si_avg(...,isINH4) ice biology, ammonia
+Sout(idIlog) == T     ! Si_avg(...,isIlog) ice biology log
+
+Sout(idIsst) == T     ! Fi_avg(...,icIsst) ice surface temperature
+Sout(idIOmf) == T     ! Fi_avg(...,icIOmf) ice-ocean mass flux
+Sout(idIOfv) == T     ! Fi_avg(...,icIOfv) ice-ocean friction velocity
+Sout(idIOmt) == T     ! Fi_avg(...,icIOmt) ice-ocean momentum transfer coefficient
+Sout(idS0mk) == T     ! Fi_avg(...,icS0mk) under ice molecular sublayer salinity
+Sout(idT0mk) == T     ! Fi_avg(...,icT0mk) under ice molecular sublayer temperature
+Sout(idWdiv) == T     ! Fi_avg(...,icWdiv) ice divergence rate
+Sout(idW_fr) == T     ! Fi_avg(...,icW_fr) ice accretion rate by frazil ice growth
+Sout(idW_ai) == T     ! Fi_avg(...,icW_ai) melt/freeze rate at Air/Ice
+Sout(idW_ao) == T     ! Fi_avg(...,icW_ao) melt/freeze rate at Air/Ocean
+Sout(idW_io) == T     ! Fi_avg(...,icW_io) melt/freeze rate at Ice/Ocean
+Sout(idW_ro) == T     ! Fi_avg(...,icW_ro) melt/freeze rate runoff into ocean
+Sout(idAlbi) == T     ! Fi_avg(...,icAlbi) sea ice albedo
+Sout(idAlbo) == T     ! Fi_avg(...,icAlbo) sea surface albedo
+Sout(idFrsw) == F     ! Fi_avg(...,icFrsw) short-wave penetration fraction in sea ice
+Sout(idSics) == T     ! Fi_avg(...,icSics) net short-wave radiation at ice surface
+Sout(idSicb) == T     ! Fi_avg(...,icSicb) net short-wave radiation at ice base
+Sout(idSocn) == T     ! Fi_avg(...,icSocn) net short-wave radiation at sea surface
+Sout(idRfac) == F     ! Fi_avg(...,icRfac) lmd_r1 scaling factor
+Sout(idSnof) == F     ! Fi_avg(...,icSnof) snowfall rate
+
 
 !
 !  GLOSSARY:
 !  =========
+!
+!------------------------------------------------------------------------------
+! Lateral boundary conditions parameters.
+!------------------------------------------------------------------------------
+!
+! The lateral boundary conditions are now specified with logical switches
+! instead of CPP flags to allow nested grid configurations. Their values are
+! loaded into structured array:
+!
+!    LBC(1:4, nLBCvar, Ngrids)
+!
+! where 1:4 are the number of boundary edges, nLBCvar are the number of LBC
+! state variables, and Ngrids is the number of nested grids. For Example, to
+! apply gradient boundary conditions we use:
+!
+!    LBC(iwest,  isAice, ng) % gradient
+!    LBC(ieast,  ...   , ng) % gradient
+!    LBC(isouth, ...   , ng) % gradient
+!    LBC(inorth, ...   , ng) % gradient
+!
+! The lateral boundary conditions are entered with a keyword. This keyword
+! is case insensitive and usually has three characters. However, it is
+! possible to have compound keywords, if applicable. For example, the
+! keyword "RadNud" implies radiation boundary condition with nudging. This
+! combination is usually used in active/passive radiation conditions.
+!
+!   Keyword    Lateral Boundary Condition Type
+!
+!   Clo        Closed                                 _____N_____     j=Mm
+!   Clo        Clamped                               |     4     |
+!   Gra        Gradient                              |           |
+!   Rad        Radiation                           1 W           E 3
+!   RadNud     Radiation Nudging                     |           |
+!   Mix        Mixed (clamped/gradient)              |_____S_____|
+!   Per        Periodic                                    2          j=1
+!   Nes        Nested (refinement, not avail yet)   i=1         i=Lm
 !
 !------------------------------------------------------------------------------
 !  Sea ice model parameters.
@@ -330,6 +408,8 @@ Aout(idSnof) == F     ! Fi_avg(...,icSnof) snowfall rate
 !  trans_coeff    Heat transfer coefficient (nondimensional).
 !
 !  sublimation    Latent heat of sublimation (J/kg).
+!
+!  LtracerIce     Logical switches for ice-ocean tracer exchange.
 !
 !------------------------------------------------------------------------------
 ! Logical switches (T/F) to activate writing of instantaneous ice fields into
@@ -462,4 +542,48 @@ Aout(idSnof) == F     ! Fi_avg(...,icSnof) snowfall rate
 ! Aout(idSocn)    Write out net short-wave radiation at sea surface
 ! Aout(idRfac)    Write out lmd_r1 scaling factor
 ! Aout(idSnof)    Write out snowfall rate
+!
+!------------------------------------------------------------------------------
+! Logical switches (T/F) to activate writing of time-averaged ice fields into
+! STATION file.
+!------------------------------------------------------------------------------
+!
+! Sout(idUice)    Write out ice U-velocity component.
+! Sout(idVice)    Write out ice V-velocity component.
+! Sout(idUiER)    Write out ice Eastward  velocity component at RHO-points.
+! Sout(idViNR)    Write out ice Northward velocity component at RHO-points.
+! Sout(idAice)    Write out ice concentration (fractional area coverage).
+! Sout(idIage)    Write out age of ice.
+! Sout(idHice)    Write out average ice thickness (ice mass per area).
+! Sout(idHmel)    Write out surface melt water thickness on ice.
+! Sout(idHsno)    Write out average snow coverage thickness.
+! Sout(idTice)    Write out surface temperature at snow/atmosphere interface.
+! Sout(idISxx)    Write out internal ice stress tensor, xx-component.
+! Sout(idISxy)    Write out internal ice stress tensor, xy-component.
+! Sout(idISyy)    Write out internal ice stress tensor, yy-component.
+! Sout(idIphy)    Write out ice biology, algae
+! Sout(idINO3)    Write out ice biology, nitrate
+! Sout(idINH4)    Write out ice biology, ammonia
+! Sout(idIlog)    Write out ice biology log
+!
+! Sout(idIsst)    Write out ice interior temperature (at ice mid-layer).
+! Sout(idIOmf)    Write out ice-ocean mass flux.
+! Sout(idIOfv)    Write out ice-ocean friction velocity.
+! Sout(idIOmt)    Write out ice-ocean momentum transfer coefficient.
+! Sout(idS0mk)    Write out salinity of molecular sublayer under ice.
+! Sout(idT0mk)    Write out temperature of molecular sublayer under ice.
+! Sout(idW_fr)    Write out rate of ice accretion by frazil ice growth.
+! Sout(idW_ai)    Write out rate of melt/freeze at air/ice interface.
+! Sout(idW_ao)    Write out rate of melt/freeze at air/ocean interface.
+! Sout(idW_io)    Write out rate of melt/freeze at ice/ocean interface.
+! Sout(idW_ro)    Write out rate of melt/freeze runoff into ocean.
+! Sout(idWdiv)    Write out rate of ice divergence.
+! Sout(idAlbi)    Write out sea ice albedo.
+! Sout(idAlbo)    Write out sea surface albedo.
+! Sout(idFrsw)    Write out short-wave penetration fraction in sea ice.
+! Sout(idSics)    Write out net short-wave radiation at ice surface
+! Sout(idSicb)    Write out net short-wave radiation at ice base
+! Sout(idSocn)    Write out net short-wave radiation at sea surface
+! Sout(idRfac)    Write out lmd_r1 scaling factor
+! Sout(idSnof)    Write out snowfall rate
 !
