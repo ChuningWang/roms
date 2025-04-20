@@ -27,6 +27,7 @@
       USE ice_spdiw_mod,    ONLY : ice_spdiw
       USE ice_vbc_mod,      ONLY : ice_vbc
 # ifdef ICE_THERMO
+      USE ice_frazil_mod,   ONLY : ice_frazil
       USE ice_thermo_mod,   ONLY : ice_thermo
 # endif
 # if defined ICE_MOMENTUM && defined ICE_EVP
@@ -213,6 +214,7 @@
         DO ig=1,GridsInLayer(nl)
           ng=GridNumber(ig,nl)
           DO tile=first_tile(ng),last_tile(ng),+1
+            CALL ice_frazil (ng, tile, model)
             CALL ice_thermo (ng, tile, model)
             CALL ice_limit (ng, tile, model)
           END DO

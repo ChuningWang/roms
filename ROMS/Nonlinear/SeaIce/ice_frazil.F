@@ -29,9 +29,10 @@
       USE mod_scalars
 !
       USE bc_2d_mod,       ONLY : bc_r2d_tile
+      USE bc_3d_mod,       ONLY : bc_r3d_tile
 # ifdef DISTRIBUTE
       USE distribute_mod,  ONLY : mp_reduce
-      USE mp_exchange_mod, ONLY : mp_exchange2d
+      USE mp_exchange_mod, ONLY : mp_exchange2d, mp_exchange3d
 # endif
 !
       implicit none
@@ -64,7 +65,7 @@
       CALL ice_frazil_tile (ng, tile, model,                            &
      &                      LBi, UBi, LBj, UBj,                         &
      &                      IminS, ImaxS, JminS, JmaxS,                 &
-     &                      nnew(ng),                                   &
+     &                      nrhs(ng), liold(ng), linew(ng),             &
 # ifdef MASKING
      &                      GRID(ng) % rmask,                           &
 # endif
@@ -75,7 +76,7 @@
      &                      GRID(ng) % z_r,                             &
      &                      OCEAN(ng) % rho,                            &
      &                      OCEAN(ng) % t,                              &
-     &                      ICE(ng) % Fi)
+     &                      ICE(ng) % Fi, ICE(ng) % Ti)
 # ifdef PROFILE
       CALL wclock_off (ng, model, 42, __LINE__, MyFile)
 # endif
@@ -87,7 +88,7 @@
       SUBROUTINE ice_frazil_tile (ng, tile, model,                      &
      &                            LBi, UBi, LBj, UBj,                   &
      &                            IminS, ImaxS, JminS, JmaxS,           &
-     &                            nnew,                                 &
+     &                            nrhs, liold, linew,                   &
 # ifdef MASKING
      &                            rmask,                                &
 # endif
@@ -95,7 +96,7 @@
      &                            rmask_wet,                            &
 # endif
      &                            Hz, z_r, rho, t,                      &
-     &                            Fi)
+     &                            Fi, Ti)
 !***********************************************************************
 !
 !  Imported variable declarations.
@@ -103,7 +104,7 @@
       integer, intent(in) :: ng, tile, model
       integer, intent(in) :: LBi, UBi, LBj, UBj
       integer, intent(in) :: IminS, ImaxS, JminS, JmaxS
-      integer, intent(in) :: nnew
+      integer, intent(in) :: nrhs, liold, linew
 
 # ifdef ASSUMED_SHAPE
 #  ifdef MASKING
@@ -117,6 +118,7 @@
       real(r8), intent(in) :: rho(LBi:,LBj:,:)
       real(r8), intent(inout) :: t(LBi:,LBj:,:,:,:)
       real(r8), intent(inout) :: Fi(LBi:,LBj:,:)
+      real(r8), intent(inout) :: Ti(LBi:,LBj:,:,:)
 # else
 #  ifdef MASKING
       real(r8), intent(in) :: rmask(LBi:UBi,LBj:UBj)
@@ -129,21 +131,25 @@
       real(r8), intent(in) :: rho(LBi:UBi,LBj:UBj,N(ng))
       real(r8), intent(inout) :: t(LBi:UBi,LBj:UBj,N(ng),3,NT(ng))
       real(r8), intent(inout) :: Fi(LBi:UBi,LBj:UBj,nIceF)
+      real(r8), intent(inout) :: Ti(LBi:UBi,LBj:UBj,2,NTICE(ng))
 # endif
 !
 ! Local variable definitions
 !
       logical :: overLand
 !
-      integer :: i, j, k, itrc
+      integer :: i, j, k, ic, itrc
 !
-      real(r8), parameter :: Lhat = 79.2_r8
-      real(r8), parameter :: r = 0.5_r8
-      real(r8), parameter :: frln = -0.0543_r8          ! [psu C-1]
-      real(r8), parameter :: sice_ref = 7.0_r8          ! [psu]
-
+      real(r8), parameter :: eps      = 1.0E-4_r8       ! zero division
+      real(r8), parameter :: r        = 0.52_r8         ! Cp_i/Cp_w
+      real(r8), parameter :: Lhat     = 83.88_r8        ! hfus/Cp_w [K]
+      real(r8), parameter :: frln     = -0.0543_r8      ! [psu C-1]
+      real(r8), parameter :: sice_ref = 3.2_r8          ! [psu]
+!
+      real(r8), dimension(NAT+1:NT(ng)) :: trc
+!
       real(r8) :: delta_wfr, gamma_k, orhoi, t_fr, sice
-      real(r8) :: cff
+      real(r8) :: cff, cff1, cff2
 
 # ifdef DISTRIBUTE
       real(r8), allocatable           :: buffer(:)
@@ -168,43 +174,40 @@
 !
       DO j=Jstr,Jend
         DO i=Istr,Iend
-          DO k=1,N(ng)
 # ifdef MASKING
-            overLand=rmask(i,j).lt.1.0_r8
+          overLand=rmask(i,j).lt.1.0_r8
 #  ifdef WET_DRY
-            overLand=overland.or.(rmask_wet(i,j).lt.1.0_r8)
+          overLand=overland.or.(rmask_wet(i,j).lt.1.0_r8)
 #  endif
 # else
-            overLand=.FALSE.
+          overLand=.FALSE.
 # endif
-            IF (.not.overLand) THEN
-              orhoi = 1.0_r8/IceRho(ng)
-              t_fr = frln*t(i,j,k,nnew,isalt) + 0.000759_r8*z_r(i,j,k)
-              delta_wfr = 0._r8
-              IF (t(i,j,k,nnew,itemp).lt.t_fr) THEN
-                gamma_k = (t_fr - t(i,j,k,nnew,itemp)) /                &
-     &                    (Lhat + t(i,j,k,nnew,itemp)*(1.0_r8-r) - t_fr)
-                delta_wfr = gamma_k*Hz(i,j,k)*(rhow+rho(i,j,k))*orhoi
-                IF ((gamma_k.lt.0.0_r8).and.(k.eq.N(ng))) THEN
-                  gamma_k = 0.0_r8
-                  delta_wfr = 0.0_r8
-                ELSE
-                  Fi(i,j,icW_fr) = Fi(i,j,icW_fr) + delta_wfr
+          IF (.not.overLand) THEN
+            IF (Licetrc(ng)) THEN
+              DO itrc=NAT+1,NT(ng)
+                IF (LtracerIce(itrc,ng)) THEN
+                  trc(itrc)=0.0_r8
                 END IF
-!
-!  Use heat at this level to melt some ice from below (gamma_k becomes
-!  negative here). The salinity is not adjusted since salt flux from
-!  frazil ice is considered a surface flux (SMD).
-!
-                t(i,j,k,nnew,itemp) = t(i,j,k,nnew,itemp) +             &
-     &            gamma_k*(Lhat + t(i,j,k,nnew,itemp)*(1.0_r8-r))
-                sice = MIN(sice_ref, t(i,j,k,nnew,isalt))
-                t(i,j,k,nnew,isalt) = t(i,j,k,nnew,isalt) *             &
+              END DO
+            END IF
+            DO k=1,N(ng)
+              orhoi = 1.0_r8/IceRho(ng)
+              t_fr = frln*t(i,j,k,nrhs,isalt) + 0.000759_r8*z_r(i,j,k)
+              delta_wfr = 0._r8
+              IF (t(i,j,k,nrhs,itemp).lt.t_fr) THEN
+                gamma_k = (t_fr - t(i,j,k,nrhs,itemp)) /                &
+     &                    (Lhat + t(i,j,k,nrhs,itemp)*(1.0_r8-r) - t_fr)
+                delta_wfr = gamma_k*Hz(i,j,k)*(rhow+rho(i,j,k))*orhoi
+                Fi(i,j,icW_fr) = Fi(i,j,icW_fr) + delta_wfr
+                t(i,j,k,nrhs,itemp) = t(i,j,k,nrhs,itemp) +             &
+     &            gamma_k*(Lhat + t(i,j,k,nrhs,itemp)*(1.0_r8-r))
+                sice = MIN(sice_ref, t(i,j,k,nrhs,isalt))
+                t(i,j,k,nrhs,isalt) = t(i,j,k,nrhs,isalt) *             &
      &            (1.0_r8+gamma_k)
               ELSE IF ((Fi(i,j,icW_fr).gt.0.0_r8).and.                  &
-     &                 (t(i,j,k,nnew,itemp).gt.t_fr)) THEN
-                gamma_k = (t_fr - t(i,j,k,nnew,itemp)) /                &
-     &                    (Lhat + t(i,j,k,nnew,itemp)*(1.0_r8-r) - t_fr)
+     &                 (t(i,j,k,nrhs,itemp).gt.t_fr)) THEN
+                gamma_k = (t_fr - t(i,j,k,nrhs,itemp)) /                &
+     &                    (Lhat + t(i,j,k,nrhs,itemp)*(1.0_r8-r) - t_fr)
                 delta_wfr = gamma_k*Hz(i,j,k)*(rhow+rho(i,j,k))*orhoi
                 IF ((Fi(i,j,icW_fr)+delta_wfr).gt.0.0_r8) THEN
                   Fi(i,j,icW_fr) = Fi(i,j,icW_fr) + delta_wfr
@@ -214,28 +217,47 @@
                   delta_wfr = -Fi(i,j,icW_fr)
                   Fi(i,j,icW_fr) = 0.0_r8
                 ENDIF
-                t(i,j,k,nnew,itemp) = t(i,j,k,nnew,itemp) +             &
-     &            gamma_k*(Lhat + t(i,j,k,nnew,itemp)*(1.0_r8-r))
-                sice = MIN(sice_ref, t(i,j,k,nnew,isalt))
-                t(i,j,k,nnew,isalt) = t(i,j,k,nnew,isalt) *             &
+                t(i,j,k,nrhs,itemp) = t(i,j,k,nrhs,itemp) +             &
+     &            gamma_k*(Lhat + t(i,j,k,nrhs,itemp)*(1.0_r8-r))
+                sice = MIN(sice_ref, t(i,j,k,nrhs,isalt))
+                t(i,j,k,nrhs,isalt) = t(i,j,k,nrhs,isalt) *             &
      &            (1.0_r8+gamma_k)
               END IF
-            END IF
-# ifdef T_PASSIVE
-!
-!  Update passive concentration.
-!
-            cff = delta_wfr +                                           &
-     &            IceRho(ng)/((rhow+rho(i,j,k))*Hz(i,j,k))
-            DO itrc=NAT+1,NT(ng)
-              t(i,j,k,nnew,itrc) = t(i,j,k,nnew,itrc)*(1.0_r8-cff)
+              IF (Licetrc(ng)) THEN
+                cff = delta_wfr*IceRho(ng)/(rhow+rho(i,j,k))
+                DO itrc=NAT+1,NT(ng)
+                  IF (LtracerIce(itrc,ng)) THEN
+                    IF (delta_wfr.lt.0.0_r8) THEN
+                      cff1=trc(itrc)/                                   &
+     &  (Fi(i,j,icW_fr)*(IceRho(ng)/(rhow+rho(i,j,k)))+eps)
+                    ELSE
+                      cff1=t(i,j,k,nrhs,itrc)
+                    ENDIF
+                    t(i,j,k,nrhs,itrc) = t(i,j,k,nrhs,itrc) -           &
+     &                cff/Hz(i,j,k)*(cff1-t(i,j,k,nrhs,itrc))
+                    trc(itrc) = trc(itrc) + cff*cff1
+                    trc(itrc) = MAX(trc(itrc), 0.0_r8)
+                  END IF
+                END DO
+              END IF
             END DO
-# endif
-          END DO
 !
 !  Compute rate of frazil ice growth.
 !
-          Fi(i,j,icW_fr) = Fi(i,j,icW_fr) / dt(ng)
+            Fi(i,j,icW_fr) = Fi(i,j,icW_fr) / dt(ng)
+!
+!  Update tracer concentration.
+!
+            IF (Licetrc(ng)) THEN
+              ic=0
+              DO itrc=NAT+1,NT(ng)
+                IF (LtracerIce(itrc,ng)) THEN
+                  ic=ic+1
+                  Ti(i,j,linew,ic) = Ti(i,j,linew,ic)+trc(itrc)
+                END IF
+              END DO
+            END IF
+          END IF
         END DO
       END DO
 !
@@ -244,6 +266,12 @@
       CALL bc_r2d_tile (ng, tile,                                       &
      &                  LBi, UBi, LBj, UBj,                             &
      &                  Fi(:,:,icW_fr))
+!
+      IF (Licetrc(ng)) THEN
+        CALL bc_r3d_tile (ng, tile,                                     &
+     &                    LBi, UBi, LBj, UBj, 1, NTICE(ng),             &
+     &                    Ti(:,:,linew,:))
+      END IF
 # ifdef DISTRIBUTE
 !
 !  Exchange boundary data.
@@ -252,6 +280,14 @@
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
      &                    Fi(:,:,icW_fr))
+
+      IF (Licetrc(ng)) THEN
+        CALL mp_exchange3d (ng, tile, model, 1,                         &
+     &                      LBi, UBi, LBj, UBj, 1, NTICE(ng),           &
+     &                      NghostPoints,                               &
+     &                      EWperiodic(ng), NSperiodic(ng),             &
+     &                      Ti(:,:,linew,:))
+      END IF
 # endif
 !
       RETURN

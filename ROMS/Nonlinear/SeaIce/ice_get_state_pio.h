@@ -117,7 +117,6 @@
             END IF
           END IF
         END DO
-#    ifdef ICE_TRACER
 !
 !  Read in integrated tracer (m Tunits).
 !
@@ -145,15 +144,15 @@
      &                          InpRec, ioDesc, Vsize,                  &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          scale, Fmin, Fmax,                      &
-#     ifdef MASKING
+#    ifdef MASKING
      &                          GRID(ng) % rmask,                       &
-#     endif
-#     ifdef CHECKSUM
+#    endif
+#    ifdef CHECKSUM
      &                          ICE(ng) % Ti(:,:,Tindex,itrc),          &
      &                          checksum = Fhash)
-#     else
+#    else
      &                          ICE(ng) % Ti(:,:,Tindex,itrc))
-#     endif
+#    endif
               IF (FoundError(status, PIO_noerr, __LINE__, MyFile))      &
      &          THEN
                 IF (Master) THEN
@@ -166,13 +165,13 @@
                 RETURN
               ELSE
                 IF (Master) THEN
-#     ifdef CHECKSUM
+#    ifdef CHECKSUM
                   WRITE (stdout,70) TRIM(Vname(2,ifield)),              &
      &                              Fmin, Fmax, Fhash
-#     else
+#    else
                   WRITE (stdout,70) TRIM(Vname(2,ifield)),              &
      &                              Fmin, Fmax
-#     endif
+#    endif
                 END IF
               END IF
             ELSE
@@ -188,4 +187,3 @@
             END IF
           END IF
         END DO
-#    endif

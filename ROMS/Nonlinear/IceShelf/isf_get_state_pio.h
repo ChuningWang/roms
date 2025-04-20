@@ -117,7 +117,6 @@
             END IF
           END IF
         END DO
-#    ifdef ICESHELF_TRACER
 !
 !  Read in iceshelf refreezed volume (m).
 !
@@ -140,15 +139,15 @@
      &                        InpRec, ioDesc, Vsize,                    &
      &                        LBi, UBi, LBj, UBj,                       &
      &                        Fscl, Fmin, Fmax,                         &
-#     ifdef MASKING
+#    ifdef MASKING
      &                        GRID(ng) % rmask,                         &
-#     endif
-#     ifdef CHECKSUM
+#    endif
+#    ifdef CHECKSUM
      &                        ISF(ng) % Vi(:,:,Tindex),                 &
      &                        checksum = Fhash)
-#     else
+#    else
      &                        ISF(ng) % Vi(:,:,Tindex))
-#     endif
+#    endif
             IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
               IF (Master) THEN
                 WRITE (stdout,60) string, TRIM(Vname(1,ifield)),        &
@@ -159,12 +158,12 @@
               RETURN
             ELSE
               IF (Master) THEN
-#     ifdef CHECKSUM
+#    ifdef CHECKSUM
                 WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax,    &
      &                            Fhash
-#     else
+#    else
                 WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
-#     endif
+#    endif
 
               END IF
             END IF
@@ -207,15 +206,15 @@
      &                          InpRec, ioDesc, Vsize,                  &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          scale, Fmin, Fmax,                      &
-#     ifdef MASKING
+#    ifdef MASKING
      &                          GRID(ng) % rmask,                       &
-#     endif
-#     ifdef CHECKSUM
+#    endif
+#    ifdef CHECKSUM
      &                          ISF(ng) % Ti(:,:,Tindex,itrc),          &
      &                          checksum = Fhash)
-#     else
+#    else
      &                          ISF(ng) % Ti(:,:,Tindex,itrc))
-#     endif
+#    endif
               IF (FoundError(status, PIO_noerr, __LINE__, MyFile))      &
      &          THEN
                 IF (Master) THEN
@@ -228,13 +227,13 @@
                 RETURN
               ELSE
                 IF (Master) THEN
-#     ifdef CHECKSUM
+#    ifdef CHECKSUM
                   WRITE (stdout,70) TRIM(Vname(2,ifield)),              &
      &                              Fmin, Fmax, Fhash
-#     else
+#    else
                   WRITE (stdout,70) TRIM(Vname(2,ifield)),              &
      &                              Fmin, Fmax
-#     endif
+#    endif
                 END IF
               END IF
             ELSE
@@ -250,4 +249,3 @@
             END IF
           END IF
         END DO
-#    endif

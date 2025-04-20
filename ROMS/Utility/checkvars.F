@@ -246,7 +246,6 @@
             get_var(iSice(i))=.TRUE.
           END IF
         END DO
-#  ifdef ICE_TRACER
         IF (Licetrc(ng)) THEN
           DO itrc=NAT+1,NT(ng)
             IF (LtracerIce(itrc,ng)) THEN
@@ -254,7 +253,6 @@
             END IF
           END DO
         END IF
-#  endif
 # endif
 # ifdef ICESHELF_DYNAM
         DO i=1,nIsfS
@@ -262,7 +260,6 @@
             get_var(iSisf(i))=.TRUE.
           END IF
         END DO
-#  ifdef ICESHELF_TRACER
         IF (Lisftrc(ng)) THEN
           get_var(idIvol)=.TRUE.
           DO itrc=NAT+1,NT(ng)
@@ -271,7 +268,6 @@
             END IF
           END DO
         END IF
-#  endif
 # endif
 #endif
 #ifdef PERFECT_RESTART

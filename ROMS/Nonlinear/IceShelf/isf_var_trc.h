@@ -17,10 +17,10 @@
 */
 
 /*
-**  Iceshelf state variables.
+**  Iceshelf tracer variables.
 */
 
-#ifdef ICESHELF_TRACER
+#ifdef T_PASSIVE
             CASE ('idItrc(inert(i))')
               IF (NPT.gt.0) THEN
                 varid=varid-1

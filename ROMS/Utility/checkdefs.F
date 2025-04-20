@@ -1443,13 +1443,6 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+19)=' ICESHELF_3EQN_VBC,'
 #   endif
-#   ifdef ICESHELF_TRACER
-!
-      IF (Master) WRITE (stdout,20) 'ICESHELF_TRACER',                  &
-     &   'Include Ice Shelf Melt/Freeze Passive Tracer'
-      is=LEN_TRIM(Coptions)+1
-      Coptions(is:is+17)=' ICESHELF_TRACER,'
-#   endif
 #  endif
 #  ifdef ICESHELF_MOM
 !

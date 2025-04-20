@@ -102,9 +102,9 @@
 !  Set number of dimensions for output variables.
 !
 # if defined WRITE_WATER && defined MASKING
-        nvd3=2
+      nvd3=2
 # else
-        nvd3=3
+      nvd3=3
 # endif
 !
 !  Initialize local information variable arrays.
@@ -254,13 +254,12 @@
             END IF
           END IF
         END DO
-# ifdef ICE_TRACER
-        IF (Licetrc(ng)) THEN
 !
 !-----------------------------------------------------------------------
 !  Define ice tracer amounts.
 !-----------------------------------------------------------------------
 !
+        IF (Licetrc(ng)) THEN
           DO itrc=NAT+1,NT(ng)
             IF (LtracerIce(itrc,ng)) THEN
               ifield=idStrc(itrc)
@@ -277,9 +276,9 @@
                 Vinfo( 3)=Vname(3,ifield)
                 Vinfo(14)=Vname(4,ifield)
                 Vinfo(16)=Vname(1,idtime)
-#  if defined WRITE_WATER && defined MASKING
+# if defined WRITE_WATER && defined MASKING
                 Vinfo(20)='mask_rho'
-#  endif
+# endif
                 Vinfo(21)=Vname(6,ifield)
                 Vinfo(22)='coordinates'
                 Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
@@ -292,7 +291,6 @@
             END IF
           END DO
         END IF
-# endif
       END IF DEFINE
 !
 !-----------------------------------------------------------------------
@@ -341,9 +339,8 @@
               END IF
             END IF
           END DO
-# ifdef ICE_TRACER
-          IF (Licetrc(ng)) THEN
 !
+          IF (Licetrc(ng)) THEN
             DO itrc=NAT+1,NT(ng)
               IF (LtracerIce(itrc, ng)) THEN
                 ifield=idStrc(itrc)
@@ -355,7 +352,6 @@
               END IF
             END DO
           END IF
-# endif
         END DO
 !
 !  Check if output variables are available in input NetCDF file.
@@ -396,9 +392,8 @@
             END IF
           END IF
         END DO
-# ifdef ICE_TRACER
-        IF (Licetrc(ng)) THEN
 !
+        IF (Licetrc(ng)) THEN
           DO itrc=NAT+1,NT(ng)
             IF (LtracerIce(itrc, ng)) THEN
               ifield=idStrc(itrc)
@@ -411,7 +406,6 @@
             END IF
           END DO
         END IF
-# endif
       END IF QUERY
 !
   10  FORMAT (/,' ICE_DEF_NF90 - unable to find variable: ',a,2x,       &
@@ -650,13 +644,12 @@
           END IF
         END IF
       END DO
-# ifdef ICE_TRACER
-      IF (Licetrc(ng)) THEN
 !
 !-----------------------------------------------------------------------
 !  write out ice tracer amount at RHO-points.
 !-----------------------------------------------------------------------
 !
+      IF (Licetrc(ng)) THEN
         ic=0
         DO itrc=NAT+1,NT(ng)
           IF (LtracerIce(itrc, ng)) THEN
@@ -673,11 +666,11 @@
                   ((S(ng)%ncid.eq.HIS(ng)%ncid).or.                     &
      &             (S(ng)%ncid.eq.QCK(ng)%ncid).or.                     &
      &             (S(ng)%ncid.eq.RST(ng)%ncid))) THEN
-                iceField => ICE(ng) % Ti(LBi:UBi,LBj:UBj,linew(ng),ic)
-#  ifdef AVERAGES
+                iceField => ICE(ng) % Ti(LBi:UBi,LBj:UBj,IOUT,ic)
+# ifdef AVERAGES
               ELSE IF (S(ng)%ncid.eq.AVG(ng)%ncid) THEN
                 iceField => ICE_TAVG(itrc,ng) % var(LBi:UBi,LBj:UBj)
-#  endif
+# endif
               END IF
 !
               scale=1.0_dp
@@ -686,9 +679,9 @@
      &                           S(ng)%Vid(ifield),                     &
      &                           S(ng)%Rindex, gtype,                   &
      &                           LBi, UBi, LBj, UBj, scale,             &
-#  ifdef MASKING
+# ifdef MASKING
      &                           GRID(ng) % rmask_full,                 &
-#  endif
+# endif
      &                           iceField)
               IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
                 IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),    &
@@ -702,7 +695,6 @@
           END IF
         END DO
       END IF
-# endif
 !
   10  FORMAT (/," ICE_WRT_NF90 - error while writing variable '",a,     &
      &        "', time record = ",i0,/,11x,'into file: ',a)
@@ -815,13 +807,12 @@
             END IF
           END IF
         END DO
-#  ifdef ICE_TRACER
-        IF (Licetrc(ng)) THEN
 !
 !-----------------------------------------------------------------------
 !  Define ice tracer amounts.
 !-----------------------------------------------------------------------
 !
+        IF (Licetrc(ng)) THEN
           DO itrc=NAT+1,NT(ng)
             IF (LtracerIce(itrc, ng)) THEN
               ifield=idStrc(itrc)
@@ -843,7 +834,6 @@
             END IF
           END DO
         END IF
-#  endif
       END IF DEFINE
 !
 !-----------------------------------------------------------------------
@@ -884,10 +874,8 @@
               END IF
             END IF
           END DO
-        END DO
-#  ifdef ICE_TRACER
-          IF (Licetrc(ng)) THEN
 !
+          IF (Licetrc(ng)) THEN
             DO itrc=NAT+1,NT(ng)
               IF (LtracerIce(itrc, ng)) THEN
                 ifield=idStrc(itrc)
@@ -899,7 +887,7 @@
               END IF
             END DO
           END IF
-#  endif
+        END DO
 !
 !  Check if output variables are available in input NetCDF file.
 !
@@ -926,9 +914,8 @@
             END IF
           END IF
         END DO
-#  ifdef ICE_TRACER
-        IF (Licetrc(ng)) THEN
 !
+        IF (Licetrc(ng)) THEN
           DO itrc=NAT+1,NT(ng)
             IF (LtracerIce(itrc, ng)) THEN
               ifield=idStrc(itrc)
@@ -941,7 +928,6 @@
             END IF
           END DO
         END IF
-#  endif
       END IF QUERY
 !
   10  FORMAT (/,' ICE_DEF_STATION_NF90 - unable to find variable: ',    &
@@ -950,9 +936,9 @@
       END SUBROUTINE ice_def_station_nf90
 !
 !***********************************************************************
-     SUBROUTINE ice_wrt_station_nf90 (ng, model, tile,                  &
-    &                                  LBi, UBi, LBj, UBj,              &
-    &                                  VarOut, S)
+      SUBROUTINE ice_wrt_station_nf90 (ng, model, tile,                 &
+     &                                 LBi, UBi, LBj, UBj,              &
+     &                                 VarOut, S)
 !***********************************************************************
 !
       USE mod_netcdf
@@ -1052,22 +1038,22 @@
           END IF
         END IF
       END DO
-#  ifdef ICE_TRACER
-      IF (Licetrc(ng)) THEN
 !
 !-----------------------------------------------------------------------
 !  write out ice tracer amount.
 !-----------------------------------------------------------------------
 !
+      IF (Licetrc(ng)) THEN
         ic=0
         DO itrc=NAT+1,NT(ng)
           IF (LtracerIce(itrc, ng)) THEN
+            ic=ic+1
             ifield=idStrc(itrc)
             IF (VarOut(ifield,ng)) THEN
               scale=1.0_dp
               CALL extract_sta2d (ng, model, Cgrid, ifield, r2dvar,     &
      &                            LBi, UBi, LBj, UBj,                   &
-     &                            scale, ICE(ng)%Ti(:,:,linew(ng),ic),  &
+     &                            scale, ICE(ng)%Ti(:,:,IOUT,ic),       &
      &                            Nstation(ng), Xpos, Ypos, psta)
 !
               CALL netcdf_put_fvar (ng, model, S(ng)%name,              &
@@ -1082,7 +1068,6 @@
           END IF
         END DO
       END IF
-#  endif
 !
   10  FORMAT (/,' ICE_WRT_STATION_NF90 - error while writing ',         &
      &        "variable '",a,"', time record = ",i0,/,11x,              &
@@ -1305,13 +1290,12 @@
             END IF
           END IF
         END DO
-#  ifdef ICE_TRACER
-        IF (Licetrc(ng)) THEN
 !
 !-----------------------------------------------------------------------
 !  Define ice tracer amounts.
 !-----------------------------------------------------------------------
 !
+        IF (Licetrc(ng)) THEN
           DO itrc=NAT+1,NT(ng)
             IF (LtracerIce(itrc, ng)) THEN
               ifield=idStrc(itrc)
@@ -1328,9 +1312,9 @@
                 Vinfo( 3)=Vname(3,ifield)
                 Vinfo(14)=Vname(4,ifield)
                 Vinfo(16)=Vname(1,idtime)
-#   if defined WRITE_WATER && defined MASKING
+#  if defined WRITE_WATER && defined MASKING
                 Vinfo(20)='mask_rho'
-#   endif
+#  endif
                 Vinfo(21)=Vname(6,ifield)
                 Vinfo(22)='coordinates'
                 Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
@@ -1347,7 +1331,6 @@
             END IF
           END DO
         END IF
-#  endif
       END IF DEFINE
 !
 !-----------------------------------------------------------------------
@@ -1419,9 +1402,8 @@
               END IF
             END IF
           END DO
-#  ifdef ICE_TRACER
-          IF (Licetrc(ng)) THEN
 !
+          IF (Licetrc(ng)) THEN
             DO itrc=NAT+1,NT(ng)
               IF (LtracerIce(itrc, ng)) THEN
                 ifield=idStrc(itrc)
@@ -1435,7 +1417,6 @@
               END IF
             END DO
           END IF
-#  endif
         END DO
 !
 !  Check if output variables are available in input NetCDF file.
@@ -1476,9 +1457,8 @@
             END IF
           END IF
         END DO
-#  ifdef ICE_TRACER
-        IF (Licetrc(ng)) THEN
 !
+        IF (Licetrc(ng)) THEN
           DO itrc=NAT+1,NT(ng)
             IF (LtracerIce(itrc, ng)) THEN
               ifield=idStrc(itrc)
@@ -1491,7 +1471,6 @@
             END IF
           END DO
         END IF
-#  endif
       END IF QUERY
 !
   10  FORMAT (/,' ICE_DEF_PIO - unable to find variable: ',a,2x,        &
@@ -1749,16 +1728,16 @@
           END IF
         END IF
       END DO
-#  ifdef ICE_TRACER
-      IF (Licetrc(ng)) THEN
 !
 !-----------------------------------------------------------------------
 !  write out ice tracer amount at RHO-points.
 !-----------------------------------------------------------------------
 !
+      IF (Licetrc(ng)) THEN
         ic=0
         DO itrc=NAT+1,NT(ng)
           IF (LtracerIce(itrc, ng)) THEN
+            ic=ic+1
             ifield=idStrc(itrc)
             IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
               LwrtVar=.TRUE.
@@ -1771,11 +1750,11 @@
                   ((S(ng)%ncid.eq.HIS(ng)%ncid).or.                     &
      &             (S(ng)%ncid.eq.QCK(ng)%ncid).or.                     &
      &             (S(ng)%ncid.eq.RST(ng)%ncid))) THEN
-                iceField => ICE(ng) % Ti(LBi:UBi,LBj:UBj,linew(ng),ic)
-#   ifdef AVERAGES
+                iceField => ICE(ng) % Ti(LBi:UBi,LBj:UBj,IOUT,ic)
+#  ifdef AVERAGES
               ELSE IF (S(ng)%ncid.eq.AVG(ng)%ncid) THEN
                 iceField => ICE_TAVG(itrc,ng) % var(LBi:UBi,LBj:UBj)
-#   endif
+#  endif
               END IF
 !
               scale=1.0_dp
@@ -1788,9 +1767,9 @@
      &                           S(ng)%pioVar(ifield), S(ng)%Rindex,    &
      &                           ioDesc,                                &
      &                           LBi, UBi, LBj, UBj, scale,             &
-#   ifdef MASKING
+#  ifdef MASKING
      &                           GRID(ng) % rmask_full,                 &
-#   endif
+#  endif
      &                           iceField)
               IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
                 IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),    &
@@ -1804,7 +1783,6 @@
           END IF
         END DO
       END IF
-#  endif
 !
   10  FORMAT (/," ICE_WRT - error while writing variable '",a,          &
      &        "', time record = ",i0,/,11x,'into file: ',a)

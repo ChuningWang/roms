@@ -806,11 +806,6 @@
 /*
 ** Check if dynamic/thermodynamic ice shelf model is activated.
 */
-#if defined ICESHELF_TRACER
-# if !defined ICEHSELF_3EQN_VBC && !defined ICESHELF_2EQN_VBC
-#  define ICESHELF_3EQN_VBC
-# endif
-#endif
 #if defined ICESHELF_3EQN_VBC || defined ICESHELF_2EQN_VBC
 # define ICESHELF_THERMO
 #endif

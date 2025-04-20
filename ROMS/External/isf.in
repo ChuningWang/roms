@@ -104,8 +104,8 @@ Hout(idIust) == T     ! Fi(...,icIust)     iceshelf Ustar
 Hout(idItbo) == T     ! Fi(...,icItbo)     iceshelf boundary layer temperature
 Hout(idIsbo) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
 
-Hout(idIvol) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
-Hout(idItrc) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
+Hout(idIvol) == T     ! Vi                 iceshelf refreezed volume
+Hout(idItrc) == T     ! Ti(...,itrc)       iceshelf refreezed tracer
 
 ! Logical switches (TRUE/FALSE) to activate writing of iceshelf
 ! variables into QUICKSAVE output file.
@@ -126,30 +126,30 @@ Qout(idIust) == T     ! Fi(...,icIust)     iceshelf Ustar
 Qout(idItbo) == T     ! Fi(...,icItbo)     iceshelf boundary layer temperature
 Qout(idIsbo) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
 
-Qout(idIvol) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
-Qout(idItrc) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
+Qout(idIvol) == T     ! Vi                 iceshelf refreezed volume
+Qout(idItrc) == T     ! Ti(...,itrc)       iceshelf refreezed tracer
 
 ! Logical switches (TRUE/FALSE) to activate writing of iceshelf
 ! variables into AVERAGES output file.
 
-Aout(idIhis) == T     ! Si(...,isIhis)     iceshelf thickness
-Aout(idIuis) == T     ! Si(...,isIuis)     iceshelf U-velocity
-Aout(idIvis) == T     ! Si(...,isIvis)     iceshelf V-velocity
+Aout(idIhis) == T     ! Si_avg(...,isIhis) iceshelf thickness
+Aout(idIuis) == T     ! Si_avg(...,isIuis) iceshelf U-velocity
+Aout(idIvis) == T     ! Si_avg(...,isIvis) iceshelf V-velocity
 Aout(idIuer) == T     !                    iceshelf eastward velocity
 Aout(idIvnr) == T     !                    iceshelf northward velocity
-Aout(idItis) == T     ! Si(...,isItis)     iceshelf temperature
-Aout(idIeis) == T     ! Si(...,isIeis)     iceshelf enthalpy
+Aout(idItis) == T     ! Si_avg(...,isItis) iceshelf temperature
+Aout(idIeis) == T     ! Si_avg(...,isIeis) iceshelf enthalpy
 
-Aout(idImel) == T     ! Fi(...,icImel)     iceshelf basal melt rate
-Aout(idIgat) == T     ! Fi(...,icItat)     iceshelf gammaT
-Aout(idIgas) == T     ! Fi(...,icIgas)     iceshelf gammaS
-Aout(idItst) == T     ! Fi(...,icItst)     iceshelf Tstar
-Aout(idIust) == T     ! Fi(...,icIust)     iceshelf Ustar
-Aout(idItbo) == T     ! Fi(...,icItbo)     iceshelf boundary layer temperature
-Aout(idIsbo) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
+Aout(idImel) == T     ! Fi_avg(...,icImel) iceshelf basal melt rate
+Aout(idIgat) == T     ! Fi_avg(...,icItat) iceshelf gammaT
+Aout(idIgas) == T     ! Fi_avg(...,icIgas) iceshelf gammaS
+Aout(idItst) == T     ! Fi_avg(...,icItst) iceshelf Tstar
+Aout(idIust) == T     ! Fi_avg(...,icIust) iceshelf Ustar
+Aout(idItbo) == T     ! Fi_avg(...,icItbo) iceshelf boundary layer temperature
+Aout(idIsbo) == T     ! Fi_avg(...,icIsbo) iceshelf boundary layer salinity
 
-Aout(idIvol) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
-Aout(idItrc) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
+Aout(idIvol) == T     ! Vi_avg             iceshelf refreezed volume
+Aout(idItrc) == T     ! Ti_avg(...,itrc)   iceshelf refreezed tracer
 
 ! Logical switches (TRUE/FALSE) to activate writing of iceshelf
 ! variables into STATION output file.
@@ -170,8 +170,8 @@ Sout(idIust) == T     ! Fi(...,icIust)     iceshelf Ustar
 Sout(idItbo) == T     ! Fi(...,icItbo)     iceshelf boundary layer temperature
 Sout(idIsbo) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
 
-Sout(idIvol) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
-Sout(idItrc) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
+Sout(idIvol) == T     ! Vi                 iceshelf refreezed volume
+Sout(idItrc) == T     ! Ti(...,itrc)       iceshelf refreezed tracer
 
 
 !

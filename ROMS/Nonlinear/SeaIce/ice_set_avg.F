@@ -88,8 +88,6 @@
       real(r8) :: fac
 !
       real(r8) :: rfac(IminS:ImaxS,JminS:JmaxS)
-      real(r8) :: ufac(IminS:ImaxS,JminS:JmaxS)
-      real(r8) :: vfac(IminS:ImaxS,JminS:JmaxS)
 
 # include "set_bounds.h"
 !
@@ -147,7 +145,9 @@
             END IF
           END IF
         END DO
-# ifdef ICE_TRACER
+!
+!  Initialize ice model tracer variables.
+!
         IF (Licetrc(ng)) THEN
           ic=0
           DO itrc=NAT+1,NT(ng)
@@ -157,18 +157,17 @@
                 DO j=JstrR,JendR
                   DO i=IstrR,IendR
                     ICE_TAVG(itrc,ng)%var(i,j)=ICE(ng)%Ti(i,j,Iout,ic)
-#  ifdef MASKING
+# ifdef MASKING
                     ICE_TAVG(itrc,ng)%var(i,j)=                         &
      &                ICE_TAVG(itrc,ng)%var(i,j) *                      &
      &                GRID(ng)%rmask_full(i,j)
-#  endif
+# endif
                   END DO
                 END DO
               END IF
             END IF
           END DO
         END IF
-# endif
 !
 !-----------------------------------------------------------------------
 !  Accumulate time-averaged fields.
@@ -213,7 +212,9 @@
             END IF
           END IF
         END DO
-# ifdef ICE_TRACER
+!
+!  Accumulate ice model tracer variables.
+!
         IF (Licetrc(ng)) THEN
           ic=0
           DO itrc=NAT+1,NT(ng)
@@ -224,9 +225,9 @@
                   DO i=IstrR,IendR
                     ICE_TAVG(itrc,ng)%var(i,j)=                         &
      &                ICE_TAVG(itrc,ng)%var(i,j)+                       &
-#  ifdef MASKING
+# ifdef MASKING
      &                GRID(ng)%rmask_full(i,j)*                         &
-#  endif
+# endif
      &                ICE(ng)%Ti(i,j,Iout,ic)
                   END DO
                 END DO
@@ -234,7 +235,6 @@
             END IF
           END DO
         END IF
-# endif
       END IF
 !
 !-----------------------------------------------------------------------
@@ -259,8 +259,6 @@
         DO j=JstrR,JendR
           DO i=IstrR,IendR
             rfac(i,j)=1.0_r8/MAX(1.0_r8, GRID(ng)%rmask_avg(i,j))
-            ufac(i,j)=1.0_r8/MAX(1.0_r8, GRID(ng)%umask_avg(i,j))
-            vfac(i,j)=1.0_r8/MAX(1.0_r8, GRID(ng)%vmask_avg(i,j))
           END DO
         END DO
 # else
@@ -268,8 +266,6 @@
         DO j=JstrR,JendR
           DO i=IstrR,IendR
             rfac(i,j)=fac
-            ufac(i,j)=fac
-            vfac(i,j)=fac
           END DO
         END DO
 # endif
@@ -331,35 +327,36 @@
             END IF
           END IF
         END DO
-      END IF
-# ifdef ICE_TRACER
-      IF (Licetrc(ng)) THEN
-        DO itrc=NAT+1,NT(ng)
-          IF (LtracerIce(itrc,ng)) THEN
-            IF (Aout(idStrc(itrc),ng)) THEN
-              DO j=JstrR,JendR
-                DO i=IstrR,IendR
-                  ICE_TAVG(itrc,ng)%var(i,j)=rfac(i,j) *                &
-     &                                       ICE_TAVG(itrc,ng)%var(i,j)
+!
+!  Process ice model tracer variables.
+!
+        IF (Licetrc(ng)) THEN
+          DO itrc=NAT+1,NT(ng)
+            IF (LtracerIce(itrc,ng)) THEN
+              IF (Aout(idStrc(itrc),ng)) THEN
+                DO j=JstrR,JendR
+                  DO i=IstrR,IendR
+                    ICE_TAVG(itrc,ng)%var(i,j)=rfac(i,j) *              &
+     &                ICE_TAVG(itrc,ng)%var(i,j)
+                  END DO
                 END DO
-              END DO
-              IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-                CALL exchange_r2d_tile (ng, tile,                       &
-     &                                  LBi, UBi, LBj, UBj,             &
-     &                                  ICE_TAVG(itrc,ng)%var)
-#  ifdef DISTRIBUTE
-                CALL mp_exchange2d (ng, tile, model, 1,                 &
-     &                              LBi, UBi, LBj, UBj,                 &
-     &                              NghostPoints,                       &
-     &                              EWperiodic(ng), NSperiodic(ng),     &
-     &                              ICE_TAVG(itrc,ng)%var)
-#  endif
+                IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+                  CALL exchange_r2d_tile (ng, tile,                     &
+     &                                    LBi, UBi, LBj, UBj,           &
+     &                                    ICE_TAVG(itrc,ng)%var)
+# ifdef DISTRIBUTE
+                  CALL mp_exchange2d (ng, tile, model, 1,               &
+     &                                LBi, UBi, LBj, UBj,               &
+     &                                NghostPoints,                     &
+     &                                EWperiodic(ng), NSperiodic(ng),   &
+     &                                ICE_TAVG(itrc,ng)%var)
+# endif
+                END IF
               END IF
             END IF
-          END IF
-        END DO
+          END DO
+        END IF
       END IF
-# endif
 !
       RETURN
       END SUBROUTINE ice_set_avg_tile

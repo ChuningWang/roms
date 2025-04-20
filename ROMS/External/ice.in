@@ -191,6 +191,8 @@ Hout(idSocn) == T     ! Fi(...,icSocn)     net short-wave radiation at sea surfa
 Hout(idRfac) == F     ! Fi(...,icRfac)     lmd_r1 scaling factor
 Hout(idSnof) == F     ! Fi(...,icSnof)     snowfall rate
 
+Hout(idStrc) == T     ! Ti(...,itrc)       sea ice tracer
+
 ! Logical switches (TRUE/FALSE) to activate writing of ice prognostic
 ! variables into QUICKSAVE output file.
 
@@ -232,6 +234,8 @@ Qout(idSicb) == T     ! Fi(...,icSicb)     net short-wave radiation at ice base
 Qout(idSocn) == T     ! Fi(...,icSocn)     net short-wave radiation at sea surface
 Qout(idRfac) == F     ! Fi(...,icRfac)     lmd_r1 scaling factor
 Qout(idSnof) == F     ! Fi(...,icSnof)     snowfall rate
+
+Qout(idStrc) == T     ! Ti(...,itrc)       sea ice tracer
 
 ! Logical switches (TRUE/FALSE) to activate writing of ice prognostic
 ! variables into AVERAGES output file.
@@ -275,47 +279,51 @@ Aout(idSocn) == T     ! Fi_avg(...,icSocn) net short-wave radiation at sea surfa
 Aout(idRfac) == F     ! Fi_avg(...,icRfac) lmd_r1 scaling factor
 Aout(idSnof) == F     ! Fi_avg(...,icSnof) snowfall rate
 
+Aout(idStrc) == T     ! Ti_avg(...,itrc)   sea ice tracer
+
 ! Logical switches (TRUE/FALSE) to activate writing of ice prognostic
 ! variables into STATION output file.
 
-Sout(idUice) == T     ! Si_avg(...,isUice) ice U-velocity
-Sout(idVice) == T     ! Si_avg(...,isVice) ice V-velocity
+Sout(idUice) == T     ! Si(...,isUice)     ice U-velocity
+Sout(idVice) == T     ! Si(...,isVice)     ice V-velocity
 Sout(idUiER) == F     !                    ice U-eastward  at RHO-points
 Sout(idViNR) == F     !                    ice V-northward at RHO-points
-Sout(idAice) == T     ! Si_avg(...,isAice) ice concentration
-Sout(idIage) == T     ! Si_avg(...,isIage) age of ice
-Sout(idHice) == T     ! Si_avg(...,isHice) ice thickness
-Sout(idHmel) == T     ! Si_avg(...,isHmel) melt pond water thickness
-Sout(idHsno) == T     ! Si_avg(...,isHsno) snow cover thickness
-Sout(idTice) == T     ! Si_avg(...,isTice) ice interior temperature
-Sout(idISxx) == T     ! Si_avg(...,isISxx) internal ice stress xx-component
-Sout(idISxy) == T     ! Si_avg(...,isISxy) internal ice stress xy-component
-Sout(idISyy) == T     ! Si_avg(...,isISyy) internal ice stress yy-component
-Sout(idIphy) == T     ! Si_avg(...,isIphy) ice biology, algae
-Sout(idINO3) == T     ! Si_avg(...,isINO3) ice biology, nitrate
-Sout(idINH4) == T     ! Si_avg(...,isINH4) ice biology, ammonia
-Sout(idIlog) == T     ! Si_avg(...,isIlog) ice biology log
+Sout(idAice) == T     ! Si(...,isAice)     ice concentration
+Sout(idIage) == T     ! Si(...,isIage)     age of ice
+Sout(idHice) == T     ! Si(...,isHice)     ice thickness
+Sout(idHmel) == T     ! Si(...,isHmel)     melt pond water thickness
+Sout(idHsno) == T     ! Si(...,isHsno)     snow cover thickness
+Sout(idTice) == T     ! Si(...,isTice)     ice interior temperature
+Sout(idISxx) == T     ! Si(...,isISxx)     internal ice stress xx-component
+Sout(idISxy) == T     ! Si(...,isISxy)     internal ice stress xy-component
+Sout(idISyy) == T     ! Si(...,isISyy)     internal ice stress yy-component
+Sout(idIphy) == T     ! Si(...,isIphy)     ice biology, algae
+Sout(idINO3) == T     ! Si(...,isINO3)     ice biology, nitrate
+Sout(idINH4) == T     ! Si(...,isINH4)     ice biology, ammonia
+Sout(idIlog) == T     ! Si(...,isIlog)     ice biology log
 
-Sout(idIsst) == T     ! Fi_avg(...,icIsst) ice surface temperature
-Sout(idIOmf) == T     ! Fi_avg(...,icIOmf) ice-ocean mass flux
-Sout(idIOfv) == T     ! Fi_avg(...,icIOfv) ice-ocean friction velocity
-Sout(idIOmt) == T     ! Fi_avg(...,icIOmt) ice-ocean momentum transfer coefficient
-Sout(idS0mk) == T     ! Fi_avg(...,icS0mk) under ice molecular sublayer salinity
-Sout(idT0mk) == T     ! Fi_avg(...,icT0mk) under ice molecular sublayer temperature
-Sout(idWdiv) == T     ! Fi_avg(...,icWdiv) ice divergence rate
-Sout(idW_fr) == T     ! Fi_avg(...,icW_fr) ice accretion rate by frazil ice growth
-Sout(idW_ai) == T     ! Fi_avg(...,icW_ai) melt/freeze rate at Air/Ice
-Sout(idW_ao) == T     ! Fi_avg(...,icW_ao) melt/freeze rate at Air/Ocean
-Sout(idW_io) == T     ! Fi_avg(...,icW_io) melt/freeze rate at Ice/Ocean
-Sout(idW_ro) == T     ! Fi_avg(...,icW_ro) melt/freeze rate runoff into ocean
-Sout(idAlbi) == T     ! Fi_avg(...,icAlbi) sea ice albedo
-Sout(idAlbo) == T     ! Fi_avg(...,icAlbo) sea surface albedo
-Sout(idFrsw) == F     ! Fi_avg(...,icFrsw) short-wave penetration fraction in sea ice
-Sout(idSics) == T     ! Fi_avg(...,icSics) net short-wave radiation at ice surface
-Sout(idSicb) == T     ! Fi_avg(...,icSicb) net short-wave radiation at ice base
-Sout(idSocn) == T     ! Fi_avg(...,icSocn) net short-wave radiation at sea surface
-Sout(idRfac) == F     ! Fi_avg(...,icRfac) lmd_r1 scaling factor
-Sout(idSnof) == F     ! Fi_avg(...,icSnof) snowfall rate
+Sout(idIsst) == T     ! Fi(...,icIsst)     ice surface temperature
+Sout(idIOmf) == T     ! Fi(...,icIOmf)     ice-ocean mass flux
+Sout(idIOfv) == T     ! Fi(...,icIOfv)     ice-ocean friction velocity
+Sout(idIOmt) == T     ! Fi(...,icIOmt)     ice-ocean momentum transfer coefficient
+Sout(idS0mk) == T     ! Fi(...,icS0mk)     under ice molecular sublayer salinity
+Sout(idT0mk) == T     ! Fi(...,icT0mk)     under ice molecular sublayer temperature
+Sout(idWdiv) == T     ! Fi(...,icWdiv)     ice divergence rate
+Sout(idW_fr) == T     ! Fi(...,icW_fr)     ice accretion rate by frazil ice growth
+Sout(idW_ai) == T     ! Fi(...,icW_ai)     melt/freeze rate at Air/Ice
+Sout(idW_ao) == T     ! Fi(...,icW_ao)     melt/freeze rate at Air/Ocean
+Sout(idW_io) == T     ! Fi(...,icW_io)     melt/freeze rate at Ice/Ocean
+Sout(idW_ro) == T     ! Fi(...,icW_ro)     melt/freeze rate runoff into ocean
+Sout(idAlbi) == T     ! Fi(...,icAlbi)     sea ice albedo
+Sout(idAlbo) == T     ! Fi(...,icAlbo)     sea surface albedo
+Sout(idFrsw) == F     ! Fi(...,icFrsw)     short-wave penetration fraction in sea ice
+Sout(idSics) == T     ! Fi(...,icSics)     net short-wave radiation at ice surface
+Sout(idSicb) == T     ! Fi(...,icSicb)     net short-wave radiation at ice base
+Sout(idSocn) == T     ! Fi(...,icSocn)     net short-wave radiation at sea surface
+Sout(idRfac) == F     ! Fi(...,icRfac)     lmd_r1 scaling factor
+Sout(idSnof) == F     ! Fi(...,icSnof)     snowfall rate
+
+Sout(idStrc) == T     ! Ti(...,itrc)       sea ice tracer
 
 
 !
@@ -455,6 +463,8 @@ Sout(idSnof) == F     ! Fi_avg(...,icSnof) snowfall rate
 ! Hout(idRfac)    Write out lmd_r1 scaling factor
 ! Hout(idSnof)    Write out snowfall rate
 !
+! Hout(idStrc)    Write out sea ice tracer
+!
 !------------------------------------------------------------------------------
 ! Logical switches (T/F) to activate writing of instantaneous ice fields into
 ! QUICKSAVE file.
@@ -498,6 +508,8 @@ Sout(idSnof) == F     ! Fi_avg(...,icSnof) snowfall rate
 ! Qout(idSocn)    Write out net short-wave radiation at sea surface
 ! Qout(idRfac)    Write out lmd_r1 scaling factor
 ! Qout(idSnof)    Write out snowfall rate
+!
+! Qout(idStrc)    Write out sea ice tracer
 !
 !------------------------------------------------------------------------------
 ! Logical switches (T/F) to activate writing of time-averaged ice fields into
@@ -543,6 +555,8 @@ Sout(idSnof) == F     ! Fi_avg(...,icSnof) snowfall rate
 ! Aout(idRfac)    Write out lmd_r1 scaling factor
 ! Aout(idSnof)    Write out snowfall rate
 !
+! Aout(idStrc)    Write out sea ice tracer
+!
 !------------------------------------------------------------------------------
 ! Logical switches (T/F) to activate writing of time-averaged ice fields into
 ! STATION file.
@@ -586,4 +600,6 @@ Sout(idSnof) == F     ! Fi_avg(...,icSnof) snowfall rate
 ! Sout(idSocn)    Write out net short-wave radiation at sea surface
 ! Sout(idRfac)    Write out lmd_r1 scaling factor
 ! Sout(idSnof)    Write out snowfall rate
+!
+! Sout(idStrc)    Write out sea ice tracer
 !

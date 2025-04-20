@@ -17,10 +17,10 @@
 */
 
 /*
-**  Ice state variables.
+**  Ice tracer variables.
 */
 
-#ifdef ICE_TRACER
+#ifdef T_PASSIVE
             CASE ('idStrc(inert(i))')
               IF (NPT.gt.0) THEN
                 varid=varid-1

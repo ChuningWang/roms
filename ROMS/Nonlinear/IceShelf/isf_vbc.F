@@ -91,10 +91,8 @@
      &                   FORCES(ng) % sustr,                            &
      &                   FORCES(ng) % svstr,                            &
 # endif
-# ifdef ICESHELF_TRACER
      &                   ISF(ng) % Vi,                                  &
      &                   ISF(ng) % Ti,                                  &
-# endif
      &                   ISF(ng) % Fi,                                  &
      &                   FORCES(ng) % stflx)
 # ifdef PROFILE
@@ -119,9 +117,7 @@
 # ifdef ICESHELF_3EQN_VBC
      &                         sustr, svstr,                            &
 # endif
-# ifdef ICESHELF_TRACER
      &                         Vi, Ti,                                  &
-# endif
      &                         Fi,                                      &
      &                         stflx)
 !***********************************************************************
@@ -156,10 +152,8 @@
       real(r8), intent(in) :: sustr(LBi:,LBj:)
       real(r8), intent(in) :: svstr(LBi:,LBj:)
 #  endif
-#  ifdef ICESHELF_TRACER
       real(r8), intent(inout) :: Vi(LBi:,LBj:,:)
       real(r8), intent(inout) :: Ti(LBi:,LBj:,:,:)
-#  endif
       real(r8), intent(out) :: Fi(LBi:,LBj:,:)
       real(r8), intent(out) :: stflx(LBi:,LBj:,:)
 # else
@@ -177,10 +171,8 @@
       real(r8), intent(in) :: sustr(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: svstr(LBi:UBi,LBj:UBj)
 #  endif
-#  ifdef ICESHELF_TRACER
       real(r8), intent(inout) :: Vi(LBi:UBi,LBj:UBj,2)
       real(r8), intent(inout) :: Ti(LBi:UBi,LBj:UBj,2,NTISF(ng))
-#  endif
       real(r8), intent(out) :: Fi(LBi:UBi,LBj:UBj,nIsfF)
       real(r8), intent(out) :: stflx(LBi:UBi,LBj:UBj,NT(ng))
 # endif
@@ -323,7 +315,6 @@
           END IF
         END DO
       END DO
-# ifdef ICESHELF_TRACER
 !
 !  Calculate melting/freezing passive tracer fluxes.
 !
@@ -375,7 +366,6 @@
           END DO
         END DO
       END IF
-# endif
 !
       RETURN
       END SUBROUTINE isf_vbc_tile

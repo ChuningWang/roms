@@ -147,10 +147,8 @@
             idSnof=varid
             iFice(icSnof)=idSnof
 #endif
-#ifdef ICE_TRACER
           CASE ('idStrc(inert(i))')
             load=.TRUE.
-#endif
 /*
 **  Ice model open boundary conditions.
 */

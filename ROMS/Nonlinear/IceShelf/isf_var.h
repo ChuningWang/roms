@@ -95,10 +95,8 @@
           CASE ('idIsbo')
             idIsbo=varid
             iFisf(icIsbo)=idIsbo
-# ifdef ICESHELF_TRACER
           CASE ('idIvol')
             idIvol=varid
           CASE ('idItrc(inert(i))')
             load=.TRUE.
-# endif
 #endif

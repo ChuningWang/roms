@@ -88,8 +88,6 @@
       real(r8) :: fac
 !
       real(r8) :: rfac(IminS:ImaxS,JminS:JmaxS)
-      real(r8) :: ufac(IminS:ImaxS,JminS:JmaxS)
-      real(r8) :: vfac(IminS:ImaxS,JminS:JmaxS)
 
 # include "set_bounds.h"
 !
@@ -147,17 +145,18 @@
             END IF
           END IF
         END DO
-# ifdef ICESHELF_TRACER
-        IF (Lisftrc(ng)) THEN
 !
+!  Initialize iceshelf model tracer variables.
+!
+        IF (Lisftrc(ng)) THEN
           IF (Aout(idIvol,ng)) THEN
             DO j=JstrR,JendR
               DO i=IstrR,IendR
                 ISF_VAVG(ng)%var(i,j)=ISF(ng)%Vi(i,j,lsnew)
-#  ifdef MASKING
+# ifdef MASKING
                 ISF_VAVG(ng)%var(i,j)=ISF_VAVG(ng)%var(i,j)*            &
      &                                GRID(ng)%rmask_full(i,j)
-#  endif
+# endif
               END DO
             END DO
           END IF
@@ -170,18 +169,17 @@
                 DO j=JstrR,JendR
                   DO i=IstrR,IendR
                     ISF_TAVG(itrc,ng)%var(i,j)=ISF(ng)%Ti(i,j,lsnew,ic)
-#  ifdef MASKING
+# ifdef MASKING
                     ISF_TAVG(itrc,ng)%var(i,j)=                         &
      &                ISF_TAVG(itrc,ng)%var(i,j) *                      &
      &                GRID(ng)%rmask_full(i,j)
-#  endif
+# endif
                   END DO
                 END DO
               END IF
             END IF
           END DO
         END IF
-# endif
 !
 !-----------------------------------------------------------------------
 !  Accumulate time-averaged fields.
@@ -226,16 +224,17 @@
             END IF
           END IF
         END DO
-# ifdef ICESHELF_TRACER
-        IF (Lisftrc(ng)) THEN
 !
+!  Accumulate iceshelf model tracer variables.
+!
+        IF (Lisftrc(ng)) THEN
           IF (Aout(idIvol,ng)) THEN
             DO j=JstrR,JendR
               DO i=IstrR,IendR
                 ISF_VAVG(ng)%var(i,j)=ISF_VAVG(ng)%var(i,j)+            &
-#  ifdef MASKING
+# ifdef MASKING
      &                                GRID(ng)%rmask_full(i,j)*         &
-#  endif
+# endif
      &                                ISF(ng)%Vi(i,j,lsnew)
               END DO
             END DO
@@ -250,9 +249,9 @@
                   DO i=IstrR,IendR
                     ISF_TAVG(itrc,ng)%var(i,j)=                         &
      &                ISF_TAVG(itrc,ng)%var(i,j)+                       &
-#  ifdef MASKING
+# ifdef MASKING
      &                GRID(ng)%rmask_full(i,j)*                         &
-#  endif
+# endif
      &                ISF(ng)%Ti(i,j,lsnew,ic)
                   END DO
                 END DO
@@ -260,7 +259,6 @@
             END IF
           END DO
         END IF
-# endif
       END IF
 !
 !-----------------------------------------------------------------------
@@ -285,8 +283,6 @@
         DO j=JstrR,JendR
           DO i=IstrR,IendR
             rfac(i,j)=1.0_r8/MAX(1.0_r8, GRID(ng)%rmask_avg(i,j))
-            ufac(i,j)=1.0_r8/MAX(1.0_r8, GRID(ng)%umask_avg(i,j))
-            vfac(i,j)=1.0_r8/MAX(1.0_r8, GRID(ng)%vmask_avg(i,j))
           END DO
         END DO
 # else
@@ -294,8 +290,6 @@
         DO j=JstrR,JendR
           DO i=IstrR,IendR
             rfac(i,j)=fac
-            ufac(i,j)=fac
-            vfac(i,j)=fac
           END DO
         END DO
 # endif
@@ -358,56 +352,57 @@
           END IF
         END DO
       END IF
-# ifdef ICESHELF_TRACER
-      IF (Lisftrc(ng)) THEN
 !
-        IF (Aout(idIvol,ng)) THEN
-          DO j=JstrR,JendR
-            DO i=IstrR,IendR
-              ISF_VAVG(ng)%var(i,j)=rfac(i,j)*                          &
-     &                              ISF_VAVG(ng)%var(i,j)
-            END DO
-          END DO
-          IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-            CALL exchange_r2d_tile (ng, tile,                           &
-     &                              LBi, UBi, LBj, UBj,                 &
-     &                              ISF_VAVG(ng)%var)
-#  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, model, 1,                     &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          NghostPoints,                           &
-     &                          EWperiodic(ng), NSperiodic(ng),         &
-     &                          ISF_VAVG(ng)%var)
-#  endif
-          END IF
-        END IF
+!  Process iceshelf model tracer variables.
 !
-        DO itrc=NAT+1,NT(ng)
-          IF (LtracerIsf(itrc,ng)) THEN
-            IF (Aout(idItrc(itrc),ng)) THEN
-              DO j=JstrR,JendR
-                DO i=IstrR,IendR
-                  ISF_TAVG(itrc,ng)%var(i,j)=rfac(i,j) *                &
-     &                                       ISF_TAVG(itrc,ng)%var(i,j)
-                END DO
+        IF (Lisftrc(ng)) THEN
+          IF (Aout(idIvol,ng)) THEN
+            DO j=JstrR,JendR
+              DO i=IstrR,IendR
+                ISF_VAVG(ng)%var(i,j)=rfac(i,j)*                        &
+     &                                ISF_VAVG(ng)%var(i,j)
               END DO
-              IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-                CALL exchange_r2d_tile (ng, tile,                       &
-     &                                  LBi, UBi, LBj, UBj,             &
-     &                                  ISF_TAVG(itrc,ng)%var)
-#  ifdef DISTRIBUTE
-                CALL mp_exchange2d (ng, tile, model, 1,                 &
-     &                              LBi, UBi, LBj, UBj,                 &
-     &                              NghostPoints,                       &
-     &                              EWperiodic(ng), NSperiodic(ng),     &
-     &                              ISF_TAVG(itrc,ng)%var)
-#  endif
-              END IF
+            END DO
+            IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+              CALL exchange_r2d_tile (ng, tile,                         &
+     &                                LBi, UBi, LBj, UBj,               &
+     &                                ISF_VAVG(ng)%var)
+# ifdef DISTRIBUTE
+              CALL mp_exchange2d (ng, tile, model, 1,                   &
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            NghostPoints,                         &
+     &                            EWperiodic(ng), NSperiodic(ng),       &
+     &                            ISF_VAVG(ng)%var)
+# endif
             END IF
           END IF
-        END DO
-      END IF
+!
+          DO itrc=NAT+1,NT(ng)
+            IF (LtracerIsf(itrc,ng)) THEN
+              IF (Aout(idItrc(itrc),ng)) THEN
+                DO j=JstrR,JendR
+                  DO i=IstrR,IendR
+                    ISF_TAVG(itrc,ng)%var(i,j)=rfac(i,j) *              &
+     &                ISF_TAVG(itrc,ng)%var(i,j)
+                  END DO
+                END DO
+                IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+                  CALL exchange_r2d_tile (ng, tile,                     &
+     &                                    LBi, UBi, LBj, UBj,           &
+     &                                    ISF_TAVG(itrc,ng)%var)
+# ifdef DISTRIBUTE
+                  CALL mp_exchange2d (ng, tile, model, 1,               &
+     &                                LBi, UBi, LBj, UBj,               &
+     &                                NghostPoints,                     &
+     &                                EWperiodic(ng), NSperiodic(ng),   &
+     &                                ISF_TAVG(itrc,ng)%var)
 # endif
+                END IF
+              END IF
+            END IF
+          END DO
+        END IF
+      END IF
 !
       RETURN
       END SUBROUTINE isf_set_avg_tile

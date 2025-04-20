@@ -650,7 +650,6 @@
 ** ICESHELF_MOM         use to activate iceshelf dynamics calculation        **
 ** ICESHELF_2EQN_VBC    use to activate 2-equation ice/ocean thermodynamics  **
 ** ICESHELF_3EQN_VBC    use to activate 3-equation ice/ocean thermodynamics  **
-** ICESHELF_TRACER      use to activate iceshelf melt/freeze passive tracer  **
 ** ICESHELF_TEOS10      use to activate TEOS10 in-situ T calculation         **
 **                                                                           **
 ** OPTION to avoid writing current date and CPP options to NetCDF file       **

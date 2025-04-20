@@ -33,9 +33,9 @@
 #ifdef AVERAGES
       integer :: nf, ns
 #endif
-      logical, allocatable :: Lswitch(:)
-#ifdef ICE_TRACER
       integer :: i, ic, itrc
+      logical, allocatable :: Lswitch(:)
+#ifdef T_PASSIVE
       logical, allocatable :: Linert(:,:)
 #endif
 !
@@ -63,7 +63,7 @@
       IF (.not.allocated(Lswitch)) THEN
         allocate (Lswitch(Ngrids))
       END IF
-#ifdef ICE_TRACER
+#ifdef T_PASSIVE
       IF (.not.allocated(Linert)) THEN
         allocate (Linert(NPT,Ngrids))
       END IF
@@ -169,9 +169,9 @@
             CASE ('sublimation')
               Npts=load_r(Nval, Rval, 1, Rvalue)
               sublimation=Rvalue(1)
-#ifdef ICE_TRACER
+#ifdef T_PASSIVE
             CASE ('LtracerIce')
-              Npts=load_l(Nval, Cval, MT-NAT, Ngrids, Linert)
+              Npts=load_l(Nval, Cval, NPT, Ngrids, Linert)
               DO ng=1,Ngrids
                 DO i=1,NPT
                   itrc=inert(i)
@@ -182,7 +182,7 @@
                 IF (ANY(LtracerIce(:,ng))) THEN
                   Licetrc(ng)=.TRUE.
                   ic=0
-                  DO itrc=1,NT(ng)
+                  DO itrc=NAT+1,NT(ng)
                     IF (LtracerIce(itrc,ng)) THEN
                       ic=ic+1
                     END IF
@@ -491,7 +491,7 @@
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Hout(idSnof,1:Ngrids)=Lswitch(1:Ngrids)
 #endif
-#ifdef ICE_TRACER
+#ifdef T_PASSIVE
             CASE ('Hout(idStrc)')
               IF (MAXVAL(idStrc).eq.0) THEN
                 IF (Master) WRITE (out,80) 'idStrc'
@@ -623,7 +623,7 @@
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idSnof,1:Ngrids)=Lswitch(1:Ngrids)
 #endif
-#ifdef ICE_TRACER
+#ifdef T_PASSIVE
             CASE ('Qout(idStrc)')
               Npts=load_l(Nval, Cval, NPT, Ngrids, Linert)
               DO ng=1,Ngrids
@@ -751,7 +751,7 @@
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idSnof,1:Ngrids)=Lswitch(1:Ngrids)
 # endif
-# ifdef ICE_TRACER
+# ifdef T_PASSIVE
             CASE ('Aout(idStrc)')
               Npts=load_l(Nval, Cval, NPT, Ngrids, Linert)
               DO ng=1,Ngrids
@@ -880,7 +880,7 @@
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idSnof,1:Ngrids)=Lswitch(1:Ngrids)
 # endif
-# ifdef ICE_TRACER
+# ifdef T_PASSIVE
             CASE ('Sout(idStrc)')
               Npts=load_l(Nval, Cval, NPT, Ngrids, Linert)
               DO ng=1,Ngrids
@@ -954,7 +954,7 @@
      &          'Heat transfer coefficient (nondimensional).'
           WRITE (out,60) sublimation, 'sublimation',                    &
      &          'Latent heat of sublimation (J/kg).'
-#ifdef ICE_TRACER
+#ifdef T_PASSIVE
           DO i=1,NPT
             itrc=inert(i)
             IF (LtracerIce(itrc,ng)) THEN
@@ -1086,7 +1086,7 @@
      &         'Hout(idSnof)',                                          &
      &         'Write out snowfall rate.'
 #endif
-#ifdef ICE_TRACER
+#ifdef T_PASSIVE
             DO i=1,NPT
               itrc=inert(i)
               IF (Hout(idStrc(itrc),ng)) WRITE (out,180)                &
@@ -1214,7 +1214,7 @@
      &         'Qout(idSnof)',                                          &
      &         'Write out snowfall rate.'
 #endif
-#ifdef ICE_TRACER
+#ifdef T_PASSIVE
             DO i=1,NPT
               itrc=inert(i)
               IF (Qout(idStrc(itrc),ng)) WRITE (out,180)                &
@@ -1343,7 +1343,7 @@
      &         'Aout(idSnof)',                                          &
      &         'Write out snowfall rate.'
 # endif
-# ifdef ICE_TRACER
+# ifdef T_PASSIVE
             DO i=1,NPT
               itrc=inert(i)
               IF (Aout(idStrc(itrc),ng)) WRITE (out,180)                &
@@ -1472,7 +1472,7 @@
      &         'Sout(idSnof)',                                          &
      &         'Write out snowfall rate.'
 # endif
-# ifdef ICE_TRACER
+# ifdef T_PASSIVE
             DO i=1,NPT
               itrc=inert(i)
               IF (Sout(idStrc(itrc),ng)) WRITE (out,180)                &
@@ -1512,9 +1512,7 @@
           END IF
         END DO
       END DO
-# ifdef ICE_TRACER
-!
-      LiceTavg=.FALSE.
+# ifdef T_PASSIVE
 !
       DO ng=1,Ngrids
         DO i=1,NPT

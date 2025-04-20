@@ -45,13 +45,11 @@
 !    icIust    friction velocity in ice/water boundary layer [m s-1]   !
 !    icItbo    temperature in laminar boundary layer [degC]            !
 !    icIsbo    salinity in laminar boundary layer [PSU]                !
-# ifdef ICESHELF_TRACER
 !                                                                      !
 !  The iceshelf model refreezed volume and tracer concentration:       !
 !                                                                      !
 !    Vi        iceshelf freeezed volume (m)                            !
 !    Ti        tracer concentration in refreezed volume (m TU)         !
-# endif
 #endif
 !                                                                      !
 !=======================================================================
@@ -82,10 +80,9 @@
       integer :: idIust       ! U*
       integer :: idItbo       ! Boundary layer temperature
       integer :: idIsbo       ! Boundary layer salinity
-#ifdef ICESHELF_TRACER
+!
       integer              :: idIvol     ! Volume of refreezed water
       integer, allocatable :: idItrc(:)  ! Tracer variables
-#endif
 !
 !  Ice model state prognostic variables indices.
 !
@@ -151,6 +148,7 @@
 !
       integer, allocatable :: lsnew(:)
       integer, allocatable :: lsold(:)
+!
 !$OMP THREADPRIVATE (lsnew, lsold)
 #ifdef AVERAGES
 !
@@ -159,24 +157,20 @@
 !
       logical, allocatable :: LisfFavg(:,:)     ! internal variables
       logical, allocatable :: LisfSavg(:,:)     ! state variables
-# ifdef ICESHELF_TRACER
       logical, allocatable :: LisfVavg(:)       ! refreezed volume
       logical, allocatable :: LisfTavg(:,:)     ! refreezed tracer
-# endif
 #endif
 !
 !  Gamma constraining factors
 !
       real(r8), allocatable :: gamU(:)          ! gamma scaling factor
       real(r8), allocatable :: min_ustar(:)     ! minimum ustar value
-#ifdef ICESHELF_TRACER
 !
 !  Logical switches
 !
       integer, allocatable :: NTISF(:)
       logical, allocatable :: Lisftrc(:)
       logical, allocatable :: LtracerIsf(:,:)   ! tracer switch
-#endif
 !
 !  Other constant parameters
 !
@@ -210,10 +204,8 @@
 
         real(r8), pointer :: Fi(:,:,:)               ! [i,j,1:nIsfF]
         real(r8), pointer :: Si(:,:,:,:)             ! [i,j,1:2,1:nIsfS]
-#ifdef ICESHELF_TRACER
         real(r8), pointer :: Vi(:,:,:)               ! [i,j,1:2]
         real(r8), pointer :: Ti(:,:,:,:)             ! [i,j,1:2,1:NTISF]
-#endif
 
       END TYPE T_ISF
 !
@@ -258,10 +250,8 @@
 !
       TYPE (T_ISF_AVG), allocatable :: ISF_FAVG(:,:) ! [nIsfF,Ngrids]
       TYPE (T_ISF_AVG), allocatable :: ISF_SAVG(:,:) ! [nIsfS,Ngrids]
-# ifdef ICESHELF_TRACER
       TYPE (T_ISF_AVG), allocatable :: ISF_VAVG(:)   ! [Ngrids]
       TYPE (T_ISF_AVG), allocatable :: ISF_TAVG(:,:) ! [MT,Ngrids]
-# endif
 #endif
 !
       CONTAINS
@@ -275,7 +265,7 @@
 !                                                                      !
 !=======================================================================
 !
-      USE mod_param,   ONLY : Dmem, LBC, Ngrids, NT, MT
+      USE mod_param,   ONLY : Dmem, LBC, Ngrids, NT, MT, NAT
       USE mod_scalars, ONLY : iwest, ieast, isouth, inorth
 !
 !  Imported variable declarations.
@@ -302,13 +292,11 @@
 !-----------------------------------------------------------------------
 !
       IF (.not.isf_kernel) THEN
-#ifdef ICESHELF_TRACER
 
         IF (.not.allocated(idItrc))                                     &
      &    allocate ( idItrc(MT) )
         Dmem(1)=Dmem(1)+REAL(MT,r8)
         idItrc(1:MT)=0
-#endif
 
         IF (.not.allocated(lsnew))                                      &
           allocate ( lsnew(Ngrids) )
@@ -331,7 +319,6 @@
           allocate ( LisfSavg(nIsfS,Ngrids) )
         Dmem(1)=Dmem(1)+REAL(nIsfS*Ngrids,r8)
         LisfSavg(1:nIsfS,1:Ngrids)=.FALSE.
-# ifdef ICESHELF_TRACER
 
         IF (.not.allocated(LisfVavg))                                   &
           allocate ( LisfVavg(Ngrids) )
@@ -342,7 +329,6 @@
           allocate ( LisfTavg(MT,Ngrids) )
         Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
         LisfTavg(1:MT,1:Ngrids)=.FALSE.
-# endif
 #endif
 
         IF (.not.allocated(gamU))                                       &
@@ -354,7 +340,6 @@
      &    allocate ( min_ustar(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
         min_ustar(1:Ngrids)=IniVal
-#ifdef ICESHELF_TRACER
 
         IF (.not.allocated(NTISF))                                      &
      &    allocate ( NTISF(Ngrids) )
@@ -370,7 +355,6 @@
      &    allocate ( LtracerIsf(MT,Ngrids) )
         Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
         LtracerIsf(1:MT,1:Ngrids)=.FALSE.
-#endif
 
       ELSE
 !
@@ -388,7 +372,6 @@
 !
         allocate ( ISF(ng) % Fi(LBi:UBi,LBj:UBj,nIsfF) )
         Dmem(ng)=Dmem(ng)+REAL(nIsfF,r8)*size2d
-#ifdef ICESHELF_TRACER
 !
         IF (Lisftrc(ng)) THEN
           allocate ( ISF(ng) % Vi(LBi:UBi,LBj:UBj,2) )
@@ -397,7 +380,6 @@
           allocate ( ISF(ng) % Ti(LBi:UBi,LBj:UBj,2,NTISF(ng)) )
           Dmem(ng)=Dmem(ng)+2.0_r8*REAL(NTISF(ng))*size2d
         END IF
-#endif
 #ifdef ICESHELF_MOM
 !
 !-----------------------------------------------------------------------
@@ -478,7 +460,6 @@
             END IF
           END IF
         END DO
-# ifdef ICESHELF_TRACER
 !
 !  Time-averaged tracer fields.
 !
@@ -492,13 +473,14 @@
           Dmem(ng)=Dmem(ng)+size2d
         END IF
 !
-        DO itrc=1,NT(ng)
-          IF (LisfTavg(itrc,ng)) THEN
-            allocate ( ISF_TAVG(itrc,ng) % var(LBi:UBi,LBj:UBj) )
-            Dmem(ng)=Dmem(ng)+size2d
-          END IF
-        END DO
-# endif
+        IF (Lisftrc(ng)) THEN
+          DO itrc=NAT+1,NT(ng)
+            IF (LisfTavg(itrc,ng)) THEN
+              allocate ( ISF_TAVG(itrc,ng) % var(LBi:UBi,LBj:UBj) )
+              Dmem(ng)=Dmem(ng)+size2d
+            END IF
+          END DO
+        END IF
       END IF
 #endif
 !
@@ -549,7 +531,6 @@
 !
       IF (.not.destroy(ng, ISF(ng)%Fi, MyFile,                          &
      &                 __LINE__, 'ISF(ng)%Fi')) RETURN
-# ifdef ICESHELF_TRACER
 !
       IF (Lisftrc(ng)) THEN
         IF (.not.destroy(ng, ISF(ng)%Vi, MyFile,                        &
@@ -558,7 +539,6 @@
         IF (.not.destroy(ng, ISF(ng)%Ti, MyFile,                        &
      &                   __LINE__, 'ISF(ng)%Ti')) RETURN
       END IF
-# endif
 # ifdef ICESHELF_MOM
 !
 !  Nonlinear iceshelf model state lateral boundary arrays.
@@ -613,25 +593,23 @@
      &                     __LINE__, 'ISF_SAVG(i,ng)%var')) RETURN
         END IF
       END DO
-#  ifdef ICESHELF_TRACER
 !
       IF (LisfVavg(ng)) THEN
         IF (.not.destroy(ng, ISF_VAVG(ng)%var, MyFile,                  &
      &                   __LINE__, 'ISF_VAVG(ng)%var')) RETURN
       END IF
 !
-      DO itrc=1,NT(ng)
-        IF (LisfTavg(itrc,ng)) THEN
-          IF (.not.destroy(ng, ISF_TAVG(itrc,ng)%var, MyFile,           &
-     &                     __LINE__,'ISF_TAVG(itrc,ng)%var')) RETURN
-        END IF
-      END DO
-#  endif
+      IF (Lisftrc(ng)) THEN
+        DO itrc=1,NT(ng)
+          IF (LisfTavg(itrc,ng)) THEN
+            IF (.not.destroy(ng, ISF_TAVG(itrc,ng)%var, MyFile,         &
+     &                       __LINE__,'ISF_TAVG(itrc,ng)%var')) RETURN
+          END IF
+        END DO
+      END IF
 # endif
 #endif
-#ifdef ICESHELF_TRACER
       IF (allocated(idItrc))   deallocate ( idItrc )
-#endif
 !
 !-----------------------------------------------------------------------
 !  Deallocate derived-type ISF and ISF_LOBC structures.
@@ -644,6 +622,8 @@
 #ifdef AVERAGES
       IF (allocated(ISF_FAVG)) deallocate ( ISF_FAVG )
       IF (allocated(ISF_SAVG)) deallocate ( ISF_SAVG )
+      IF (allocated(ISF_VAVG)) deallocate ( ISF_VAVG )
+      IF (allocated(ISF_TAVG)) deallocate ( ISF_TAVG )
 #endif
 !
 !-----------------------------------------------------------------------
@@ -653,11 +633,8 @@
 #ifdef AVERAGES
       IF (allocated(LisfFavg)) deallocate ( LisfFavg )
       IF (allocated(LisfSavg)) deallocate ( LisfSavg )
-
-# ifdef ICESHELF_TRACER
       IF (allocated(LisfVavg)) deallocate ( LisfVavg )
       IF (allocated(LisfTavg)) deallocate ( LisfTavg )
-# endif
 #endif
 !
       RETURN
@@ -737,7 +714,6 @@
           END DO
         END DO
       END DO
-#ifdef ICESHELF_TRACER
 !
       IF (Lisftrc(ng)) THEN
         DO j=Jmin,Jmax
@@ -759,7 +735,6 @@
           END IF
         END DO
       END IF
-#endif
 #ifdef ICESHELF_MOM
 !
 !-----------------------------------------------------------------------
@@ -834,7 +809,6 @@
           END IF
         END IF
       END DO
-# ifdef ICESHELF_TRACER
 !
 !  Time-averaged tracer fields.
 !
@@ -846,16 +820,17 @@
         END DO
       END IF
 !
-      DO itrc=1,NT(ng)
-        IF (LisfTavg(itrc,ng)) THEN
-          DO j=Jmin,Jmax
-            DO i=Imin,Imax
-              ISF_TAVG(itrc,ng) % var(i,j) = IniVal
+      IF (Licetrc(ng)) THEN
+        DO itrc=1,NT(ng)
+          IF (LisfTavg(itrc,ng)) THEN
+            DO j=Jmin,Jmax
+              DO i=Imin,Imax
+                ISF_TAVG(itrc,ng) % var(i,j) = IniVal
+              END DO
             END DO
-          END DO
-        END IF
-      END DO
-# endif
+          END IF
+        END DO
+      END IF
 #endif
 !
       RETURN

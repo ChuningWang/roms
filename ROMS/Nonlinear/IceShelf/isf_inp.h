@@ -33,9 +33,9 @@
 #ifdef AVERAGES
       integer :: nf, ns
 #endif
-      logical, allocatable :: Lswitch(:)
-#ifdef ICESHELF_TRACER
       integer :: i, ic, itrc
+      logical, allocatable :: Lswitch(:)
+#ifdef T_PASSIVE
       logical, allocatable :: Linert(:,:)
 #endif
 !
@@ -63,7 +63,7 @@
       IF (.not.allocated(Lswitch)) THEN
         allocate (Lswitch(Ngrids))
       END IF
-#ifdef ICESHELF_TRACER
+#ifdef T_PASSIVE
       IF (.not.allocated(Linert)) THEN
         allocate (Linert(NPT,Ngrids))
       END IF
@@ -101,7 +101,7 @@
               Npts=load_r(Nval, Rval, Ngrids, gamU)
             CASE ('min_ustar')
               Npts=load_r(Nval, Rval, Ngrids, min_ustar)
-# ifdef ICESHELF_TRACER
+# ifdef T_PASSIVE
             CASE ('LtracerIsf')
               Npts=load_l(Nval, Cval, NPT, Ngrids, Linert)
               DO ng=1,Ngrids
@@ -114,7 +114,7 @@
                 IF (ANY(LtracerIsf(:,ng))) THEN
                   Lisftrc(ng)=.TRUE.
                   ic=0
-                  DO itrc=1,NT(ng)
+                  DO itrc=NAT+1,NT(ng)
                     IF (LtracerIsf(itrc,ng)) THEN
                       ic=ic+1
                     END IF
@@ -239,7 +239,7 @@
               END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Hout(idIsbo,1:Ngrids)=Lswitch(1:Ngrids)
-# ifdef ICESHELF_TRACER
+# ifdef T_PASSIVE
             CASE ('Hout(idIvol)')
               IF (idIvol.eq.0) THEN
                 IF (Master) WRITE (out,80) 'idIvol'
@@ -314,7 +314,7 @@
             CASE ('Qout(idIsbo)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idIsbo,1:Ngrids)=Lswitch(1:Ngrids)
-# ifdef ICESHELF_TRACER
+# ifdef T_PASSIVE
             CASE ('Qout(idIvol)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               DO ng=1,Ngrids
@@ -380,7 +380,7 @@
             CASE ('Aout(idIsbo)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idIsbo,1:Ngrids)=Lswitch(1:Ngrids)
-#  ifdef ICESHELF_TRACER
+#  ifdef T_PASSIVE
             CASE ('Aout(idIvol)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               DO ng=1,Ngrids
@@ -447,7 +447,7 @@
             CASE ('Sout(idIsbo)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idIsbo,1:Ngrids)=Lswitch(1:Ngrids)
-#  ifdef ICESHELF_TRACER
+#  ifdef T_PASSIVE
             CASE ('Sout(idIvol)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               DO ng=1,Ngrids
@@ -494,7 +494,7 @@
      &          'Iceshelf Ustar scaling factor (nondimensional).'
           WRITE (out,60) min_ustar(ng), 'min_ustar',                    &
      &          'Iceshelf minimum Ustar value.'
-# ifdef ICESHELF_TRACER
+# ifdef T_PASSIVE
           DO i=1,NPT
             itrc=inert(i)
             IF (LtracerIsf(itrc,ng)) THEN
@@ -557,7 +557,7 @@
             IF (Hout(idIsbo,ng)) WRITE (out,70) Hout(idIsbo,ng),        &
      &         'Hout(idIsbo)',                                          &
      &         'Write out iceshelf laminar boundary layer salinity.'
-# ifdef ICESHELF_TRACER
+# ifdef T_PASSIVE
             IF (Hout(idIvol,ng)) WRITE (out,70) Hout(idIvol,ng),        &
      &         'Hout(idIvol)',                                          &
      &         'Write out iceshelf refreezed volume.'
@@ -619,7 +619,7 @@
             IF (Qout(idIsbo,ng)) WRITE (out,70) Qout(idIsbo,ng),        &
      &         'Qout(idIsbo)',                                          &
      &         'Write out iceshelf laminar boundary layer salinity.'
-# ifdef ICESHELF_TRACER
+# ifdef T_PASSIVE
             IF (Qout(idIvol,ng)) WRITE (out,70) Qout(idIvol,ng),        &
      &         'Qout(idIvol)',                                          &
      &         'Write out iceshelf refreezed volume.'
@@ -682,7 +682,7 @@
             IF (Aout(idIsbo,ng)) WRITE (out,70) Aout(idIsbo,ng),        &
      &         'Aout(idIsbo)',                                          &
      &         'Write out iceshelf laminar boundary layer salinity.'
-#  ifdef ICESHELF_TRACER
+#  ifdef T_PASSIVE
             IF (Aout(idIvol,ng)) WRITE (out,70) Aout(idIvol,ng),        &
      &         'Aout(idIvol)',                                          &
      &         'Write out iceshelf refreezed volume.'
@@ -745,7 +745,7 @@
             IF (Sout(idIsbo,ng)) WRITE (out,70) Sout(idIsbo,ng),        &
      &         'Sout(idIsbo)',                                          &
      &         'Write out iceshelf laminar boundary layer salinity.'
-#  ifdef ICESHELF_TRACER
+#  ifdef T_PASSIVE
             IF (Sout(idIvol,ng)) WRITE (out,70) Sout(idIvol,ng),        &
      &         'Sout(idIvol)',                                          &
      &         'Write out iceshelf refreezed volume.'
@@ -789,10 +789,7 @@
           END IF
         END DO
       END DO
-# ifdef ICESHELF_TRACER
-!
-      LisfVavg=.FALSE.
-      LisfTavg=.FALSE.
+# ifdef T_PASSIVE
 !
       DO ng=1,Ngrids
         IF (Aout(idIvol,ng)) THEN
