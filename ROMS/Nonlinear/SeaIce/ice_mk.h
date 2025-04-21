@@ -245,22 +245,24 @@
 !
       integer :: i, j, ic, itrc
 !
-      real(r8), parameter :: eps      = 1.0E-4_r8       ! zero division
-      real(r8), parameter :: sice_ref = 3.2_r8          ! [psu]
-      real(r8), parameter :: AlphIc   = 2.034_r8        ! [W m-1 K-1]
-      real(r8), parameter :: AlphSn   = 0.31_r8         ! [W m-1 K-1]
-      real(r8), parameter :: Cp_i     = 2093.0_r8       ! [J kg-1 K-1]
-      real(r8), parameter :: Cp_w     = 3990.0_r8       ! [J kg-1 K-1]
-      real(r8), parameter :: frln     = -0.0543_r8      ! [psu C-1]
-      real(r8), parameter :: hfus     = 3.347E+5_r8     ! [J kg-1]
-      real(r8), parameter :: kappa    = 0.4_r8          ! von Karman
-      real(r8), parameter :: nu       = 1.8E-6_r8       ! m2/s
-      real(r8), parameter :: prs      = 2432.0_r8       ! S Schmidt Num.
-      real(r8), parameter :: prt      = 13.0_r8         ! T Prandtl Num.
-      real(r8), parameter :: RhoCpr   = 0.2442754E-6_r8 ! [J k-1 m-3]
-      real(r8), parameter :: RhoSW    = 1026.0_r8       ! [kg m-3]
-      real(r8), parameter :: tpr      = 0.85_r8         ! Turb. Prandtl
-      real(r8), parameter :: ykf      = 3.14            ! Yaglom/Kader
+      real(r8), parameter :: eps      = 1.0E-4_r8     ! zero division
+      real(r8), parameter :: sice_ref = 3.2_r8        ! [psu]
+      real(r8), parameter :: MelRho   = 1003.1_r8     ! [kg m-3]
+      real(r8), parameter :: AlphIc   = 2.034_r8      ! [W m-1 K-1]
+      real(r8), parameter :: AlphSn   = 0.31_r8       ! [W m-1 K-1]
+      real(r8), parameter :: Cp_i     = 2093.0_r8     ! [J kg-1 K-1]
+      real(r8), parameter :: Cp_w     = 3990.0_r8     ! [J kg-1 K-1]
+      real(r8), parameter :: frln     = -0.0543_r8    ! [psu C-1]
+      real(r8), parameter :: hfus     = 3.347E+5_r8   ! [J kg-1]
+      real(r8), parameter :: kappa    = 0.4_r8        ! von Karman
+      real(r8), parameter :: nu       = 1.8E-6_r8     ! m2/s
+      real(r8), parameter :: prs      = 2432.0_r8     ! S Schmidt Num.
+      real(r8), parameter :: prt      = 13.0_r8       ! T Prandtl Num.
+      real(r8), parameter :: RhoSW    = 1026.0_r8     ! [kg m-3]
+      real(r8), parameter :: RhoCp    = RhoSW*Cp_w    ! [kg m-1 s-2 K-1]
+      real(r8), parameter :: RhoCpr   = 1.0_r8/rhocp  ! 1/(Rho*Cp)
+      real(r8), parameter :: tpr      = 0.85_r8       ! Turb. Prandtl
+      real(r8), parameter :: ykf      = 3.14          ! Yaglom/Kader
 !
 !  (CW) In MK89, z0ii is 0.05/3 (Table 1)
 !       We also add ocean roughness following MK89 PG 10,941
@@ -272,7 +274,7 @@
       real(r8) :: dztop, corfac, cot, delta_mi
       real(r8) :: hicehinv, hstar, ai_old, hi_old, phi
       real(r8) :: Qsur, rno, termt, terms, tfrz
-      real(r8) :: xwai, xtot, z0i, z0o, z0, zdz0
+      real(r8) :: xtot, z0i, z0o, z0, zdz0
       real(r8) :: hh, clear, fac_sf
 !
       logical, dimension(IminS:ImaxS,JminS:JmaxS) :: overOcean
@@ -325,7 +327,7 @@
             temp_top(i,j)=t(i,j,N(ng),nrhs,itemp)
             salt_top(i,j)=t(i,j,N(ng),nrhs,isalt)
             salt_top(i,j)=MIN(MAX(0.0_r8, salt_top(i,j)), 40.0_r8)
-            Qao(i,j)=-stflx(i,j,itemp)/RhoCpr
+            Qao(i,j)=-stflx(i,j,itemp)*RhoCp
 !
 !  Compute squared-root of surface wind stress magnitude.
 !
@@ -333,21 +335,20 @@
      &                          (0.5_r8*(svstr(i,j)+svstr(i,j+1)))**2))
             utau(i,j)=MAX(utau(i,j), eps)
 !
-!  Compute snow thickness, freezing temperature, ice thickness, brine
+!  Compute snow thickness, ice thickness, freezing temperature, brine
 !  fraction, and thermal conductivity.
 !
+            ice_thick(i,j)=0.05_r8+                                     &
+     &        Si(i,j,linew,isHice)/(Si(i,j,linew,isAice)+eps)
+            snow_thick(i,j)=                                            &
+     &        Si(i,j,linew,isHsno)/(Si(i,j,linew,isAice)+eps)
             sice(i,j)=MIN(sice_ref, salt_top(i,j))
             tfrz=frln*sice(i,j)
-            ice_thick(i,j)=0.05_r8+                                     &
-     &                     Si(i,j,linew,isHice)/                        &
-     &                     (Si(i,j,linew,isAice)+eps)
-            snow_thick(i,j)=Si(i,j,linew,isHsno)/                       &
-                            (Si(i,j,linew,isAice)+eps)
             brnfr(i,j)=tfrz/(Si(i,j,linew,isTice)-eps)
             brnfr(i,j)=MIN(MAX(brnfr(i,j), 0.0_r8), 0.2_r8)
             alph(i,j)=AlphIc*MAX(1.0_r8-1.2_r8*brnfr(i,j), 0.25_r8)
             cff=Si(i,j,linew,isHice)**2
-            corfac=1.0_r8/(0.5_r8*(1.0_r8+EXP(-cff)))
+            corfac=2.0_r8/(1.0_r8+EXP(-cff))
             alph(i,j)=alph(i,j)*corfac
             Coa(i,j)=2.0_r8*alph(i,j)*snow_thick(i,j)/                  &
      &               (AlphSn*ice_thick(i,j))
@@ -469,7 +470,7 @@
                 Qsur=-(Qai(i,j)-Qi2(i,j))/(hfus1(i,j)*RhoSW)
               ELSE IF ((Si(i,j,linew,isHsno).le.eps).and.               &
      &                 (Si(i,j,linew,isHmel).gt.eps)) THEN
-                Qsur=-(Qai(i,j)-Qi2(i,j))/(hfus1(i,j)*1003.1_r8)
+                Qsur=-(Qai(i,j)-Qi2(i,j))/(hfus1(i,j)*MelRho)
               ELSE
                 Qsur=-(Qai(i,j)-Qi2(i,j))/(hfus*SnowWetRho(ng))
               END IF
@@ -485,8 +486,9 @@
 !
 !  (CW) snow>0 -> sfw -> Tis>0 -> Qsurf>0, snow melt (1, 7)
 !       Alternatively, Qsurf<0, no snow melt (2, 8)
-!       Note that because it is snow melting, the density scaling factor
-!       should be SnowWetRho/1003.1_r8 instead of SnowWetRho/RhoSW.
+!       Note that because it is snow melting into meltpond, the density
+!       scaling factor should be SnowWetRho/MelRho instead of
+!       SnowWetRho/RhoSW.
 !
                 Si(i,j,linew,isHsno)=Si(i,j,linew,isHsno)-              &
      &                               Si(i,j,linew,isAice)*              &
@@ -494,7 +496,8 @@
                 Si(i,j,linew,isHmel)=Si(i,j,linew,isHmel)+              &
      &                               Si(i,j,linew,isAice)*              &
      &                               MAX(Qsur, 0.0_r8)*dtice(ng)*       &
-     &                               SnowWetRho(ng)/1003.1_r8
+     &                               SnowWetRho(ng)/MelRho
+!
               ELSE IF ((Si(i,j,linew,isHmel).gt.eps).and.               &
      &                 (Fi(i,j,icIsst).le.tfrz)) THEN
 !
@@ -505,6 +508,7 @@
                 Si(i,j,linew,isHmel)=Si(i,j,linew,isHmel)+              &
      &                               Si(i,j,linew,isAice)*              &
      &                               MIN(Qsur, 0.0_r8)*dtice(ng)
+!
               ELSE IF ((Si(i,j,linew,isHsno).le.eps).and.               &
      &                 (Si(i,j,linew,isHmel).ge.eps).and.               &
      &                 (Fi(i,j,icIsst).gt.tfrz)) THEN
@@ -516,6 +520,7 @@
                 Si(i,j,linew,isHmel)=Si(i,j,linew,isHmel)+              &
      &                               Si(i,j,linew,isAice)*              &
      &                               MAX(Qsur, 0.0_r8)*dtice(ng)
+!
               ELSE IF ((Si(i,j,linew,isHsno).lt.eps).and.               &
      &                 (Si(i,j,linew,isHmel).lt.eps).and.               &
      &                 (Fi(i,j,icIsst).gt.tfrz)) THEN
@@ -605,16 +610,18 @@
 !  freezing point, freeze surface water.
 !
             tfrz=frln*salt_top(i,j)
-            cff=Qao(i,j)*dtice(ng)-                                     &
-     &          (temp_top(i,j)-tfrz)*(z_w(i,j,N(ng))-z_w(i,j,N(ng)-1))/ &
-     &          RhoCpr
-            IF (cff.gt.0.0_r8) THEN
-              Fi(i,j,icW_ao)=cff/(hfus1(i,j)*RhoSW*dtice(ng))
-            ELSE
-              Fi(i,j,icW_ao)=0.0_r8
+!
+!  (CW) See explaination of W_ao term in MK89 Pg 10,939
+!
+            Fi(i,j,icW_ao)=0.0_r8
+            IF (((temp_top(i,j).le.tfrz).and.(Qao(i,j).gt.0.0_r8)).or.  &
+     &          ((temp_top(i,j).ge.tfrz).and.(Qao(i,j).lt.0.0_r8).and.  &
+     &           (Si(i,j,linew,isAice).gt.0.0_r8))) THEN
+              Fi(i,j,icW_ao)=Qao(i,j)/(hfus1(i,j)*RhoSW)
             END IF
 !
-            IF (Si(i,j,linew,isAice).gt.min_ai(ng)) THEN
+            IF ((Si(i,j,linew,isAice).gt.min_ai(ng)).and.               &
+     &          (Si(i,j,linew,isHice).gt.min_hi(ng))) THEN
 !
 !  Calculate s0mk, t0mk and total freeze/melt of ice layer
 !    Note s0mk and t0mk are used in the next time step, thus the first
@@ -679,14 +686,15 @@
 !  Adjust surface heat flux (MK89 Eq 16).
 !
               stflx(i,j,itemp)=                                         &
-     &  (1.0_r8-Si(i,j,linew,isAice))*Qao(i,j)+                         &
-     &  (Si(i,j,linew,isAice)*Qio(i,j)-xtot*hfus1(i,j)*RhoSW)*fac_sf
+     &          (1.0_r8-Si(i,j,linew,isAice))*Qao(i,j)+                 &
+     &          (Si(i,j,linew,isAice)*Qio(i,j)-xtot*hfus1(i,j)*RhoSW)*  &
+     &          fac_sf
 #ifdef ICE_ALBEDO
 !
 !  Add short-wave radiation flux that penetrats sea ice.
 !
               stflx(i,j,itemp)=stflx(i,j,itemp)-                        &
-     &          Si(i,j,linew,isAice)*Fi(i,j,icSicb)/RhoCpr
+     &          Si(i,j,linew,isAice)*Fi(i,j,icSicb)*RhoCp
 #endif
 !
 !  Change surface heat flux back to ROMS convention (Celsius m/s).
@@ -696,9 +704,9 @@
 !  Adjust surface freshwater flux (MK89 Eq 20).
 !
               stflx(i,j,isalt)=                                         &
-     &  (1.0_r8-Si(i,j,linew,isAice))*stflx(i,j,isalt)-                 &
-     &  (xtot-Si(i,j,linew,isAice)*Fi(i,j,icW_ro))*                     &
-     &  (sice(i,j)-salt_top(i,j))*fac_sf
+     &          (1.0_r8-Si(i,j,linew,isAice))*stflx(i,j,isalt)-         &
+     &          (xtot-Si(i,j,linew,isAice)*Fi(i,j,icW_ro))*             &
+     &          (sice(i,j)-salt_top(i,j))*fac_sf
             END IF
           ELSE
 !
@@ -763,27 +771,52 @@
 !
             hi_old=Si(i,j,linew,isHice)
             ai_old=Si(i,j,linew,isAice)
-            phi=4.0_r8
-            IF (Fi(i,j,icW_ao).lt.0.0_r8) phi=0.5_r8
 !
 !  MK89 Eq 3.
 !
             Si(i,j,linew,isHice)=Si(i,j,linew,isHice)+                  &
-     &  cff*(Si(i,j,linew,isAice)*(Fi(i,j,icW_io)-Fi(i,j,icW_ai))+      &
-     &       (1.0_r8-Si(i,j,linew,isAice))*Fi(i,j,icW_ao)+              &
-     &       Fi(i,j,icW_fr))
+     &        (Si(i,j,linew,isAice)*(Fi(i,j,icW_io)-Fi(i,j,icW_ai))+    &
+     &         (1.0_r8-Si(i,j,linew,isAice))*Fi(i,j,icW_ao)+            &
+     &         Fi(i,j,icW_fr))*cff
 !
 !  MK89 Eq 4, implicit formulation.
 !
+            IF (Fi(i,j,icW_ao).lt.0.0_r8) THEN
+              phi=0.5_r8
+            ELSE
+              phi=4.0_r8
+            END IF
             cff1=cff*(phi*Fi(i,j,icW_ao)+Fi(i,j,icW_fr))/ice_thick(i,j)
-            Si(i,j,linew,isAice)=                                       &
+            Si(i,j,linew,isAice)=                                      &
      &        (cff1+Si(i,j,linew,isAice))/(1.0_r8+cff1)
             Si(i,j,linew,isAice)=MIN(Si(i,j,linew,isAice), max_ai(ng))
 !
-!  If ice concentration decreases, reduce snow mass accordingly.
+!  If sea ice concentration decreases, reduce snow and meltpond masses
+!  accordingly; modify heat and salt flux to account the change in snow
+!  and meltpond mass.
 !
             IF (Si(i,j,linew,isAice).lt.ai_old) THEN
+              cff1=Si(i,j,linew,isHsno)*SnowWetRho(ng)*                 &
+     &             (1.0_r8-Si(i,j,linew,isAice)/MAX(ai_old, eps))
+              cff2=Si(i,j,linew,isHmel)*MelRho*                         &
+     &             (1.0_r8-Si(i,j,linew,isAice)/MAX(ai_old, eps))
+!
+              Fi(i,j,icW_ro)=Fi(i,j,icW_ro)+                            &
+     &                       (cff1+cff2)/(RhoSW*dtice(ng)*              &
+     &                                    (Si(i,j,linew,isAice)+eps))
+              Fi(i,j,icIOmf)=Fi(i,j,icIOmf)-                            &
+     &                       (cff1+cff2)/(RhoSW*dtice(ng)*              &
+     &                                    (Si(i,j,linew,isAice)+eps))
+!
+              stflx(i,j,itemp)=stflx(i,j,itemp)-                        &
+     &                         hfus*cff1/dtice(ng)*RhoCpr
+              stflx(i,j,isalt)=stflx(i,j,isalt)-                        &
+     &                         (cff1+cff2)/(RhoSW*dtice(ng))*           &
+     &                         (salt_top(i,j)-sice(i,j))
+!
               Si(i,j,linew,isHsno)=Si(i,j,linew,isHsno)*                &
+     &                             Si(i,j,linew,isAice)/MAX(ai_old, eps)
+              Si(i,j,linew,isHmel)=Si(i,j,linew,isHmel)*                &
      &                             Si(i,j,linew,isAice)/MAX(ai_old, eps)
             END IF
 

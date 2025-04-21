@@ -27,8 +27,8 @@
       USE ice_spdiw_mod,    ONLY : ice_spdiw
       USE ice_vbc_mod,      ONLY : ice_vbc
 # ifdef ICE_THERMO
-      USE ice_frazil_mod,   ONLY : ice_frazil
       USE ice_thermo_mod,   ONLY : ice_thermo
+      USE ice_frazil_mod,   ONLY : ice_frazil
 # endif
 # if defined ICE_MOMENTUM && defined ICE_EVP
       USE ice_evp_mod,      ONLY : ice_evp
