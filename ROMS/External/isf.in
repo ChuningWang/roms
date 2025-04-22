@@ -81,9 +81,17 @@
 
    min_ustar == 8.0d-6
 
-! Logical switches for iceshelf melt water passive tracers.
+! Logical switches for iceshelf-ocean tracer exchange.
 
   LtracerIsf == T     ! dye_01, ...        inert passive tracers
+
+! Logical switches for iceshelf melt water tracer source.
+
+  LsourceIsf == T     ! dye_01, ...        inert passive tracers
+
+! Iceshelf melt water tracer concentration.
+
+      trcIsf == 1.0d0 ! dye_01, ...        inert passive tracers
 
 ! Logical switches (TRUE/FALSE) to activate writing of iceshelf
 ! variables into HISTORY output file.

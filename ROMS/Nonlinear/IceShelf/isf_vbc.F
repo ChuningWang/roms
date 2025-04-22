@@ -367,6 +367,31 @@
         END DO
       END IF
 !
+!  Add external tracer from iceshelf melt.
+!
+      IF (Lisfsrc(ng)) THEN
+        DO itrc=NAT+1,NT(ng)
+          IF (LsourceIsf(itrc,ng)) THEN
+            DO j=Jstr,Jend
+              DO i=Istr,Iend
+# ifdef WET_DRY
+                IF (zice(i,j).ne.0.0_r8.and.                            &
+     &              rmask_wet(i,j).gt.0.0_r8) THEN
+# elif defined MASKING
+                IF (zice(i,j).ne.0.0_r8.and.rmask(i,j).gt.0.0_r8) THEN
+# else
+                IF (zice(i,j).ne.0.0_r8) THEN
+# endif
+                  stflx(i,j,itrc)=stflx(i,j,itrc)+                      &
+     &                            MAX(Fi(i,j,icImel), 0.0_r8)*          &
+     &                            trcIce(itrc,ng)
+                END IF
+              END DO
+            END DO
+          END IF
+        END DO
+      END IF
+!
       RETURN
       END SUBROUTINE isf_vbc_tile
 !

@@ -240,6 +240,14 @@
                   END IF
                 END DO
               END IF
+              IF (Lfrzsrc(ng)) THEN
+                DO itrc=NAT+1,NT(ng)
+                  IF (LsourceFrz(itrc,ng)) THEN
+                    t(i,j,k,nrhs,itrc) = t(i,j,k,nrhs,itrc) +           &
+     &                MAX(delta_wfr, 0.0_r8)/Hz(i,j,k)*trcFrz(itrc,ng)
+                  END IF
+                END DO
+              END IF
             END DO
 !
 !  Compute rate of frazil ice growth.

@@ -147,7 +147,23 @@ spec_heat_air =  1004.d0
 
 ! Logical switches for ice-ocean tracer exchange.
 
-  LtracerIce == T     ! dye_01, ...        passive/bio/sed tracers
+  LtracerIce == T     ! dye_01, ...        inert passive tracers
+
+! Logical switches for ice melt water tracer source.
+
+  LsourceIce == T     ! dye_01, ...        inert passive tracers
+
+! Ice melt water tracer concentration.
+
+      trcIce == 1.0d0 ! dye_01, ...        inert passive tracers
+
+! Logical switches for ice freeze water tracer source.
+
+  LsourceFrz == T     ! dye_01, ...        inert passive tracers
+
+! Ice freeze water tracer concentration.
+
+      trcFrz == 1.0d0 ! dye_01, ...        inert passive tracers
 
 ! Logical switches (TRUE/FALSE) to activate writing of ice prognostic
 ! variables into HISTORY output file.

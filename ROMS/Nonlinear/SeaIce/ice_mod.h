@@ -316,7 +316,16 @@
 !
       integer, allocatable :: NTICE(:)
       logical, allocatable :: Licetrc(:)
-      logical, allocatable :: LtracerIce(:,:)   ! tracer switch
+      logical, allocatable :: LtracerIce(:,:)   ! tracer exchange switch
+      logical, allocatable :: Licesrc(:)
+      logical, allocatable :: LsourceIce(:,:)   ! tracer source switch
+      logical, allocatable :: Lfrzsrc(:)
+      logical, allocatable :: LsourceFrz(:,:)   ! tracer source switch
+!
+!  Ice melt water tracer concentration
+!
+      real(r8), allocatable :: trcIce(:,:)      ! tracer concentration
+      real(r8), allocatable :: trcFrz(:,:)      ! tracer concentration
 !
 !-----------------------------------------------------------------------
 !  Define derived-type structure ice model state and internal arrays.
@@ -546,6 +555,36 @@
      &    allocate ( LtracerIce(MT,Ngrids) )
         Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
         LtracerIce(1:MT,1:Ngrids)=.FALSE.
+
+        IF (.not.allocated(Licesrc))                                    &
+     &    allocate ( Licesrc(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        Licesrc(1:Ngrids)=.FALSE.
+
+        IF (.not.allocated(LsourceIce))                                 &
+     &    allocate ( LsourceIce(MT,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
+        LsourceIce(1:MT,1:Ngrids)=.FALSE.
+
+        IF (.not.allocated(Lfrzsrc))                                    &
+     &    allocate ( Lfrzsrc(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        Lfrzsrc(1:Ngrids)=.FALSE.
+
+        IF (.not.allocated(LsourceFrz))                                 &
+     &    allocate ( LsourceFrz(MT,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
+        LsourceFrz(1:MT,1:Ngrids)=.FALSE.
+
+        IF (.not.allocated(trcIce))                                     &
+     &    allocate ( trcIce(MT,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
+        trcIce(1:MT,1:Ngrids)=IniVal
+
+        IF (.not.allocated(trcFrz))                                     &
+     &    allocate ( trcFrz(MT,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
+        trcFrz(1:MT,1:Ngrids)=IniVal
 
       ELSE
 !

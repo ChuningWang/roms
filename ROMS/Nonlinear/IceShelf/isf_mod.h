@@ -170,7 +170,13 @@
 !
       integer, allocatable :: NTISF(:)
       logical, allocatable :: Lisftrc(:)
-      logical, allocatable :: LtracerIsf(:,:)   ! tracer switch
+      logical, allocatable :: LtracerIsf(:,:)   ! tracer exchange switch
+      logical, allocatable :: Lisfsrc(:)
+      logical, allocatable :: LsourceIsf(:,:)   ! tracer source switch
+!
+!  Iceshelf melt water tracer concentration
+!
+      real(r8), allocatable :: trcIsf(:,:)      ! tracer concentration
 !
 !  Other constant parameters
 !
@@ -355,6 +361,21 @@
      &    allocate ( LtracerIsf(MT,Ngrids) )
         Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
         LtracerIsf(1:MT,1:Ngrids)=.FALSE.
+
+        IF (.not.allocated(Lisfsrc))                                    &
+     &    allocate ( Lisfsrc(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        Lisfsrc(1:Ngrids)=.FALSE.
+
+        IF (.not.allocated(LsourceIsf))                                 &
+     &    allocate ( LsourceIsf(MT,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
+        LsourceIsf(1:MT,1:Ngrids)=.FALSE.
+
+        IF (.not.allocated(trcIsf))                                     &
+     &    allocate ( trcIsf(MT,Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
+        trcIsf(1:MT,1:Ngrids)=IniVal
 
       ELSE
 !

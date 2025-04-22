@@ -753,6 +753,47 @@
         END DO
       END IF
 !
+!  Add external tracer from ice melt.
+!
+      IF (Licesrc(ng)) THEN
+        DO itrc=NAT+1,NT(ng)
+          IF (LsourceIce(itrc,ng)) THEN
+            DO j=Jstr,Jend
+              DO i=Istr,Iend
+                IF (overOcean(i,j)) THEN
+                  cff=Si(i,j,linew,isAice)*Fi(i,j,icW_ro)+              &
+     &                Si(i,j,linew,isAice)*                             &
+     &                MAX(-Fi(i,j,icW_io), 0.0_r8)+                     &
+     &                (1.0_r8-Si(i,j,linew,isAice))*                    &
+     &                MAX(-Fi(i,j,icW_ao), 0.0_r8)
+                  stflx(i,j,itrc)=stflx(i,j,itrc)+cff*trcIce(itrc,ng)
+                END IF
+              END DO
+            END DO
+          END IF
+        END DO
+      END IF
+!
+!  Add external tracer from ice freeze.
+!
+      IF (Lfrzsrc(ng)) THEN
+        DO itrc=NAT+1,NT(ng)
+          IF (LsourceFrz(itrc,ng)) THEN
+            DO j=Jstr,Jend
+              DO i=Istr,Iend
+                IF (overOcean(i,j)) THEN
+                  cff=Si(i,j,linew,isAice)*                             &
+     &                MAX(Fi(i,j,icW_io), 0.0_r8)+                      &
+     &                (1.0_r8-Si(i,j,linew,isAice))*                    &
+     &                MAX(Fi(i,j,icW_ao), 0.0_r8)
+                  stflx(i,j,itrc)=stflx(i,j,itrc)+cff*trcFrz(itrc,ng)
+                END IF
+              END DO
+            END DO
+          END IF
+        END DO
+      END IF
+!
 !-----------------------------------------------------------------------
 !  Update ice properties.
 !-----------------------------------------------------------------------
@@ -866,7 +907,9 @@
         END DO
       END DO
 !
+!-----------------------------------------------------------------------
 !  Bound values.
+!-----------------------------------------------------------------------
 !
       DO j=Jstr,Jend
         DO i=Istr,Iend

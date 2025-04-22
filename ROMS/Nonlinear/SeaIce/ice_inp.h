@@ -36,6 +36,7 @@
       integer :: i, ic, itrc
       logical, allocatable :: Lswitch(:)
 #ifdef T_PASSIVE
+      real(r8), allocatable :: Rtracer(:,:)
       logical, allocatable :: Linert(:,:)
 #endif
 !
@@ -64,6 +65,9 @@
         allocate (Lswitch(Ngrids))
       END IF
 #ifdef T_PASSIVE
+      IF (.not.allocated(Rtracer)) THEN
+        allocate (Rtracer(NPT,Ngrids))
+      END IF
       IF (.not.allocated(Linert)) THEN
         allocate (Linert(NPT,Ngrids))
       END IF
@@ -189,6 +193,48 @@
                   END DO
                   NTICE(ng)=ic
                 END IF
+              END DO
+            CASE ('LsourceIce')
+              Npts=load_l(Nval, Cval, NPT, Ngrids, Linert)
+              DO ng=1,Ngrids
+                DO i=1,NPT
+                  itrc=inert(i)
+                  LsourceIce(itrc,ng)=Linert(i,ng)
+                END DO
+              END DO
+              DO ng=1,Ngrids
+                IF (ANY(LsourceIce(:,ng))) THEN
+                  Licesrc(ng)=.TRUE.
+                END IF
+              END DO
+            CASE ('trcIce')
+              Npts=load_r(Nval, Rval, NPT, Ngrids, Rtracer)
+              DO ng=1,Ngrids
+                DO i=1,NPT
+                  itrc=inert(i)
+                  trcIce(itrc,ng)=Rtracer(i,ng)
+                END DO
+              END DO
+            CASE ('LsourceFrz')
+              Npts=load_l(Nval, Cval, NPT, Ngrids, Linert)
+              DO ng=1,Ngrids
+                DO i=1,NPT
+                  itrc=inert(i)
+                  LsourceFrz(itrc,ng)=Linert(i,ng)
+                END DO
+              END DO
+              DO ng=1,Ngrids
+                IF (ANY(LsourceFrz(:,ng))) THEN
+                  Lfrzsrc(ng)=.TRUE.
+                END IF
+              END DO
+            CASE ('trcFrz')
+              Npts=load_r(Nval, Rval, NPT, Ngrids, Rtracer)
+              DO ng=1,Ngrids
+                DO i=1,NPT
+                  itrc=inert(i)
+                  trcFrz(itrc,ng)=Rtracer(i,ng)
+                END DO
               END DO
 #endif
             CASE ('Hout(idUice)')
