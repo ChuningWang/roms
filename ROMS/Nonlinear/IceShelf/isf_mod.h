@@ -841,7 +841,7 @@
         END DO
       END IF
 !
-      IF (Licetrc(ng)) THEN
+      IF (Lisftrc(ng)) THEN
         DO itrc=1,NT(ng)
           IF (LisfTavg(itrc,ng)) THEN
             DO j=Jmin,Jmax

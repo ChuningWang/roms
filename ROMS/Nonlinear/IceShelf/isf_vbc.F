@@ -384,7 +384,7 @@
 # endif
                   stflx(i,j,itrc)=stflx(i,j,itrc)+                      &
      &                            MAX(Fi(i,j,icImel), 0.0_r8)*          &
-     &                            trcIce(itrc,ng)
+     &                            trcIsf(itrc,ng)
                 END IF
               END DO
             END DO

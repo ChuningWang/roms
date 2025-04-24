@@ -351,7 +351,6 @@
             END IF
           END IF
         END DO
-      END IF
 !
 !  Process iceshelf model tracer variables.
 !
