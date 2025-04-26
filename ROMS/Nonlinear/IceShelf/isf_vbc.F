@@ -238,8 +238,8 @@
 !  Calculate exchange coefficients. Note that this assumes log profile.
 !
             cff = gamU(ng)*SQRT(SQRT(                                   &
-     &                          (0.5_r8*(sustr(i,j)+sustr(i+1,j)))**2+  &
-     &                          (0.5_r8*(svstr(i,j)+svstr(i,j+1)))**2))
+     &            (0.5_r8*(sustr(i,j)+sustr(i+1,j)))**2+                &
+     &            (0.5_r8*(svstr(i,j)+svstr(i,j+1)))**2))
             Fi(i,j,icIust) = MAX(min_ustar(ng), cff)
 #  ifdef GAMMAS_KY1972
 !

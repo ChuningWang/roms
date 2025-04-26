@@ -196,9 +196,9 @@
       real(r8) :: clear, hh
 # endif
 !
+      real(r8), parameter :: eps = 1.0E-4
       real(r8), parameter :: kappa = 0.4_r8
       real(r8), parameter :: z0ii = 0.01_r8
-      real(r8), parameter :: eps = 1.0E-20
 !
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: spdiw
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: chuiw
@@ -240,14 +240,12 @@
           utauiw(i,j)=spd
           chuiw(i,j)=Cd_io(ng)*spd
 #  else
-          thic=Si(i,j,liold,isHice)/                                    &
-     &         MAX(Si(i,j,liold,isAice), MAX(min_ai(ng), eps))
+          thic=Si(i,j,liold,isHice)/MAX(Si(i,j,liold,isAice), eps)
 !
 !  This parameterization for z0 seems to be designed to vary the
 !  ice-ocean drag for ice between half a meter and 5 m thick (SMD).
 !
-          z0=MAX(z0ii*thic, 0.01_r8)
-          z0=MIN(z0, 0.1_r8)
+          z0=MIN(MAX(z0ii*thic, 0.01_r8), 0.1_r8)
           dztop=z_w(i,j,N(ng))-z_r(i,j,N(ng))
           zdz0=dztop/z0
 !
@@ -259,7 +257,7 @@
 !
           IF (zdz0.lt.6.0_r8) zdz0=6.0_r8
           utauiw(i,j)=SQRT(Fi(i,j,icIOmt)*spd)
-          utauiw(i,j)=MAX(utauiw(i,j), 1.0E-04_r8)
+          utauiw(i,j)=MAX(utauiw(i,j), eps)
           chuiw(i,j)=kappa*utauiw(i,j)/LOG(zdz0)
 !
 !  Add an ice thickness dependent factor for the wind stress similar
@@ -277,7 +275,7 @@
         END DO
       END DO
 !
-!  Compute surface air-sea U-stress.
+!  Compute surface air-ice interface U-stress.
 !
       DO j=Jstr,Jend
         DO i=IstrP,Iend
@@ -301,7 +299,7 @@
 #  ifdef ICE_BULK_FLUXES
 !
 #   ifdef ICESHELF
-          IceCavity=zice(i,j).ne.0.0_r8
+          IceCavity=zice(i,j).ne.0.0_r8.or.zice(i-1,j).ne.0.0_r8
 #   else
           IceCavity=.FALSE.
 #   endif
@@ -342,7 +340,7 @@
 #  ifdef ICE_BULK_FLUXES
 !
 #   ifdef ICESHELF
-          IceCavity=zice(i,j).ne.0.0_r8
+          IceCavity=zice(i,j).ne.0.0_r8.or.zice(i,j-1).ne.0.0_r8
 #   else
           IceCavity=.FALSE.
 #   endif

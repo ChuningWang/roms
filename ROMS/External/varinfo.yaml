@@ -6214,6 +6214,17 @@ metadata:
     add_offset:     0.0d0
     scale:          1.0d0
 
+  - variable:       snow                                             # Output
+    standard_name:  snowfall_flux
+    long_name:      snow fall rate
+    units:          kilogram meter-2 second-1                        # [kg m2/s]
+    field:          snow fall
+    time:           ocean_time
+    index_code:     idSnof
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0                                            # 1/rhosnow (0.0011 m3/kg) if m/s
+
   - variable:       ice_dye_
     standard_name:  mass_concentration_of_dye_in_sea_ice
     long_name:      ice dye concentration

@@ -339,12 +339,12 @@
 !  fraction, and thermal conductivity.
 !
             ice_thick(i,j)=0.05_r8+                                     &
-     &        Si(i,j,linew,isHice)/(Si(i,j,linew,isAice)+eps)
+     &        Si(i,j,linew,isHice)/MAX(Si(i,j,linew,isAice), eps)
             snow_thick(i,j)=                                            &
-     &        Si(i,j,linew,isHsno)/(Si(i,j,linew,isAice)+eps)
+     &        Si(i,j,linew,isHsno)/MAX(Si(i,j,linew,isAice), eps)
             sice(i,j)=MIN(sice_ref, salt_top(i,j))
             tfrz=frln*sice(i,j)
-            brnfr(i,j)=tfrz/(Si(i,j,linew,isTice)-eps)
+            brnfr(i,j)=tfrz/MIN(Si(i,j,linew,isTice), -eps)
             brnfr(i,j)=MIN(MAX(brnfr(i,j), 0.0_r8), 0.2_r8)
             alph(i,j)=AlphIc*MAX(1.0_r8-1.2_r8*brnfr(i,j), 0.25_r8)
             cff=Si(i,j,linew,isHice)**2
@@ -677,7 +677,7 @@
             IF (Si(i,j,linew,isAice).gt.min_ai(ng)) THEN
 #ifdef ICE_SHOREFAST
               hh=h(i,j)+Zt_avg1(i,j)
-              clear=MAX(hh-0.9_r8*Si(i,j,liold,isHice), 0.0_r8)
+              clear=MAX(hh-0.9_r8*Si(i,j,linew,isHice), 0.0_r8)
               fac_sf=MIN(MAX(clear-0.5_r8, 0.0_r8)/1.0_r8, 1.0_r8)
 #else
               fac_sf=1.0_r8

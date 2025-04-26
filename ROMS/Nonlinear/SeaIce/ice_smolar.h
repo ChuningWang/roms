@@ -765,7 +765,7 @@
       integer :: i, j
 !
       real(r8) :: Cu_crss, Cu
-      real(r8) :: cff1, cff2, rateu, ratev, rateyiu, ratexiv
+      real(r8) :: cff, cff1, cff2, rateu, ratev, rateyiu, ratexiv
       real(r8) :: uspeed, vspeed
 !
       real(r8), parameter :: epsil = 1.0E-15_r8
@@ -832,9 +832,9 @@
       DO j=Jmin,Jmax
         DO i=Imin,Imax
           ar(i,j)=1.0_r8/omn(i,j)
-          aif(i,j)=(field(i,j,liold)-                                   &
-     &              dtice(ng)*(aflxu(i+1,j)-aflxu(i,j)+                 &
-     &                         aflxv(i,j+1)-aflxv(i,j))*ar(i,j))
+          aif(i,j)=field(i,j,liold)-                                    &
+     &             dtice(ng)*(aflxu(i+1,j)-aflxu(i,j)+                  &
+     &                        aflxv(i,j+1)-aflxv(i,j))*ar(i,j)
 #ifdef MASKING
           aif(i,j)=aif(i,j)*rmask(i,j)
 #endif
@@ -889,29 +889,6 @@
         END IF
       END IF
 
-#ifdef MASKING
-!
-!  Apply land/sea mask.
-!
-      DO j=Jmin,Jmax
-        DO i=Imin,Imax
-          aif(i,j)=aif(i,j)*rmask(i,j)
-# ifdef WET_DRY
-          aif(i,j)=aif(i,j)*rmask_wet(i,j)
-# endif
-        END DO
-      END DO
-#endif
-#ifdef ICESHELF
-      DO j=Jmin,Jmax
-        DO i=Imin,Jmax
-          IF (zice(i,j).ne.0.0_r8) THEN
-            aif(i,j)=0.0_r8
-          END IF
-        END DO
-      END DO
-#endif
-
 #ifndef ICE_UPWIND
 !
 !  Step 2: Compute antidiffusive velocities .
@@ -946,12 +923,23 @@
 !
       DO j=Jstr,Jend
         DO i=Istr,Iend+1
-          rateu=(aif(i,j)-aif(i-1,j))/                                  &
-     &          MAX(epsil, aif(i,j)+aif(i-1,j))
-
-          rateyiu=(FE(i,j+1)+FE(i,j)+FE(i-1,j+1)+FE(i-1,j))/            &
-     &            (MAX(epsil, aif(i  ,j)+FE(i  ,j+1)-FE(i  ,j)+         &
-     &                        aif(i-1,j)+FE(i-1,j+1)-FE(i-1,j)))
+          cff = aif(i,j)+aif(i-1,j)
+          rateu=(aif(i,j)-aif(i-1,j)) /                                 &
+     &          (SIGN(1._r8, cff)*MAX(ABS(cff), epsil))
+!
+          cff = aif(i  ,j) + FE(i  ,j+1) - FE(i  ,j) +                  &
+     &          aif(i-1,j) + FE(i-1,j+1) - FE(i-1,j)
+          rateyiu=(FE(i,j+1) + FE(i,j) + FE(i-1,j+1) + FE(i-1,j)) /     &
+     &            (SIGN(1._r8, cff)*MAX(ABS(cff), epsil))
+!
+!  SMD's formula.
+!
+!         rateu=(aif(i,j)-aif(i-1,j))/                                  &
+!    &          MAX(epsil, aif(i,j)+aif(i-1,j))
+!
+!         rateyiu=(FE(i,j+1)+FE(i,j)+FE(i-1,j+1)+FE(i-1,j))/            &
+!    &            (MAX(epsil, aif(i  ,j)+FE(i  ,j+1)-FE(i  ,j)+         &
+!    &                        aif(i-1,j)+FE(i-1,j+1)-FE(i-1,j)))
 
           Cu=0.5*dtice(ng)*(pm(i,j)+pm(i-1,j))*ui(i,j,liunw)
 
@@ -973,12 +961,23 @@
 !
       DO j=Jstr,Jend+1
         DO i=Istr,Iend
-          ratev=(aif(i,j)-aif(i,j-1))/                                  &
-     &          MAX(epsil, aif(i,j)+aif(i,j-1))
-
-          ratexiv=(FX(i+1,j)+FX(i,j) +FX(i+1,j-1)+FX(i,j-1))/           &
-     &            (MAX(epsil, aif(i,j  )+FX(i+1,j  )-FX(i,j  )+         &
-     &                        aif(i,j-1)+FX(i+1,j-1)-FX(i,j-1)))
+          cff = aif(i,j)+aif(i,j-1)
+          ratev=(aif(i,j)-aif(i,j-1)) /                                 &
+     &          (SIGN(1._r8, cff)*MAX(ABS(cff), epsil))
+!
+          cff = aif(i,j  ) + FX(i+1,j  ) - FX(i,j  ) +                  &
+     &          aif(i,j-1) + FX(i+1,j-1) - FX(i,j-1)
+          ratexiv=(FX(i+1,j) + FX(i,j) + FX(i+1,j-1) + FX(i,j-1)) /     &
+     &            (SIGN(1._r8, cff)*MAX(ABS(cff), epsil))
+!
+!  SMD's formula.
+!
+!         ratev=(aif(i,j)-aif(i,j-1))/                                  &
+!    &          MAX(epsil, aif(i,j)+aif(i,j-1))
+!
+!         ratexiv=(FX(i+1,j)+FX(i,j) +FX(i+1,j-1)+FX(i,j-1))/           &
+!    &            (MAX(epsil, aif(i,j  )+FX(i+1,j  )-FX(i,j  )+         &
+!    &                        aif(i,j-1)+FX(i+1,j-1)-FX(i,j-1)))
 
           Cu=0.5*dtice(ng)*(pn(i,j)+pn(i,j-1))*vi(i,j,liunw)
 
