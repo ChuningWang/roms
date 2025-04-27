@@ -483,7 +483,7 @@
                 ((S(ng)%ncid.eq.HIS(ng)%ncid).or.                       &
      &           (S(ng)%ncid.eq.QCK(ng)%ncid).or.                       &
      &           (S(ng)%ncid.eq.RST(ng)%ncid))) THEN
-              iceField => ICE(ng) % Si(LBi:UBi,LBj:UBj,IUOUT,ifld)
+              iceField => ICE(ng) % Si(LBi:UBi,LBj:UBj,IOUT,ifld)
 # ifdef AVERAGES
             ELSE IF (S(ng)%ncid.eq.AVG(ng)%ncid) THEN
               iceField => ICE_SAVG(ifld,ng) % var(LBi:UBi,LBj:UBj)
@@ -548,8 +548,8 @@
 # ifdef MASKING
      &                    GRID(ng) % rmask_full,                        &
 # endif
-     &                    ICE(ng) % Si(:,:,IUOUT,isUice),               &
-     &                    ICE(ng) % Si(:,:,IUOUT,isVice),               &
+     &                    ICE(ng) % Si(:,:,IOUT,isUice),                &
+     &                    ICE(ng) % Si(:,:,IOUT,isVice),                &
      &                    Ur2d, Vr2d)
 !
         scale=1.0_dp
@@ -1000,7 +1000,7 @@
             scale=1.0_dp
             CALL extract_sta2d (ng, model, Cgrid, ifield, r2dvar,       &
      &                          LBi, UBi, LBj, UBj,                     &
-     &                          scale, ICE(ng)%Si(:,:,IUOUT,ifld),      &
+     &                          scale, ICE(ng)%Si(:,:,IOUT,ifld),       &
      &                          Nstation(ng), Xpos, Ypos, psta)
 !
             CALL netcdf_put_fvar (ng, model, S(ng)%name,                &
@@ -1551,7 +1551,7 @@
                 ((S(ng)%ncid.eq.HIS(ng)%ncid).or.                       &
      &           (S(ng)%ncid.eq.QCK(ng)%ncid).or.                       &
      &           (S(ng)%ncid.eq.RST(ng)%ncid))) THEN
-              iceField => ICE(ng) % Si(LBi:UBi,LBj:UBj,IUOUT,ifld)
+              iceField => ICE(ng) % Si(LBi:UBi,LBj:UBj,IOUT,ifld)
 #  ifdef AVERAGES
             ELSE IF (S(ng)%ncid.eq.AVG(ng)%ncid) THEN
               iceField => ICE_SAVG(ifld,ng) % var(LBi:UBi,LBj:UBj)
@@ -1628,8 +1628,8 @@
 #  ifdef MASKING
      &                    GRID(ng) % rmask_full,                        &
 #  endif
-     &                    ICE(ng) % Si(:,:,IUOUT,isUice),               &
-     &                    ICE(ng) % Si(:,:,IUOUT,isVice),               &
+     &                    ICE(ng) % Si(:,:,IOUT,isUice),                &
+     &                    ICE(ng) % Si(:,:,IOUT,isVice),                &
      &                    Ur2d, Vr2d)
 !
         scale=1.0_dp

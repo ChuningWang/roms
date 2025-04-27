@@ -76,8 +76,11 @@
 # if defined DIFF_3DCOEF || defined VISC_3DCOEF
       USE hmixing_mod,          ONLY : hmixing
 # endif
-# if defined ICE_MODEL && defined ICE_ALBEDO && defined SHORTWAVE
+# ifdef ICE_MODEL
+#  if defined ICE_ALBEDO && defined SHORTWAVE
       USE ice_albedo_mod,       ONLY : ice_albedo
+#  endif
+      USE ice_ini_fields_mod,   ONLY : ice_ini_fields
 # endif
       USE ini_fields_mod,       ONLY : ini_fields, ini_zeta
 # ifdef LMD_MIXING
@@ -313,6 +316,9 @@
 !
                 DO tile=last_tile(ng),first_tile(ng),-1
                   CALL ini_fields (ng, tile, iNLM)
+# ifdef ICE_MODEL
+                  CALL ice_ini_fields (ng, tile, iNLM)
+# endif
                 END DO
 !$OMP BARRIER
 

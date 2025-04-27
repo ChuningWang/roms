@@ -15,6 +15,7 @@ list( APPEND _files
       ROMS/Nonlinear/SeaIce/ice_evp.F
       ROMS/Nonlinear/SeaIce/ice_evp_sig.F
       ROMS/Nonlinear/SeaIce/ice_frazil.F
+      ROMS/Nonlinear/SeaIce/ice_ini_fields.F
       ROMS/Nonlinear/SeaIce/ice_limit.F
       ROMS/Nonlinear/SeaIce/ice_set_data.F
       ROMS/Nonlinear/SeaIce/ice_set_avg.F

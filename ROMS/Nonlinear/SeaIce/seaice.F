@@ -69,7 +69,7 @@
 !  Local variable declarations.
 !
       integer :: tile
-      integer :: ig, ng, nl, my_iEVP, nelas
+      integer :: ig, ng, nl, my_iEVP
 !
       real(r8), parameter :: dt_large = 1.0E+23_r8
 !
@@ -133,12 +133,11 @@
 !
         DO ig=1,GridsInLayer(nl)
           ng=GridNumber(ig,nl)
-          nelas=nEVP(ng)
           liuol(ng)=liunw(ng)
           liunw(ng)=3-liuol(ng)
           dtevp(ng)=dtice(ng)/REAL(nEVP(ng), r8)
 
-          DO my_iEVP=1,nelas
+          DO my_iEVP=1,nEVP(ng)
             lieol(ng)=lienw(ng)
             lienw(ng)=3-lieol(ng)
             iEVP(ng)=my_iEVP

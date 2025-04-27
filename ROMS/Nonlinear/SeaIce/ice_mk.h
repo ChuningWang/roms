@@ -86,10 +86,10 @@
 !
       USE bc_2d_mod,       ONLY : bc_r2d_tile
       USE bc_3d_mod,       ONLY : bc_r3d_tile
-      USE exchange_2d_mod, ONLY : exchange_r2d_tile
-      USE exchange_3d_mod, ONLY : exchange_r3d_tile
       USE ice_bc2d_mod,    ONLY : ice_bc2d_tile
       USE ice_tibc_mod,    ONLY : ice_tibc_tile
+      USE exchange_2d_mod, ONLY : exchange_r2d_tile
+      USE exchange_3d_mod, ONLY : exchange_r3d_tile
 #ifdef DISTRIBUTE
       USE mp_exchange_mod, ONLY : mp_exchange2d, mp_exchange3d
 #endif
@@ -1027,7 +1027,6 @@
      &                    LBi, UBi, LBj, UBj, 1, NTICE(ng),             &
      &                    Ti(:,:,linew,:))
       END IF
-
 !
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
         CALL exchange_r2d_tile (ng, tile,                               &
