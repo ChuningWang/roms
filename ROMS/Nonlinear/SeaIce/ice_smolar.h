@@ -27,12 +27,14 @@
       USE mod_scalars
 !
       USE bc_2d_mod,       ONLY : bc_r2d_tile
-      USE exchange_2d_mod, ONLY : exchange_r2d_tile
-#ifdef DISTRIBUTE
-      USE mp_exchange_mod, ONLY : mp_exchange2d
-#endif
+      USE bc_3d_mod,       ONLY : bc_r3d_tile
       USE ice_bc2d_mod,    ONLY : ice_bc2d_tile
       USE ice_tibc_mod,    ONLY : ice_tibc_tile
+      USE exchange_2d_mod, ONLY : exchange_r2d_tile
+      USE exchange_3d_mod, ONLY : exchange_r3d_tile
+#ifdef DISTRIBUTE
+      USE mp_exchange_mod, ONLY : mp_exchange2d, mp_exchange3d
+#endif
 !
       implicit none
 !
@@ -367,12 +369,12 @@
                 END IF
               END DO
             END DO
-!
-            CALL bc_r2d_tile (ng, tile,                                 &
-     &                        LBi, UBi, LBj, UBj,                       &
-     &                        ICE(ng) % Ti(:,:,linew,ic))
           END IF
         END DO
+!
+        CALL bc_r3d_tile (ng, tile,                                     &
+     &                    LBi, UBi, LBj, UBj, 1, NTICE(ng),             &
+     &                    ICE(ng) % Ti(:,:,linew,:))
       END IF
 !
 !-----------------------------------------------------------------------
@@ -606,15 +608,11 @@
      &                          LBi, UBi, LBj, UBj,                     &
      &                          ICE(ng)%Si(:,:,linew,isHage))
 
-        ic=0
-        DO itrc=NAT+1,NT(ng)
-          IF (LtracerIce(itrc,ng)) THEN
-          ic=ic+1
-            CALL exchange_r2d_tile (ng, tile,                           &
-     &                              LBi, UBi, LBj, UBj,                 &
-     &                              ICE(ng)%Ti(:,:,linew,ic))
-          END IF
-        END DO
+        IF (Licetrc(ng)) THEN
+          CALL exchange_r3d_tile (ng, tile,                             &
+     &                            LBi, UBi, LBj, UBj, 1, NTICE(ng),     &
+     &                            ICE(ng)%Ti(:,:,linew,:))
+        END IF
 
 # ifdef ICE_BIO
         CALL exchange_r2d_tile (ng, tile,                               &
@@ -655,17 +653,13 @@
      &                    ICE(ng)%Si(:,:,linew,isIage),                 &
      &                    ICE(ng)%Si(:,:,linew,isHage))
 
-      ic=0
-      DO itrc=NAT+1,NT(ng)
-        IF (LtracerIce(itrc,ng)) THEN
-          ic=ic+1
-          CALL mp_exchange2d (ng, tile, model, 1,                       &
-     &                        LBi, UBi, LBj, UBj,                       &
-     &                        NghostPoints,                             &
-     &                        EWperiodic(ng), NSperiodic(ng),           &
-     &                        ICE(ng)%Ti(:,:,linew,ic))
-        END IF
-      END DO
+      IF (Licetrc(ng)) THEN
+        CALL mp_exchange3d (ng, tile, model, 1,                         &
+     &                      LBi, UBi, LBj, UBj, 1, NTICE(ng),           &
+     &                      NghostPoints,                               &
+     &                      EWperiodic(ng), NSperiodic(ng),             &
+     &                      ICE(ng)%Ti(:,:,linew,:))
+      END IF
 
 #  if defined ICE_BIO
       CALL mp_exchange2d (ng, tile, model, 3,                           &

@@ -1031,7 +1031,7 @@
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,linew,isHage))
+     &                          Si(:,:,linew,isAice))
 
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
@@ -1039,15 +1039,11 @@
 
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,linew,isHmel))
-
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
      &                          Si(:,:,linew,isHsno))
 
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,linew,isAice))
+     &                          Si(:,:,linew,isHmel))
 
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
@@ -1074,15 +1070,14 @@
       CALL mp_exchange2d (ng, tile, model, 4,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
-     &                    Si(:,:,linew,isHage),                         &
+     &                    Si(:,:,linew,isAice),                         &
      &                    Si(:,:,linew,isHice),                         &
-     &                    Si(:,:,linew,isHmel),                         &
-     &                    Si(:,:,linew,isHsno))
+     &                    Si(:,:,linew,isHsno),                         &
+     &                    Si(:,:,linew,isHmel))
 
-      CALL mp_exchange2d (ng, tile, model, 4,                           &
+      CALL mp_exchange2d (ng, tile, model, 3,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
-     &                    Si(:,:,linew,isAice),                         &
      &                    Si(:,:,linew,isIage),                         &
      &                    Si(:,:,linew,isEnth),                         &
      &                    Si(:,:,linew,isTice))

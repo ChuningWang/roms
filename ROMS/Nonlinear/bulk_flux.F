@@ -2,7 +2,7 @@
       MODULE bulk_flux_mod
 #ifdef BULK_FLUXES
 # if defined ICE_MODEL && defined ICE_BULK_FLUXES && \
-     defined ICE_SNOWFALL
+     defined ICE_THERMO && defined ICE_SNOWFALL
 #  define ICE_USE_SNOW
 # endif
 !
@@ -179,10 +179,8 @@
 # if defined ICE_MODEL && defined ICE_BULK_FLUXES
      &                     ICE(ng) % Fi,                                &
      &                     ICE(ng) % Si,                                &
-#  if defined ICE_SNOWFALL || defined ICE_THERMO
-     &                     FORCES(ng) % snow,                           &
-#  endif
 #  ifdef ICE_THERMO
+     &                     FORCES(ng) % snow,                           &
      &                     FORCES(ng) % Qnet_ai,                        &
 #  endif
      &                     FORCES(ng) % sustr_ai,                       &
@@ -240,10 +238,8 @@
      &                           rain, lhflx, lrflx, shflx, srflx,      &
 # if defined ICE_MODEL && defined ICE_BULK_FLUXES
      &                           Fi, Si,                                &
-#  if defined ICE_SNOWFALL || defined ICE_THERMO
-     &                           snow,                                  &
-#  endif
 #  ifdef ICE_THERMO
+     &                           snow,                                  &
      &                           Qnet_ai,                               &
 #  endif
      &                           sustr_ai, svstr_ai,                    &
@@ -313,10 +309,8 @@
 #  if defined ICE_MODEL && defined ICE_BULK_FLUXES
       real(r8), intent(inout) :: Fi(LBi:,LBj:,:)
       real(r8), intent(inout) :: Si(LBi:,LBj:,:,:)
-#   if defined ICE_SNOWFALL || defined ICE_THERMO
-      real(r8), intent(inout) :: snow(LBi:,LBj:)
-#   endif
 #   ifdef ICE_THERMO
+      real(r8), intent(inout) :: snow(LBi:,LBj:)
       real(r8), intent(out  ) :: Qnet_ai(LBi:,LBj:)
 #   endif
       real(r8), intent(out  ) :: sustr_ai(LBi:,LBj:)
@@ -378,10 +372,8 @@
 #  if defined ICE_MODEL && defined ICE_BULK_FLUXES
       real(r8), intent(inout) :: Fi(LBi:UBi,LBj:UBj,nIceF)
       real(r8), intent(inout) :: Si(LBi:UBi,LBj:UBj,2,nIceS)
-#   if defined ICE_SNOWFALL || defined ICE_THERMO
-      real(r8), intent(inout) :: snow(LBi:UBi,LBj:UBj)
-#   endif
 #   ifdef ICE_THERMO
+      real(r8), intent(inout) :: snow(LBi:UBi,LBj:UBj)
       real(r8), intent(out  ) :: Qnet_ai(LBi:UBi,LBj:UBj)
 #   endif
       real(r8), intent(out  ) :: sustr_ai(LBi:UBi,LBj:UBj)
@@ -1229,7 +1221,7 @@
       cff=1.0_r8/rhow
       DO j=JstrR,JendR
         DO i=IstrR,IendR
-# if defined ICE_MODEL  &&  defined ICE_BULK_FLUXES
+# if defined ICE_MODEL && defined ICE_BULK_FLUXES
 !
 !  Net precipitation (m/s). Negative values of 'rain' indicate frozen
 !  precipitation (SMD).
@@ -1237,14 +1229,17 @@
 !  The treatment of snowfall is rewritten. Now it is allowed to use
 !    liquid and solid precipitation at the same time (CW).
 !
-#  if defined ICE_THERMO && !defined ICE_SNOWFALL
+#  ifdef ICE_THERMO
+#   ifdef ICE_SNOWFALL
+          Fi(i,j,icSnof)=snow(i,j)
+#   else
           IF (rain(i,j).ge.0.0_r8) THEN
             snow(i,j)=0.0_r8
           ELSE
             snow(i,j)=ABS(rain(i,j))
           END IF
+#   endif
 #  endif
-          Fi(i,j,icSnof)=snow(i,j)
 # endif
 !
 !  Load surface fluxes to state arrays.
@@ -1387,6 +1382,10 @@
 
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fi(:,:,icSnof))
+
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
      &                          snow)
 
         CALL exchange_r2d_tile (ng, tile,                               &
@@ -1398,11 +1397,11 @@
      &                          LBi, UBi, LBj, UBj,                     &
      &                          srflx)
 
-        CALL exchange_r2d_tile (ng, tile,                               &
+        CALL exchange_u2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          sustr_ai)
 
-        CALL exchange_r2d_tile (ng, tile,                               &
+        CALL exchange_v2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          svstr_ai)
 
@@ -1447,12 +1446,18 @@
 
 #  if defined ICE_MODEL && defined ICE_BULK_FLUXES
 #   ifdef ICE_THERMO
-      CALL mp_exchange2d (ng, tile, iNLM, 4,                            &
+      CALL mp_exchange2d (ng, tile, iNLM, 3,                            &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    Fi(:,:,icQcon),                               &
      &                    Fi(:,:,icQrhs),                               &
+     &                    Fi(:,:,icSnof))
+
+      CALL mp_exchange2d (ng, tile, iNLM, 2,                            &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    snow, Qnet_ai)
 #   endif
 

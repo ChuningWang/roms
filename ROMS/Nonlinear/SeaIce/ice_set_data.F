@@ -184,15 +184,6 @@
      &                    Si(:,:,:,isHmel),                             &
      &                    LBC(:,ibICE(isHmel),ng))
 
-      CALL ice_bc2d_tile (ng, tile, model, isTice,                      &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    IminS, ImaxS, JminS, JmaxS,                   &
-     &                    liold, linew,                                 &
-     &                    Si(:,:,:,isUice),                             &
-     &                    Si(:,:,:,isVice),                             &
-     &                    Si(:,:,:,isIage),                             &
-     &                    LBC(:,ibICE(isTice),ng))
-
       CALL ice_tibc_tile (ng, tile, model,                              &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    liold, linew,                                 &

@@ -558,7 +558,8 @@
 # endif
 
 # if !(defined ANA_SNOW || defined FRC_COUPLING) && \
-      (defined BULK_FLUXES && defined ICE_MODEL && defined ICE_SNOWFALL)
+      (defined BULK_FLUXES && defined ICE_MODEL && \
+       defined ICE_THERMO && defined ICE_SNOWFALL)
 !
 !  Snow fall rate.
 !

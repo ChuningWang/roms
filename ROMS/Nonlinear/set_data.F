@@ -405,7 +405,8 @@
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #   endif
       END IF
-#   if defined ICE_MODEL && defined ICE_SNOWFALL
+#   if defined BULK_FLUXES && defined ICE_MODEL && \
+       defined ICE_THERMO && defined ICE_SNOWFALL
 !
 !  Set snow fall rate (kg/m2/s).
 !

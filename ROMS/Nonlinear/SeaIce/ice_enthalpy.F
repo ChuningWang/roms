@@ -116,7 +116,6 @@
      &                          LBi, UBi, LBj, UBj,                     &
      &                          Si(:,:,linew,isEnth))
       END IF
-
 # ifdef DISTRIBUTE
 !
       CALL mp_exchange2d (ng, tile, model, 2,                           &

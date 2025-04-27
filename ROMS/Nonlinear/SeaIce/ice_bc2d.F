@@ -35,6 +35,8 @@
      &                          ui, vi, field, S)
 !***********************************************************************
 !
+      USE exchange_2d_mod, ONLY : exchange_r2d_tile
+!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, tile, model, ifld
@@ -557,6 +559,17 @@
      &                                field(Iend  ,Jend+1,linew))
         END IF
       END IF
+!
+!-----------------------------------------------------------------------
+!  Apply periodic boundary conditions.
+!-----------------------------------------------------------------------
+!
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          field(:,:,linew))
+      END IF
+!
       RETURN
       END SUBROUTINE ice_bc2d_tile
 #endif

@@ -28,10 +28,10 @@
       USE mod_ocean
       USE mod_scalars
 !
-      USE bc_2d_mod,       ONLY : bc_r2d_tile
-      USE bc_3d_mod,       ONLY : bc_r3d_tile
+      USE exchange_2d_mod, ONLY : exchange_r2d_tile
+      USE exchange_3d_mod, ONLY : exchange_r3d_tile
+      USE exchange_4d_mod, ONLY : exchange_r4d_tile
 # ifdef DISTRIBUTE
-      USE distribute_mod,  ONLY : mp_reduce
       USE mp_exchange_mod, ONLY : mp_exchange2d, mp_exchange3d
 # endif
 !
@@ -65,7 +65,7 @@
       CALL ice_frazil_tile (ng, tile, model,                            &
      &                      LBi, UBi, LBj, UBj,                         &
      &                      IminS, ImaxS, JminS, JmaxS,                 &
-     &                      nrhs(ng), liold(ng), linew(ng),             &
+     &                      nrhs(ng), linew(ng),                        &
 # ifdef MASKING
      &                      GRID(ng) % rmask,                           &
 # endif
@@ -88,7 +88,7 @@
       SUBROUTINE ice_frazil_tile (ng, tile, model,                      &
      &                            LBi, UBi, LBj, UBj,                   &
      &                            IminS, ImaxS, JminS, JmaxS,           &
-     &                            nrhs, liold, linew,                   &
+     &                            nrhs, linew,                          &
 # ifdef MASKING
      &                            rmask,                                &
 # endif
@@ -104,7 +104,7 @@
       integer, intent(in) :: ng, tile, model
       integer, intent(in) :: LBi, UBi, LBj, UBj
       integer, intent(in) :: IminS, ImaxS, JminS, JmaxS
-      integer, intent(in) :: nrhs, liold, linew
+      integer, intent(in) :: nrhs, linew
 
 # ifdef ASSUMED_SHAPE
 #  ifdef MASKING
@@ -269,27 +269,57 @@
         END DO
       END DO
 !
-!  Set lateral boundary conditions.
+!  Apply periodic boundary conditions.
 !
-      CALL bc_r2d_tile (ng, tile,                                       &
-     &                  LBi, UBi, LBj, UBj,                             &
-     &                  Fi(:,:,icW_fr))
-!
-      IF (Licetrc(ng)) THEN
-        CALL bc_r3d_tile (ng, tile,                                     &
-     &                    LBi, UBi, LBj, UBj, 1, NTICE(ng),             &
-     &                    Ti(:,:,linew,:))
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+        CALL exchange_r3d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
+     &                          t(:,:,:,nrhs,itemp))
+        CALL exchange_r3d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
+     &                          t(:,:,:,nrhs,isalt))
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fi(:,:,icW_fr))
+        IF (Licetrc(ng)) THEN
+          DO itrc=NAT+1,NT(ng)
+            IF (LtracerIce(itrc,ng)) THEN
+              CALL exchange_r3d_tile (ng, tile,                         &
+     &                                LBi, UBi, LBj, UBj, 1, N(ng),     &
+     &                                t(:,:,:,nrhs,itrc))
+            END IF
+          END DO
+          CALL exchange_r3d_tile (ng, tile,                             &
+     &                            LBi, UBi, LBj, UBj, 1, NTICE(ng),     &
+     &                            Ti(:,:,linew,:))
+        END IF
       END IF
+!
 # ifdef DISTRIBUTE
 !
-!  Exchange boundary data.
-!
+      CALL mp_exchange3d (ng, tile, model, 1,                           &
+     &                    LBi, UBi, LBj, UBj, 1, N(ng),                 &
+     &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
+     &                    t(:,:,:,nrhs,itemp))
+      CALL mp_exchange3d (ng, tile, model, 1,                           &
+     &                    LBi, UBi, LBj, UBj, 1, N(ng),                 &
+     &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
+     &                    t(:,:,:,nrhs,isalt))
       CALL mp_exchange2d (ng, tile, model, 1,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
      &                    Fi(:,:,icW_fr))
 
       IF (Licetrc(ng)) THEN
+        DO itrc=NAT+1,NT(ng)
+          IF (LtracerIce(itrc,ng)) THEN
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
+     &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          t(:,:,:,nrhs,itrc))
+          END IF
+        END DO
         CALL mp_exchange3d (ng, tile, model, 1,                         &
      &                      LBi, UBi, LBj, UBj, 1, NTICE(ng),           &
      &                      NghostPoints,                               &

@@ -231,7 +231,7 @@
      &          MIN(Zt_avg1(i,j), 0.0_r8)-0.9*Si(i,j,liold,isHice)
           clear=MAX(clear, 0.001_r8)
           IF (clear.lt.5.0_r8) THEN
-            spd=0.2_r8*clear*spd                ! 0.2 = 1/5
+            spd=0.2_r8*clear*spd
           END IF
 #  else
           spd=MAX(spd, 0.15_r8)
@@ -374,7 +374,7 @@
       DO j=Jstr,Jend
         DO i=Istr,Iend
           cff=(Si(i,j,liold,isAice)+0.02)*rho0*Cd_io(ng)/IceRho(ng)
-          spdiw(i,j)=cff*spd_iw(i,j)
+          spdiw(i,j)=cff*Fi(i,j,icIOvs)
           spdiw(i,j)=MAX(spdiw(i,j), cff*0.1_r8)
           wind_speed(i,j)=0.5*SQRT((windu(i,j)+windu(i+1,j))**2 +       &
      &                             (windv(i,j)+windv(i,j+1))**2)
@@ -382,8 +382,8 @@
           clear=h(i,j)+MIN(Zt_avg1(i,j), 0.0_r8)-0.9*hi(i,j,liold)
           clear=MAX(clear, 0.001_r8)
           IF (clear.lt.5.0_r8) THEN
-            spd=0.2_r8*clear*spd
-            spdiw(i,j)=0.2_r8*clear*spdiw(i,j)     ! 0.2 = 1/5
+            spdiw(i,j)=0.2_r8*clear*spdiw(i,j)
+            wind_speed(i,j)=0.2_r8*clear*wind_speed(i,j)
           END IF
 #  endif
         END DO
