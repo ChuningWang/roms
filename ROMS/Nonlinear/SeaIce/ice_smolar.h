@@ -186,6 +186,10 @@
        &                          ICE(ng)%Si(i,j,liold,isHice))/dt(ng)
         END DO
       END DO
+!
+        CALL bc_r2d_tile (ng, tile,                                     &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    ICE(ng)%Fi(:,:,icWdiv))
 
 #ifdef ICE_THERMO
 !
@@ -846,44 +850,52 @@
       IF (.not.EWperiodic(ng)) THEN
         IF (DOMAIN(ng)%Western_Edge(tile)) THEN
           DO j=Jmin,Jmax
-            aif(Istr-1,j)=aif(Istr,j)
+            aif(Imin-1,j)=aif(Imin,j)
+            aif(Imin-2,j)=aif(Imin,j)
           END DO
         END IF
         IF (DOMAIN(ng)%Eastern_Edge(tile)) THEN
           DO j=Jmin,Jmax
-            aif(Iend+1,j)=aif(Iend,j)
+            aif(Imax+1,j)=aif(Imax,j)
+            aif(Imax+2,j)=aif(Imax,j)
           END DO
         END IF
       END IF
-!
       IF (.not.NSperiodic(ng)) THEN
         IF (DOMAIN(ng)%Southern_Edge(tile)) THEN
           DO i=Imin,Imax
-            aif(i,Jstr-1)=aif(i,Jstr)
+            aif(i,Jmin-1)=aif(i,Jmin)
+            aif(i,Jmin-2)=aif(i,Jmin)
           END DO
         END IF
         IF (DOMAIN(ng)%Northern_Edge(tile)) THEN
           DO i=Imin,Imax
-            aif(i,Jend+1)=aif(i,Jend)
+            aif(i,Jmax+1)=aif(i,Jmax)
+            aif(i,Jmax+2)=aif(i,Jmax)
           END DO
         END IF
-        IF (.not.EWperiodic(ng)) THEN
-          IF (DOMAIN(ng)%SouthWest_Corner(tile)) THEN
-            aif(Istr-1,Jstr-1)=aif(Istr,Jstr)
-          END IF
-          IF (DOMAIN(ng)%NorthWest_Corner(tile)) THEN
-            aif(Istr-1,Jend+1)=aif(Istr,Jend)
-          END IF
-          IF (DOMAIN(ng)%SouthEast_Corner(tile)) THEN
-            aif(Iend+1,Jstr-1)=aif(Iend,Jstr)
-          END IF
-          IF (DOMAIN(ng)%NorthEast_Corner(tile)) THEN
-            aif(Iend+1,Jend+1)=aif(Iend,Jend)
-          END IF
+      END IF
+      IF (.not.(EWperiodic(ng).or.NSperiodic(ng))) THEN
+        IF (DOMAIN(ng)%SouthWest_Corner(tile)) THEN
+          aif(Imin-1,Jmin-1)=aif(Imin,Jmin)
+        END IF
+        IF (DOMAIN(ng)%NorthWest_Corner(tile)) THEN
+          aif(Imin-1,Jmax+1)=aif(Imin,Jmax)
+        END IF
+        IF (DOMAIN(ng)%SouthEast_Corner(tile)) THEN
+          aif(Imax+1,Jmin-1)=aif(Imax,Jmin)
+        END IF
+        IF (DOMAIN(ng)%NorthEast_Corner(tile)) THEN
+          aif(Imax+1,Jmax+1)=aif(Imax,Jmax)
         END IF
       END IF
-
 #ifndef ICE_UPWIND
+!
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          aif)
+      END IF
 !
 !  Step 2: Compute antidiffusive velocities .
 !
@@ -893,8 +905,8 @@
 !  either of them is masked, then "ui" is zero at that point,
 !  and therefore no additional masking is required.
 !
-      DO j=Jstr,Jend+1
-        DO i=Istr,Iend+1
+      DO j=Jstr-1,Jend+1
+        DO i=Istr-1,Iend+1
           FE(i,j)=0.5*                                                  &
 # ifdef MASKING
      &            vmask(i,j)*                                           &
@@ -917,12 +929,12 @@
 !
       DO j=Jstr,Jend
         DO i=Istr,Iend+1
-          cff = aif(i,j)+aif(i-1,j)
+          cff=aif(i,j)+aif(i-1,j)
           rateu=(aif(i,j)-aif(i-1,j)) /                                 &
      &          (SIGN(1._r8, cff)*MAX(ABS(cff), epsil))
 !
-          cff = aif(i  ,j) + FE(i  ,j+1) - FE(i  ,j) +                  &
-     &          aif(i-1,j) + FE(i-1,j+1) - FE(i-1,j)
+          cff=aif(i  ,j) + FE(i  ,j+1) - FE(i  ,j) +                    &
+     &        aif(i-1,j) + FE(i-1,j+1) - FE(i-1,j)
           rateyiu=(FE(i,j+1) + FE(i,j) + FE(i-1,j+1) + FE(i-1,j)) /     &
      &            (SIGN(1._r8, cff)*MAX(ABS(cff), epsil))
 !
@@ -955,12 +967,12 @@
 !
       DO j=Jstr,Jend+1
         DO i=Istr,Iend
-          cff = aif(i,j)+aif(i,j-1)
+          cff=aif(i,j)+aif(i,j-1)
           ratev=(aif(i,j)-aif(i,j-1)) /                                 &
      &          (SIGN(1._r8, cff)*MAX(ABS(cff), epsil))
 !
-          cff = aif(i,j  ) + FX(i+1,j  ) - FX(i,j  ) +                  &
-     &          aif(i,j-1) + FX(i+1,j-1) - FX(i,j-1)
+          cff=aif(i,j  ) + FX(i+1,j  ) - FX(i,j  ) +                    &
+     &        aif(i,j-1) + FX(i+1,j-1) - FX(i,j-1)
           ratexiv=(FX(i+1,j) + FX(i,j) + FX(i+1,j-1) + FX(i,j-1)) /     &
      &            (SIGN(1._r8, cff)*MAX(ABS(cff), epsil))
 !

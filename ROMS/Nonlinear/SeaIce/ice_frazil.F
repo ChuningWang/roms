@@ -30,7 +30,6 @@
 !
       USE exchange_2d_mod, ONLY : exchange_r2d_tile
       USE exchange_3d_mod, ONLY : exchange_r3d_tile
-      USE exchange_4d_mod, ONLY : exchange_r4d_tile
 # ifdef DISTRIBUTE
       USE mp_exchange_mod, ONLY : mp_exchange2d, mp_exchange3d
 # endif

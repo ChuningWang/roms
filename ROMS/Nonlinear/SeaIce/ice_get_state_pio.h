@@ -10,7 +10,7 @@
               IF (foundit) THEN
                 my_pioVar%vd=var_desc(vindex)
                 SELECT CASE (i)
-                  CASE (isUice)
+                  CASE (isUice, isUevp)
                     my_pioVar%gtype=u2dvar
                     IF (KIND(ICE(ng)%Si).eq.8) THEN
                       my_pioVar%dkind=PIO_double
@@ -34,7 +34,7 @@
 #    else
      &                                ICE(ng) % Si(:,:,Tindex,i))
 #    endif
-                  CASE (isVice)
+                  CASE (isVice, isVevp)
                     my_pioVar%gtype=v2dvar
                     IF (KIND(ICE(ng)%Si).eq.8) THEN
                       my_pioVar%dkind=PIO_double

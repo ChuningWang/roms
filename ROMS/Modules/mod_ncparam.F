@@ -3277,14 +3277,16 @@
 !  Set ice model state boundary indices.  Currently, the last ice model
 !  LBC state variable is isVice=11.
 !
+      ice_ic_brylast=ic_brylast
       DO i=1,nIceS
-        ibICE(i)=i
       END DO
       ic=ic_brylast
       DO i=1,isVice
         ic=ic+1
+        ibICE(i)=ic
         idBvar(ic)=iSice(i)
       END DO
+      ic_brylast=ic
 #endif
 #ifdef ADJUST_BOUNDARY
 !

@@ -183,7 +183,8 @@
       integer, parameter :: isINH4 = 18 ! ice biology, ammonia
       integer, parameter :: isIlog = 19 ! ice biology log
 #endif
-
+!
+      integer :: ice_ic_brylast  ! Boundary layer salinity
 !
 !  Ice model state lateral boundary conditions indices.
 !

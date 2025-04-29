@@ -9,7 +9,7 @@
      &                            TRIM(Vname(1,ifield)), varid)
               IF (foundit) THEN
                 SELECT CASE (i)
-                  CASE (isUice)
+                  CASE (isUice, isUevp)
                     gtype=var_flag(varid)*u2dvar
                     status=nf_fread2d(ng, IDmod, ncname, ncINPid,       &
      &                                Vname(1,ifield), varid,           &
@@ -25,7 +25,7 @@
 #   else
      &                                ICE(ng) % Si(:,:,Tindex,i))
 #   endif
-                  CASE (isVice)
+                  CASE (isVice, isVevp)
                     gtype=var_flag(varid)*v2dvar
                     status=nf_fread2d(ng, IDmod, ncname, ncINPid,       &
      &                                Vname(1,ifield), varid,           &

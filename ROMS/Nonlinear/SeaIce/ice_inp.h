@@ -83,47 +83,47 @@
         IF (status.gt.0) THEN
           SELECT CASE (TRIM(KeyWord))
             CASE ('LBC(isAice)')
-              ioff = isAice+(nLBCvar-11)
+              ioff = ice_ic_brylast + isAice
               Npts=load_lbc(Nval, Cval, line, nline, ioff, igrid,       &
      &                      0, 0, Vname(1,idAice), LBC)
             CASE ('LBC(isHice)')
-              ioff = isHice+(nLBCvar-11)
+              ioff = ice_ic_brylast + isHice
               Npts=load_lbc(Nval, Cval, line, nline, ioff, igrid,       &
      &                      0, 0, Vname(1,idHice), LBC)
             CASE ('LBC(isHsno)')
-              ioff = isHsno+(nLBCvar-11)
+              ioff = ice_ic_brylast + isHsno
               Npts=load_lbc(Nval, Cval, line, nline, ioff, igrid,       &
      &                      0, 0, Vname(1,idHsno), LBC)
             CASE ('LBC(isTice)')
-              ioff = isTice+(nLBCvar-11)
+              ioff = ice_ic_brylast + isTice
               Npts=load_lbc(Nval, Cval, line, nline, ioff, igrid,       &
      &                      0, 0, Vname(1,idTice), LBC)
             CASE ('LBC(isHmel)')
-              ioff = isHmel+(nLBCvar-11)
+              ioff = ice_ic_brylast + isHmel
               Npts=load_lbc(Nval, Cval, line, nline, ioff, igrid,       &
      &                      0, 0, Vname(1,idHmel), LBC)
             CASE ('LBC(isIage)')
-              ioff = isIage+(nLBCvar-11)
+              ioff = ice_ic_brylast + isIage
               Npts=load_lbc(Nval, Cval, line, nline, ioff, igrid,       &
      &                      0, 0, Vname(1,idIage), LBC)
             CASE ('LBC(isISxx)')
-              ioff = isISxx+(nLBCvar-11)
+              ioff = ice_ic_brylast + isISxx
               Npts=load_lbc(Nval, Cval, line, nline, ioff, igrid,       &
      &                      0, 0, Vname(1,idISxx), LBC)
             CASE ('LBC(isISxy)')
-              ioff = isISxy+(nLBCvar-11)
+              ioff = ice_ic_brylast + isISxy
               Npts=load_lbc(Nval, Cval, line, nline, ioff, igrid,       &
      &                      0, 0, Vname(1,idISxy), LBC)
             CASE ('LBC(isISyy)')
-              ioff = isISyy+(nLBCvar-11)
+              ioff = ice_ic_brylast + isISyy
               Npts=load_lbc(Nval, Cval, line, nline, ioff, igrid,       &
      &                      0, 0, Vname(1,idISyy), LBC)
             CASE ('LBC(isUice)')
-              ioff = isUice+(nLBCvar-11)
+              ioff = ice_ic_brylast + isUice
               Npts=load_lbc(Nval, Cval, line, nline, ioff, igrid,       &
      &                      0, 0, Vname(1,idUice), LBC)
             CASE ('LBC(isVice)')
-              ioff = isVice+(nLBCvar-11)
+              ioff = ice_ic_brylast + isVice
               Npts=load_lbc(Nval, Cval, line, nline, ioff, igrid,       &
      &                      0, 0, Vname(1,idVice), LBC)
             CASE ('nEVP')
