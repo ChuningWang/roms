@@ -1,4 +1,5 @@
 #include "cppdefs.h"
+
       MODULE ice_albedo_mod
 
 #if defined ICE_MODEL && defined ICE_ALBEDO
@@ -669,8 +670,8 @@
      &                    Fi(:,:,icRfac))
 #  endif
 # endif
-      RETURN
 !
+      RETURN
       END SUBROUTINE ice_albedo_tile
 #endif
       END module ice_albedo_mod

@@ -30,8 +30,6 @@
       USE bc_3d_mod,       ONLY : bc_r3d_tile
       USE ice_bc2d_mod,    ONLY : ice_bc2d_tile
       USE ice_tibc_mod,    ONLY : ice_tibc_tile
-      USE exchange_2d_mod, ONLY : exchange_r2d_tile
-      USE exchange_3d_mod, ONLY : exchange_r3d_tile
 #ifdef DISTRIBUTE
       USE mp_exchange_mod, ONLY : mp_exchange2d, mp_exchange3d
 #endif
@@ -726,32 +724,10 @@
 !  Horizontal advection of generic ice field.
 !-----------------------------------------------------------------------
 !
-#ifndef ICE_UPWIND
-      IF (EWperiodic(ng)) THEN
-        Imin=Istr-1
-        Imax=Iend+1
-      ELSE
-        Imin=MAX(Istr-1,1)
-        Imax=MIN(Iend+1,Lm(ng))
-      END IF
-      IF (NSperiodic(ng)) THEN
-        Jmin=Jstr-1
-        Jmax=Jend+1
-      ELSE
-        Jmin=MAX(Jstr-1,1)
-        Jmax=MIN(Jend+1,Mm(ng))
-      END IF
-#else
-      Imin=Istr
-      Imax=Iend
-      Jmin=Jstr
-      Jmax=Jend
-#endif
-!
 !  Upstream fluxes. (HGA: the advection is not in flux form?)
 !
-      DO j=Jmin,Jmax
-        DO i=Imin,Imax+1
+      DO j=Jstrm1,Jendp1
+        DO i=Istrm1,Iendp2
           cff1=MAX(0.0_r8,ui(i,j,liunw))
           cff2=MIN(0.0_r8,ui(i,j,liunw))
           aflxu(i,j)=on_u(i,j)*                                         &
@@ -760,8 +736,8 @@
         END DO
       END DO
 !
-      DO j=Jmin,Jmax+1
-        DO i=Imin,Imax
+      DO j=Jstrm1,Jendp2
+        DO i=Istrm1,Iendp1
           cff1=MAX(0.0_r8,vi(i,j,liunw))
           cff2=MIN(0.0_r8,vi(i,j,liunw))
           aflxv(i,j)=om_v(i,j)*                                         &
@@ -772,8 +748,8 @@
 !
 !  Step 1: first guess advection operator.
 !
-      DO j=Jmin,Jmax
-        DO i=Imin,Imax
+      DO j=Jstrm1,Jendp1
+        DO i=Istrm1,Iendp1
           ar(i,j)=1.0_r8/omn(i,j)
           aif(i,j)=field(i,j,liold)-                                    &
      &             dtice(ng)*(aflxu(i+1,j)-aflxu(i,j)+                  &
@@ -793,57 +769,9 @@
 !
 !  Set values at the open boundaries.
 !
-      IF (.not.EWperiodic(ng)) THEN
-        IF (DOMAIN(ng)%Western_Edge(tile)) THEN
-          DO j=Jmin,Jmax
-            aif(Istr-1,j)=aif(Istr,j)
-          END DO
-        END IF
-!
-        IF (DOMAIN(ng)%Eastern_Edge(tile)) THEN
-          DO j=Jmin,Jmax
-            aif(Iend+1,j)=aif(Iend,j)
-          END DO
-        END IF
-      END IF
-!
-      IF (.not.NSperiodic(ng)) THEN
-        IF (DOMAIN(ng)%Southern_Edge(tile)) THEN
-          DO i=Imin,Imax
-            aif(i,Jstr-1)=aif(i,Jstr)
-          END DO
-        END IF
-!
-        IF (DOMAIN(ng)%Northern_Edge(tile)) THEN
-          DO i=Imin,Imax
-            aif(i,Jend+1)=aif(i,Jend)
-          END DO
-        END IF
-      END IF
-!
-      IF (.not.(NSperiodic(ng).or.EWperiodic(ng))) THEN
-        IF (DOMAIN(ng)%SouthWest_Corner(tile)) THEN
-          aif(Istr-1,Jstr-1)=aif(Istr,Jstr)
-        END IF
-!
-        IF (DOMAIN(ng)%SouthEast_Corner(tile)) THEN
-          aif(Iend+1,Jstr-1)=aif(Iend,Jstr)
-        END IF
-!
-        IF (DOMAIN(ng)%NorthWest_Corner(tile)) THEN
-          aif(Istr-1,Jend+1)=aif(Istr,Jend)
-        END IF
-!
-        IF (DOMAIN(ng)%NorthEast_Corner(tile)) THEN
-          aif(Iend+1,Jend+1)=aif(Iend,Jend)
-        END IF
-      END IF
-!
-      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          aif)
-      END IF
+      CALL bc_r2d_tile (ng, tile,                                       &
+     &                  LBi, UBi, LBj, UBj,                             &
+     &                  aif)
 !
 !  Step 2: Compute antidiffusive velocities.
 !
@@ -853,8 +781,8 @@
 !  then "ui" is zero at that point, and therefore no additional masking
 !  is required.
 !
-      DO j=Jstr,Jend+1
-        DO i=Istr-1,Iend+1
+      DO j=Jstr,Jendp1
+        DO i=Istrm1,Iendp1
           FE(i,j)=0.5*                                                  &
 # ifdef MASKING
      &            vmask(i,j)*                                           &
@@ -866,8 +794,8 @@
 !
         END DO
       END DO
-      DO j=Jstr-1,Jend+1
-        DO i=Istr,Iend+1
+      DO j=Jstrm1,Jendp1
+        DO i=Istr,Iendp1
           FX(i,j)=0.5*                                                  &
 # ifdef MASKING
      &            umask(i,j)*                                           &
@@ -880,7 +808,7 @@
       END DO
 !
       DO j=Jstr,Jend
-        DO i=Istr,Iend+1
+        DO i=Istr,Iendp1
           cff=aif(i,j)+aif(i-1,j)
           rateu=(aif(i,j)-aif(i-1,j)) /                                 &
      &          (SIGN(1._r8, cff)*MAX(ABS(cff), epsil))
@@ -917,7 +845,7 @@
         END DO
       END DO
 !
-      DO j=Jstr,Jend+1
+      DO j=Jstr,Jendp1
         DO i=Istr,Iend
           cff=aif(i,j)+aif(i,j-1)
           ratev=(aif(i,j)-aif(i,j-1)) /                                 &
@@ -986,5 +914,4 @@
 !
       RETURN
       END SUBROUTINE ice_mpdata_tile
-
       END MODULE ice_advect_mod

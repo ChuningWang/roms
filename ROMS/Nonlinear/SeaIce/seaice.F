@@ -1,5 +1,7 @@
 #include "cppdefs.h"
+
       MODULE seaice_mod
+
 #ifdef ICE_MODEL
 !
 !git $Id$
@@ -225,6 +227,5 @@
 !
       RETURN
       END SUBROUTINE seaice
-!
 #endif
       END MODULE seaice_mod

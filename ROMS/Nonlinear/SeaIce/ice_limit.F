@@ -1,4 +1,5 @@
 #include "cppdefs.h"
+
       MODULE ice_limit_mod
 
 #if defined ICE_ADVECT || defined ICE_THERMO
@@ -128,89 +129,6 @@
       END DO
 !
 !  Set lateral boundary conditions.
-!
-!      CALL ice_bc2d_tile (ng, tile, model, isAice,                      &
-!     &                    LBi, UBi, LBj, UBj,                           &
-!     &                    IminS, ImaxS, JminS, JmaxS,                   &
-!     &                    liold, linew,                                 &
-!     &                    Si(:,:,:,isUice),                             &
-!     &                    Si(:,:,:,isVice),                             &
-!     &                    Si(:,:,:,isAice),                             &
-!     &                    LBC(:,ibICE(isAice),ng))
-!
-!      CALL ice_bc2d_tile (ng, tile, model, isHice,                      &
-!     &                    LBi, UBi, LBj, UBj,                           &
-!     &                    IminS, ImaxS, JminS, JmaxS,                   &
-!     &                    liold, linew,                                 &
-!     &                    Si(:,:,:,isUice),                             &
-!     &                    Si(:,:,:,isVice),                             &
-!     &                    Si(:,:,:,isHice),                             &
-!     &                    LBC(:,ibICE(isHice),ng))
-!
-!      CALL ice_bc2d_tile (ng, tile, model, isHsno,                      &
-!     &                    LBi, UBi, LBj, UBj,                           &
-!     &                    IminS, ImaxS, JminS, JmaxS,                   &
-!     &                    liold, linew,                                 &
-!     &                    Si(:,:,:,isUice),                             &
-!     &                    Si(:,:,:,isVice),                             &
-!     &                    Si(:,:,:,isHsno),                             &
-!     &                    LBC(:,ibICE(isHsno),ng))
-!
-!      CALL ice_bc2d_tile (ng, tile, model, isHmel,                      &
-!     &                    LBi, UBi, LBj, UBj,                           &
-!     &                    IminS, ImaxS, JminS, JmaxS,                   &
-!     &                    liold, linew,                                 &
-!     &                    Si(:,:,:,isUice),                             &
-!     &                    Si(:,:,:,isVice),                             &
-!     &                    Si(:,:,:,isHmel),                             &
-!     &                    LBC(:,ibICE(isHmel),ng))
-!
-!      CALL ice_bc2d_tile (ng, tile, model, isIage,                      &
-!     &                    LBi, UBi, LBj, UBj,                           &
-!     &                    IminS, ImaxS, JminS, JmaxS,                   &
-!     &                    liold, linew,                                 &
-!     &                    Si(:,:,:,isUice),                             &
-!     &                    Si(:,:,:,isVice),                             &
-!     &                    Si(:,:,:,isIage),                             &
-!     &                    LBC(:,ibICE(isIage),ng))
-
-# ifdef ICE_BIO
-!      CALL ice_bc2d_tile (ng, tile, model, isIphy,                      &
-!     &                    LBi, UBi, LBj, UBj,                           &
-!     &                    IminS, ImaxS, JminS, JmaxS,                   &
-!     &                    liold, linew,                                 &
-!     &                    Si(:,:,:,isUice),                             &
-!     &                    Si(:,:,:,isVice),                             &
-!     &                    Si(:,:,:,isIphy),                             &
-!     &                    LBC(:,ibICE(isIphy),ng))
-!
-!      CALL ice_bc2d_tile (ng, tile, model, isINO3,                      &
-!     &                    LBi, UBi, LBj, UBj,                           &
-!     &                    IminS, ImaxS, JminS, JmaxS,                   &
-!     &                    liold, linew,                                 &
-!     &                    Si(:,:,:,isUice),                             &
-!     &                    Si(:,:,:,isVice),                             &
-!     &                    Si(:,:,:,isINO3),                             &
-!     &                    LBC(:,ibICE(isINO3),ng))
-!
-!      CALL ice_bc2d_tile (ng, tile, model, isINH4,                      &
-!     &                    LBi, UBi, LBj, UBj,                           &
-!     &                    IminS, ImaxS, JminS, JmaxS,                   &
-!     &                    liold, linew,                                 &
-!     &                    Si(:,:,:,isUice),                             &
-!     &                    Si(:,:,:,isVice),                             &
-!     &                    Si(:,:,:,isINH4),                             &
-!     &                    LBC(:,ibICE(isINH4),ng))
-# endif
-
-!     CALL ice_tibc_tile (ng, tile, model,                              &
-!    &                    LBi, UBi, LBj, UBj,                           &
-!    &                    liold, linew,                                 &
-!    &                    Si(:,:,:,isUice),                             &
-!    &                    Si(:,:,:,isVice),                             &
-!    &                    Si(:,:,:,isHice),                             &
-!    &                    Si(:,:,:,isTice),                             &
-!    &                    Si(:,:,:,isEnth))
 !
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
         CALL exchange_r2d_tile (ng, tile,                               &

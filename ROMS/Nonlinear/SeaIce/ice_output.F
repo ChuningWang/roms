@@ -1,5 +1,7 @@
 #include "cppdefs.h"
+
       MODULE ice_output_mod
+
 #if defined ICE_MODEL && defined SOLVE3D
 !
 !git $Id$
@@ -1790,6 +1792,5 @@
       RETURN
       END SUBROUTINE ice_wrt_pio
 # endif
-!
 #endif
       END MODULE ice_output_mod

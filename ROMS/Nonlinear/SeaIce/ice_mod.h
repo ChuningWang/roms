@@ -1023,5 +1023,4 @@
 !
       RETURN
       END SUBROUTINE initialize_ice
-!
       END MODULE mod_ice

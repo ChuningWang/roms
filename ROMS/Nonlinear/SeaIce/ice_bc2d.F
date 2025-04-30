@@ -1,4 +1,5 @@
 #include "cppdefs.h"
+
       MODULE ice_bc2d_mod
 
 #ifdef ICE_MODEL
@@ -573,5 +574,4 @@
       RETURN
       END SUBROUTINE ice_bc2d_tile
 #endif
-
       END MODULE ice_bc2d_mod

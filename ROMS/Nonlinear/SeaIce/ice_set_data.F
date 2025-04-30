@@ -1,7 +1,8 @@
 #include "cppdefs.h"
+
       MODULE ice_set_data_mod
 
-#ifdef ICE_FIXED
+#if defined ICE_MODEL && defined ICE_FIXED
 !
 !git $Id$
 !=======================================================================

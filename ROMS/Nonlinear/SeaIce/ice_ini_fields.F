@@ -1,6 +1,8 @@
 #include "cppdefs.h"
+
       MODULE ice_ini_fields_mod
-#ifdef NONLINEAR
+
+#ifdef ICE_MODEL
 !
 !git $Id$
 !================================================== Hernan G. Arango ===

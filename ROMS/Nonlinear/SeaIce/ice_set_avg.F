@@ -1,5 +1,7 @@
 #include "cppdefs.h"
+
       MODULE ice_set_avg_mod
+
 #if defined ICE_MODEL && defined SOLVE3D
 !
 !git $Id$

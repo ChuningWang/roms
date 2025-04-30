@@ -1,4 +1,5 @@
 #include "cppdefs.h"
+
       MODULE ice_frazil_mod
 
 #if defined ICE_MODEL && defined ICE_THERMO
@@ -274,12 +275,15 @@
         CALL exchange_r3d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          t(:,:,:,nrhs,itemp))
+!
         CALL exchange_r3d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          t(:,:,:,nrhs,isalt))
+!
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          Fi(:,:,icW_fr))
+!
         IF (Licetrc(ng)) THEN
           DO itrc=NAT+1,NT(ng)
             IF (LtracerIce(itrc,ng)) THEN
@@ -288,27 +292,29 @@
      &                                t(:,:,:,nrhs,itrc))
             END IF
           END DO
+!
           CALL exchange_r3d_tile (ng, tile,                             &
      &                            LBi, UBi, LBj, UBj, 1, NTICE(ng),     &
      &                            Ti(:,:,linew,:))
         END IF
       END IF
-!
 # ifdef DISTRIBUTE
 !
       CALL mp_exchange3d (ng, tile, model, 1,                           &
      &                    LBi, UBi, LBj, UBj, 1, N(ng),                 &
      &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
      &                    t(:,:,:,nrhs,itemp))
+!
       CALL mp_exchange3d (ng, tile, model, 1,                           &
      &                    LBi, UBi, LBj, UBj, 1, N(ng),                 &
      &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
      &                    t(:,:,:,nrhs,isalt))
+!
       CALL mp_exchange2d (ng, tile, model, 1,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
      &                    Fi(:,:,icW_fr))
-
+!
       IF (Licetrc(ng)) THEN
         DO itrc=NAT+1,NT(ng)
           IF (LtracerIce(itrc,ng)) THEN
@@ -319,6 +325,7 @@
      &                          t(:,:,:,nrhs,itrc))
           END IF
         END DO
+!
         CALL mp_exchange3d (ng, tile, model, 1,                         &
      &                      LBi, UBi, LBj, UBj, 1, NTICE(ng),           &
      &                      NghostPoints,                               &
@@ -331,4 +338,3 @@
       END SUBROUTINE ice_frazil_tile
 #endif
       END MODULE ice_frazil_mod
-

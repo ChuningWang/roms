@@ -1,4 +1,5 @@
 #include "cppdefs.h"
+
       MODULE ice_vbc_mod
 
 #ifdef ICE_MODEL
@@ -554,6 +555,5 @@
 !
       RETURN
       END SUBROUTINE ice_vbc_tile
-!
 #endif
       END MODULE ice_vbc_mod

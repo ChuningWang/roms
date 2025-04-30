@@ -951,23 +951,23 @@
       CALL bc_r2d_tile (ng, tile,                                       &
      &                  LBi, UBi, LBj, UBj,                             &
      &                  Fi(:,:,icIsst))
-
+!
       CALL bc_r2d_tile (ng, tile,                                       &
      &                  LBi, UBi, LBj, UBj,                             &
      &                  Fi(:,:,icQcon))
-
+!
       CALL bc_r2d_tile (ng, tile,                                       &
      &                  LBi, UBi, LBj, UBj,                             &
      &                  Fi(:,:,icQrhs))
-
+!
       CALL bc_r2d_tile (ng, tile,                                       &
      &                  LBi, UBi, LBj, UBj,                             &
      &                  stflx(:,:,isalt))
-
+!
       CALL bc_r2d_tile (ng, tile,                                       &
      &                  LBi, UBi, LBj, UBj,                             &
      &                  stflx(:,:,itemp))
-
+!
       CALL ice_bc2d_tile (ng, tile, model, isAice,                      &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    IminS, ImaxS, JminS, JmaxS,                   &
@@ -976,7 +976,7 @@
      &                    Si(:,:,:,isVice),                             &
      &                    Si(:,:,:,isAice),                             &
      &                    LBC(:,ibICE(isAice),ng))
-
+!
       CALL ice_bc2d_tile (ng, tile, model, isHice,                      &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    IminS, ImaxS, JminS, JmaxS,                   &
@@ -985,7 +985,7 @@
      &                    Si(:,:,:,isVice),                             &
      &                    Si(:,:,:,isHice),                             &
      &                    LBC(:,ibICE(isHice),ng))
-
+!
       CALL ice_bc2d_tile (ng, tile, model, isHsno,                      &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    IminS, ImaxS, JminS, JmaxS,                   &
@@ -994,7 +994,7 @@
      &                    Si(:,:,:,isVice),                             &
      &                    Si(:,:,:,isHsno),                             &
      &                    LBC(:,ibICE(isHsno),ng))
-
+!
       CALL ice_bc2d_tile (ng, tile, model, isHmel,                      &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    IminS, ImaxS, JminS, JmaxS,                   &
@@ -1003,7 +1003,7 @@
      &                    Si(:,:,:,isVice),                             &
      &                    Si(:,:,:,isHmel),                             &
      &                    LBC(:,ibICE(isHmel),ng))
-
+!
       CALL ice_bc2d_tile (ng, tile, model, isIage,                      &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    IminS, ImaxS, JminS, JmaxS,                   &
@@ -1012,7 +1012,7 @@
      &                    Si(:,:,:,isVice),                             &
      &                    Si(:,:,:,isIage),                             &
      &                    LBC(:,ibICE(isIage),ng))
-
+!
       CALL ice_tibc_tile (ng, tile, model,                              &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    liold, linew,                                 &
@@ -1021,7 +1021,7 @@
      &                    Si(:,:,:,isHice),                             &
      &                    Si(:,:,:,isTice),                             &
      &                    Si(:,:,:,isEnth))
-
+!
       IF (Licetrc(ng)) THEN
         CALL bc_r3d_tile (ng, tile,                                     &
      &                    LBi, UBi, LBj, UBj, 1, NTICE(ng),             &
@@ -1032,39 +1032,37 @@
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          Si(:,:,linew,isAice))
-
+!
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          Si(:,:,linew,isHice))
-
+!
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          Si(:,:,linew,isHsno))
-
+!
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          Si(:,:,linew,isHmel))
-
+!
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          Si(:,:,linew,isIage))
-
+!
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          Si(:,:,linew,isEnth))
-
+!
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          Si(:,:,linew,isTice))
-
+!
         IF (Licetrc(ng)) THEN
           CALL exchange_r3d_tile (ng, tile,                             &
      &                            LBi, UBi, LBj, UBj, 1, NTICE(ng),     &
      &                            Ti(:,:,linew,:))
         END IF
-
       END IF
-
 #ifdef DISTRIBUTE
 !
       CALL mp_exchange2d (ng, tile, model, 4,                           &
@@ -1074,14 +1072,14 @@
      &                    Si(:,:,linew,isHice),                         &
      &                    Si(:,:,linew,isHsno),                         &
      &                    Si(:,:,linew,isHmel))
-
+!
       CALL mp_exchange2d (ng, tile, model, 3,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
      &                    Si(:,:,linew,isIage),                         &
      &                    Si(:,:,linew,isEnth),                         &
      &                    Si(:,:,linew,isTice))
-
+!
       IF (Licetrc(ng)) THEN
         CALL mp_exchange3d (ng, tile, model, 1,                         &
      &                      LBi, UBi, LBj, UBj, 1, NTICE(ng),           &
@@ -1089,10 +1087,8 @@
      &                      EWperiodic(ng), NSperiodic(ng),             &
      &                      Ti(:,:,linew,:))
       END IF
-
 #endif
 !
       RETURN
       END SUBROUTINE ice_thermo_tile
-!
       END MODULE ice_thermo_mod
