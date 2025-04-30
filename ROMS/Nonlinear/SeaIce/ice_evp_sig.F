@@ -204,21 +204,6 @@
      &                    Si(:,:,:,isVevp),                             &
      &                    Si(:,:,:,isISyy),                             &
      &                    LBC(:,ibICE(isISyy),ng))
-!
-     IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,lienw,isISxx))
-
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,lienw,isISxy))
-
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,lienw,isISyy))
-      END IF
-
 # ifdef DISTRIBUTE
 !
       CALL mp_exchange2d (ng, tile, model, 3,                           &

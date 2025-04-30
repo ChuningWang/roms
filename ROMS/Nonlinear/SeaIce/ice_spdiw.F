@@ -28,7 +28,8 @@
       USE mod_ocean
       USE mod_scalars
 !
-      USE bc_2d_mod
+      USE bc_2d_mod,       ONLY : bc_r2d_tile
+      USE exchange_2d_mod, ONLY : exchange_u2d_tile, exchange_v2d_tile
 # ifdef DISTRIBUTE
       USE mp_exchange_mod, ONLY : mp_exchange2d
 # endif
@@ -169,8 +170,8 @@
 !
 !  Compute verticaly averaged U-velocity over mixed-layer thickness.
 !
-      DO j=Jstr,Jend
-        DO i=IstrU-1,Iend+1
+      DO j=JstrR,JendR
+        DO i=IstrUm1,Iendp1
           nlio=0
           nbotu=NINT(0.5_r8*(nbot(i-1,j)+nbot(i,j)))
           nbotu=MAX(MIN(nbotu,N(ng)),1)
@@ -189,8 +190,8 @@
 !
 !  Compute verticaly averaged U-velocity over mixed-layer thickness.
 !
-      DO j=JstrV-1,Jend+1
-        DO i=Istr,Iend
+      DO j=JstrVm1,Jendp1
+        DO i=IstrR,IendR
           nlio=0
           nbotv=NINT(0.5_r8*(nbot(i,j-1)+nbot(i,j)))
           nbotv=MAX(MIN(nbotv,N(ng)),1)
@@ -222,13 +223,13 @@
 !
 !  Load vertically averaged mixed layer velocity components.
 !
-      DO j=Jstr,Jend
-        DO i=IstrP,Iend
+      DO j=JstrR,JendR
+        DO i=IstrUm1,Iendp1
           Fi(i,j,icUavg)=uw(i,j)
         END DO
       END DO
-      DO j=JstrP,Jend
-        DO i=Istr,Iend
+      DO j=JstrVm1,Jendp1
+        DO i=IstrR,IendR
           Fi(i,j,icVavg)=vw(i,j)
         END DO
       END DO
@@ -238,16 +239,18 @@
         CALL bc_r2d_tile (ng, tile,                                     &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    Fi(:,:,icIOvs))
-
-        CALL bc_u2d_tile (ng, tile,                                     &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    Fi(:,:,icUavg))
-
-        CALL bc_v2d_tile (ng, tile,                                     &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    Fi(:,:,icVavg))
-
+!
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+        CALL exchange_u2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fi(:,:,icUavg))
+!
+        CALL exchange_v2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fi(:,:,icVavg))
+      END IF
 # ifdef DISTRIBUTE
+!
       CALL mp_exchange2d (ng, tile, model, 3,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &

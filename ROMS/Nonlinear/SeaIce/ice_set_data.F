@@ -21,15 +21,12 @@
       USE mod_ice
       USE mod_scalars
 !
-      USE exchange_2d_mod, ONLY : exchange_r2d_tile
-      USE exchange_2d_mod, ONLY : exchange_u2d_tile
-      USE exchange_2d_mod, ONLY : exchange_v2d_tile
       USE ice_bc2d_mod,    ONLY : ice_bc2d_tile
       USE ice_tibc_mod,    ONLY : ice_tibc_tile
       USE ice_uibc_mod,    ONLY : ice_uibc_tile
       USE ice_vibc_mod,    ONLY : ice_vibc_tile
 # ifdef DISTRIBUTE
-      USE mp_exchange_mod, ONLY : mp_exchange2d
+      USE mp_exchange_mod, ONLY : mp_exchange3d
 # endif
 !
       implicit none
@@ -133,15 +130,23 @@
           Si(i,j,liold,isHmel)=hmel(i,j)
           Si(i,j,liold,isTice)=tice(i,j)
           Si(i,j,liold,isEnth)=tice(i,j)*hice(i,j)
-          Si(i,j,liold,isUice)=uice(i,j)
-          Si(i,j,liold,isVice)=vice(i,j)
           Si(i,j,linew,isAice)=aice(i,j)
           Si(i,j,linew,isHice)=hice(i,j)
           Si(i,j,linew,isHsno)=hsno(i,j)
           Si(i,j,linew,isHmel)=hmel(i,j)
           Si(i,j,linew,isTice)=tice(i,j)
           Si(i,j,linew,isEnth)=tice(i,j)*hice(i,j)
+        END DO
+      END DO
+      DO j=Jstr,Jend
+        DO i=IstrU,Iend
+          Si(i,j,liold,isUice)=uice(i,j)
           Si(i,j,linew,isUice)=uice(i,j)
+        END DO
+      END DO
+      DO j=JstrV,Jend
+        DO i=Istr,Iend
+          Si(i,j,liold,isVice)=vice(i,j)
           Si(i,j,linew,isVice)=vice(i,j)
         END DO
       END DO
@@ -151,12 +156,69 @@
       CALL ice_bc2d_tile (ng, tile, model, isAice,                      &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    IminS, ImaxS, JminS, JmaxS,                   &
+     &                    liold, liold,                                 &
+     &                    Si(:,:,:,isUice),                             &
+     &                    Si(:,:,:,isVice),                             &
+     &                    Si(:,:,:,isAice),                             &
+     &                    LBC(:,ibICE(isAice),ng))
+!
+      CALL ice_bc2d_tile (ng, tile, model, isHice,                      &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    IminS, ImaxS, JminS, JmaxS,                   &
+     &                    liold, liold,                                 &
+     &                    Si(:,:,:,isUice),                             &
+     &                    Si(:,:,:,isVice),                             &
+     &                    Si(:,:,:,isHice),                             &
+     &                    LBC(:,ibICE(isHice),ng))
+!
+      CALL ice_bc2d_tile (ng, tile, model, isHsno,                      &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    IminS, ImaxS, JminS, JmaxS,                   &
+     &                    liold, liold,                                 &
+     &                    Si(:,:,:,isUice),                             &
+     &                    Si(:,:,:,isVice),                             &
+     &                    Si(:,:,:,isHsno),                             &
+     &                    LBC(:,ibICE(isHsno),ng))
+!
+      CALL ice_bc2d_tile (ng, tile, model, isHmel,                      &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    IminS, ImaxS, JminS, JmaxS,                   &
+     &                    liold, liold,                                 &
+     &                    Si(:,:,:,isUice),                             &
+     &                    Si(:,:,:,isVice),                             &
+     &                    Si(:,:,:,isHmel),                             &
+     &                    LBC(:,ibICE(isHmel),ng))
+!
+      CALL ice_tibc_tile (ng, tile, model,                              &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    liold, liold,                                 &
+     &                    Si(:,:,:,isUice),                             &
+     &                    Si(:,:,:,isVice),                             &
+     &                    Si(:,:,:,isHice),                             &
+     &                    Si(:,:,:,isTice),                             &
+     &                    Si(:,:,:,isEnth))
+!
+      CALL ice_uibc_tile (ng, tile, model,                              &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    IminS, ImaxS, JminS, JmaxS,                   &
+     &                    liold, liold,                                 &
+     &                    Si(:,:,:,isUice))
+!
+      CALL ice_vibc_tile (ng, tile, model,                              &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    IminS, ImaxS, JminS, JmaxS,                   &
+     &                    liold, liold,                                 &
+     &                    Si(:,:,:,isVice))
+!
+      CALL ice_bc2d_tile (ng, tile, model, isAice,                      &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    IminS, ImaxS, JminS, JmaxS,                   &
      &                    liold, linew,                                 &
      &                    Si(:,:,:,isUice),                             &
      &                    Si(:,:,:,isVice),                             &
      &                    Si(:,:,:,isAice),                             &
      &                    LBC(:,ibICE(isAice),ng))
-
+!
       CALL ice_bc2d_tile (ng, tile, model, isHice,                      &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    IminS, ImaxS, JminS, JmaxS,                   &
@@ -165,7 +227,7 @@
      &                    Si(:,:,:,isVice),                             &
      &                    Si(:,:,:,isHice),                             &
      &                    LBC(:,ibICE(isHice),ng))
-
+!
       CALL ice_bc2d_tile (ng, tile, model, isHsno,                      &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    IminS, ImaxS, JminS, JmaxS,                   &
@@ -174,7 +236,7 @@
      &                    Si(:,:,:,isVice),                             &
      &                    Si(:,:,:,isHsno),                             &
      &                    LBC(:,ibICE(isHsno),ng))
-
+!
       CALL ice_bc2d_tile (ng, tile, model, isHmel,                      &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    IminS, ImaxS, JminS, JmaxS,                   &
@@ -183,7 +245,7 @@
      &                    Si(:,:,:,isVice),                             &
      &                    Si(:,:,:,isHmel),                             &
      &                    LBC(:,ibICE(isHmel),ng))
-
+!
       CALL ice_tibc_tile (ng, tile, model,                              &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    liold, linew,                                 &
@@ -192,117 +254,34 @@
      &                    Si(:,:,:,isHice),                             &
      &                    Si(:,:,:,isTice),                             &
      &                    Si(:,:,:,isEnth))
-
+!
       CALL ice_uibc_tile (ng, tile, model,                              &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    IminS, ImaxS, JminS, JmaxS,                   &
      &                    liold, linew,                                 &
      &                    Si(:,:,:,isUice))
-
+!
       CALL ice_vibc_tile (ng, tile, model,                              &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    IminS, ImaxS, JminS, JmaxS,                   &
      &                    liold, linew,                                 &
      &                    Si(:,:,:,isVice))
-!
-      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,liold,isAice))
-
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,liold,isHice))
-
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,liold,isHsno))
-
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,liold,isHmel))
-
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,liold,isTice))
-
-        CALL exchange_u2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,liold,isUice))
-
-        CALL exchange_v2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,liold,isVice))
-
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,linew,isAice))
-
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,linew,isHice))
-
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,linew,isHsno))
-
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,linew,isHmel))
-
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,linew,isTice))
-
-        CALL exchange_u2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,linew,isUice))
-
-        CALL exchange_v2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,linew,isVice))
-
-      END IF
-
 # ifdef DISTRIBUTE
 !
-      CALL mp_exchange2d (ng, tile, model, 4,                           &
-     &                    LBi, UBi, LBj, UBj,                           &
+      CALL mp_exchange3d (ng, tile, model, 4,                           &
+     &                    LBi, UBi, LBj, UBj, 1, 2,                     &
      &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
-     &                    Si(:,:,liold,isAice),                         &
-     &                    Si(:,:,liold,isHice),                         &
-     &                    Si(:,:,liold,isHsno),                         &
-     &                    Si(:,:,liold,isHmel))
-
-      CALL mp_exchange2d (ng, tile, model, 1,                           &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
-     &                    Si(:,:,liold,isTice))
-
-      CALL mp_exchange2d (ng, tile, model, 2,                           &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
-     &                    Si(:,:,liold,isUice),                         &
-     &                    Si(:,:,liold,isVice))
+     &                    Si(:,:,:,isAice),                             &
+     &                    Si(:,:,:,isHice),                             &
+     &                    Si(:,:,:,isHsno),                             &
+     &                    Si(:,:,:,isHmel))
 !
-      CALL mp_exchange2d (ng, tile, model, 4,                           &
-     &                    LBi, UBi, LBj, UBj,                           &
+      CALL mp_exchange3d (ng, tile, model, 3,                           &
+     &                    LBi, UBi, LBj, UBj, 1, 2,                     &
      &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
-     &                    Si(:,:,linew,isAice),                         &
-     &                    Si(:,:,linew,isHice),                         &
-     &                    Si(:,:,linew,isHsno),                         &
-     &                    Si(:,:,linew,isHmel))
-
-      CALL mp_exchange2d (ng, tile, model, 1,                           &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
-     &                    Si(:,:,linew,isTice))
-
-      CALL mp_exchange2d (ng, tile, model, 2,                           &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
-     &                    Si(:,:,linew,isUice),                         &
-     &                    Si(:,:,linew,isVice))
+     &                    Si(:,:,:,isTice),                             &
+     &                    Si(:,:,:,isUice),                             &
+     &                    Si(:,:,:,isVice))
 # endif
 !
       RETURN

@@ -131,12 +131,12 @@
 !
       IF (iEVP(ng).eq.1) THEN
         DO j=Jstr,Jend
-          DO i=IstrP,Iend
+          DO i=Istr,Iend
             Si(i,j,1,isUevp)=Si(i,j,liuol,isUice)
             Si(i,j,2,isUevp)=Si(i,j,liuol,isUice)
           END DO
         END DO
-        DO j=JstrP,Jend
+        DO j=Jstr,Jend
           DO i=Istr,Iend
             Si(i,j,1,isVevp)=Si(i,j,liuol,isVice)
             Si(i,j,2,isVevp)=Si(i,j,liuol,isVice)
@@ -149,7 +149,7 @@
               Si(Istr,j,1,isUevp)=Si(Istr,j,liuol,isUice)
               Si(Istr,j,2,isUevp)=Si(Istr,j,liuol,isUice)
             END DO
-            DO j=JstrP,Jend
+            DO j=Jstr,Jend
               Si(Istr-1,j,1,isVevp)=Si(Istr-1,j,liuol,isVice)
               Si(Istr-1,j,2,isVevp)=Si(Istr-1,j,liuol,isVice)
             END DO
@@ -162,7 +162,7 @@
               Si(Iend+1,j,1,isUevp)=Si(Iend+1,j,liuol,isUice)
               Si(Iend+1,j,2,isUevp)=Si(Iend+1,j,liuol,isUice)
             END DO
-            DO j=JstrP,Jend
+            DO j=Jstr,Jend
               Si(Iend+1,j,1,isVevp)=Si(Iend+1,j,liuol,isVice)
               Si(Iend+1,j,2,isVevp)=Si(Iend+1,j,liuol,isVice)
             END DO
@@ -171,7 +171,7 @@
 !
         IF (.not.(CompositeGrid(isouth,ng).or.NSperiodic(ng))) THEN
           IF (DOMAIN(ng)%Southern_Edge(tile)) THEN
-            DO i=IstrP,Iend
+            DO i=Istr,Iend
               Si(i,Jstr-1,1,isUevp)=Si(i,Jstr-1,liuol,isUice)
               Si(i,Jstr-1,2,isUevp)=Si(i,Jstr-1,liuol,isUice)
             END DO
@@ -184,7 +184,7 @@
 !
         IF (.not.(CompositeGrid(inorth,ng).or.NSperiodic(ng))) THEN
           IF (DOMAIN(ng)%Northern_Edge(tile)) THEN
-            DO i=IstrP,Iend
+            DO i=Istr,Iend
               Si(i,Jend+1,1,isUevp)=Si(i,Jend+1,liuol,isUice)
               Si(i,Jend+1,2,isUevp)=Si(i,Jend+1,liuol,isUice)
             END DO
@@ -320,8 +320,8 @@
 !
 !  Apply outflow mask.
 !
-      DO j=JstrT,JendT
-        DO i=IstrT,IendT
+      DO j=Jstr,Jend
+        DO i=Istr,Iend
           Fi(i,j,icPice)=Fi(i,j,icPice)*mask_outflow(i,j)
           Fi(i,j,icBvis)=Fi(i,j,icBvis)*mask_outflow(i,j)
           Fi(i,j,icSvis)=Fi(i,j,icSvis)*mask_outflow(i,j)

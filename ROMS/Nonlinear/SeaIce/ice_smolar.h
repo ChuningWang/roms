@@ -180,16 +180,16 @@
 !
 !  Compute rate of ice divergence (m3/s).
 !
-      DO j=JstrT,JendT
-        DO i=IstrT,IendT
+      DO j=JstrR,JendR
+        DO i=IstrR,IendR
           ICE(ng)%Fi(i,j,icWdiv)=(ICE(ng)%Si(i,j,linew,isHice)-         &
        &                          ICE(ng)%Si(i,j,liold,isHice))/dt(ng)
         END DO
       END DO
 !
-        CALL bc_r2d_tile (ng, tile,                                     &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    ICE(ng)%Fi(:,:,icWdiv))
+      CALL bc_r2d_tile (ng, tile,                                       &
+     &                  LBi, UBi, LBj, UBj,                             &
+     &                  ICE(ng) % Fi(:,:,icWdiv))
 
 #ifdef ICE_THERMO
 !
@@ -307,14 +307,15 @@
      &                      ICE(ng) % Si(:,:,:,isVice),                 &
      &                      ICE(ng) % Si(:,:,:,isEnth))
 !
-      DO j=JstrT,JendT
-        DO i=IstrT,IendT
-          ICE(ng)%Si(i,j,linew,isTice)=ICE(ng)%Si(i,j,linew,isEnth)/    &
-     &                                 MAX(ICE(ng)%Si(i,j,linew,isHice),&
-     &                                     1.0E-6_r8)
+      DO j=Jstr,Jend
+        DO i=Istr,Iend
           IF (ICE(ng)%Si(i,j,linew,isHice).le.min_hi(ng)) THEN
             ICE(ng)%Si(i,j,linew,isEnth)=0.0_r8
-            ICE(ng)%Si(i,j,linew,isTice)=0.0_r8
+            ICE(ng)%Si(i,j,linew,isTice)=-2.0_r8
+          ELSE
+            ICE(ng)%Si(i,j,linew,isTice)=                               &
+     &        ICE(ng)%Si(i,j,linew,isEnth) /                            &
+     &        MAX(ICE(ng)%Si(i,j,linew,isHice), 1.0E-6_r8)
           END IF
         END DO
       END DO
@@ -365,8 +366,8 @@
      &                            ICE(ng) % Si(:,:,:,isVice),           &
      &                            ICE(ng) % Ti(:,:,:,ic))
 !
-            DO j=JstrT,JendT
-              DO i=IstrT,IendT
+            DO j=Jstr,Jend
+              DO i=Istr,Iend
                 IF (ICE(ng)%Si(i,j,linew,isHice).le.min_hi(ng) .or.     &
      &              ICE(ng)%Si(i,j,linew,isAice).le.min_ai(ng)) THEN
                   ICE(ng)%Ti(i,j,linew,ic)=0.0_r8
@@ -427,8 +428,8 @@
      &                      ICE(ng) % Si(:,:,:,isVice),                 &
      &                      ICE(ng) % Si(:,:,:,isHage))
 !
-      DO j=JstrT,JendT
-        DO i=IstrT,IendT
+      DO j=Jstr,Jend
+        DO i=Istr,Iend
           ICE(ng)%Si(i,j,linew,isIage)=ICE(ng)%Si(i,j,linew,isHage)/    &
      &                                 MAX(ICE(ng)%Si(i,j,linew,isHice),&
      &                                     1.0E-6_r8)
@@ -573,68 +574,11 @@
      &                    ICE(ng) % Si(:,:,:,isINH4),                   &
      &                    LBC(:,ibICE(isINH4),ng))
 #endif
+#ifdef DISTRIBUTE
 !
 !-----------------------------------------------------------------------
 !  Exchange boundary information.
 !-----------------------------------------------------------------------
-!
-      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          ICE(ng)%Si(:,:,linew,isAice))
-
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          ICE(ng)%Si(:,:,linew,isHice))
-
-#ifdef ICE_THERMO
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          ICE(ng)%Si(:,:,linew,isHsno))
-
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          ICE(ng)%Si(:,:,linew,isHmel))
-
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          ICE(ng)%Si(:,:,linew,isTice))
-
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          ICE(ng)%Si(:,:,linew,isEnth))
-
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          ICE(ng)%Si(:,:,linew,isIage))
-
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          ICE(ng)%Si(:,:,linew,isHage))
-
-        IF (Licetrc(ng)) THEN
-          CALL exchange_r3d_tile (ng, tile,                             &
-     &                            LBi, UBi, LBj, UBj, 1, NTICE(ng),     &
-     &                            ICE(ng)%Ti(:,:,linew,:))
-        END IF
-
-# ifdef ICE_BIO
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          ICE(ng)%Si(:,:,linew,isIphy))
-
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          ICE(ng)%Si(:,:,linew,isINO3))
-
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          ICE(ng)%Si(:,:,linew,isINH4))
-# endif
-#endif
-      END IF
-
-#ifdef DISTRIBUTE
 !
       CALL mp_exchange2d (ng, tile, model, 2,                           &
      &                    LBi, UBi, LBj, UBj,                           &
@@ -815,6 +759,7 @@
      &                cff2*field(i  ,j,liold))
         END DO
       END DO
+!
       DO j=Jmin,Jmax+1
         DO i=Imin,Imax
           cff1=MAX(0.0_r8,vi(i,j,liunw))
@@ -844,52 +789,55 @@
 #endif
         END DO
       END DO
+#ifndef ICE_UPWIND
 !
 !  Set values at the open boundaries.
 !
       IF (.not.EWperiodic(ng)) THEN
         IF (DOMAIN(ng)%Western_Edge(tile)) THEN
           DO j=Jmin,Jmax
-            aif(Imin-1,j)=aif(Imin,j)
-            aif(Imin-2,j)=aif(Imin,j)
+            aif(Istr-1,j)=aif(Istr,j)
           END DO
         END IF
+!
         IF (DOMAIN(ng)%Eastern_Edge(tile)) THEN
           DO j=Jmin,Jmax
-            aif(Imax+1,j)=aif(Imax,j)
-            aif(Imax+2,j)=aif(Imax,j)
+            aif(Iend+1,j)=aif(Iend,j)
           END DO
         END IF
       END IF
+!
       IF (.not.NSperiodic(ng)) THEN
         IF (DOMAIN(ng)%Southern_Edge(tile)) THEN
           DO i=Imin,Imax
-            aif(i,Jmin-1)=aif(i,Jmin)
-            aif(i,Jmin-2)=aif(i,Jmin)
+            aif(i,Jstr-1)=aif(i,Jstr)
           END DO
         END IF
+!
         IF (DOMAIN(ng)%Northern_Edge(tile)) THEN
           DO i=Imin,Imax
-            aif(i,Jmax+1)=aif(i,Jmax)
-            aif(i,Jmax+2)=aif(i,Jmax)
+            aif(i,Jend+1)=aif(i,Jend)
           END DO
         END IF
       END IF
-      IF (.not.(EWperiodic(ng).or.NSperiodic(ng))) THEN
+!
+      IF (.not.(NSperiodic(ng).or.EWperiodic(ng))) THEN
         IF (DOMAIN(ng)%SouthWest_Corner(tile)) THEN
-          aif(Imin-1,Jmin-1)=aif(Imin,Jmin)
+          aif(Istr-1,Jstr-1)=aif(Istr,Jstr)
         END IF
-        IF (DOMAIN(ng)%NorthWest_Corner(tile)) THEN
-          aif(Imin-1,Jmax+1)=aif(Imin,Jmax)
-        END IF
+!
         IF (DOMAIN(ng)%SouthEast_Corner(tile)) THEN
-          aif(Imax+1,Jmin-1)=aif(Imax,Jmin)
+          aif(Iend+1,Jstr-1)=aif(Iend,Jstr)
         END IF
+!
+        IF (DOMAIN(ng)%NorthWest_Corner(tile)) THEN
+          aif(Istr-1,Jend+1)=aif(Istr,Jend)
+        END IF
+!
         IF (DOMAIN(ng)%NorthEast_Corner(tile)) THEN
-          aif(Imax+1,Jmax+1)=aif(Imax,Jmax)
+          aif(Iend+1,Jend+1)=aif(Iend,Jend)
         END IF
       END IF
-#ifndef ICE_UPWIND
 !
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
         CALL exchange_r2d_tile (ng, tile,                               &
@@ -897,15 +845,15 @@
      &                          aif)
       END IF
 !
-!  Step 2: Compute antidiffusive velocities .
+!  Step 2: Compute antidiffusive velocities.
 !
-!  This is needed to avoid touching "aif" under land mask.
-!  Note that only aif(i,j) and aif(i-1,j) are allowed to appear
-!  explicitly in the code segment below. This is okay because if
-!  either of them is masked, then "ui" is zero at that point,
-!  and therefore no additional masking is required.
+!  This is needed to avoid touching "aif" under land mask. Note that
+!  only aif(i,j) and aif(i-1,j) are allowed to appear explicitly in the
+!  code segment below. This is okay because if either of them is masked,
+!  then "ui" is zero at that point, and therefore no additional masking
+!  is required.
 !
-      DO j=Jstr-1,Jend+1
+      DO j=Jstr,Jend+1
         DO i=Istr-1,Iend+1
           FE(i,j)=0.5*                                                  &
 # ifdef MASKING
@@ -916,6 +864,10 @@
 # endif
      &            (aif(i,j)-aif(i,j-1))
 !
+        END DO
+      END DO
+      DO j=Jstr-1,Jend+1
+        DO i=Istr,Iend+1
           FX(i,j)=0.5*                                                  &
 # ifdef MASKING
      &            umask(i,j)*                                           &

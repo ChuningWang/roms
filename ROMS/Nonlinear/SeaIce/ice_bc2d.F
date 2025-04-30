@@ -537,7 +537,7 @@
 !  Boundary corners.
 !-----------------------------------------------------------------------
 !
-      IF (.not.EWperiodic(ng).and. .not.NSperiodic(ng)) THEN
+      IF (.not.(EWperiodic(ng).or.NSperiodic(ng))) THEN
         IF (DOMAIN(ng)%SouthWest_Corner(tile)) THEN
           field(Istr-1,Jstr-1,linew)=0.5_r8*                            &
      &                               (field(Istr  ,Jstr-1,linew)+       &

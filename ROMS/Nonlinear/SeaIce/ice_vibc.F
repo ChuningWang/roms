@@ -66,6 +66,8 @@
      &                          vi)
 !***********************************************************************
 !
+      USE exchange_2d_mod, ONLY : exchange_v2d_tile
+!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, tile, model
@@ -525,6 +527,14 @@
           vi(Iend+1,Jend+1,liunw)=0.5_r8*(vi(Iend+1,Jend  ,liunw)+      &
      &                                    vi(Iend  ,Jend+1,liunw))
         END IF
+      END IF
+!
+!  Apply lateral boundary conditions.
+!
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+        CALL exchange_v2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          vi(:,:,liunw))
       END IF
 !
       RETURN

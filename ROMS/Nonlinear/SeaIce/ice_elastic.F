@@ -22,9 +22,9 @@
       USE mod_ice
       USE mod_scalars
 !
-      USE exchange_2d_mod, ONLY : exchange_u2d_tile, exchange_v2d_tile
       USE ice_uibc_mod,    ONLY : ice_uibc_tile
       USE ice_vibc_mod,    ONLY : ice_vibc_tile
+      USE exchange_2d_mod, ONLY : exchange_u2d_tile, exchange_v2d_tile
 # ifdef DISTRIBUTE
       USE mp_exchange_mod, ONLY : mp_exchange2d
 # endif
@@ -217,7 +217,7 @@
 !-----------------------------------------------------------------------
 !
       DO j=Jstr,Jend
-        DO i=IstrP,Iend
+        DO i=IstrU,Iend
           uforce=0.0_r8
           area=om_u(i,j)*on_u(i,j)
           chux=0.5_r8*(Fi(i-1,j,icIOmt)+                                &
@@ -452,7 +452,7 @@
 !  Timestep ice V-momentum equations.
 !-----------------------------------------------------------------------
 !
-      DO j=JstrP,Jend
+      DO j=JstrV,Jend
         DO i=Istr,Iend
           vforce=0.0_r8
           area=om_v(i,j)*on_v(i,j)
@@ -700,14 +700,6 @@
      &                    lieol, lienw,                                 &
      &                    Si(:,:,:,isVevp))
 !
-      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-        CALL exchange_u2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,lienw,isUevp))
-        CALL exchange_v2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,lienw,isVevp))
-      END IF
 
 # ifdef DISTRIBUTE
 !
@@ -720,124 +712,43 @@
 
 !
 !-----------------------------------------------------------------------
-!  Update ice velocity
+!  Update ice velocity.
 !-----------------------------------------------------------------------
 !
       IF(iEVP(ng).eq.nEVP(ng)) THEN
-        DO j=Jstr,Jend
-          DO i=IstrP,Iend
+        DO j=JstrR,JendR
+          DO i=Istr,IendR
             Si(i,j,liunw,isUice)=Si(i,j,lienw,isUevp)
           END DO
         END DO
-        DO j=JstrP,Jend
-          DO i=Istr,Iend
+        DO j=Jstr,JendR
+          DO i=IstrR,IendR
             Si(i,j,liunw,isVice)=Si(i,j,lienw,isVevp)
           END DO
         END DO
 !
-        IF (.not.(CompositeGrid(iwest,ng).or.EWperiodic(ng))) THEN
-          IF (DOMAIN(ng)%Western_Edge(tile)) THEN
-            DO j=Jstr,Jend
-              Si(Istr,j,liunw,isUice)=Si(Istr,j,lienw,isUevp)
-            END DO
-            DO j=JstrP,Jend
-              Si(Istr-1,j,liunw,isVice)=Si(Istr-1,j,lienw,isVevp)
-            END DO
-          END IF
-        END IF
+!-----------------------------------------------------------------------
+!  Apply lateral boundary conditions.
+!-----------------------------------------------------------------------
 !
-        IF (.not.(CompositeGrid(ieast,ng).or.EWperiodic(ng))) THEN
-          IF (DOMAIN(ng)%Eastern_Edge(tile)) THEN
-            DO j=Jstr,Jend
-              Si(Iend+1,j,liunw,isUice)=Si(Iend+1,j,lienw,isUevp)
-            END DO
-            DO j=JstrP,Jend
-              Si(Iend+1,j,liunw,isVice)=Si(Iend+1,j,lienw,isVevp)
-            END DO
-          END IF
-        END IF
-!
-        IF (.not.(CompositeGrid(isouth,ng).or.NSperiodic(ng))) THEN
-          IF (DOMAIN(ng)%Southern_Edge(tile)) THEN
-            DO i=IstrP,Iend
-              Si(i,Jstr-1,liunw,isUice)=Si(i,Jstr-1,lienw,isUevp)
-            END DO
-            DO i=Istr,Iend
-              Si(i,Jstr,liunw,isVice)=Si(i,Jstr,lienw,isVevp)
-            END DO
-          END IF
-        END IF
-!
-        IF (.not.(CompositeGrid(inorth,ng).or.NSperiodic(ng))) THEN
-          IF (DOMAIN(ng)%Northern_Edge(tile)) THEN
-            DO i=IstrP,Iend
-              Si(i,Jend+1,liunw,isUice)=Si(i,Jend+1,lienw,isUevp)
-            END DO
-            DO i=Istr,Iend
-              Si(i,Jend+1,liunw,isVice)=Si(i,Jend+1,lienw,isVevp)
-            END DO
-          END IF
-        END IF
-!
-        IF (.not.(CompositeGrid(isouth,ng).or.NSperiodic(ng).or.        &
-     &            CompositeGrid(iwest ,ng).or.EWperiodic(ng))) THEN
-          IF (DOMAIN(ng)%SouthWest_Corner(tile)) THEN
-            Si(Istr  ,Jstr-1,liunw,isUice)=Si(Istr  ,Jstr-1,lienw,      &
-     &                                        isUevp)
-            Si(Istr-1,Jstr  ,liunw,isVice)=Si(Istr-1,Jstr  ,lienw,      &
-     &                                        isVevp)
-          END IF
-        END IF
-!
-        IF (.not.(CompositeGrid(isouth,ng).or.NSperiodic(ng).or.        &
-     &            CompositeGrid(ieast ,ng).or.EWperiodic(ng))) THEN
-          IF (DOMAIN(ng)%SouthEast_Corner(tile)) THEN
-            Si(Iend+1,Jstr-1,liunw,isUice)=Si(Iend+1,Jstr-1,lienw,      &
-     &                                        isUevp)
-            Si(Iend+1,Jstr  ,liunw,isVice)=Si(Iend+1,Jstr  ,lienw,      &
-     &                                        isVevp)
-          END IF
-        END IF
-!
-        IF (.not.(CompositeGrid(inorth,ng).or.NSperiodic(ng).or.        &
-     &            CompositeGrid(iwest ,ng).or.EWperiodic(ng))) THEN
-          IF (DOMAIN(ng)%NorthWest_Corner(tile)) THEN
-            Si(Istr  ,Jend+1,liunw,isUice)=Si(Istr  ,Jend+1,lienw,      &
-     &                                        isUevp)
-            Si(Istr-1,Jend+1,liunw,isVice)=Si(Istr-1,Jend+1,lienw,      &
-     &                                        isVevp)
-          END IF
-        END IF
-!
-        IF (.not.(CompositeGrid(inorth,ng).or.NSperiodic(ng).or.        &
-     &            CompositeGrid(ieast ,ng).or.EWperiodic(ng))) THEN
-          IF (DOMAIN(ng)%NorthEast_Corner(tile)) THEN
-            Si(Iend+1,Jend+1,liunw,isUice)=Si(Iend+1,Jend+1,lienw,      &
-     &                                        isUevp)
-            Si(Iend+1,Jend+1,liunw,isVice)=Si(Iend+1,Jend+1,lienw,      &
-     &                                        isVevp)
-          END IF
-        END IF
-!
-!  Exchange boundary data.
-!
-      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-        CALL exchange_u2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,liunw,isUice))
+        IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+          CALL exchange_u2d_tile (ng, tile,                             &
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            Si(:,:,liunw,isUice))
 
-        CALL exchange_v2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,liunw,isVice))
-      END IF
+          CALL exchange_v2d_tile (ng, tile,                             &
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            Si(:,:,liunw,isVice))
+        END IF
 
 # ifdef DISTRIBUTE
 !
-      CALL mp_exchange2d (ng, tile, model, 2,                           &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
-     &                    Si(:,:,liunw,isUice),                         &
-     &                    Si(:,:,liunw,isVice))
+        CALL mp_exchange2d (ng, tile, model, 2,                         &
+     &                      LBi, UBi, LBj, UBj,                         &
+     &                      NghostPoints,                               &
+     &                      EWperiodic(ng), NSperiodic(ng),             &
+     &                      Si(:,:,liunw,isUice),                       &
+     &                      Si(:,:,liunw,isVice))
 # endif
       ENDIF
 !

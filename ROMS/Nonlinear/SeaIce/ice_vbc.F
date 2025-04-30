@@ -20,13 +20,14 @@
       USE mod_forces
       USE mod_grid
       USE mod_ice
+      USE mod_ocean
+      USE mod_scalars
 # ifdef LMD_SKPP
       USE mod_mixing
 # endif
-      USE mod_ocean
-      USE mod_scalars
 !
-      USE bc_2d_mod
+      USE exchange_2d_mod, ONLY: exchange_r2d_tile, exchange_u2d_tile,  &
+     &                           exchange_v2d_tile
 # ifdef DISTRIBUTE
       USE mp_exchange_mod, ONLY : mp_exchange2d
 # endif
@@ -84,10 +85,14 @@
      &                   FORCES(ng) % sustr_ao,                         &
      &                   FORCES(ng) % svstr_ao,                         &
 # endif
-     &                   FORCES(ng) % sustr,                            &
-     &                   FORCES(ng) % svstr,                            &
+# ifndef ICE_MK
+     &                   FORCES(ng) % Uwind,                            &
+     &                   FORCES(ng) % Vwind,                            &
+# endif
+     &                   ICE(ng) % Si,                                  &
      &                   ICE(ng) % Fi,                                  &
-     &                   ICE(ng) % Si)
+     &                   FORCES(ng) % sustr,                            &
+     &                   FORCES(ng) % svstr)
 # ifdef PROFILE
       CALL wclock_off (ng, model, 42, __LINE__, MyFile)
 # endif
@@ -116,8 +121,11 @@
      &                         sustr_ai, svstr_ai,                      &
      &                         sustr_ao, svstr_ao,                      &
 # endif
-     &                         sustr, svstr,                            &
-     &                         Fi, Si)
+# ifndef ICE_MK
+     &                         Uwind, Vwind,                            &
+# endif
+     &                         Si, Fi,                                  &
+     &                         sustr, svstr)
 !***********************************************************************
 !
 !  Imported variable declarations.
@@ -150,10 +158,14 @@
       real(r8), intent(in) :: sustr_ai(LBi:,LBj:)
       real(r8), intent(in) :: svstr_ai(LBi:,LBj:)
 #  endif
+#  ifndef ICE_MK
+      real(r8), intent(in) :: Uwind(LBi:,LBj:)
+      real(r8), intent(in) :: Vwind(LBi:,LBj:)
+#  endif
       real(r8), intent(in) :: Si(LBi:,LBj:,:,:)
+      real(r8), intent(inout) :: Fi(LBi:,LBj:,:)
       real(r8), intent(inout) :: sustr(LBi:,LBj:)
       real(r8), intent(inout) :: svstr(LBi:,LBj:)
-      real(r8), intent(inout) :: Fi(LBi:,LBj:,:)
 # else
 #  ifdef ICE_SHOREFAST
       real(r8), intent(in) :: h(LBi:UBi,LBj:UBj)
@@ -177,10 +189,14 @@
       real(r8), intent(in) :: sustr_ai(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: svstr_ai(LBi:UBi,LBj:UBj)
 #  endif
+#  ifndef ICE_MK
+      real(r8), intent(in) :: Uwind(LBi:UBi,LBj:UBj)
+      real(r8), intent(in) :: Vwind(LBi:UBi,LBj:UBj)
+#  endif
       real(r8), intent(in) :: Si(LBi:UBi,LBj:UBj,2,nIceS)
+      real(r8), intent(inout) :: Fi(LBi:UBi,LBj:UBj,nIceF)
       real(r8), intent(inout) :: sustr(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: svstr(LBi:UBi,LBj:UBj)
-      real(r8), intent(inout) :: Fi(LBi:UBi,LBj:UBj,nIceF)
 # endif
 !
 !  Local variable declarations.
@@ -205,8 +221,6 @@
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: chuai
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: utauiw
 # ifndef ICE_MK
-      real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: uwind
-      real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: vwind
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: wind_speed
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: windu
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: windv
@@ -221,8 +235,8 @@
 !  Kantha ice thermodynamics formulation.
 !-----------------------------------------------------------------------
 !
-      DO j=Jstr-1,Jend
-        DO i=Istr-1,Iend
+      DO j=Jstrm1,Jendp1
+        DO i=Istrm1,Iendp1
           rhoO=rho0+rho(i,j,N(ng))
           spd=Fi(i,j,icIOvs)
 #  ifdef ICE_SHOREFAST
@@ -277,8 +291,8 @@
 !
 !  Compute surface air-ice interface U-stress.
 !
-      DO j=Jstr,Jend
-        DO i=IstrP,Iend
+      DO j=JstrR,JendR
+        DO i=Istr,IendR
           rhoO=1000.0_r8+0.5_r8*(rho(i,j,N(ng))+rho(i-1,j,N(ng)))
           aix =0.5_r8*(Si(i,j,liold,isAice)+Si(i-1,j,liold,isAice))
           chux=0.5_r8*(chuiw(i,j)+chuiw(i-1,j))
@@ -316,8 +330,8 @@
 !
 !  Compute surface air-ice interface V-stress.
 !
-      DO j=JstrP,Jend
-        DO i=Istr,Iend
+      DO j=Jstr,JendR
+        DO i=IstrR,IendR
           rhoO=1000.0_r8+0.5_r8*(rho(i,j,N(ng))+rho(i,j-1,N(ng)))
           aiy =0.5_r8*(Si(i,j,liold,isAice)+Si(i,j-1,liold,isAice))
           chuy=0.5_r8*(chuiw(i,j)+chuiw(i,j-1))
@@ -360,24 +374,23 @@
 !  Alternate formulation to the Mellor-Kantha ice thermodynamics.
 !-----------------------------------------------------------------------
 !
-      DO j=Jstr,Jend
-        DO i=IstrP,Iend
+      DO j=JstrR,JendR
+        DO i=Istr,IendR
            windu(i,j)=0.5_r8*(Uwind(i-1,j)+Uwind(i,j))
         END DO
       END DO
-      DO j=JstrP,Jend
-        DO i=Istr,Iend
+      DO j=Jstr,JendR
+        DO i=IstrR,IendR
            windv(i,j)=0.5_r8*(Vwind(i,j-1)+Vwind(i,j))
         END DO
       END DO
 !
-      DO j=Jstr,Jend
-        DO i=Istr,Iend
+      DO j=JstrR,JendR
+        DO i=IstrR,IendR
           cff=(Si(i,j,liold,isAice)+0.02)*rho0*Cd_io(ng)/IceRho(ng)
           spdiw(i,j)=cff*Fi(i,j,icIOvs)
           spdiw(i,j)=MAX(spdiw(i,j), cff*0.1_r8)
-          wind_speed(i,j)=0.5*SQRT((windu(i,j)+windu(i+1,j))**2 +       &
-     &                             (windv(i,j)+windv(i,j+1))**2)
+          wind_speed(i,j)=SQRT(Uwind(i,j)**2+Vwind(i,j)**2)
 #  ifdef ICE_SHOREFAST
           clear=h(i,j)+MIN(Zt_avg1(i,j), 0.0_r8)-0.9*hi(i,j,liold)
           clear=MAX(clear, 0.001_r8)
@@ -391,8 +404,8 @@
 !
 !  Compute surface air-ice interface U-stress.
 !
-      DO j=Jstr,Jend
-        DO i=IstrP,Iend
+      DO j=JstrR,JendR
+        DO i=Istr,IendR
           rhoO=1000.0_r8+0.5_r8*(rho(i,j,N(ng))+rho(i-1,j,N(ng)))
           aix=0.5_r8*(Si(i,j,liold,isAice)+Si(i-1,j,liold,isAice))
           hix=0.5_r8*(Si(i,j,liold,isHice)+Si(i-1,j,liold,isHice))
@@ -427,8 +440,8 @@
 !
 !  Compute surface air-ice interface V-stress.
 !
-      DO j=JstrP,Jend
-        DO i=Istr,Iend
+      DO j=Jstr,JendR
+        DO i=IstrR,IendR
           rhoO=1000.0_r8+0.5_r8*(rho(i,j,N(ng))+rho(i,j-1,N(ng)))
           aiy=0.5_r8*(Si(i,j,liold,isAice)+Si(i,j-1,liold,isAice))
           hiy=0.5_r8*(Si(i,j,liold,isHice)+Si(i,j-1,liold,isHice))
@@ -469,8 +482,8 @@
 !  Load sea surface elevation (isHsse).
 # endif
 !
-      DO j=Jstr,Jend
-        DO i=Istr,Iend
+      DO j=JstrR,JendR
+        DO i=IstrR,IendR
           Fi(i,j,icHsse)=Zt_avg1(i,j)
 # ifdef ICE_MK
           Fi(i,j,icIOmt)=chuiw(i,j)
@@ -481,38 +494,39 @@
 !
 !  Apply boundary conditions.
 !
-      CALL bc_r2d_tile (ng, tile,                                       &
-     &                  LBi, UBi, LBj, UBj,                             &
-     &                  Fi(:,:,icHsse))
-
-      CALL bc_u2d_tile (ng, tile,                                       &
-     &                  LBi, UBi, LBj, UBj,                             &
-     &                  Fi(:,:,icAIus))
-
-      CALL bc_v2d_tile (ng, tile,                                       &
-     &                  LBi, UBi, LBj, UBj,                             &
-     &                  Fi(:,:,icAIvs))
-
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fi(:,:,icHsse))
+!
+        CALL exchange_u2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fi(:,:,icAIus))
+!
+        CALL exchange_v2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fi(:,:,icAIvs))
 # ifdef ICE_MK
-      CALL bc_r2d_tile (ng, tile,                                       &
-     &                  LBi, UBi, LBj, UBj,                             &
-     &                  Fi(:,:,icIOmt))
-
-      CALL bc_r2d_tile (ng, tile,                                       &
-     &                  LBi, UBi, LBj, UBj,                             &
-     &                  Fi(:,:,icIOfv))
+!
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fi(:,:,icIOmt))
+!
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fi(:,:,icIOfv))
 # endif
-
 # ifdef ICE_BULK_FLUXES
-      CALL bc_u2d_tile (ng, tile,                                       &
-     &                  LBi, UBi, LBj, UBj,                             &
-     &                  sustr)
-
-      CALL bc_v2d_tile (ng, tile,                                       &
-     &                  LBi, UBi, LBj, UBj,                             &
-     &                  svstr)
+!
+        CALL exchange_u2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          sustr)
+!
+        CALL exchange_v2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          svstr)
 # endif
-
+      END IF
 # ifdef DISTRIBUTE
 !
       CALL mp_exchange2d (ng, tile, model, 3,                           &

@@ -66,6 +66,8 @@
      &                          ui)
 !***********************************************************************
 !
+      USE exchange_2d_mod, ONLY : exchange_u2d_tile
+!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, tile, model
@@ -525,6 +527,14 @@
           ui(Iend+1,Jend+1,liunw)=0.5_r8*(ui(Iend  ,Jend+1,liunw)+      &
      &                                    ui(Iend+1,Jend  ,liunw))
         END IF
+      END IF
+!
+!  Apply lateral boundary conditions.
+!
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+        CALL exchange_u2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          ui(:,:,liunw))
       END IF
 !
       RETURN

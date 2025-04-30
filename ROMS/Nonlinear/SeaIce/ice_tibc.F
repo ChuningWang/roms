@@ -69,6 +69,8 @@
      &                          ui, vi, hi, ti, enthalpy)
 !***********************************************************************
 !
+      USE exchange_2d_mod, ONLY : exchange_r2d_tile
+!
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, tile, model
@@ -621,6 +623,19 @@
             ti(Iend+1,Jend+1,linew)=0.0_r8
           END IF
         END IF
+      END IF
+!
+!-----------------------------------------------------------------------
+!  Apply periodic boundary conditions.
+!-----------------------------------------------------------------------
+!
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          enthalpy(:,:,linew))
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          ti(:,:,linew))
       END IF
 !
       RETURN
