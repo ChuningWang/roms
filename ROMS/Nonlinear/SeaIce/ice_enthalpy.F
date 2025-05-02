@@ -19,6 +19,7 @@
       USE mod_ice
       USE mod_scalars
 !
+      USE ice_tibc_mod,    ONLY : ice_tibc_tile
       USE exchange_3d_mod, ONLY : exchange_r3d_tile
 #ifdef DISTRIBUTE
       USE mp_exchange_mod, ONLY : mp_exchange3d
@@ -94,31 +95,34 @@
 !  Computes the ice enthalpy.
 !-----------------------------------------------------------------------
 !
-      DO j=JstrR,JendR
-        DO i=IstrR,IendR
+      DO j=Jstr,Jend
+        DO i=Istr,Iend
           Si(i,j,liold,isEnth)=Si(i,j,liold,isHice)*                    &
      &                         Si(i,j,liold,isTice)
+          Si(i,j,linew,isEnth)=Si(i,j,linew,isHice)*                    &
+     &                         Si(i,j,linew,isTice)
           IF(Si(i,j,liold,isHice).le.min_hi(ng)) THEN
             Si(i,j,liold,isEnth)=0.0_r8
           END IF
-          Si(i,j,linew,isEnth)=Si(i,j,linew,isHice)*                    &
-     &                         Si(i,j,linew,isTice)
           IF(Si(i,j,linew,isHice).le.min_hi(ng)) THEN
             Si(i,j,linew,isEnth)=0.0_r8
           END IF
         END DO
       END DO
 !
-!  Exchange boundary data.
+!  Apply lateral boundary conditions.
 !
-      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-        CALL exchange_r3d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj, 1, 2,               &
-     &                          Si(:,:,:,isEnth))
-      END IF
+      CALL ice_tibc_tile (ng, tile, model,                              &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    liold, linew,                                 &
+     &                    ICE(ng) % Si(:,:,:,isUice),                   &
+     &                    ICE(ng) % Si(:,:,:,isVice),                   &
+     &                    ICE(ng) % Si(:,:,:,isHice),                   &
+     &                    ICE(ng) % Si(:,:,:,isTice),                   &
+     &                    ICE(ng) % Si(:,:,:,isEnth))
 # ifdef DISTRIBUTE
 !
-      CALL mp_exchange3d (ng, tile, model, 2,                           &
+      CALL mp_exchange3d (ng, tile, model, 1,                           &
      &                    LBi, UBi, LBj, UBj, 1, 2,                     &
      &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
      &                    Si(:,:,:,isEnth))

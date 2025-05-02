@@ -21,8 +21,8 @@
       USE mod_ice
       USE mod_scalars
 !
-      USE exchange_2d_mod, ONLY : exchange_r2d_tile
       USE ice_bc2d_mod,    ONLY : ice_bc2d_tile
+      USE exchange_2d_mod, ONLY : exchange_r2d_tile
 # ifdef DISTRIBUTE
       USE mp_exchange_mod, ONLY : mp_exchange2d
 # endif

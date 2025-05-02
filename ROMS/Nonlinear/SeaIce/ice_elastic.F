@@ -25,7 +25,6 @@
 !
       USE ice_uibc_mod,    ONLY : ice_uibc_tile
       USE ice_vibc_mod,    ONLY : ice_vibc_tile
-      USE exchange_2d_mod, ONLY : exchange_u2d_tile, exchange_v2d_tile
 # ifdef DISTRIBUTE
       USE mp_exchange_mod, ONLY : mp_exchange2d
 # endif
@@ -694,14 +693,12 @@
      &                    IminS, ImaxS, JminS, JmaxS,                   &
      &                    lieol, lienw,                                 &
      &                    Si(:,:,:,isUevp))
-
+!
       CALL ice_vibc_tile (ng, tile, model,                              &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    IminS, ImaxS, JminS, JmaxS,                   &
      &                    lieol, lienw,                                 &
      &                    Si(:,:,:,isVevp))
-!
-
 # ifdef DISTRIBUTE
 !
       CALL mp_exchange2d (ng, tile, model, 2,                           &
@@ -710,38 +707,36 @@
      &                    Si(:,:,lienw,isUevp),                         &
      &                    Si(:,:,lienw,isVevp))
 # endif
-
 !
 !-----------------------------------------------------------------------
 !  Update ice velocity.
 !-----------------------------------------------------------------------
 !
       IF(iEVP(ng).eq.nEVP(ng)) THEN
-        DO j=JstrR,JendR
-          DO i=Istr,IendR
+        DO j=Jstr,Jend
+          DO i=IstrU,Iend
             Si(i,j,liunw,isUice)=Si(i,j,lienw,isUevp)
           END DO
         END DO
-        DO j=Jstr,JendR
-          DO i=IstrR,IendR
+        DO j=JstrV,Jend
+          DO i=Istr,Iend
             Si(i,j,liunw,isVice)=Si(i,j,lienw,isVevp)
           END DO
         END DO
 !
-!-----------------------------------------------------------------------
 !  Apply lateral boundary conditions.
-!-----------------------------------------------------------------------
 !
-        IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-          CALL exchange_u2d_tile (ng, tile,                             &
-     &                            LBi, UBi, LBj, UBj,                   &
-     &                            Si(:,:,liunw,isUice))
+        CALL ice_uibc_tile (ng, tile, model,                            &
+     &                      LBi, UBi, LBj, UBj,                         &
+     &                      IminS, ImaxS, JminS, JmaxS,                 &
+     &                      liuol, liunw,                               &
+     &                      Si(:,:,:,isUice))
 
-          CALL exchange_v2d_tile (ng, tile,                             &
-     &                            LBi, UBi, LBj, UBj,                   &
-     &                            Si(:,:,liunw,isVice))
-        END IF
-
+        CALL ice_vibc_tile (ng, tile, model,                            &
+     &                      LBi, UBi, LBj, UBj,                         &
+     &                      IminS, ImaxS, JminS, JmaxS,                 &
+     &                      liuol, liunw,                               &
+     &                      Si(:,:,:,isVice))
 # ifdef DISTRIBUTE
 !
         CALL mp_exchange2d (ng, tile, model, 2,                         &
@@ -752,6 +747,7 @@
      &                      Si(:,:,liunw,isVice))
 # endif
       ENDIF
+
 !
       RETURN
       END SUBROUTINE ice_elastic_tile

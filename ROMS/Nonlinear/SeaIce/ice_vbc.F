@@ -236,8 +236,8 @@
 !  Kantha ice thermodynamics formulation.
 !-----------------------------------------------------------------------
 !
-      DO j=Jstrm1,Jendp1
-        DO i=Istrm1,Iendp1
+      DO j=Jstr-1,JendR
+        DO i=Istr-1,IendR
           rhoO=rho0+rho(i,j,N(ng))
           spd=Fi(i,j,icIOvs)
 #  ifdef ICE_SHOREFAST
@@ -386,8 +386,8 @@
         END DO
       END DO
 !
-      DO j=JstrR,JendR
-        DO i=IstrR,IendR
+      DO j=Jstr-1,JendR
+        DO i=Istr-1,IendR
           cff=(Si(i,j,liold,isAice)+0.02)*rho0*Cd_io(ng)/IceRho(ng)
           spdiw(i,j)=cff*Fi(i,j,icIOvs)
           spdiw(i,j)=MAX(spdiw(i,j), cff*0.1_r8)
@@ -493,7 +493,7 @@
         END DO
       END DO
 !
-!  Apply boundary conditions.
+!  Apply periodic boundary conditions.
 !
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
         CALL exchange_r2d_tile (ng, tile,                               &
@@ -536,16 +536,17 @@
      &                    Fi(:,:,icHsse),                               &
      &                    Fi(:,:,icAIus),                               &
      &                    Fi(:,:,icAIvs))
-
+!
 #  ifdef ICE_MK
+!
       CALL mp_exchange2d (ng, tile, model, 2,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
      &                    Fi(:,:,icIOmt),                               &
      &                    Fi(:,:,icIOfv))
 #  endif
-
 #  ifdef ICE_BULK_FLUXES
+!
       CALL mp_exchange2d (ng, tile, model, 2,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &

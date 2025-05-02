@@ -131,122 +131,19 @@
 !  Load ice velocity components into EVP velocity arrays.
 !
       IF (iEVP(ng).eq.1) THEN
-        DO j=Jstr,Jend
-          DO i=Istr,Iend
+        DO j=Jstr-1,Jend+1
+          DO i=Istr,Iend+1
             Si(i,j,1,isUevp)=Si(i,j,liuol,isUice)
             Si(i,j,2,isUevp)=Si(i,j,liuol,isUice)
           END DO
         END DO
-        DO j=Jstr,Jend
-          DO i=Istr,Iend
+        DO j=Jstr,Jend+1
+          DO i=Istr-1,Iend+1
             Si(i,j,1,isVevp)=Si(i,j,liuol,isVice)
             Si(i,j,2,isVevp)=Si(i,j,liuol,isVice)
           END DO
         END DO
-!
-        IF (.not.(CompositeGrid(iwest,ng).or.EWperiodic(ng))) THEN
-          IF (DOMAIN(ng)%Western_Edge(tile)) THEN
-            DO j=Jstr,Jend
-              Si(Istr,j,1,isUevp)=Si(Istr,j,liuol,isUice)
-              Si(Istr,j,2,isUevp)=Si(Istr,j,liuol,isUice)
-            END DO
-            DO j=Jstr,Jend
-              Si(Istr-1,j,1,isVevp)=Si(Istr-1,j,liuol,isVice)
-              Si(Istr-1,j,2,isVevp)=Si(Istr-1,j,liuol,isVice)
-            END DO
-          END IF
-        END IF
-!
-        IF (.not.(CompositeGrid(ieast,ng).or.EWperiodic(ng))) THEN
-          IF (DOMAIN(ng)%Eastern_Edge(tile)) THEN
-            DO j=Jstr,Jend
-              Si(Iend+1,j,1,isUevp)=Si(Iend+1,j,liuol,isUice)
-              Si(Iend+1,j,2,isUevp)=Si(Iend+1,j,liuol,isUice)
-            END DO
-            DO j=Jstr,Jend
-              Si(Iend+1,j,1,isVevp)=Si(Iend+1,j,liuol,isVice)
-              Si(Iend+1,j,2,isVevp)=Si(Iend+1,j,liuol,isVice)
-            END DO
-          END IF
-        END IF
-!
-        IF (.not.(CompositeGrid(isouth,ng).or.NSperiodic(ng))) THEN
-          IF (DOMAIN(ng)%Southern_Edge(tile)) THEN
-            DO i=Istr,Iend
-              Si(i,Jstr-1,1,isUevp)=Si(i,Jstr-1,liuol,isUice)
-              Si(i,Jstr-1,2,isUevp)=Si(i,Jstr-1,liuol,isUice)
-            END DO
-            DO i=Istr,Iend
-              Si(i,Jstr,1,isVevp)=Si(i,Jstr,liuol,isVice)
-              Si(i,Jstr,2,isVevp)=Si(i,Jstr,liuol,isVice)
-            END DO
-          END IF
-        END IF
-!
-        IF (.not.(CompositeGrid(inorth,ng).or.NSperiodic(ng))) THEN
-          IF (DOMAIN(ng)%Northern_Edge(tile)) THEN
-            DO i=Istr,Iend
-              Si(i,Jend+1,1,isUevp)=Si(i,Jend+1,liuol,isUice)
-              Si(i,Jend+1,2,isUevp)=Si(i,Jend+1,liuol,isUice)
-            END DO
-            DO i=Istr,Iend
-              Si(i,Jend+1,1,isVevp)=Si(i,Jend+1,liuol,isVice)
-              Si(i,Jend+1,2,isVevp)=Si(i,Jend+1,liuol,isVice)
-            END DO
-          END IF
-        END IF
-!
-        IF (.not.(CompositeGrid(isouth,ng).or.NSperiodic(ng).or.        &
-     &            CompositeGrid(iwest ,ng).or.EWperiodic(ng))) THEN
-          IF (DOMAIN(ng)%SouthWest_Corner(tile)) THEN
-            Si(Istr  ,Jstr-1,1,isUevp)=Si(Istr  ,Jstr-1,liuol,isUice)
-            Si(Istr  ,Jstr-1,2,isUevp)=Si(Istr  ,Jstr-1,liuol,isUice)
-            Si(Istr-1,Jstr  ,1,isVevp)=Si(Istr-1,Jstr  ,liuol,isVice)
-            Si(Istr-1,Jstr  ,2,isVevp)=Si(Istr-1,Jstr  ,liuol,isVice)
-          END IF
-        END IF
-!
-        IF (.not.(CompositeGrid(isouth,ng).or.NSperiodic(ng).or.        &
-     &            CompositeGrid(ieast ,ng).or.EWperiodic(ng))) THEN
-          IF (DOMAIN(ng)%SouthEast_Corner(tile)) THEN
-            Si(Iend+1,Jstr-1,1,isUevp)=Si(Iend+1,Jstr-1,liuol,isUice)
-            Si(Iend+1,Jstr-1,2,isUevp)=Si(Iend+1,Jstr-1,liuol,isUice)
-            Si(Iend+1,Jstr  ,1,isVevp)=Si(Iend+1,Jstr  ,liuol,isVice)
-            Si(Iend+1,Jstr  ,2,isVevp)=Si(Iend+1,Jstr  ,liuol,isVice)
-          END IF
-        END IF
-!
-        IF (.not.(CompositeGrid(inorth,ng).or.NSperiodic(ng).or.        &
-     &            CompositeGrid(iwest ,ng).or.EWperiodic(ng))) THEN
-          IF (DOMAIN(ng)%NorthWest_Corner(tile)) THEN
-            Si(Istr  ,Jend+1,1,isUevp)=Si(Istr  ,Jend+1,liuol,isUice)
-            Si(Istr  ,Jend+1,2,isUevp)=Si(Istr  ,Jend+1,liuol,isUice)
-            Si(Istr-1,Jend+1,1,isVevp)=Si(Istr-1,Jend+1,liuol,isVice)
-            Si(Istr-1,Jend+1,2,isVevp)=Si(Istr-1,Jend+1,liuol,isVice)
-          END IF
-        END IF
-!
-        IF (.not.(CompositeGrid(inorth,ng).or.NSperiodic(ng).or.        &
-     &            CompositeGrid(ieast ,ng).or.EWperiodic(ng))) THEN
-          IF (DOMAIN(ng)%NorthEast_Corner(tile)) THEN
-            Si(Iend+1,Jend+1,1,isUevp)=Si(Iend+1,Jend+1,liuol,isUice)
-            Si(Iend+1,Jend+1,2,isUevp)=Si(Iend+1,Jend+1,liuol,isUice)
-            Si(Iend+1,Jend+1,1,isVevp)=Si(Iend+1,Jend+1,liuol,isVice)
-            Si(Iend+1,Jend+1,2,isVevp)=Si(Iend+1,Jend+1,liuol,isVice)
-          END IF
-        END IF
       END IF
-
-# ifdef DISTRIBUTE
-!
-      CALL mp_exchange2d (ng, tile, model, 4,                           &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
-     &                    Si(:,:,1,isUevp),                             &
-     &                    Si(:,:,2,isUevp),                             &
-     &                    Si(:,:,1,isVevp),                             &
-     &                    Si(:,:,2,isVevp))
-# endif
 !
 !  Compute strain rates. Then, compute ice pressure (strength; icPice),
 !  bulk viscosity (icBvis), and shear viscosity (icSvis).
@@ -270,15 +167,13 @@
           eps_xy(i,j)=0.5_r8*(epx+epy)
 !
           eone=eps_xx(i,j)+eps_yy(i,j)
-          etwos=(eps_xx(i,j)-eps_yy(i,j))*                              &
-                (eps_xx(i,j)-eps_yy(i,j))+                              &
-     &          4.0_r8*eps_xy(i,j)*eps_xy(i,j)
+          etwos=(eps_xx(i,j)-eps_yy(i,j))*2+4.0_r8*eps_xy(i,j)**2
 !
           delta=ABS(eone**2+e2r*etwos)
           delta=MAX(SQRT(delta),epso)
 # ifdef ICE_STRENGTH_QUAD
-          Fi(i,j,icPice)=Fi(i,j,icPgrd)*                                &
-                         Si(i,j,liold,isHice)*Si(i,j,liold,isHice)*     &
+          Fi(i,j,icPice)=Fi(i,j,icPgrd)*Si(i,j,liold,isHice)*           &
+     &                   Si(i,j,liold,isHice)*                          &
      &                   EXP(-Astrength(ng)*                            &
      &                       (1.0_r8-Si(i,j,liold,isAice)))
 # else
@@ -294,7 +189,7 @@
         END DO
       END DO
 !
-!  Set lateral boundary conditions.
+!  Apply lateral boundary conditions.
 !
       CALL bc_r2d_tile (ng, tile,                                       &
      &                  LBi, UBi, LBj, UBj,                             &
@@ -307,8 +202,8 @@
       CALL bc_r2d_tile (ng, tile,                                       &
      &                  LBi, UBi, LBj, UBj,                             &
      &                  Fi(:,:,icSvis))
-
 # ifdef DISTRIBUTE
+!
       CALL mp_exchange2d (ng, tile, model, 3,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
@@ -316,7 +211,6 @@
      &                    Fi(:,:,icBvis),                               &
      &                    Fi(:,:,icSvis))
 # endif
-
 # ifdef OUTFLOW_MASK
 !
 !  Apply outflow mask.

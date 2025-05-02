@@ -20,6 +20,7 @@ list( APPEND _files
       ROMS/Nonlinear/SeaIce/ice_set_data.F
       ROMS/Nonlinear/SeaIce/ice_set_avg.F
       ROMS/Nonlinear/SeaIce/ice_spdiw.F
+      ROMS/Nonlinear/SeaIce/ice_strengthcoef.F
       ROMS/Nonlinear/SeaIce/ice_thermo.F
       ROMS/Nonlinear/SeaIce/ice_tibc.F
       ROMS/Nonlinear/SeaIce/ice_uibc.F

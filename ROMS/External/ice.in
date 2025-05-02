@@ -107,6 +107,14 @@
       zetaMin == 0.d0
       zetaMax == 1.0d+14
 
+! Ice strength coefficient [N/m2].
+
+        Pstar == 5.0d+03
+
+! Ice strength coefficient in quadratic form [N/m].
+
+      Pstar_e == 1.4d+03
+
 ! Ellipticity squared of yield curve [nondimensional].
 
      ellip_sq == 4.d0

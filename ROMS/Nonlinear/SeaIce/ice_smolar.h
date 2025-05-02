@@ -124,7 +124,8 @@
      &                      GRID(ng) % omn,                             &
      &                      ICE(ng) % Si(:,:,:,isUice),                 &
      &                      ICE(ng) % Si(:,:,:,isVice),                 &
-     &                      ICE(ng) % Si(:,:,:,isAice))
+     &                      ICE(ng) % Si(:,:,:,isAice),                 &
+     &                      ICE(ng) % Fi(:,:,icIaif))
 !
       CALL ice_bc2d_tile (ng, tile, model, isAice,                      &
      &                    LBi, UBi, LBj, UBj,                           &
@@ -165,7 +166,8 @@
      &                      GRID(ng) % omn,                             &
      &                      ICE(ng) % Si(:,:,:,isUice),                 &
      &                      ICE(ng) % Si(:,:,:,isVice),                 &
-     &                      ICE(ng) % Si(:,:,:,isHice))
+     &                      ICE(ng) % Si(:,:,:,isHice),                 &
+     &                      ICE(ng) % Fi(:,:,icIaif))
 !
       CALL ice_bc2d_tile (ng, tile, model, isHice,                      &
      &                    LBi, UBi, LBj, UBj,                           &
@@ -178,8 +180,8 @@
 !
 !  Compute rate of ice divergence (m3/s).
 !
-      DO j=JstrR,JendR
-        DO i=IstrR,IendR
+      DO j=Jstr,Jend
+        DO i=Istr,Iend
           ICE(ng)%Fi(i,j,icWdiv)=(ICE(ng)%Si(i,j,linew,isHice)-         &
        &                          ICE(ng)%Si(i,j,liold,isHice))/dt(ng)
         END DO
@@ -221,7 +223,8 @@
      &                      GRID(ng) % omn,                             &
      &                      ICE(ng) % Si(:,:,:,isUice),                 &
      &                      ICE(ng) % Si(:,:,:,isVice),                 &
-     &                      ICE(ng) % Si(:,:,:,isHsno))
+     &                      ICE(ng) % Si(:,:,:,isHsno),                 &
+     &                      ICE(ng) % Fi(:,:,icIaif))
 !
       CALL ice_bc2d_tile (ng, tile, model, isHsno,                      &
      &                    LBi, UBi, LBj, UBj,                           &
@@ -262,7 +265,8 @@
      &                      GRID(ng) % omn,                             &
      &                      ICE(ng) % Si(:,:,:,isUice),                 &
      &                      ICE(ng) % Si(:,:,:,isVice),                 &
-     &                      ICE(ng) % Si(:,:,:,isHmel))
+     &                      ICE(ng) % Si(:,:,:,isHmel),                 &
+     &                      ICE(ng) % Fi(:,:,icIaif))
 !
       CALL ice_bc2d_tile (ng, tile, model, isHmel,                      &
      &                    LBi, UBi, LBj, UBj,                           &
@@ -303,7 +307,8 @@
      &                      GRID(ng) % omn,                             &
      &                      ICE(ng) % Si(:,:,:,isUice),                 &
      &                      ICE(ng) % Si(:,:,:,isVice),                 &
-     &                      ICE(ng) % Si(:,:,:,isEnth))
+     &                      ICE(ng) % Si(:,:,:,isEnth),                 &
+     &                      ICE(ng) % Fi(:,:,icIaif))
 !
       DO j=Jstr,Jend
         DO i=Istr,Iend
@@ -362,7 +367,8 @@
      &                            GRID(ng) % omn,                       &
      &                            ICE(ng) % Si(:,:,:,isUice),           &
      &                            ICE(ng) % Si(:,:,:,isVice),           &
-     &                            ICE(ng) % Ti(:,:,:,ic))
+     &                            ICE(ng) % Ti(:,:,:,ic),               &
+     &                            ICE(ng) % Fi(:,:,icIaif))
 !
             DO j=Jstr,Jend
               DO i=Istr,Iend
@@ -385,8 +391,8 @@
 !  ice age (isIage).
 !-----------------------------------------------------------------------
 !
-      DO j=JstrT,JendT
-        DO i=IstrT,IendT
+      DO j=Jstr,Jend
+        DO i=Istr,Iend
           ICE(ng)%Si(i,j,liold,isHage)=ICE(ng)%Si(i,j,liold,isHice)*    &
      &                                 ICE(ng)%Si(i,j,liold,isIage)
           ICE(ng)%Si(i,j,linew,isHage)=ICE(ng)%Si(i,j,linew,isHice)*    &
@@ -397,6 +403,15 @@
           END IF
         END DO
       END DO
+!
+      CALL ice_bc2d_tile (ng, tile, model, isHage,                      &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    IminS, ImaxS, JminS, JmaxS,                   &
+     &                    liold, linew,                                 &
+     &                    ICE(ng) % Si(:,:,:,isUice),                   &
+     &                    ICE(ng) % Si(:,:,:,isVice),                   &
+     &                    ICE(ng) % Si(:,:,:,isHage),                   &
+     &                    LBC(:,ibICE(isHage),ng))
 !
       CALL ice_mpdata_tile (ng, tile, model,                            &
      &                      LBi, UBi, LBj, UBj,                         &
@@ -424,7 +439,8 @@
      &                      GRID(ng) % omn,                             &
      &                      ICE(ng) % Si(:,:,:,isUice),                 &
      &                      ICE(ng) % Si(:,:,:,isVice),                 &
-     &                      ICE(ng) % Si(:,:,:,isHage))
+     &                      ICE(ng) % Si(:,:,:,isHage),                 &
+     &                      ICE(ng) % Fi(:,:,icIaif))
 !
       DO j=Jstr,Jend
         DO i=Istr,Iend
@@ -480,7 +496,8 @@
      &                      GRID(ng) % omn,                             &
      &                      ICE(ng) % Si(:,:,:,isUice),                 &
      &                      ICE(ng) % Si(:,:,:,isVice),                 &
-     &                      ICE(ng) % Si(:,:,:,isIphy))
+     &                      ICE(ng) % Si(:,:,:,isIphy),                 &
+     &                      ICE(ng) % Fi(:,:,icIaif))
 !
 ! Need to change this to ice_bc2d_tile calls.
 !
@@ -522,7 +539,8 @@
      &                      GRID(ng) % omn,                             &
      &                      ICE(ng) % Si(:,:,:,isUice),                 &
      &                      ICE(ng) % Si(:,:,:,isVice),                 &
-     &                      ICE(ng) % Si(:,:,:,isINO3))
+     &                      ICE(ng) % Si(:,:,:,isINO3),                 &
+     &                      ICE(ng) % Fi(:,:,icIaif))
 !
       CALL ice_bc2d_tile (ng, tile, model, isINO3,                      &
      &                    LBi, UBi, LBj, UBj,                           &
@@ -562,7 +580,8 @@
      &                      GRID(ng) % omn,                             &
      &                      ICE(ng) % Si(:,:,:,isUice),                 &
      &                      ICE(ng) % Si(:,:,:,isVice),                 &
-     &                      ICE(ng) % Si(:,:,:,isINH4))
+     &                      ICE(ng) % Si(:,:,:,isINH4),                 &
+     &                      ICE(ng) % Fi(:,:,icIaif))
 !
       CALL ice_bc2d_tile (ng, tile, model, isINH4,                      &
      &                    LBi, UBi, LBj, UBj,                           &
@@ -574,9 +593,7 @@
 #endif
 #ifdef DISTRIBUTE
 !
-!-----------------------------------------------------------------------
-!  Exchange boundary information.
-!-----------------------------------------------------------------------
+!  Apply periodic boundary conditions.
 !
       CALL mp_exchange2d (ng, tile, model, 2,                           &
      &                    LBi, UBi, LBj, UBj,                           &
@@ -627,7 +644,7 @@
      &                            IminS, ImaxS, JminS, JmaxS,           &
      &                            linew, liold, liunw,                  &
 #ifdef MASKING
-     &                            rmask,  umask, vmask,                 &
+     &                            rmask, umask, vmask,                  &
 #endif
 #ifdef WET_DRY
      &                            rmask_wet, umask_wet, vmask_wet,      &
@@ -639,7 +656,7 @@
      &                            pm, pn,                               &
 #endif
      &                            on_u, om_v, omn,                      &
-     &                            ui, vi, field)
+     &                            ui, vi, field, aif)
 !***********************************************************************
 !
 !  Imported variable declarations.
@@ -673,6 +690,7 @@
       real(r8), intent(in) :: ui(LBi:,LBj:,:)
       real(r8), intent(in) :: vi(LBi:,LBj:,:)
       real(r8), intent(inout) :: field(LBi:,LBj:,:)
+      real(r8), intent(out) :: aif(LBi:,LBj:)
 #else
 # ifdef MASKING
       real(r8), intent(in) :: rmask(LBi:UBi,LBj:UBj)
@@ -697,6 +715,7 @@
       real(r8), intent(in) :: ui(LBi:UBi,LBj:UBj,2)
       real(r8), intent(in) :: vi(LBi:UBi,LBj:UBj,2)
       real(r8), intent(inout) :: field(LBi:UBi,LBj:UBj,2)
+      real(r8), intent(out) :: aif(LBi:UBi,LBj:UBj)
 #endif
 !
 ! Local variable definitions
@@ -714,7 +733,6 @@
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: ar
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: aflxu
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: aflxv
-      real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: aif
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: FX
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: FE
 
@@ -726,8 +744,8 @@
 !
 !  Upstream fluxes. (HGA: the advection is not in flux form?)
 !
-      DO j=Jstrm1,Jendp1
-        DO i=Istrm1,Iendp2
+      DO j=Jstr,Jend
+        DO i=Istr,Iend+1
           cff1=MAX(0.0_r8,ui(i,j,liunw))
           cff2=MIN(0.0_r8,ui(i,j,liunw))
           aflxu(i,j)=on_u(i,j)*                                         &
@@ -736,8 +754,8 @@
         END DO
       END DO
 !
-      DO j=Jstrm1,Jendp2
-        DO i=Istrm1,Iendp1
+      DO j=Jstr,Jend+1
+        DO i=Istr,Iend
           cff1=MAX(0.0_r8,vi(i,j,liunw))
           cff2=MIN(0.0_r8,vi(i,j,liunw))
           aflxv(i,j)=om_v(i,j)*                                         &
@@ -748,8 +766,8 @@
 !
 !  Step 1: first guess advection operator.
 !
-      DO j=Jstrm1,Jendp1
-        DO i=Istrm1,Iendp1
+      DO j=Jstr,Jend
+        DO i=Istr,Iend
           ar(i,j)=1.0_r8/omn(i,j)
           aif(i,j)=field(i,j,liold)-                                    &
      &             dtice(ng)*(aflxu(i+1,j)-aflxu(i,j)+                  &
@@ -772,6 +790,13 @@
       CALL bc_r2d_tile (ng, tile,                                       &
      &                  LBi, UBi, LBj, UBj,                             &
      &                  aif)
+# ifdef DISTRIBUTE
+!
+      CALL mp_exchange2d (ng, tile, model, 1,                           &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
+     &                    aif)
+# endif
 !
 !  Step 2: Compute antidiffusive velocities.
 !
@@ -781,8 +806,8 @@
 !  then "ui" is zero at that point, and therefore no additional masking
 !  is required.
 !
-      DO j=Jstr,Jendp1
-        DO i=Istrm1,Iendp1
+      DO j=Jstr,Jend+1
+        DO i=Istr-1,Iend+1
           FE(i,j)=0.5*                                                  &
 # ifdef MASKING
      &            vmask(i,j)*                                           &
@@ -794,8 +819,8 @@
 !
         END DO
       END DO
-      DO j=Jstrm1,Jendp1
-        DO i=Istr,Iendp1
+      DO j=Jstr-1,Jend+1
+        DO i=Istr,Iend+1
           FX(i,j)=0.5*                                                  &
 # ifdef MASKING
      &            umask(i,j)*                                           &
@@ -808,7 +833,7 @@
       END DO
 !
       DO j=Jstr,Jend
-        DO i=Istr,Iendp1
+        DO i=Istr,Iend+1
           cff=aif(i,j)+aif(i-1,j)
           rateu=(aif(i,j)-aif(i-1,j)) /                                 &
      &          (SIGN(1._r8, cff)*MAX(ABS(cff), epsil))
@@ -818,26 +843,14 @@
           rateyiu=(FE(i,j+1) + FE(i,j) + FE(i-1,j+1) + FE(i-1,j)) /     &
      &            (SIGN(1._r8, cff)*MAX(ABS(cff), epsil))
 !
-!  SMD's formula.
-!
-!         rateu=(aif(i,j)-aif(i-1,j))/                                  &
-!    &          MAX(epsil, aif(i,j)+aif(i-1,j))
-!
-!         rateyiu=(FE(i,j+1)+FE(i,j)+FE(i-1,j+1)+FE(i-1,j))/            &
-!    &            (MAX(epsil, aif(i  ,j)+FE(i  ,j+1)-FE(i  ,j)+         &
-!    &                        aif(i-1,j)+FE(i-1,j+1)-FE(i-1,j)))
-
           Cu=0.5*dtice(ng)*(pm(i,j)+pm(i-1,j))*ui(i,j,liunw)
-
           Cu_crss=0.5_r8*dtice(ng)*                                     &
      &            0.0625_r8*(pn(i-1,j+1)+pn(i,j+1)+                     &
      &                       pn(i-1,j-1)+pn(i,j-1))*                    &
      &            (vi(i-1,j+1,liunw)+vi(i,j+1,liunw)+                   &
      &             vi(i-1,j  ,liunw)+vi(i,j  ,liunw))
-
           uspeed=rateu*(ABS(ui(i,j,liunw))-Cu*ui(i,j,liunw))-           &
      &           rateyiu*Cu_crss*ui(i,j,liunw)
-
           cff1=MAX(0.0_r8,uspeed)
           cff2=MIN(0.0_r8,uspeed)
           aflxu(i,j)=on_u(i,j)*(cff1*aif(i-1,j)+                        &
@@ -845,7 +858,7 @@
         END DO
       END DO
 !
-      DO j=Jstr,Jendp1
+      DO j=Jstr,Jend+1
         DO i=Istr,Iend
           cff=aif(i,j)+aif(i,j-1)
           ratev=(aif(i,j)-aif(i,j-1)) /                                 &
@@ -856,26 +869,14 @@
           ratexiv=(FX(i+1,j) + FX(i,j) + FX(i+1,j-1) + FX(i,j-1)) /     &
      &            (SIGN(1._r8, cff)*MAX(ABS(cff), epsil))
 !
-!  SMD's formula.
-!
-!         ratev=(aif(i,j)-aif(i,j-1))/                                  &
-!    &          MAX(epsil, aif(i,j)+aif(i,j-1))
-!
-!         ratexiv=(FX(i+1,j)+FX(i,j) +FX(i+1,j-1)+FX(i,j-1))/           &
-!    &            (MAX(epsil, aif(i,j  )+FX(i+1,j  )-FX(i,j  )+         &
-!    &                        aif(i,j-1)+FX(i+1,j-1)-FX(i,j-1)))
-
           Cu=0.5*dtice(ng)*(pn(i,j)+pn(i,j-1))*vi(i,j,liunw)
-
           Cu_crss=0.5_r8*dtice(ng)*                                     &
      &            0.0625_r8*(pm(i+1,j)+pm(i+1,j-1)+                     &
      &                       pm(i-1,j)+pm(i-1,j-1))*                    &
      &            (ui(i,j  ,liunw)+ui(i+1,j  ,liunw)+                   &
      &             ui(i,j-1,liunw)+ui(i+1,j-1,liunw))
-
           vspeed=ratev*(ABS(vi(i,j,liunw))-Cu*vi(i,j,liunw))-           &
      &           ratexiv*Cu_crss*vi(i,j,liunw)
-
           cff1=MAX(0.0_r8,vspeed)
           cff2=MIN(0.0_r8,vspeed)
           aflxv(i,j)=om_v(i,j)*(cff1*aif(i,j-1)+                        &

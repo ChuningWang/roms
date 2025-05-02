@@ -194,9 +194,9 @@
 !  Ice model internal variables indices.
 !
 #if defined ICE_BULK_FLUXES
-      integer, parameter :: nIceF = 32  ! number of ice field variables
+      integer, parameter :: nIceF = 33  ! number of ice field variables
 #else
-      integer, parameter :: nIceF = 24  ! number of ice field variables
+      integer, parameter :: nIceF = 25  ! number of ice field variables
 #endif
 !
       integer :: iFice(nIceF)           ! internal fields I/O indices
@@ -225,15 +225,16 @@
       integer, parameter :: icW_fr = 22 ! ice accretion rate by frazil
       integer, parameter :: icW_io = 23 ! melt/freeze rate at Ice/Ocean
       integer, parameter :: icW_ro = 24 ! melt/freeze rate runoff
+      integer, parameter :: icIaif = 25 ! interim variable
 #if defined ICE_BULK_FLUXES
-      integer, parameter :: icAlbi = 25 ! sea ice albedo
-      integer, parameter :: icAlbo = 26 ! ocean surface albedo
-      integer, parameter :: icFrsw = 27 ! SW penetration fraction in ice
-      integer, parameter :: icSics = 28 ! net SW flux at sea ice surface
-      integer, parameter :: icSicb = 29 ! net SW flux at sea ice base
-      integer, parameter :: icSocn = 30 ! net SW flux at sea surface
-      integer, parameter :: icRfac = 31 ! lmd_r1 scaling factor
-      integer, parameter :: icSnof = 32 ! snowfall rate
+      integer, parameter :: icAlbi = 26 ! sea ice albedo
+      integer, parameter :: icAlbo = 27 ! ocean surface albedo
+      integer, parameter :: icFrsw = 28 ! SW penetration fraction in ice
+      integer, parameter :: icSics = 29 ! net SW flux at sea ice surface
+      integer, parameter :: icSicb = 30 ! net SW flux at sea ice base
+      integer, parameter :: icSocn = 31 ! net SW flux at sea surface
+      integer, parameter :: icRfac = 32 ! lmd_r1 scaling factor
+      integer, parameter :: icSnof = 33 ! snowfall rate
 #endif
 !
 !-----------------------------------------------------------------------
@@ -274,10 +275,11 @@
       real(r8), allocatable :: Cd_io(:)         ! ice-ocean boundary
 !
 !  Ice strength exponential weighting coefficient on concentration
-!  (nondimensional).
+!  (nondimensional) and strength coeeficient (N/m2 or N/m).
 !
       real(r8), allocatable :: Astrength(:)
       real(r8), allocatable :: Pstar(:)
+      real(r8), allocatable :: Pstar_e(:)
 !
 !  Minimum and maximum average fractional ice concetration coverage
 !  (nomdimensional) limiters.
@@ -501,6 +503,11 @@
      &    allocate ( Pstar(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
         Pstar(1:Ngrids)=IniVal
+
+        IF (.not.allocated(Pstar_e))                                    &
+     &    allocate ( Pstar_e(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+        Pstar_e(1:Ngrids)=IniVal
 
         IF (.not.allocated(min_ai))                                     &
      &    allocate ( min_ai(Ngrids) )

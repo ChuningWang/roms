@@ -944,9 +944,7 @@
         END DO
       END IF
 !
-!-----------------------------------------------------------------------
-!  Lateral boundary conditions.
-!-----------------------------------------------------------------------
+!  Apply lateral boundary conditions.
 !
       CALL bc_r2d_tile (ng, tile,                                       &
      &                  LBi, UBi, LBj, UBj,                             &

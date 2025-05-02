@@ -152,7 +152,7 @@
         END DO
       END DO
 !
-!  Set lateral boundary conditions.
+!  Apply lateral boundary conditions.
 !
       CALL ice_bc2d_tile (ng, tile, model, isAice,                      &
      &                    LBi, UBi, LBj, UBj,                           &

@@ -74,6 +74,9 @@
     (defined MASKING    && (defined READ_WATER || defined WRITE_WATER))
       USE wpoints_mod,       ONLY : wpoints
 #endif
+#ifdef ICE_STRENGTH_QUAD
+      USE ice_strengthcoef_mod, ONLY : ice_strengthcoef
+#endif
 !
       implicit none
 !
@@ -275,6 +278,19 @@
           SetGridConfig(ng)=.FALSE.
         END IF
       END DO
+#ifdef ICE_STRENGTH_QUAD
+!
+!-----------------------------------------------------------------------
+!  Compute ice strength as a function of grid size.
+!-----------------------------------------------------------------------
+!
+      DO ng=1,Ngrids
+        DO tile=first_tile(ng),last_tile(ng),+1
+          CALL ice_strengthcoef (ng, tile, iNLM)
+        END DO
+!$OMP BARRIER
+      END DO
+#endif
 !
 !-----------------------------------------------------------------------
 !  Initialize horizontal mixing coefficients. If applicable, scale

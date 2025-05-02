@@ -128,7 +128,7 @@
         END DO
       END DO
 !
-!  Set lateral boundary conditions.
+!  Apply periodic boundary conditions.
 !
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
         CALL exchange_r2d_tile (ng, tile,                               &

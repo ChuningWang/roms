@@ -142,6 +142,10 @@
               Npts=load_r(Nval, Rval, Ngrids, Cd_io)
             CASE ('Astrength')
               Npts=load_r(Nval, Rval, Ngrids, Astrength)
+            CASE ('Pstar')
+              Npts=load_r(Nval, Rval, Ngrids, Pstar)
+            CASE ('Pstar_e')
+              Npts=load_r(Nval, Rval, Ngrids, Pstar_e)
             CASE ('zetaMin')
               Npts=load_r(Nval, Rval, Ngrids, zetaMin)
             CASE ('zetaMax')
@@ -976,6 +980,10 @@
      &          'Ice-Ocean drag coefficient (nondimensional).'
           WRITE (out,60) Astrength(ng), 'Astrength',                    &
      &          'Ice strength exponential weighting (nondimensional).'
+          WRITE (out,60) Pstar(ng), 'Pstar',                            &
+     &          'Ice strength coefficient (N/m2).'
+          WRITE (out,60) Pstar_e(ng), 'Pstar_e',                        &
+     &          'Ice strength coefficient in quadratic form (N/m).'
           WRITE (out,60) ZetaMin(ng), 'zetaMin',                        &
      &          'Minimum ice shear strength (N/m2) limiter.'
           WRITE (out,60) ZetaMax(ng), 'zetaMax',                        &
