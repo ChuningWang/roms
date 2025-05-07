@@ -164,16 +164,16 @@
 !
 !  Initialize rate of frazil ice growth (m3/s).
 !
-      DO j=JstrR,JendR
-        DO i=IstrR,IendR
+      DO j=Jstr,Jend
+        DO i=Istr,Iend
           Fi(i,j,icW_fr)=0.0_r8
         END DO
       END DO
 !
 !  Original formulation.
 !
-      DO j=JstrR,JendR
-        DO i=IstrR,IendR
+      DO j=Jstr,Jend
+        DO i=Istr,Iend
 # ifdef MASKING
           overLand=rmask(i,j).lt.1.0_r8
 #  ifdef WET_DRY

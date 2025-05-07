@@ -172,9 +172,9 @@
             END IF
           END DO
 !
-!  Western edge, closed boundary condition.
+!  Western edge, gradient boundary condition.
 !
-        ELSE IF (S(iwest)%closed) THEN
+        ELSE IF (S(iwest)%gradient) THEN
           DO j=Jstr,Jend
             field(Istr-1,j,linew)=field(Istr,j,linew)
 # ifdef MASKING
@@ -185,6 +185,13 @@
             field(Istr-1,j,linew)=field(Istr-1,j,linew)*                &
      &                            GRID(ng)%rmask_wet(Istr-1,j)
 # endif
+          END DO
+!
+!  Western edge, closed boundary condition.
+!
+        ELSE IF (S(iwest)%closed) THEN
+          DO j=Jstr,Jend
+            field(Istr-1,j,linew)=0.0_r8
           END DO
         END IF
       END IF
@@ -287,9 +294,9 @@
             END IF
           END DO
 !
-!  Eastern edge, closed boundary condition.
+!  Eastern edge, gradient boundary condition.
 !
-        ELSE IF (S(ieast)%closed) THEN
+        ELSE IF (S(ieast)%gradient) THEN
           DO j=Jstr,Jend
             field(Iend+1,j,linew)=field(Iend,j,linew)
 # ifdef MASKING
@@ -300,6 +307,13 @@
             field(Iend+1,j,linew)=field(Iend+1,j,linew)*                &
      &                            GRID(ng)%rmask_wet(Iend+1,j)
 # endif
+          END DO
+!
+!  Eastern edge, closed boundary condition.
+!
+        ELSE IF (S(ieast)%closed) THEN
+          DO j=Jstr,Jend
+            field(Iend+1,j,linew)=0.0_r8
           END DO
         END IF
       END IF
@@ -402,9 +416,9 @@
             END IF
           END DO
 !
-!  Southern edge, closed boundary condition.
+!  Southern edge, gradient boundary condition.
 !
-        ELSE IF (S(isouth)%closed) THEN
+        ELSE IF (S(isouth)%gradient) THEN
           DO i=Istr,Iend
             field(i,Jstr-1,linew)=field(i,Jstr,linew)
 # ifdef MASKING
@@ -415,6 +429,13 @@
             field(i,Jstr-1,linew)=field(i,Jstr-1,linew)*                &
      &                            GRID(ng)%rmask_wet(i,Jstr-1)
 # endif
+          END DO
+!
+!  Southern edge, closed boundary condition.
+!
+        ELSE IF (S(isouth)%closed) THEN
+          DO i=Istr,Iend
+            field(i,Jstr-1,linew)=0.0_r8
           END DO
         END IF
       END IF
@@ -517,9 +538,9 @@
             END IF
           END DO
 !
-!  Northern edge, closed boundary condition.
+!  Northern edge, gradient boundary condition.
 !
-        ELSE IF (S(inorth)%closed) THEN
+        ELSE IF (S(inorth)%gradient) THEN
           DO i=Istr,Iend
             field(i,Jend+1,linew)=field(i,Jend,linew)
 # ifdef MASKING
@@ -530,6 +551,13 @@
             field(i,Jend+1,linew)=field(i,Jend+1,linew)*                &
      &                            GRID(ng)%rmask_wet(i,Jend+1)
 # endif
+          END DO
+!
+!  Northern edge, closed boundary condition.
+!
+        ELSE IF (S(inorth)%closed) THEN
+          DO i=Istr,Iend
+            field(i,Jend+1,linew)=0.0_r8
           END DO
         END IF
       END IF

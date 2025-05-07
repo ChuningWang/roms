@@ -271,7 +271,7 @@
 !                                                                      !
 !=======================================================================
 !
-      USE mod_param,   ONLY : Dmem, LBC, Ngrids, NT, MT, NAT
+      USE mod_param,   ONLY : BOUNDS, Dmem, LBC, Ngrids, NT, MT, NAT
       USE mod_scalars, ONLY : iwest, ieast, isouth, inorth
 !
 !  Imported variable declarations.
@@ -282,6 +282,7 @@
 !
 !  Local variable declarations.
 !
+      integer :: LBiG, UBiG, LBjG, UBjG, my_tile
       integer :: i, ic, itrc
 
       real(r8), parameter :: IniVal = 0.0_r8
@@ -408,40 +409,46 @@
 !  variables.
 !-----------------------------------------------------------------------
 !
+        my_tile=-1                           ! for global values
+        LBiG=BOUNDS(ng)%LBi(my_tile)
+        UBiG=BOUNDS(ng)%UBi(my_tile)
+        LBjG=BOUNDS(ng)%LBj(my_tile)
+        UBjG=BOUNDS(ng)%UBj(my_tile)
+!
         IF (ng.eq.1) allocate ( ISF_LOBC(nIsfS,Ngrids) )
 !
 !  Nonlinear iceself model 'state' lateral boundary arrays.
 !
         DO i=1,nIsfS
           IF (LBC(iwest,ibISF(i),ng)%acquire) THEN
-            allocate ( ISF_LOBC(i,ng) % isf_west(LBj:UBj) )
+            allocate ( ISF_LOBC(i,ng) % isf_west(LBjG:UBjG) )
             Dmem(ng)=Dmem(ng)+Ysize
 
-            allocate ( ISF_LOBC(i,ng) % isfG_west(LBj:UBj,2) )
+            allocate ( ISF_LOBC(i,ng) % isfG_west(LBjG:UBjG,2) )
             Dmem(ng)=Dmem(ng)+2.0_r8*Ysize
           END IF
 !
           IF (LBC(ieast,ibISF(i),ng)%acquire) THEN
-            allocate ( ISF_LOBC(i,ng) % isf_east(LBj:UBj) )
+            allocate ( ISF_LOBC(i,ng) % isf_east(LBjG:UBjG) )
             Dmem(ng)=Dmem(ng)+Ysize
 
-            allocate ( ISF_LOBC(i,ng) % isfG_east(LBj:UBj,2) )
+            allocate ( ISF_LOBC(i,ng) % isfG_east(LBjG:UBjG,2) )
             Dmem(ng)=Dmem(ng)+2.0_r8*Ysize
           END IF
 !
           IF (LBC(isouth,ibISF(i),ng)%acquire) THEN
-            allocate ( ISF_LOBC(i,ng) % isf_south(LBi:UBi) )
+            allocate ( ISF_LOBC(i,ng) % isf_south(LBiG:UBiG) )
             Dmem(ng)=Dmem(ng)+Xsize
 
-            allocate ( ISF_LOBC(i,ng) % isfG_south(LBi:UBi,2) )
+            allocate ( ISF_LOBC(i,ng) % isfG_south(LBiG:UBiG,2) )
             Dmem(ng)=Dmem(ng)+2.0_r8*Xsize
           END IF
 !
           IF (LBC(inorth,ibISF(i),ng)%acquire) THEN
-            allocate ( ISF_LOBC(i,ng) % isf_north(LBi:UBi) )
+            allocate ( ISF_LOBC(i,ng) % isf_north(LBiG:UBiG) )
             Dmem(ng)=Dmem(ng)+Xsize
 
-            allocate ( ISF_LOBC(i,ng) % isfG_north(LBi:UBi,2) )
+            allocate ( ISF_LOBC(i,ng) % isfG_north(LBiG:UBiG,2) )
             Dmem(ng)=Dmem(ng)+2.0_r8*Xsize
           END IF
         END DO

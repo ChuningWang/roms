@@ -10,53 +10,116 @@
               IF (foundit) THEN
                 SELECT CASE (i)
                   CASE (isIuis)
-                    gtype=var_flag(varid)*u2dvar
-                    status=nf_fread2d(ng, IDmod, ncname, ncINPid,       &
-     &                                Vname(1,ifield), varid,           &
-     &                                InpRec, gtype, Vsize,             &
-     &                                LBi, UBi, LBj, UBj,               &
-     &                                Fscl, Fmin, Fmax,                 &
+                    IF (Perfect2D) THEN
+                      gtype=var_flag(varid)*u3dvar
+                    ELSE
+                      gtype=var_flag(varid)*u2dvar
+                    END IF
+                    IF (Perfect2D) THEN
+                      status=nf_fread3d(ng, IDmod, ncname, ncINPid,     &
+     &                                  Vname(1,ifield), varid,         &
+     &                                  InpRec, gtype, Vsize,           &
+     &                                  LBi, UBi, LBj, UBj, 1, 2,       &
+     &                                  Fscl, Fmin, Fmax,               &
 #   ifdef MASKING
-     &                                GRID(ng) % umask,                 &
+     &                                  GRID(ng) % umask,               &
 #   endif
 #   ifdef CHECKSUM
-     &                                ISF(ng) % Si(:,:,Tindex,i),       &
-     &                                checksum = Fhash)
+     &                                  ISF(ng) % Si(:,:,:,i),          &
+     &                                  checksum = Fhash)
 #   else
-     &                                ISF(ng) % Si(:,:,Tindex,i))
+     &                                  ISF(ng) % Si(:,:,:,i))
 #   endif
+                    ELSE
+                      status=nf_fread2d(ng, IDmod, ncname, ncINPid,     &
+     &                                  Vname(1,ifield), varid,         &
+     &                                  InpRec, gtype, Vsize,           &
+     &                                  LBi, UBi, LBj, UBj,             &
+     &                                  Fscl, Fmin, Fmax,               &
+#   ifdef MASKING
+     &                                  GRID(ng) % umask,               &
+#   endif
+#   ifdef CHECKSUM
+     &                                  ISF(ng) % Si(:,:,Tindex,i),     &
+     &                                  checksum = Fhash)
+#   else
+     &                                  ISF(ng) % Si(:,:,Tindex,i))
+#   endif
+                    END IF
                   CASE (isIvis)
-                    gtype=var_flag(varid)*v2dvar
-                    status=nf_fread2d(ng, IDmod, ncname, ncINPid,       &
-     &                                Vname(1,ifield), varid,           &
-     &                                InpRec, gtype, Vsize,             &
-     &                                LBi, UBi, LBj, UBj,               &
-     &                                Fscl, Fmin, Fmax,                 &
+                    IF (Perfect2D) THEN
+                      gtype=var_flag(varid)*v3dvar
+                    ELSE
+                      gtype=var_flag(varid)*v2dvar
+                    END IF
+                    IF (Perfect2D) THEN
+                      status=nf_fread3d(ng, IDmod, ncname, ncINPid,     &
+     &                                  Vname(1,ifield), varid,         &
+     &                                  InpRec, gtype, Vsize,           &
+     &                                  LBi, UBi, LBj, UBj, 1, 2,       &
+     &                                  Fscl, Fmin, Fmax,               &
 #   ifdef MASKING
-     &                                GRID(ng) % vmask,                 &
+     &                                  GRID(ng) % vmask,               &
 #   endif
 #   ifdef CHECKSUM
-     &                                ISF(ng) % Si(:,:,Tindex,i),       &
-     &                                checksum = Fhash)
+     &                                  ISF(ng) % Si(:,:,:,i),          &
+     &                                  checksum = Fhash)
 #   else
-     &                                ISF(ng) % Si(:,:,Tindex,i))
+     &                                  ISF(ng) % Si(:,:,:,i))
 #   endif
+                    ELSE
+                      status=nf_fread2d(ng, IDmod, ncname, ncINPid,     &
+     &                                  Vname(1,ifield), varid,         &
+     &                                  InpRec, gtype, Vsize,           &
+     &                                  LBi, UBi, LBj, UBj,             &
+     &                                  Fscl, Fmin, Fmax,               &
+#   ifdef MASKING
+     &                                  GRID(ng) % vmask,               &
+#   endif
+#   ifdef CHECKSUM
+     &                                  ISF(ng) % Si(:,:,Tindex,i),     &
+     &                                  checksum = Fhash)
+#   else
+     &                                  ISF(ng) % Si(:,:,Tindex,i))
+#   endif
+                    END IF
                   CASE DEFAULT
-                    gtype=var_flag(varid)*r2dvar
-                    status=nf_fread2d(ng, IDmod, ncname, ncINPid,       &
-     &                                Vname(1,ifield), varid,           &
-     &                                InpRec, gtype, Vsize,             &
-     &                                LBi, UBi, LBj, UBj,               &
-     &                                Fscl, Fmin, Fmax,                 &
+                    IF (Perfect2D) THEN
+                      gtype=var_flag(varid)*r3dvar
+                    ELSE
+                      gtype=var_flag(varid)*r2dvar
+                    END IF
+                    IF (Perfect2D) THEN
+                      status=nf_fread3d(ng, IDmod, ncname, ncINPid,     &
+     &                                  Vname(1,ifield), varid,         &
+     &                                  InpRec, gtype, Vsize,           &
+     &                                  LBi, UBi, LBj, UBj, 1, 2,       &
+     &                                  Fscl, Fmin, Fmax,               &
 #   ifdef MASKING
-     &                                GRID(ng) % rmask,                 &
+     &                                  GRID(ng) % rmask,               &
 #   endif
 #   ifdef CHECKSUM
-     &                                ISF(ng) % Si(:,:,Tindex,i),       &
-     &                                checksum = Fhash)
+     &                                  ISF(ng) % Si(:,:,:,i),          &
+     &                                  checksum = Fhash)
 #   else
-     &                                ISF(ng) % Si(:,:,Tindex,i))
+     &                                  ISF(ng) % Si(:,:,:,i))
 #   endif
+                    ELSE
+                      status=nf_fread2d(ng, IDmod, ncname, ncINPid,     &
+     &                                  Vname(1,ifield), varid,         &
+     &                                  InpRec, gtype, Vsize,           &
+     &                                  LBi, UBi, LBj, UBj,             &
+     &                                  Fscl, Fmin, Fmax,               &
+#   ifdef MASKING
+     &                                  GRID(ng) % rmask,               &
+#   endif
+#   ifdef CHECKSUM
+     &                                  ISF(ng) % Si(:,:,Tindex,i),     &
+     &                                  checksum = Fhash)
+#   else
+     &                                  ISF(ng) % Si(:,:,Tindex,i))
+#   endif
+                    END IF
                 END SELECT
 !
                 IF (FoundError(status, nf90_noerr, __LINE__,            &
@@ -93,6 +156,55 @@
           END IF
         END DO
 !
+!  Read iceshelf model state variables.
+!
+        DO i=1,nIsfF
+          IF (iFisf(i).gt.0) THEN
+            ifield=iFisf(i)
+            IF (get_var(ifield).and.Perfect2D) THEN
+              foundit=find_string(var_name, n_var,                      &
+     &                            TRIM(Vname(1,ifield)), varid)
+              IF (foundit) THEN
+                gtype=var_flag(varid)*r2dvar
+                status=nf_fread2d(ng, IDmod, ncname, ncINPid,           &
+     &                            Vname(1,ifield), varid,               &
+     &                            InpRec, gtype, Vsize,                 &
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            Fscl, Fmin, Fmax,                     &
+#   ifdef MASKING
+     &                            GRID(ng) % rmask,                     &
+#   endif
+#   ifdef CHECKSUM
+     &                            ISF(ng) % Fi(:,:,i),                  &
+     &                            checksum = Fhash)
+#   else
+     &                            ISF(ng) % Fi(:,:,i))
+#   endif
+!
+                IF (FoundError(status, nf90_noerr, __LINE__,            &
+     &              MyFile)) THEN
+                  IF (Master) THEN
+                    WRITE (stdout,60) string, TRIM(Vname(1,ifield)),    &
+     &                                InpRec, TRIM(ncname)
+                  END IF
+                  exit_flag=2
+                  ioerror=status
+                  RETURN
+                ELSE
+                  IF (Master) THEN
+#   ifdef CHECKSUM
+                    WRITE (stdout,70) TRIM(Vname(2,ifield)),            &
+     &                                Fmin, Fmax, Fhash
+#   else
+                    WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+#   endif
+                  END IF
+                END IF
+              END IF
+            END IF
+          END IF
+        END DO
+!
 !  Read in iceshelf refreezed volume (m).
 !
         ifield=idIvol
@@ -100,21 +212,42 @@
           foundit=find_string(var_name, n_var, TRIM(Vname(1,ifield)),   &
      &                        varid)
           IF (foundit) THEN
-            gtype=var_flag(varid)*r2dvar
-            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
-     &                        Vname(1,ifield), varid,                   &
-     &                        InpRec, gtype, Vsize,                     &
-     &                        LBi, UBi, LBj, UBj,                       &
-     &                        Fscl, Fmin, Fmax,                         &
+            IF (Perfect2D) THEN
+              gtype=var_flag(varid)*r3dvar
+            ELSE
+              gtype=var_flag(varid)*r2dvar
+            END IF
+            IF (Perfect2D) THEN
+              status=nf_fread3d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,ifield), varid,                 &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj, 1, 2,               &
+     &                          Fscl, Fmin, Fmax,                       &
 #   ifdef MASKING
-     &                        GRID(ng) % rmask,                         &
+     &                          GRID(ng) % rmask,                       &
 #   endif
 #   ifdef CHECKSUM
-     &                        ISF(ng) % Vi(:,:,Tindex),                 &
-     &                        checksum = Fhash)
+     &                          ISF(ng) % Vi,                           &
+     &                          checksum = Fhash)
 #   else
-     &                        ISF(ng) % Vi(:,:,Tindex))
+     &                          ISF(ng) % Vi)
 #   endif
+            ELSE
+              status=nf_fread2d(ng, IDmod, ncname, ncINPid,             &
+     &                          Vname(1,ifield), varid,                 &
+     &                          InpRec, gtype, Vsize,                   &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Fscl, Fmin, Fmax,                       &
+#   ifdef MASKING
+     &                          GRID(ng) % rmask,                       &
+#   endif
+#   ifdef CHECKSUM
+     &                          ISF(ng) % Vi(:,:,Tindex),               &
+     &                          checksum = Fhash)
+#   else
+     &                          ISF(ng) % Vi(:,:,Tindex))
+#   endif
+            END IF
             IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) THEN
                 WRITE (stdout,60) string, TRIM(Vname(1,ifield)),        &
@@ -157,22 +290,42 @@
      &                          TRIM(Vname(1,ifield)), varid)
             IF (foundit) THEN
               itrc=itrc+1
-              gtype=var_flag(varid)*r2dvar
-              scale=1.0_dp
-              status=nf_fread2d(ng, IDmod, ncname, ncINPid,             &
-     &                          Vname(1,ifield), varid,                 &
-     &                          InpRec, gtype, Vsize,                   &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          scale, Fmin, Fmax,                      &
+              IF (Perfect2D) THEN
+                gtype=var_flag(varid)*r3dvar
+              ELSE
+                gtype=var_flag(varid)*r2dvar
+              END IF
+              IF (Perfect2D) THEN
+                status=nf_fread3d(ng, IDmod, ncname, ncINPid,           &
+     &                            Vname(1,ifield), varid,               &
+     &                            InpRec, gtype, Vsize,                 &
+     &                            LBi, UBi, LBj, UBj, 1, 2,             &
+     &                            Fscl, Fmin, Fmax,                     &
 #   ifdef MASKING
-     &                          GRID(ng) % rmask,                       &
+     &                            GRID(ng) % rmask,                     &
 #   endif
 #   ifdef CHECKSUM
-     &                          ISF(ng) % Ti(:,:,Tindex,itrc),          &
-     &                          checksum = Fhash)
+     &                            ISF(ng) % Ti(:,:,:,itrc),             &
+     &                            checksum = Fhash)
 #   else
-     &                          ISF(ng) % Ti(:,:,Tindex,itrc))
+     &                            ISF(ng) % Ti(:,:,:,itrc))
 #   endif
+              ELSE
+                status=nf_fread2d(ng, IDmod, ncname, ncINPid,           &
+     &                            Vname(1,ifield), varid,               &
+     &                            InpRec, gtype, Vsize,                 &
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            Fscl, Fmin, Fmax,                     &
+#   ifdef MASKING
+     &                            GRID(ng) % rmask,                     &
+#   endif
+#   ifdef CHECKSUM
+     &                            ISF(ng) % Ti(:,:,Tindex,itrc),        &
+     &                            checksum = Fhash)
+#   else
+     &                            ISF(ng) % Ti(:,:,Tindex,itrc))
+#   endif
+              END IF
               IF (FoundError(status, nf90_noerr, __LINE__, MyFile))     &
      &          THEN
                 IF (Master) THEN

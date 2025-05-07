@@ -2,11 +2,11 @@
 
       MODULE ice_output_mod
 
-#if defined ICE_MODEL && defined SOLVE3D
+#ifdef ICE_MODEL
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2024 The ROMS/TOMS Group          Chuning Wang   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
@@ -28,6 +28,9 @@
       USE extract_sta_mod, ONLY : extract_sta2d
 # endif
       USE nf_fwrite2d_mod, ONLY : nf_fwrite2d
+#ifdef PERFECT_RESTART
+      USE nf_fwrite3d_mod, ONLY : nf_fwrite3d
+#endif
       USE uv_rotate_mod,   ONLY : uv_rotate2d
       USE strings_mod,     ONLY : FoundError
 !
@@ -58,85 +61,101 @@
 !
 !***********************************************************************
       SUBROUTINE ice_def_nf90 (ng, model, ldef, VarOut, S,              &
-     &                         t2dgrd, u2dgrd, v2dgrd)
+     &                         t2dgrd, u2dgrd, v2dgrd, sr2dgrd)
 !***********************************************************************
 !
       USE mod_netcdf
 !
 !  Imported variable declarations.
 !
-      logical, intent(in) :: ldef, VarOut(NV,Ngrids)
-!
       integer, intent(in) :: ng, model
-      integer, intent(in), optional :: t2dgrd(:), u2dgrd(:), v2dgrd(:)
-!
+      logical, intent(in) :: ldef, VarOut(NV,Ngrids)
       TYPE(T_IO), intent(inout) :: S(Ngrids)
+      integer, intent(in), optional, target :: t2dgrd(:), u2dgrd(:),    &
+     &                                         v2dgrd(:), sr2dgrd(:)
 !
 !  Local variable declarations.
 !
-      logical :: got_var(NV)
-      logical :: LdefVar
+      logical :: LdefVar, got_var(NV)
 !
       integer, parameter :: Natt = 25
 
-      integer :: i, ifield, j, nf, nvd3, status, vtype, ic, itrc
-
-      integer :: icegrd(3)
+      integer :: i, j, ifield, nf, nvd3, nvd4, nvd, status, vtype
+      integer :: ic, itrc
 !
-
+      integer, pointer :: icegrd(:)
+!
       real(r8) :: Aval(6)
 !
-      character (len=120) :: Vinfo(Natt)
-      character (len=256) :: ncname
-!
+      character (len=256)    :: ncname
+      character (len=MaxLen) :: Vinfo(Natt)
+
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__//", ice_def_nf90"
 !
       SourceFile=MyFile
 !
 !-----------------------------------------------------------------------
-!  Define prognostic ice variables into specified output NetCDF.
+!  Set and report file name.
 !-----------------------------------------------------------------------
 !
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       ncname=S(ng)%name
 !
+      DEFINE : IF (ldef) THEN
+!
 !  Set number of dimensions for output variables.
 !
 # if defined WRITE_WATER && defined MASKING
-      nvd3=2
+#  ifdef PERFECT_RESTART
+        IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+          nvd3=3
+          nvd4=4
+        ELSE
+          nvd3=2
+          nvd4=2
+        END IF
+#  else
+        nvd3=2
+        nvd4=2
+#  endif
 # else
-      nvd3=3
+        nvd3=3
+        nvd4=4
 # endif
 !
 !  Initialize local information variable arrays.
 !
-      DO i=1,Natt
-        DO j=1,LEN(Vinfo(1))
-          Vinfo(i)(j:j)=' '
+        DO i=1,Natt
+          DO j=1,LEN(Vinfo(1))
+            Vinfo(i)(j:j)=' '
+          END DO
         END DO
-      END DO
-      DO i=1,6
-        Aval(i)=0.0_r8
-      END DO
+        DO i=1,6
+          Aval(i)=0.0_r8
+        END DO
 !
 !-----------------------------------------------------------------------
 !  Define ice model state prognostic variables.
 !-----------------------------------------------------------------------
 !
-      DEFINE : IF (ldef) THEN
-
         DO nf=1,nIceS
           IF (iSice(nf).gt.0) THEN
             ifield=iSice(nf)
             IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
               LdefVar=.TRUE.
               vtype=NF_FRST
+# ifdef PERFECT_RESTART
+              nvd=nvd4
+# else
+              nvd=nvd3
+# endif
             ELSE
               LdefVar=VarOut(ifield,ng)
               vtype=NF_FOUT
+              nvd=nvd3
             END IF
-            IF (Ldefvar) THEN
+            IF (LdefVar) THEN
               Vinfo( 1)=Vname(1,ifield)
               Vinfo( 2)=Vname(2,ifield)
               Vinfo( 3)=Vname(3,ifield)
@@ -148,30 +167,60 @@
 !
               SELECT CASE (nf)
                 CASE (isUice)
-                  icegrd(1:3)=u2dgrd(1:3)
+                  icegrd => u2dgrd
 # if defined WRITE_WATER && defined MASKING
+#  if !defined WET_DRY && defined PERFECT_RESTART
+                  IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+                    Vinfo(24)='_FillValue'
+                    Aval(6)=spval
+                  END IF
+#  else
                   Vinfo(20)='mask_u'
+#  endif
 # endif
                 CASE (isVice)
-                  icegrd(1:3)=v2dgrd(1:3)
+                  icegrd => v2dgrd
 # if defined WRITE_WATER && defined MASKING
+#  if !defined WET_DRY && defined PERFECT_RESTART
+                  IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+                    Vinfo(24)='_FillValue'
+                    Aval(6)=spval
+                  END IF
+#  else
                   Vinfo(20)='mask_v'
+#  endif
 # endif
                 CASE DEFAULT
-                  icegrd(1:3)=t2dgrd(1:3)
+                  icegrd => t2dgrd
 # if defined WRITE_WATER && defined MASKING
+#  if !defined WET_DRY && defined PERFECT_RESTART
+                  IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+                    Vinfo(24)='_FillValue'
+                    Aval(6)=spval
+                  END IF
+#  else
                   Vinfo(20)='mask_rho'
+#  endif
 # endif
               END SELECT
 !
               status=def_var(ng, model, S(ng)%ncid,                     &
      &                       S(ng)%Vid(ifield),                         &
-     &                       vtype, nvd3, icegrd, Aval, Vinfo, ncname)
+     &                       vtype, nvd, icegrd, Aval, Vinfo, ncname)
               IF (FoundError(exit_flag, NoError,                        &
      &                       __LINE__, MyFile)) RETURN
             END IF
           END IF
         END DO
+!
+!  Reset icegrid dimension info.
+!
+        IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+          icegrd => sr2dgrd
+        ELSE
+          icegrd => t2dgrd
+        END IF
+        nvd=nvd3
 !
 !  Define ice EASTward velocity at RHO-points.
 !
@@ -183,14 +232,21 @@
           Vinfo(14)=Vname(4,idUiER)
           Vinfo(16)=Vname(1,idtime)
 # if defined WRITE_WATER && defined MASKING
+#  if !defined WET_DRY && defined PERFECT_RESTART
+          IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+            Vinfo(24)='_FillValue'
+            Aval(6)=spval
+          END IF
+#  else
           Vinfo(20)='mask_rho'
+#  endif
 # endif
           Vinfo(21)=Vname(6,idUiER)
           Vinfo(22)='coordinates'
           Aval(5)=REAL(Iinfo(1,idUiER,ng),r8)
           status=def_var(ng, model, S(ng)%ncid,                         &
      &                   S(ng)%Vid(idUiER),                             &
-     &                   vtype, nvd3, t2dgrd, Aval, Vinfo, ncname)
+     &                   vtype, nvd, icegrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 !
@@ -204,14 +260,21 @@
           Vinfo(14)=Vname(4,idViNR)
           Vinfo(16)=Vname(1,idtime)
 # if defined WRITE_WATER && defined MASKING
+#  if !defined WET_DRY && defined PERFECT_RESTART
+          IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+            Vinfo(24)='_FillValue'
+            Aval(6)=spval
+          END IF
+#  else
           Vinfo(20)='mask_rho'
+#  endif
 # endif
           Vinfo(21)=Vname(6,idViNR)
           Vinfo(22)='coordinates'
           Aval(5)=REAL(Iinfo(1,idViNR,ng),r8)
           status=def_var(ng, model, S(ng)%ncid,                         &
      &                   S(ng)%Vid(idViNR),                             &
-     &                   vtype, nvd3, t2dgrd, Aval, Vinfo, ncname)
+     &                   vtype, nvd, icegrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 !
@@ -230,7 +293,14 @@
               Vinfo(14)=Vname(4,ifield)
               Vinfo(16)=Vname(1,idtime)
 # if defined WRITE_WATER && defined MASKING
+#  if !defined WET_DRY && defined PERFECT_RESTART
+              IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+                Vinfo(24)='_FillValue'
+                Aval(6)=spval
+              END IF
+#  else
               Vinfo(20)='mask_rho'
+#  endif
 # endif
               Vinfo(21)=Vname(6,ifield)
               Vinfo(22)='coordinates'
@@ -250,7 +320,7 @@
 !
               status=def_var(ng, model, S(ng)%ncid,                     &
      &                       S(ng)%Vid(ifield),                         &
-     &                       vtype, nvd3, t2dgrd, Aval, Vinfo, ncname)
+     &                       vtype, nvd, icegrd, Aval, Vinfo, ncname)
               IF (FoundError(exit_flag, NoError,                        &
      &                       __LINE__, MyFile)) RETURN
             END IF
@@ -261,6 +331,18 @@
 !  Define ice tracer amounts.
 !-----------------------------------------------------------------------
 !
+!  Reset icegrid dimension info.
+!
+        icegrd => t2dgrd
+        IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+# ifdef PERFECT_RESTART
+          nvd=nvd4
+# else
+          nvd=nvd3
+# endif
+        ELSE
+          nvd=nvd3
+        END IF
         IF (Licetrc(ng)) THEN
           DO itrc=NAT+1,NT(ng)
             IF (LtracerIce(itrc,ng)) THEN
@@ -272,21 +354,28 @@
                 LdefVar=VarOut(ifield,ng)
                 vtype=NF_FOUT
               END IF
-              IF (Ldefvar) THEN
+              IF (LdefVar) THEN
                 Vinfo( 1)=Vname(1,ifield)
                 Vinfo( 2)=Vname(2,ifield)
                 Vinfo( 3)=Vname(3,ifield)
                 Vinfo(14)=Vname(4,ifield)
                 Vinfo(16)=Vname(1,idtime)
 # if defined WRITE_WATER && defined MASKING
+#  if !defined WET_DRY && defined PERFECT_RESTART
+                IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+                  Vinfo(24)='_FillValue'
+                  Aval(6)=spval
+                END IF
+#  else
                 Vinfo(20)='mask_rho'
+#  endif
 # endif
                 Vinfo(21)=Vname(6,ifield)
                 Vinfo(22)='coordinates'
                 Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
                 status=def_var(ng, model, S(ng)%ncid,                   &
      &                         S(ng)%Vid(ifield),                       &
-     &                         vtype, nvd3, t2dgrd, Aval, Vinfo, ncname)
+     &                         vtype, nvd, icegrd, Aval, Vinfo, ncname)
                 IF (FoundError(exit_flag, NoError, __LINE__, MyFile))   &
      &            RETURN
               END IF
@@ -425,23 +514,22 @@
 !
 !  Imported variable declarations.
 !
-      logical, intent(in) :: VarOut(NV,Ngrids)
-!
       integer, intent(in) :: ng, model, tile
       integer, intent(in) :: LBi, UBi, LBj, UBj
-!
+      logical, intent(in) :: VarOut(NV,Ngrids)
       TYPE(T_IO), intent(inout) :: S(Ngrids)
 !
 !  Local variable declarations.
 !
       logical :: LwrtVar
 !
-      integer :: ifield, ifld, ic, itrc
       integer :: gfactor, gtype, status
+      integer :: ifield, ifld, ic, itrc
 !
       real(dp) :: scale
 !
-      real(r8), pointer :: iceField(:,:)
+      real(r8), pointer :: iceField2d(:,:)
+      real(r8), pointer :: iceField3d(:,:,:)
       real(r8), pointer :: iceMask(:,:)
 !
       real(r8), allocatable :: Ur2d(:,:)
@@ -462,7 +550,15 @@
 !  points (gfactor=-1) fields only.
 !
 # if defined WRITE_WATER && defined MASKING
+#  ifdef PERFECT_RESTART
+      IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+        gfactor=1
+      ELSE
+        gfactor=-1
+      END IF
+#  else
       gfactor=-1
+#  endif
 # else
       gfactor=1
 # endif
@@ -483,42 +579,93 @@
           IF (LwrtVar) THEN
             IF ((model.eq.iNLM).and.                                    &
                 ((S(ng)%ncid.eq.HIS(ng)%ncid).or.                       &
-     &           (S(ng)%ncid.eq.QCK(ng)%ncid).or.                       &
-     &           (S(ng)%ncid.eq.RST(ng)%ncid))) THEN
-              iceField => ICE(ng) % Si(LBi:UBi,LBj:UBj,IOUT,ifld)
+     &           (S(ng)%ncid.eq.QCK(ng)%ncid))) THEN
+              iceField2d => ICE(ng) % Si(LBi:UBi,LBj:UBj,IOUT,ifld)
+            ELSE IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+# ifdef PERFECT_RESTART
+              iceField3d => ICE(ng) % Si(LBi:UBi,LBj:UBj,1:2,ifld)
+# else
+              iceField2d => ICE(ng) % Si(LBi:UBi,LBj:UBj,IOUT,ifld)
+# endif
 # ifdef AVERAGES
             ELSE IF (S(ng)%ncid.eq.AVG(ng)%ncid) THEN
-              iceField => ICE_SAVG(ifld,ng) % var(LBi:UBi,LBj:UBj)
+              iceField2d => ICE_SAVG(ifld,ng) % var(LBi:UBi,LBj:UBj)
 # endif
             END IF
 !
             SELECT CASE (ifld)
               CASE (isUice)
-                gtype=gfactor*u2dvar
+                IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+# ifdef PERFECT_RESTART
+                  gtype=gfactor*u3dvar
+# else
+                  gtype=gfactor*u2dvar
+# endif
+                ELSE
+                  gtype=gfactor*u2dvar
+                END IF
 # ifdef MASKING
                 iceMask => GRID(ng) % umask_full
 # endif
               CASE (isVice)
-                gtype=gfactor*v2dvar
+                IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+# ifdef PERFECT_RESTART
+                  gtype=gfactor*v3dvar
+# else
+                  gtype=gfactor*v2dvar
+# endif
+                ELSE
+                  gtype=gfactor*v2dvar
+                END IF
 # ifdef MASKING
                 iceMask => GRID(ng) % vmask_full
 # endif
               CASE DEFAULT
-                gtype=gfactor*r2dvar
+                IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+# ifdef PERFECT_RESTART
+                  gtype=gfactor*r3dvar
+# else
+                  gtype=gfactor*r2dvar
+# endif
+                ELSE
+                  gtype=gfactor*r2dvar
+                END IF
 # ifdef MASKING
                 iceMask => GRID(ng) % rmask_full
 # endif
             END SELECT
             scale=1.0_dp
 !
+# ifdef PERFECT_RESTART
+            IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+              status=nf_fwrite3d(ng, model, S(ng)%ncid, ifield,         &
+     &                           S(ng)%Vid(ifield),                     &
+     &                           S(ng)%Rindex, gtype,                   &
+     &                           LBi, UBi, LBj, UBj, 1, 2, scale,       &
+#  ifdef MASKING
+     &                           iceMask,                               &
+#  endif
+     &                           iceField3d)
+            ELSE
+              status=nf_fwrite2d(ng, model, S(ng)%ncid, ifield,         &
+     &                           S(ng)%Vid(ifield),                     &
+     &                           S(ng)%Rindex, gtype,                   &
+     &                           LBi, UBi, LBj, UBj, scale,             &
+#  ifdef MASKING
+     &                           iceMask,                               &
+#  endif
+     &                           iceField2d)
+            END IF
+# else
             status=nf_fwrite2d(ng, model, S(ng)%ncid, ifield,           &
      &                         S(ng)%Vid(ifield),                       &
      &                         S(ng)%Rindex, gtype,                     &
      &                         LBi, UBi, LBj, UBj, scale,               &
-# ifdef MASKING
+#  ifdef MASKING
      &                         iceMask,                                 &
+#  endif
+     &                         iceField2d)
 # endif
-     &                         iceField)
             IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),      &
      &                                      S(ng)%Rindex,               &
@@ -609,10 +756,10 @@
                 ((S(ng)%ncid.eq.HIS(ng)%ncid).or.                       &
      &           (S(ng)%ncid.eq.QCK(ng)%ncid).or.                       &
      &           (S(ng)%ncid.eq.RST(ng)%ncid))) THEN
-              iceField => ICE(ng) % Fi(LBi:UBi,LBj:UBj,ifld)
+              iceField2d => ICE(ng) % Fi(LBi:UBi,LBj:UBj,ifld)
 # ifdef AVERAGES
             ELSE IF (S(ng)%ncid.eq.AVG(ng)%ncid) THEN
-              iceField => ICE_FAVG(ifld,ng) % var(LBi:UBi,LBj:UBj)
+              iceField2d => ICE_FAVG(ifld,ng) % var(LBi:UBi,LBj:UBj)
 # endif
             END IF
 !
@@ -634,7 +781,7 @@
 # ifdef MASKING
      &                         GRID(ng) % rmask_full,                   &
 # endif
-     &                         iceField)
+     &                         iceField2d)
             IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),      &
      &                                      S(ng)%Rindex,               &
@@ -666,25 +813,60 @@
             IF (LwrtVar) THEN
               IF ((model.eq.iNLM).and.                                  &
                   ((S(ng)%ncid.eq.HIS(ng)%ncid).or.                     &
-     &             (S(ng)%ncid.eq.QCK(ng)%ncid).or.                     &
-     &             (S(ng)%ncid.eq.RST(ng)%ncid))) THEN
-                iceField => ICE(ng) % Ti(LBi:UBi,LBj:UBj,IOUT,ic)
+     &             (S(ng)%ncid.eq.QCK(ng)%ncid))) THEN
+                iceField2d => ICE(ng) % Ti(LBi:UBi,LBj:UBj,IOUT,ic)
+              ELSE IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+# ifdef PERFECT_RESTART
+                iceField3d => ICE(ng) % Ti(LBi:UBi,LBj:UBj,1:2,ic)
+# else
+                iceField2d => ICE(ng) % Ti(LBi:UBi,LBj:UBj,IOUT,ic)
+# endif
 # ifdef AVERAGES
               ELSE IF (S(ng)%ncid.eq.AVG(ng)%ncid) THEN
-                iceField => ICE_TAVG(itrc,ng) % var(LBi:UBi,LBj:UBj)
+                iceField2d => ICE_TAVG(itrc,ng) % var(LBi:UBi,LBj:UBj)
 # endif
               END IF
 !
               scale=1.0_dp
+# ifdef PERFECT_RESTART
+              IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+                gtype=gfactor*r3dvar
+              ELSE
+                gtype=gfactor*r2dvar
+              END IF
+# else
               gtype=gfactor*r2dvar
+# endif
+# ifdef PERFECT_RESTART
+              IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+                status=nf_fwrite3d(ng, model, S(ng)%ncid, ifield,       &
+     &                             S(ng)%Vid(ifield),                   &
+     &                             S(ng)%Rindex, gtype,                 &
+     &                             LBi, UBi, LBj, UBj, 1, 2, scale,     &
+#  ifdef MASKING
+     &                             GRID(ng) % rmask_full,               &
+#  endif
+     &                             iceField3d)
+              ELSE
+                status=nf_fwrite2d(ng, model, S(ng)%ncid, ifield,       &
+     &                             S(ng)%Vid(ifield),                   &
+     &                             S(ng)%Rindex, gtype,                 &
+     &                             LBi, UBi, LBj, UBj, scale,           &
+#  ifdef MASKING
+     &                             GRID(ng) % rmask_full,               &
+#  endif
+     &                             iceField2d)
+              END IF
+# else
               status=nf_fwrite2d(ng, model, S(ng)%ncid, ifield,         &
      &                           S(ng)%Vid(ifield),                     &
      &                           S(ng)%Rindex, gtype,                   &
      &                           LBi, UBi, LBj, UBj, scale,             &
-# ifdef MASKING
+#  ifdef MASKING
      &                           GRID(ng) % rmask_full,                 &
+#  endif
+     &                           iceField2d)
 # endif
-     &                           iceField)
               IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
                 IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),    &
      &                                        S(ng)%Rindex,             &
@@ -784,6 +966,37 @@
             END IF
           END IF
         END DO
+        IF (VarOut(idUiER,ng)) THEN
+          Vinfo( 1)=Vname(1,idUiER)
+          Vinfo( 2)=Vname(2,idUiER)
+          Vinfo( 3)=Vname(3,idUiER)
+          Vinfo(14)=Vname(4,idUiER)
+          Vinfo(16)=Vname(1,idtime)
+!
+          status=def_var(ng, model, S(ng)%ncid,                         &
+     &                   S(ng)%Vid(idUiER),                             &
+     &                   NF_FOUT, 2, pgrd, Aval, Vinfo, ncname,         &
+     &                   SetFillVal = .TRUE.,                           &
+     &                   SetParAccess = .TRUE.)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        END IF
+!
+!  Define isf NORTHward velocity at RHO-points.
+!
+        IF (VarOut(idViNR,ng)) THEN
+          Vinfo( 1)=Vname(1,idViNR)
+          Vinfo( 2)=Vname(2,idViNR)
+          Vinfo( 3)=Vname(3,idViNR)
+          Vinfo(14)=Vname(4,idViNR)
+          Vinfo(16)=Vname(1,idtime)
+!
+          status=def_var(ng, model, S(ng)%ncid,                         &
+     &                   S(ng)%Vid(idViNR),                             &
+     &                   NF_FOUT, 2, pgrd, Aval, Vinfo, ncname,         &
+     &                   SetFillVal = .TRUE.,                           &
+     &                   SetParAccess = .TRUE.)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        END IF
 !
 !-----------------------------------------------------------------------
 !  Define ice model internal variables.
@@ -964,6 +1177,9 @@
 !
       real(r8), dimension(Nstation(ng)) :: Xpos, Ypos, psta
 !
+      real(r8), allocatable :: Ur2d(:,:)
+      real(r8), allocatable :: Vr2d(:,:)
+!
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__//", ice_wrt_station_nf90"
 !
@@ -1016,6 +1232,58 @@
         END IF
       END DO
 !
+!  Write ice EASTward and NORTHward velocity component (m/s) at
+!  RHO-points.
+!
+      IF (VarOut(idUiER,ng).and.VarOut(idViNR,ng)) THEN
+        IF (.not.allocated(Ur2d)) THEN
+          allocate (Ur2d(LBi:UBi,LBj:UBj))
+          Ur2d(LBi:UBi,LBj:UBj)=0.0_r8
+        END IF
+        IF (.not.allocated(Vr2d)) THEN
+          allocate (Vr2d(LBi:UBi,LBj:UBj))
+          Vr2d(LBi:UBi,LBj:UBj)=0.0_r8
+        END IF
+        CALL uv_rotate2d (ng, tile, .FALSE., .TRUE.,                    &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    GRID(ng) % CosAngler,                         &
+     &                    GRID(ng) % SinAngler,                         &
+#  ifdef MASKING
+     &                    GRID(ng) % rmask_full,                        &
+#  endif
+     &                    ICE(ng) % Si(:,:,IOUT,isUice),                &
+     &                    ICE(ng) % Si(:,:,IOUT,isVice),                &
+     &                    Ur2d, Vr2d)
+!
+        scale=1.0_dp
+        CALL extract_sta2d (ng, model, Cgrid, idUiER, r2dvar,           &
+     &                      LBi, UBi, LBj, UBj,                         &
+     &                      scale, Ur2d,                                &
+     &                      Nstation(ng), Xpos, Ypos, psta)
+        CALL netcdf_put_fvar (ng, model, S(ng)%name,                    &
+     &                        TRIM(Vname(1,idUiER)), psta,              &
+     &                        (/1,S(ng)%Rindex/),                       &
+     &                        (/Nstation(ng),1/),                       &
+     &                        ncid = S(ng)%ncid,                        &
+     &                        varid = S(ng)%Vid(idUiER))
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+        CALL extract_sta2d (ng, model, Cgrid, idViNR, r2dvar,           &
+     &                      LBi, UBi, LBj, UBj,                         &
+     &                      scale, Vr2d,                                &
+     &                      Nstation(ng), Xpos, Ypos, psta)
+        CALL netcdf_put_fvar (ng, model, S(ng)%name,                    &
+     &                        TRIM(Vname(1,idViNR)), psta,              &
+     &                        (/1,S(ng)%Rindex/),                       &
+     &                        (/Nstation(ng),1/),                       &
+     &                        ncid = S(ng)%ncid,                        &
+     &                        varid = S(ng)%Vid(idViNR))
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
+        deallocate (Ur2d)
+        deallocate (Vr2d)
+      END IF
+!
 !-----------------------------------------------------------------------
 !  write out ice model internal variables.
 !-----------------------------------------------------------------------
@@ -1024,7 +1292,16 @@
         IF (iFice(ifld).gt.0) THEN
           ifield=iFice(ifld)
           IF (VarOut(ifield,ng)) THEN
+# ifdef ICE_BULK_FLUXES
+            IF ((ifld.eq.icSics).or.(ifld.eq.icSicb).or.                &
+     &          (ifld.eq.icSocn)) THEN
+              scale=rho0*Cp
+            ELSE
+              scale=1.0_dp
+            END IF
+# else
             scale=1.0_dp
+# endif
             CALL extract_sta2d (ng, model, Cgrid, ifield, r2dvar,       &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          scale, ICE(ng)%Fi(:,:,ifld),            &
@@ -1083,34 +1360,34 @@
 !
 !***********************************************************************
       SUBROUTINE ice_def_pio (ng, model, ldef, VarOut, S,               &
-     &                        t2dgrd, u2dgrd, v2dgrd)
+     &                         t2dgrd, u2dgrd, v2dgrd, sr2dgrd)
 !***********************************************************************
 !
       USE mod_pio_netcdf
 !
 !  Imported variable declarations.
 !
-      logical, intent(in) :: ldef, VarOut(NV,Ngrids)
-!
       integer, intent(in) :: ng, model
-      integer, intent(in), optional :: t2dgrd(:), u2dgrd(:), v2dgrd(:)
-!
+      logical, intent(in) :: ldef, VarOut(NV,Ngrids)
       TYPE(T_IO), intent(inout) :: S(Ngrids)
+      integer, intent(in), optional, target :: t2dgrd(:), u2dgrd(:),    &
+     &                                         v2dgrd(:), sr2dgrd(:)
 !
 !  Local variable declarations.
 !
-      logical :: LdefVar
+      logical :: LdefVar, got_var(NV)
 !
       integer, parameter :: Natt = 25
-
-      integer :: i, ifield, j, nf, nvd3, status, vtype, ic, itrc
-
-      integer :: icegrd(3)
+!
+      integer :: i, j, ifield, nf, nvd3, nvd4, nvd, status, vtype
+      integer :: ic, itrc
+!
+      integer, pointer :: icegrd(:)
 !
       real(r8) :: Aval(6)
 !
-      character (len=120) :: Vinfo(Natt)
       character (len=256) :: ncname
+      character (len=MaxLen) :: Vinfo(Natt)
 !
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__//", ice_def_pio"
@@ -1118,7 +1395,7 @@
       SourceFile=MyFile
 !
 !-----------------------------------------------------------------------
-!  Define ice model state prognostic variables.
+!  Set and report file name.
 !-----------------------------------------------------------------------
 !
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
@@ -1129,9 +1406,21 @@
 !  Set number of dimensions for output variables.
 !
 #  if defined WRITE_WATER && defined MASKING
+#   ifdef PERFECT_RESTART
+        IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+          nvd3=3
+          nvd4=4
+        ELSE
+          nvd3=2
+          nvd4=2
+        END IF
+#   else
         nvd3=2
+        nvd4=2
+#   endif
 #  else
         nvd3=3
+        nvd4=4
 #  endif
 !
 !  Initialize local information variable arrays.
@@ -1145,7 +1434,9 @@
           Aval(i)=0.0_r8
         END DO
 !
+!-----------------------------------------------------------------------
 !  Define ice model state prognostic variables.
+!-----------------------------------------------------------------------
 !
         DO nf=1,nIceS
           IF (iSice(nf).gt.0) THEN
@@ -1153,12 +1444,17 @@
             IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
               LdefVar=.TRUE.
               vtype=PIO_FRST
+#  ifdef PERFECT_RESTART
+              nvd=nvd4
+#  else
+              nvd=nvd3
+#  endif
             ELSE
               LdefVar=VarOut(ifield,ng)
               vtype=PIO_FOUT
+              nvd=nvd3
            END IF
-
-            IF (Ldefvar) THEN
+            IF (LdefVar) THEN
               Vinfo( 1)=Vname(1,ifield)
               Vinfo( 2)=Vname(2,ifield)
               Vinfo( 3)=Vname(3,ifield)
@@ -1171,34 +1467,63 @@
 !
               SELECT CASE (nf)
                 CASE (isUice)
-                  icegrd(1:3)=u2dgrd(1:3)
+                  icegrd => u2dgrd
 #  if defined WRITE_WATER && defined MASKING
+#   if !defined WET_DRY && defined PERFECT_RESTART
+                  IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+                    Vinfo(24)='_FillValue'
+                    Aval(6)=spval
+                  END IF
+#   else
                   Vinfo(20)='mask_u'
+#   endif
 #  endif
                   S(ng)%pioVar(ifield)%gtype=u2dvar
                 CASE (isVice)
-                  icegrd(1:3)=v2dgrd(1:3)
+                  icegrd => v2dgrd
 #  if defined WRITE_WATER && defined MASKING
+#   if !defined WET_DRY && defined PERFECT_RESTART
+                  IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+                    Vinfo(24)='_FillValue'
+                    Aval(6)=spval
+                  END IF
+#   else
                   Vinfo(20)='mask_v'
+#   endif
 #  endif
                   S(ng)%pioVar(ifield)%gtype=v2dvar
                 CASE DEFAULT
-                  icegrd(1:3)=t2dgrd(1:3)
+                  icegrd => t2dgrd
 #  if defined WRITE_WATER && defined MASKING
+#   if !defined WET_DRY && defined PERFECT_RESTART
+                  IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+                    Vinfo(24)='_FillValue'
+                    Aval(6)=spval
+                  END IF
+#   else
                   Vinfo(20)='mask_rho'
+#   endif
 #  endif
                   S(ng)%pioVar(ifield)%gtype=r2dvar
               END SELECT
 !
               status=def_var(ng, model, S(ng)%pioFile,                  &
      &                       S(ng)%pioVar(ifield)%vd,                   &
-     &                       vtype, nvd3, icegrd,                       &
-     &                       Aval, Vinfo, ncname)
+     &                       vtype, nvd, icegrd, Aval, Vinfo, ncname)
               IF (FoundError(exit_flag, NoError,                        &
      &                       __LINE__, MyFile)) RETURN
             END IF
           END IF
         END DO
+!
+!  Reset icegrid dimension info.
+!
+        IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+          icegrd => sr2dgrd
+        ELSE
+          icegrd => t2dgrd
+        END IF
+        nvd=nvd3
 !
 !  Define ice EASTward velocity at RHO-points.
 !
@@ -1210,7 +1535,14 @@
           Vinfo(14)=Vname(4,idUiER)
           Vinfo(16)=Vname(1,idtime)
 #  if defined WRITE_WATER && defined MASKING
+#   if !defined WET_DRY && defined PERFECT_RESTART
+          IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+            Vinfo(24)='_FillValue'
+            Aval(6)=spval
+          END IF
+#   else
           Vinfo(20)='mask_rho'
+#   endif
 #  endif
           Vinfo(21)=Vname(6,idUiER)
           Vinfo(22)='coordinates'
@@ -1220,7 +1552,7 @@
 !
           status=def_var(ng, model, S(ng)%pioFile,                      &
      &                   S(ng)%pioVar(idUiER)%vd,                       &
-     &                   vtype, nvd3, t2dgrd, Aval, Vinfo, ncname)
+     &                   vtype, nvd, icegrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 !
@@ -1234,7 +1566,14 @@
           Vinfo(14)=Vname(4,idViNR)
           Vinfo(16)=Vname(1,idtime)
 #  if defined WRITE_WATER && defined MASKING
+#   if !defined WET_DRY && defined PERFECT_RESTART
+          IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+            Vinfo(24)='_FillValue'
+            Aval(6)=spval
+          END IF
+#   else
           Vinfo(20)='mask_rho'
+#   endif
 #  endif
           Vinfo(21)=Vname(6,idViNR)
           Vinfo(22)='coordinates'
@@ -1244,7 +1583,7 @@
 !
           status=def_var(ng, model, S(ng)%pioFile,                      &
      &                   S(ng)%pioVar(idViNR)%vd,                       &
-     &                   vtype, nvd3, t2dgrd, Aval, Vinfo, ncname)
+     &                   vtype, nvd, icegrd, Aval, Vinfo, ncname)
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 !
@@ -1263,7 +1602,14 @@
               Vinfo(14)=Vname(4,ifield)
               Vinfo(16)=Vname(1,idtime)
 #  if defined WRITE_WATER && defined MASKING
+#   if !defined WET_DRY && defined PERFECT_RESTART
+              IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+                Vinfo(24)='_FillValue'
+                Aval(6)=spval
+              END IF
+#   else
               Vinfo(20)='mask_rho'
+#   endif
 #  endif
               Vinfo(21)=Vname(6,ifield)
               Vinfo(22)='coordinates'
@@ -1285,8 +1631,7 @@
 !
               status=def_var(ng, model, S(ng)%pioFile,                  &
      &                       S(ng)%pioVar(ifield)%vd,                   &
-     &                       vtype, nvd3, t2dgrd,                       &
-     &                       Aval, Vinfo, ncname)
+     &                       vtype, nvd, icegrd, Aval, Vinfo, ncname)
               IF (FoundError(exit_flag, NoError,                        &
      &                       __LINE__, MyFile)) RETURN
             END IF
@@ -1297,6 +1642,18 @@
 !  Define ice tracer amounts.
 !-----------------------------------------------------------------------
 !
+!  Reset icegrid dimension info.
+!
+        icegrd => t2dgrd
+        IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+#  ifdef PERFECT_RESTART
+          nvd=nvd4
+#  else
+          nvd=nvd3
+#  endif
+        ELSE
+          nvd=nvd3
+        END IF
         IF (Licetrc(ng)) THEN
           DO itrc=NAT+1,NT(ng)
             IF (LtracerIce(itrc, ng)) THEN
@@ -1308,14 +1665,21 @@
                 LdefVar=VarOut(ifield,ng)
                 vtype=PIO_FOUT
               END IF
-              IF (Ldefvar) THEN
+              IF (LdefVar) THEN
                 Vinfo( 1)=Vname(1,ifield)
                 Vinfo( 2)=Vname(2,ifield)
                 Vinfo( 3)=Vname(3,ifield)
                 Vinfo(14)=Vname(4,ifield)
                 Vinfo(16)=Vname(1,idtime)
 #  if defined WRITE_WATER && defined MASKING
+#   if !defined WET_DRY && defined PERFECT_RESTART
+                IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+                  Vinfo(24)='_FillValue'
+                  Aval(6)=spval
+                END IF
+#   else
                 Vinfo(20)='mask_rho'
+#   endif
 #  endif
                 Vinfo(21)=Vname(6,ifield)
                 Vinfo(22)='coordinates'
@@ -1325,8 +1689,7 @@
 !
                 status=def_var(ng, model, S(ng)%pioFile,                &
      &                         S(ng)%pioVar(ifield)%vd,                 &
-     &                         vtype, nvd3, t2dgrd,                     &
-     &                         Aval, Vinfo, ncname)
+     &                         vtype, nvd, icegrd, Aval, Vinfo, ncname)
                 IF (FoundError(exit_flag, NoError,                      &
      &                         __LINE__, MyFile)) RETURN
               END IF
@@ -1491,23 +1854,22 @@
 !
 !  Imported variable declarations.
 !
-      logical, intent(in) :: VarOut(NV,Ngrids)
-!
       integer, intent(in) :: ng, model, tile
       integer, intent(in) :: LBi, UBi, LBj, UBj
-!
+      logical, intent(in) :: VarOut(NV,Ngrids)
       TYPE(T_IO), intent(inout) :: S(Ngrids)
 !
 !  Local variable declarations.
 !
       logical :: LwrtVar
 !
-      integer :: ifield, ifld, ic, itrc
       integer :: gfactor, gtype, status
+      integer :: ifield, ifld, ic, itrc
 !
       real(dp) :: scale
 !
-      real(r8), pointer :: iceField(:,:)
+      real(r8), pointer :: iceField2d(:,:)
+      real(r8), pointer :: iceField3d(:,:,:)
       real(r8), pointer :: iceMask(:,:)
 !
       real(r8), allocatable :: Ur2d(:,:)
@@ -1530,7 +1892,15 @@
 !  points (gfactor=-1) fields only.
 !
 #  if defined WRITE_WATER && defined MASKING
+#   ifdef PERFECT_RESTART
+      IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+        gfactor=1
+      ELSE
+        gfactor=-1
+      END IF
+#   else
       gfactor=-1
+#   endif
 #  else
       gfactor=1
 #  endif
@@ -1551,39 +1921,92 @@
           IF (LwrtVar) THEN
             IF ((model.eq.iNLM).and.                                    &
                 ((S(ng)%ncid.eq.HIS(ng)%ncid).or.                       &
-     &           (S(ng)%ncid.eq.QCK(ng)%ncid).or.                       &
-     &           (S(ng)%ncid.eq.RST(ng)%ncid))) THEN
-              iceField => ICE(ng) % Si(LBi:UBi,LBj:UBj,IOUT,ifld)
+     &           (S(ng)%ncid.eq.QCK(ng)%ncid))) THEN
+              iceField2d => ICE(ng) % Si(LBi:UBi,LBj:UBj,IOUT,ifld)
+            ELSE IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+#  ifdef PERFECT_RESTART
+              iceField3d => ICE(ng) % Si(LBi:UBi,LBj:UBj,1:2,ifld)
+#  else
+              iceField2d => ICE(ng) % Si(LBi:UBi,LBj:UBj,IOUT,ifld)
+#  endif
 #  ifdef AVERAGES
             ELSE IF (S(ng)%ncid.eq.AVG(ng)%ncid) THEN
-              iceField => ICE_SAVG(ifld,ng) % var(LBi:UBi,LBj:UBj)
+              iceField2d => ICE_SAVG(ifld,ng) % var(LBi:UBi,LBj:UBj)
 #  endif
             END IF
 !
             SELECT CASE (ifld)
               CASE (isUice)
-                IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
-                  ioDesc => ioDesc_dp_u2dvar(ng)
+                IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+#  ifdef PERFECT_RESTART
+                  IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
+                    ioDesc => ioDesc_dp_u3dvar(ng)
+                  ELSE
+                    ioDesc => ioDesc_sp_u3dvar(ng)
+                  END IF
+#  else
+                  IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
+                    ioDesc => ioDesc_dp_u2dvar(ng)
+                  ELSE
+                    ioDesc => ioDesc_sp_u2dvar(ng)
+                  END IF
+#  endif
                 ELSE
-                  ioDesc => ioDesc_sp_u2dvar(ng)
+                  IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
+                    ioDesc => ioDesc_dp_u2dvar(ng)
+                  ELSE
+                    ioDesc => ioDesc_sp_u2dvar(ng)
+                  END IF
                 END IF
 #  ifdef MASKING
                 iceMask => GRID(ng) % umask_full
 #  endif
               CASE (isVice)
-                IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
-                  ioDesc => ioDesc_dp_v2dvar(ng)
+                IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+#  ifdef PERFECT_RESTART
+                  IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
+                    ioDesc => ioDesc_dp_v3dvar(ng)
+                  ELSE
+                    ioDesc => ioDesc_sp_v3dvar(ng)
+                  END IF
+#  else
+                  IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
+                    ioDesc => ioDesc_dp_v2dvar(ng)
+                  ELSE
+                    ioDesc => ioDesc_sp_v2dvar(ng)
+                  END IF
+#  endif
                 ELSE
-                  ioDesc => ioDesc_sp_v2dvar(ng)
+                  IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
+                    ioDesc => ioDesc_dp_v2dvar(ng)
+                  ELSE
+                    ioDesc => ioDesc_sp_v2dvar(ng)
+                  END IF
                 END IF
 #  ifdef MASKING
                 iceMask => GRID(ng) % vmask_full
 #  endif
               CASE DEFAULT
-                IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
-                  ioDesc => ioDesc_dp_r2dvar(ng)
+                IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+#  ifdef PERFECT_RESTART
+                  IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
+                    ioDesc => ioDesc_dp_r3dvar(ng)
+                  ELSE
+                    ioDesc => ioDesc_sp_r3dvar(ng)
+                  END IF
+#  else
+                  IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
+                    ioDesc => ioDesc_dp_r2dvar(ng)
+                  ELSE
+                    ioDesc => ioDesc_sp_r2dvar(ng)
+                  END IF
+#  endif
                 ELSE
-                  ioDesc => ioDesc_sp_r2dvar(ng)
+                  IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
+                    ioDesc => ioDesc_dp_r2dvar(ng)
+                  ELSE
+                    ioDesc => ioDesc_sp_r2dvar(ng)
+                  END IF
                 END IF
 #  ifdef MASKING
                 iceMask => GRID(ng) % rmask_full
@@ -1591,14 +2014,36 @@
             END SELECT
             scale=1.0_dp
 !
+#  ifdef PERFECT_RESTART
+            IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+              status=nf_fwrite3d(ng, model, S(ng)%pioFile, ifield,      &
+     &                           S(ng)%pioVar(ifield), S(ng)%Rindex,    &
+     &                           ioDesc,                                &
+     &                           LBi, UBi, LBj, UBj, 1, 2, scale,       &
+#   ifdef MASKING
+     &                           iceMask,                               &
+#   endif
+     &                           iceField3d)
+            ELSE
+              status=nf_fwrite2d(ng, model, S(ng)%pioFile, ifield,      &
+     &                           S(ng)%pioVar(ifield), S(ng)%Rindex,    &
+     &                           ioDesc,                                &
+     &                           LBi, UBi, LBj, UBj, scale,             &
+#   ifdef MASKING
+     &                           iceMask,                               &
+#   endif
+     &                           iceField2d)
+            END IF
+#  else
             status=nf_fwrite2d(ng, model, S(ng)%pioFile, ifield,        &
      &                         S(ng)%pioVar(ifield), S(ng)%Rindex,      &
      &                         ioDesc,                                  &
      &                         LBi, UBi, LBj, UBj, scale,               &
-#  ifdef MASKING
+#   ifdef MASKING
      &                         iceMask,                                 &
+#   endif
+     &                         iceField2d)
 #  endif
-     &                         iceField)
             IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),      &
      &                                      S(ng)%Rindex,               &
@@ -1698,14 +2143,23 @@
                 ((S(ng)%ncid.eq.HIS(ng)%ncid).or.                       &
      &           (S(ng)%ncid.eq.QCK(ng)%ncid).or.                       &
      &           (S(ng)%ncid.eq.RST(ng)%ncid))) THEN
-              iceField => ICE(ng) % Fi(LBi:UBi,LBj:UBj,ifld)
+              iceField2d => ICE(ng) % Fi(LBi:UBi,LBj:UBj,ifld)
 #  ifdef AVERAGES
             ELSE IF (S(ng)%ncid.eq.AVG(ng)%ncid) THEN
-              iceField => ICE_FAVG(ifld,ng) % var(LBi:UBi,LBj:UBj)
+              iceField2d => ICE_FAVG(ifld,ng) % var(LBi:UBi,LBj:UBj)
 #  endif
             END IF
 !
+# ifdef ICE_BULK_FLUXES
+            IF ((ifld.eq.icSics).or.(ifld.eq.icSicb).or.                &
+     &          (ifld.eq.icSocn)) THEN
+              scale=rho0*Cp
+            ELSE
+              scale=1.0_dp
+            END IF
+# else
             scale=1.0_dp
+# endif
             IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
               ioDesc => ioDesc_dp_r2dvar(ng)
             ELSE
@@ -1718,7 +2172,7 @@
 #  ifdef MASKING
      &                         GRID(ng) % rmask_full,                   &
 #  endif
-     &                         iceField)
+     &                         iceField2d)
             IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
               IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),      &
      &                                      S(ng)%Rindex,               &
@@ -1750,21 +2204,63 @@
             IF (LwrtVar) THEN
               IF ((model.eq.iNLM).and.                                  &
                   ((S(ng)%ncid.eq.HIS(ng)%ncid).or.                     &
-     &             (S(ng)%ncid.eq.QCK(ng)%ncid).or.                     &
-     &             (S(ng)%ncid.eq.RST(ng)%ncid))) THEN
-                iceField => ICE(ng) % Ti(LBi:UBi,LBj:UBj,IOUT,ic)
+     &             (S(ng)%ncid.eq.QCK(ng)%ncid))) THEN
+                iceField2d => ICE(ng) % Ti(LBi:UBi,LBj:UBj,IOUT,ic)
+              ELSE IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+#  ifdef PERFECT_RESTART
+                iceField3d => ICE(ng) % Ti(LBi:UBi,LBj:UBj,1:2,ic)
+#  else
+                iceField2d => ICE(ng) % Ti(LBi:UBi,LBj:UBj,IOUT,ic)
+#  endif
 #  ifdef AVERAGES
               ELSE IF (S(ng)%ncid.eq.AVG(ng)%ncid) THEN
-                iceField => ICE_TAVG(itrc,ng) % var(LBi:UBi,LBj:UBj)
+                iceField2d => ICE_TAVG(itrc,ng) % var(LBi:UBi,LBj:UBj)
 #  endif
               END IF
 !
               scale=1.0_dp
-              IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
-                ioDesc => ioDesc_dp_r2dvar(ng)
+              IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+#  ifdef PERFECT_RESTART
+                IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
+                  ioDesc => ioDesc_dp_r3dvar(ng)
+                ELSE
+                  ioDesc => ioDesc_sp_r3dvar(ng)
+                END IF
+#  else
+                IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
+                  ioDesc => ioDesc_dp_r2dvar(ng)
+                ELSE
+                  ioDesc => ioDesc_sp_r2dvar(ng)
+                END IF
+#  endif
               ELSE
-                ioDesc => ioDesc_sp_r2dvar(ng)
+                IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
+                  ioDesc => ioDesc_dp_r2dvar(ng)
+                ELSE
+                  ioDesc => ioDesc_sp_r2dvar(ng)
+                END IF
               END IF
+#  ifdef PERFECT_RESTART
+              IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+                status=nf_fwrite3d(ng, model, S(ng)%pioFile, ifield,    &
+     &                             S(ng)%pioVar(ifield), S(ng)%Rindex,  &
+     &                             ioDesc,                              &
+     &                             LBi, UBi, LBj, UBj, 1, 2, scale,     &
+#  ifdef MASKING
+     &                             GRID(ng) % rmask_full,               &
+#  endif
+     &                             iceField3d)
+              ELSE
+                status=nf_fwrite2d(ng, model, S(ng)%pioFile, ifield,    &
+     &                             S(ng)%pioVar(ifield), S(ng)%Rindex,  &
+     &                             ioDesc,                              &
+     &                             LBi, UBi, LBj, UBj, scale,           &
+#  ifdef MASKING
+     &                             GRID(ng) % rmask_full,               &
+#  endif
+     &                             iceField2d)
+              END IF
+#  else
               status=nf_fwrite2d(ng, model, S(ng)%pioFile, ifield,      &
      &                           S(ng)%pioVar(ifield), S(ng)%Rindex,    &
      &                           ioDesc,                                &
@@ -1772,7 +2268,8 @@
 #  ifdef MASKING
      &                           GRID(ng) % rmask_full,                 &
 #  endif
-     &                           iceField)
+     &                           iceField2d)
+#  endif
               IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
                 IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),    &
      &                                        S(ng)%Rindex,             &

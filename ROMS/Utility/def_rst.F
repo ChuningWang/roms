@@ -1585,7 +1585,7 @@
 !-----------------------------------------------------------------------
 !
         CALL ice_def_nf90 (ng, model, Ldefine, Hout, RST,               &
-                           t2dgrd, u2dgrd, v2dgrd)
+                           r2dgrd, u2dgrd, v2dgrd, sr2dgrd)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
 #ifdef ICESHELF_DYNAM
@@ -1595,7 +1595,7 @@
 !-----------------------------------------------------------------------
 !
         CALL isf_def_nf90 (ng, model, Ldefine, Hout, RST,               &
-                           t2dgrd, u2dgrd, v2dgrd)
+                           r2dgrd, u2dgrd, v2dgrd, sr2dgrd)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
 !
@@ -3743,7 +3743,7 @@
 !-----------------------------------------------------------------------
 !
         CALL ice_def_pio (ng, model, Ldefine, Hout, RST,                &
-     &                    t2dgrd, u2dgrd, v2dgrd)
+     &                    r2dgrd, u2dgrd, v2dgrd, sr2dgrd)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
 # ifdef ICESHELF_DYNAM
@@ -3753,7 +3753,7 @@
 !-----------------------------------------------------------------------
 !
         CALL isf_def_pio (ng, model, Ldefine, Hout, RST,                &
-     &                    t2dgrd, u2dgrd, v2dgrd)
+     &                    r2dgrd, u2dgrd, v2dgrd, sr2dgrd)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
 !

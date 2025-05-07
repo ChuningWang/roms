@@ -1064,6 +1064,8 @@
             string(ibry,ng)='Flather    '
           ELSE IF (S(ibry,ifield,ng)%gradient) THEN
             string(ibry,ng)='Gradient   '
+          ELSE IF (S(ibry,ifield,ng)%mixed) THEN
+            string(ibry,ng)='Mixed      '
           ELSE IF (S(ibry,ifield,ng)%nested) THEN
             string(ibry,ng)='Nested     '
           ELSE IF (S(ibry,ifield,ng)%periodic) THEN

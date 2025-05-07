@@ -153,101 +153,101 @@
 **  Ice model open boundary conditions.
 */
 
-          CASE ('isAice(iwest)')
+          CASE ('idAice(iwest)')
             iceOBC(iwest,isAice)=varid
-          CASE ('isAice(ieast)')
+          CASE ('idAice(ieast)')
             iceOBC(ieast,isAice)=varid
-          CASE ('isAice(isouth)')
+          CASE ('idAice(isouth)')
             iceOBC(isouth,isAice)=varid
-          CASE ('isAice(inorth)')
+          CASE ('idAice(inorth)')
             iceOBC(inorth,isAice)=varid
 
-          CASE ('isHice(iwest)')
+          CASE ('idHice(iwest)')
             iceOBC(iwest,isHice)=varid
-          CASE ('isHice(ieast)')
+          CASE ('idHice(ieast)')
             iceOBC(ieast,isHice)=varid
-          CASE ('isHice(isouth)')
+          CASE ('idHice(isouth)')
             iceOBC(isouth,isHice)=varid
-          CASE ('isHice(inorth)')
+          CASE ('idHice(inorth)')
             iceOBC(inorth,isHice)=varid
 
-          CASE ('isHmel(iwest)')
+          CASE ('idHmel(iwest)')
             iceOBC(iwest,isHmel)=varid
-          CASE ('isHmel(ieast)')
+          CASE ('idHmel(ieast)')
             iceOBC(ieast,isHmel)=varid
-          CASE ('isHmel(isouth)')
+          CASE ('idHmel(isouth)')
             iceOBC(isouth,isHmel)=varid
-          CASE ('isHmel(inorth)')
+          CASE ('idHmel(inorth)')
             iceOBC(inorth,isHmel)=varid
 
-          CASE ('isHsno(iwest)')
+          CASE ('idHsno(iwest)')
             iceOBC(iwest,isHsno)=varid
-          CASE ('isHsno(ieast)')
+          CASE ('idHsno(ieast)')
             iceOBC(ieast,isHsno)=varid
-          CASE ('isHsno(isouth)')
+          CASE ('idHsno(isouth)')
             iceOBC(isouth,isHsno)=varid
-          CASE ('isHsno(inorth)')
+          CASE ('idHsno(inorth)')
             iceOBC(inorth,isHsno)=varid
 
-          CASE ('isIage(iwest)')
+          CASE ('idIage(iwest)')
             iceOBC(iwest,isIage)=varid
-          CASE ('isIage(ieast)')
+          CASE ('idIage(ieast)')
             iceOBC(ieast,isIage)=varid
-          CASE ('isIage(isouth)')
+          CASE ('idIage(isouth)')
             iceOBC(isouth,isIage)=varid
-          CASE ('isIage(inorth)')
+          CASE ('idIage(inorth)')
             iceOBC(inorth,isIage)=varid
 
-          CASE ('isISxx(iwest)')
+          CASE ('idISxx(iwest)')
             iceOBC(iwest,isISxx)=varid
-          CASE ('isISxx(ieast)')
+          CASE ('idISxx(ieast)')
             iceOBC(ieast,isISxx)=varid
-          CASE ('isISxx(isouth)')
+          CASE ('idISxx(isouth)')
             iceOBC(isouth,isISxx)=varid
-          CASE ('isISxx(inorth)')
+          CASE ('idISxx(inorth)')
             iceOBC(inorth,isISxx)=varid
 
-          CASE ('isISxy(iwest)')
+          CASE ('idISxy(iwest)')
             iceOBC(iwest,isISxy)=varid
-          CASE ('isISxy(ieast)')
+          CASE ('idISxy(ieast)')
             iceOBC(ieast,isISxy)=varid
-          CASE ('isISxy(isouth)')
+          CASE ('idISxy(isouth)')
             iceOBC(isouth,isISxy)=varid
-          CASE ('isISxy(inorth)')
+          CASE ('idISxy(inorth)')
             iceOBC(inorth,isISxy)=varid
 
-          CASE ('isISyy(iwest)')
+          CASE ('idISyy(iwest)')
             iceOBC(iwest,isISyy)=varid
-          CASE ('isISyy(ieast)')
+          CASE ('idISyy(ieast)')
             iceOBC(ieast,isISyy)=varid
-          CASE ('isISyy(isouth)')
+          CASE ('idISyy(isouth)')
             iceOBC(isouth,isISyy)=varid
-          CASE ('isISyy(inorth)')
+          CASE ('idISyy(inorth)')
             iceOBC(inorth,isISyy)=varid
 
-          CASE ('isTice(iwest)')
+          CASE ('idTice(iwest)')
             iceOBC(iwest,isTice)=varid
-          CASE ('isTice(ieast)')
+          CASE ('idTice(ieast)')
             iceOBC(ieast,isTice)=varid
-          CASE ('isTice(isouth)')
+          CASE ('idTice(isouth)')
             iceOBC(isouth,isTice)=varid
-          CASE ('isTice(inorth)')
+          CASE ('idTice(inorth)')
             iceOBC(inorth,isTice)=varid
 
-          CASE ('isUice(iwest)')
+          CASE ('idUice(iwest)')
             iceOBC(iwest,isUice)=varid
-          CASE ('isUice(ieast)')
+          CASE ('idUice(ieast)')
             iceOBC(ieast,isUice)=varid
-          CASE ('isUice(isouth)')
+          CASE ('idUice(isouth)')
             iceOBC(isouth,isUice)=varid
-          CASE ('isUice(inorth)')
+          CASE ('idUice(inorth)')
             iceOBC(inorth,isUice)=varid
 
-          CASE ('isVice(iwest)')
+          CASE ('idVice(iwest)')
             iceOBC(iwest,isVice)=varid
-          CASE ('isVice(ieast)')
+          CASE ('idVice(ieast)')
             iceOBC(ieast,isVice)=varid
-          CASE ('isVice(isouth)')
+          CASE ('idVice(isouth)')
             iceOBC(isouth,isVice)=varid
-          CASE ('isVice(inorth)')
+          CASE ('idVice(inorth)')
             iceOBC(inorth,isVice)=varid

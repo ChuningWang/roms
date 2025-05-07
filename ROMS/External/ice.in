@@ -72,7 +72,7 @@
    LBC(isHice) ==   Per     Per     Per     Per         ! ice thickness
    LBC(isHsno) ==   Per     Per     Per     Per         ! snow thickness
    LBC(isTice) ==   Per     Per     Per     Per         ! ice temperature
-   LBC(isHmel) ==   Per     Per     Per     Per         ! surface water
+   LBC(isHmel) ==   Per     Per     Per     Per         ! surface melt water
    LBC(isIage) ==   Per     Per     Per     Per         ! Ice age
    LBC(isISxx) ==   Per     Per     Per     Per         ! xx-stress
    LBC(isISxy) ==   Per     Per     Per     Per         ! xy-stress

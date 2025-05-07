@@ -394,7 +394,7 @@
 !                                                                      !
 !=======================================================================
 !
-      USE mod_param,   ONLY : Dmem, LBC, Ngrids, NT, MT, NAT
+      USE mod_param,   ONLY : BOUNDS, Dmem, LBC, Ngrids, NT, MT, NAT
       USE mod_scalars, ONLY : iwest, ieast, isouth, inorth
 !
 !  Imported variable declarations.
@@ -405,6 +405,7 @@
 !
 !  Local variable declarations.
 !
+      integer :: LBiG, UBiG, LBjG, UBjG, my_tile
       integer :: i, ic, itrc
 !
       real(r8), parameter :: IniVal = 0.0_r8
@@ -620,40 +621,46 @@
 !  Allocate derived-type structure ice model lateral boundary variables.
 !-----------------------------------------------------------------------
 !
+        my_tile=-1                           ! for global values
+        LBiG=BOUNDS(ng)%LBi(my_tile)
+        UBiG=BOUNDS(ng)%UBi(my_tile)
+        LBjG=BOUNDS(ng)%LBj(my_tile)
+        UBjG=BOUNDS(ng)%UBj(my_tile)
+!
         IF (ng.eq.1) allocate ( ICE_LOBC(nIceS,Ngrids) )
 !
 !  Nonlinear ice model 'state' lateral boundary arrays.
 !
         DO i=1,nIceS
           IF (LBC(iwest,ibICE(i),ng)%acquire) THEN
-            allocate ( ICE_LOBC(i,ng) % ice_west(LBj:UBj) )
+            allocate ( ICE_LOBC(i,ng) % ice_west(LBjG:UBjG) )
             Dmem(ng)=Dmem(ng)+Ysize
 
-            allocate ( ICE_LOBC(i,ng) % iceG_west(LBj:UBj,2) )
+            allocate ( ICE_LOBC(i,ng) % iceG_west(LBjG:UBjG,2) )
             Dmem(ng)=Dmem(ng)+2.0_r8*Ysize
           END IF
 !
           IF (LBC(ieast,ibICE(i),ng)%acquire) THEN
-            allocate ( ICE_LOBC(i,ng) % ice_east(LBj:UBj) )
+            allocate ( ICE_LOBC(i,ng) % ice_east(LBjG:UBjG) )
             Dmem(ng)=Dmem(ng)+Ysize
 
-            allocate ( ICE_LOBC(i,ng) % iceG_east(LBj:UBj,2) )
+            allocate ( ICE_LOBC(i,ng) % iceG_east(LBjG:UBjG,2) )
             Dmem(ng)=Dmem(ng)+2.0_r8*Ysize
           END IF
 !
           IF (LBC(isouth,ibICE(i),ng)%acquire) THEN
-            allocate ( ICE_LOBC(i,ng) % ice_south(LBi:UBi) )
+            allocate ( ICE_LOBC(i,ng) % ice_south(LBiG:UBiG) )
             Dmem(ng)=Dmem(ng)+Xsize
 
-            allocate ( ICE_LOBC(i,ng) % iceG_south(LBi:UBi,2) )
+            allocate ( ICE_LOBC(i,ng) % iceG_south(LBiG:UBiG,2) )
             Dmem(ng)=Dmem(ng)+2.0_r8*Xsize
           END IF
 !
           IF (LBC(inorth,ibICE(i),ng)%acquire) THEN
-            allocate ( ICE_LOBC(i,ng) % ice_north(LBi:UBi) )
+            allocate ( ICE_LOBC(i,ng) % ice_north(LBiG:UBiG) )
             Dmem(ng)=Dmem(ng)+Xsize
 
-            allocate ( ICE_LOBC(i,ng) % iceG_north(LBi:UBi,2) )
+            allocate ( ICE_LOBC(i,ng) % iceG_north(LBiG:UBiG,2) )
             Dmem(ng)=Dmem(ng)+2.0_r8*Xsize
           END IF
         END DO
@@ -830,13 +837,15 @@
 !  Deallocate derived-type ICE and ICE_LOBC structures.
 !-----------------------------------------------------------------------
 !
-      IF (allocated(ICE))      deallocate ( ICE )
-      IF (allocated(ICE_LOBC)) deallocate ( ICE_LOBC )
+      IF (ng.eq.Ngrids) THEN
+        IF (allocated(ICE))      deallocate ( ICE )
+        IF (allocated(ICE_LOBC)) deallocate ( ICE_LOBC )
 #ifdef AVERAGES
-      IF (allocated(ICE_FAVG)) deallocate ( ICE_FAVG )
-      IF (allocated(ICE_SAVG)) deallocate ( ICE_SAVG )
-      IF (allocated(ICE_TAVG)) deallocate ( ICE_TAVG )
+        IF (allocated(ICE_FAVG)) deallocate ( ICE_FAVG )
+        IF (allocated(ICE_SAVG)) deallocate ( ICE_SAVG )
+        IF (allocated(ICE_TAVG)) deallocate ( ICE_TAVG )
 #endif
+      END IF
 !
 !-----------------------------------------------------------------------
 !  Deallocate other variables in modules.

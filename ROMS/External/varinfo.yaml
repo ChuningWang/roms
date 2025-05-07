@@ -6236,6 +6236,490 @@ metadata:
     add_offset:     0.0d0
     scale:          1.0d0
 
+  - variable:       Aice_west
+    standard_name:  sea_ice_area_fraction
+    long_name:      fraction of cell covered by ice western BC
+    units:          nondimensional
+    field:          ice concentration western BC
+    time:           ocean_time
+    index_code:     idAice(iwest)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ice_thickness_west
+    standard_name:  sea_ice_thickness
+    long_name:      average ice thickness in cell western BC
+    units:          meter                                            # [m]
+    field:          ice thickness western BC
+    time:           ocean_time
+    index_code:     idHice(iwest)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       meltpond_thickness_west
+    standard_name:  melt_pond_water_thickness_on_sea_ice
+    long_name:      surface melt water thickness on ice western BC
+    units:          meter                                            # [m]
+    field:          sea ice melt water thickness western BC
+    time:           ocean_time
+    index_code:     idHmel(iwest)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ice_age_west
+    standard_name:  age_of_sea_ice
+    long_name:      age of sea ice western BC
+    units:          second                                           # [s]
+    field:          ice age western BC
+    time:           ocean_time
+    index_code:     idIage(iwest)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       snow_thickness_west
+    standard_name:  snowfall_thickness_above_sea_ice
+    long_name:      thickness of snow cover western BC
+    units:          meter                                            # [m]
+    field:          snow thickness western BC
+    time:           ocean_time
+    index_code:     idHsno(iwest)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Tice_west
+    standard_name:  sea_ice_temperature
+    long_name:      interior ice temperature western BC
+    units:          Celcius                                          # [C]
+    field:          sea ice interior temperature western BC
+    time:           ocean_time
+    index_code:     idTice(iwest)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Uice_west
+    standard_name:  sea_ice_x_velocity
+    long_name:      u-component of ice velocity western BC
+    units:          meter second-1                                   # [m/s]
+    field:          sea ice x-velocity western BC
+    time:           ocean_time
+    index_code:     idUice(iwest)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Vice_west
+    standard_name:  sea_ice_y_velocity
+    long_name:      v-component of ice velocity western BC
+    units:          meter second-1                                   # [m/s]
+    field:          sea ice y-velocity western BC
+    time:           ocean_time
+    index_code:     idVice(iwest)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ice_Sxx_west
+    standard_name:  sea_ice_internal_xx_stress
+    long_name:      internal ice stress xx-component western BC
+    units:          Newton meter-1                                   # [N/m]
+    field:          sea ice xx-stress western BC
+    time:           ocean_time
+    index_code:     idISxx(iwest)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ice_Sxy_west
+    standard_name:  sea_ice_internal_xy_stress
+    long_name:      internal ice stress xy-component western BC
+    units:          Newton meter-1                                   # [N/m]
+    field:          sea ice xy-stress western BC
+    time:           ocean_time
+    index_code:     idISxy(iwest)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ice_Syy_west
+    standard_name:  sea_ice_internal_yy_stress
+    long_name:      internal ice stress yy-component western BC
+    units:          Newton meter-1                                   # [N/m]
+    field:          sea ice yy-stress western BC
+    time:           ocean_time
+    index_code:     idISyy(iwest)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Aice_east
+    standard_name:  sea_ice_area_fraction
+    long_name:      fraction of cell covered by ice eastern BC
+    units:          nondimensional
+    field:          ice concentration eastern BC
+    time:           ocean_time
+    index_code:     idAice(ieast)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ice_thickness_east
+    standard_name:  sea_ice_thickness
+    long_name:      average ice thickness in cell eastern BC
+    units:          meter                                            # [m]
+    field:          ice thickness eastern BC
+    time:           ocean_time
+    index_code:     idHice(ieast)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       meltpond_thickness_east
+    standard_name:  melt_pond_water_thickness_on_sea_ice
+    long_name:      surface melt water thickness on ice eastern BC
+    units:          meter                                            # [m]
+    field:          sea ice melt water thickness eastern BC
+    time:           ocean_time
+    index_code:     idHmel(ieast)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ice_age_east
+    standard_name:  age_of_sea_ice
+    long_name:      age of sea ice eastern BC
+    units:          second                                           # [s]
+    field:          ice age eastern BC
+    time:           ocean_time
+    index_code:     idIage(ieast)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       snow_thickness_east
+    standard_name:  snowfall_thickness_above_sea_ice
+    long_name:      thickness of snow cover eastern BC
+    units:          meter                                            # [m]
+    field:          snow thickness eastern BC
+    time:           ocean_time
+    index_code:     idHsno(ieast)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Tice_east
+    standard_name:  sea_ice_temperature
+    long_name:      interior ice temperature eastern BC
+    units:          Celcius                                          # [C]
+    field:          sea ice interior temperature eastern BC
+    time:           ocean_time
+    index_code:     idTice(ieast)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Uice_east
+    standard_name:  sea_ice_x_velocity
+    long_name:      u-component of ice velocity eastern BC
+    units:          meter second-1                                   # [m/s]
+    field:          sea ice x-velocity eastern BC
+    time:           ocean_time
+    index_code:     idUice(ieast)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Vice_east
+    standard_name:  sea_ice_y_velocity
+    long_name:      v-component of ice velocity eastern BC
+    units:          meter second-1                                   # [m/s]
+    field:          sea ice y-velocity eastern BC
+    time:           ocean_time
+    index_code:     idVice(ieast)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ice_Sxx_east
+    standard_name:  sea_ice_internal_xx_stress
+    long_name:      internal ice stress xx-component eastern BC
+    units:          Newton meter-1                                   # [N/m]
+    field:          sea ice xx-stress eastern BC
+    time:           ocean_time
+    index_code:     idISxx(ieast)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ice_Sxy_east
+    standard_name:  sea_ice_internal_xy_stress
+    long_name:      internal ice stress xy-component eastern BC
+    units:          Newton meter-1                                   # [N/m]
+    field:          sea ice xy-stress eastern BC
+    time:           ocean_time
+    index_code:     idISxy(ieast)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ice_Syy_east
+    standard_name:  sea_ice_internal_yy_stress
+    long_name:      internal ice stress yy-component eastern BC
+    units:          Newton meter-1                                   # [N/m]
+    field:          sea ice yy-stress eastern BC
+    time:           ocean_time
+    index_code:     idISyy(ieast)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Aice_south
+    standard_name:  sea_ice_area_fraction
+    long_name:      fraction of cell covered by ice southern BC
+    units:          nondimensional
+    field:          ice concentration southern BC
+    time:           ocean_time
+    index_code:     idAice(isouth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ice_thickness_south
+    standard_name:  sea_ice_thickness
+    long_name:      average ice thickness in cell southern BC
+    units:          meter                                            # [m]
+    field:          ice thickness southern BC
+    time:           ocean_time
+    index_code:     idHice(isouth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       meltpond_thickness_south
+    standard_name:  melt_pond_water_thickness_on_sea_ice
+    long_name:      surface melt water thickness on ice southern BC
+    units:          meter                                            # [m]
+    field:          sea ice melt water thickness southern BC
+    time:           ocean_time
+    index_code:     idHmel(isouth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ice_age_south
+    standard_name:  age_of_sea_ice
+    long_name:      age of sea ice southern BC
+    units:          second                                           # [s]
+    field:          ice age southern BC
+    time:           ocean_time
+    index_code:     idIage(isouth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       snow_thickness_south
+    standard_name:  snowfall_thickness_above_sea_ice
+    long_name:      thickness of snow cover southern BC
+    units:          meter                                            # [m]
+    field:          snow thickness southern BC
+    time:           ocean_time
+    index_code:     idHsno(isouth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Tice_south
+    standard_name:  sea_ice_temperature
+    long_name:      interior ice temperature southern BC
+    units:          Celcius                                          # [C]
+    field:          sea ice interior temperature southern BC
+    time:           ocean_time
+    index_code:     idTice(isouth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Uice_south
+    standard_name:  sea_ice_x_velocity
+    long_name:      u-component of ice velocity southern BC
+    units:          meter second-1                                   # [m/s]
+    field:          sea ice x-velocity southern BC
+    time:           ocean_time
+    index_code:     idUice(isouth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Vice_south
+    standard_name:  sea_ice_y_velocity
+    long_name:      v-component of ice velocity southern BC
+    units:          meter second-1                                   # [m/s]
+    field:          sea ice y-velocity southern BC
+    time:           ocean_time
+    index_code:     idVice(isouth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ice_Sxx_south
+    standard_name:  sea_ice_internal_xx_stress
+    long_name:      internal ice stress xx-component southern BC
+    units:          Newton meter-1                                   # [N/m]
+    field:          sea ice xx-stress southern BC
+    time:           ocean_time
+    index_code:     idISxx(isouth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ice_Sxy_south
+    standard_name:  sea_ice_internal_xy_stress
+    long_name:      internal ice stress xy-component southern BC
+    units:          Newton meter-1                                   # [N/m]
+    field:          sea ice xy-stress southern BC
+    time:           ocean_time
+    index_code:     idISxy(isouth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ice_Syy_south
+    standard_name:  sea_ice_internal_yy_stress
+    long_name:      internal ice stress yy-component southern BC
+    units:          Newton meter-1                                   # [N/m]
+    field:          sea ice yy-stress southern BC
+    time:           ocean_time
+    index_code:     idISyy(isouth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Aice_north
+    standard_name:  sea_ice_area_fraction
+    long_name:      fraction of cell covered by ice northern BC
+    units:          nondimensional
+    field:          ice concentration northern BC
+    time:           ocean_time
+    index_code:     idAice(inorth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ice_thickness_north
+    standard_name:  sea_ice_thickness
+    long_name:      average ice thickness in cell northern BC
+    units:          meter                                            # [m]
+    field:          ice thickness northern BC
+    time:           ocean_time
+    index_code:     idHice(inorth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       meltpond_thickness_north
+    standard_name:  melt_pond_water_thickness_on_sea_ice
+    long_name:      surface melt water thickness on ice northern BC
+    units:          meter                                            # [m]
+    field:          sea ice melt water thickness northern BC
+    time:           ocean_time
+    index_code:     idHmel(inorth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ice_age_north
+    standard_name:  age_of_sea_ice
+    long_name:      age of sea ice northern BC
+    units:          second                                           # [s]
+    field:          ice age northern BC
+    time:           ocean_time
+    index_code:     idIage(inorth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       snow_thickness_north
+    standard_name:  snowfall_thickness_above_sea_ice
+    long_name:      thickness of snow cover northern BC
+    units:          meter                                            # [m]
+    field:          snow thickness northern BC
+    time:           ocean_time
+    index_code:     idHsno(inorth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Tice_north
+    standard_name:  sea_ice_temperature
+    long_name:      interior ice temperature northern BC
+    units:          Celcius                                          # [C]
+    field:          sea ice interior temperature northern BC
+    time:           ocean_time
+    index_code:     idTice(inorth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Uice_north
+    standard_name:  sea_ice_x_velocity
+    long_name:      u-component of ice velocity northern BC
+    units:          meter second-1                                   # [m/s]
+    field:          sea ice x-velocity northern BC
+    time:           ocean_time
+    index_code:     idUice(inorth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       Vice_north
+    standard_name:  sea_ice_y_velocity
+    long_name:      v-component of ice velocity northern BC
+    units:          meter second-1                                   # [m/s]
+    field:          sea ice y-velocity northern BC
+    time:           ocean_time
+    index_code:     idVice(inorth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ice_Sxx_north
+    standard_name:  sea_ice_internal_xx_stress
+    long_name:      internal ice stress xx-component northern BC
+    units:          Newton meter-1                                   # [N/m]
+    field:          sea ice xx-stress northern BC
+    time:           ocean_time
+    index_code:     idISxx(inorth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ice_Sxy_north
+    standard_name:  sea_ice_internal_xy_stress
+    long_name:      internal ice stress xy-component northern BC
+    units:          Newton meter-1                                   # [N/m]
+    field:          sea ice xy-stress northern BC
+    time:           ocean_time
+    index_code:     idISxy(inorth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ice_Syy_north
+    standard_name:  sea_ice_internal_yy_stress
+    long_name:      internal ice stress yy-component northern BC
+    units:          Newton meter-1                                   # [N/m]
+    field:          sea ice yy-stress northern BC
+    time:           ocean_time
+    index_code:     idISyy(inorth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
   ##################################
   ###  Iceshelf State Variables  ###
   ##################################
