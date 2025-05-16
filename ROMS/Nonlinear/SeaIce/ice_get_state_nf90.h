@@ -156,7 +156,7 @@
           END IF
         END DO
 !
-!  Read iceshelf model state variables.
+!  Read sea ice model state variables.
 !
         DO i=1,nIceF
           IF (iFice(i).gt.0) THEN
