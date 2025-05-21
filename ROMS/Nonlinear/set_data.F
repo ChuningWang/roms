@@ -1310,7 +1310,7 @@
 #  ifdef ANA_ICEOBC
         CALL ana_iceobc (ng, tile, iNLM)
 #  else
-        DO i=1,nIceS
+        DO i=1,isVice
           SELECT CASE (i)
             CASE (isUice)
               istr0=1

@@ -1379,7 +1379,7 @@
 
 #if defined ICE_MODEL && !defined ANA_ICEOBC
       IF (LprocessOBC(ng)) THEN
-        DO i=1,11
+        DO i=1,isVice
           SELECT CASE (i)
             CASE (isUice)
               istr0=1
