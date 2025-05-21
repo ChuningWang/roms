@@ -399,19 +399,9 @@
      &                                 ICE(ng)%Si(i,j,linew,isIage)
           IF (ICE(ng)%Si(i,j,liold,isHice).le.min_hi(ng)) THEN
             ICE(ng)%Si(i,j,liold,isHage)=0.0_r8
-            ICE(ng)%Si(i,j,liold,isIage)=0.0_r8
           END IF
         END DO
       END DO
-!
-      CALL ice_bc2d_tile (ng, tile, model, isHage,                      &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    IminS, ImaxS, JminS, JmaxS,                   &
-     &                    liold, linew,                                 &
-     &                    ICE(ng) % Si(:,:,:,isUice),                   &
-     &                    ICE(ng) % Si(:,:,:,isVice),                   &
-     &                    ICE(ng) % Si(:,:,:,isHage),                   &
-     &                    LBC(:,ibICE(isHage),ng))
 !
       CALL ice_mpdata_tile (ng, tile, model,                            &
      &                      LBi, UBi, LBj, UBj,                         &
@@ -448,7 +438,6 @@
      &                                 MAX(ICE(ng)%Si(i,j,linew,isHice),&
      &                                     1.0E-6_r8)
           IF (ICE(ng)%Si(i,j,linew,isHice).le.min_hi(ng)) THEN
-            ICE(ng)%Si(i,j,linew,isHage)=0.0_r8
             ICE(ng)%Si(i,j,linew,isIage)=0.0_r8
           END IF
         END DO
