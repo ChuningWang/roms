@@ -1,5 +1,7 @@
 #include "cppdefs.h"
+
       MODULE isf_vbc_mod
+
 #ifdef ICESHELF_THERMO
 # define GAMMAS_MC1987
 # undef GAMMAS_KY1972

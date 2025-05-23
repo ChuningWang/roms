@@ -1,5 +1,7 @@
 #include "cppdefs.h"
+
       MODULE isf_set_avg_mod
+
 #if defined ICESHELF_THERMO && defined AVERAGES
 !
 !git $Id$
