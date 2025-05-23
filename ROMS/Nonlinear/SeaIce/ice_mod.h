@@ -41,10 +41,10 @@
 !    isVice    ice V-velocity (m/s)                                    !
 !    isVevp    elastic-viscous-plastic ice V-velocity (m/s)            !
 #if defined ICE_BIO
+!    isIlog    ice biology log                                         !
 !    isIphy    ice biology, algae                                      !
 !    isINO3    ice biology, nitrate                                    !
 !    isINH4    ice biology, ammonia                                    !
-!    isIlog    ice biology log                                         !
 #endif
 !                                                                      !
 !  The ice model internal 'field' arrays are declares in compact form  !
@@ -178,10 +178,10 @@
       integer, parameter :: isUevp = 14 ! EVP ice U-velocity
       integer, parameter :: isVevp = 15 ! EVP ice V-velocity
 #if defined ICE_BIO
-      integer, parameter :: isIphy = 16 ! ice biology, algae
-      integer, parameter :: isINO3 = 17 ! ice biology, nitrate
-      integer, parameter :: isINH4 = 18 ! ice biology, ammonia
-      integer, parameter :: isIlog = 19 ! ice biology log
+      integer, parameter :: isIlog = 16 ! ice biology log
+      integer, parameter :: isIphy = 17 ! ice biology, algae
+      integer, parameter :: isINO3 = 18 ! ice biology, nitrate
+      integer, parameter :: isINH4 = 19 ! ice biology, ammonia
 #endif
 !
       integer :: ice_ic_brylast  ! Boundary layer salinity
@@ -423,177 +423,211 @@
 !
       IF (.not.ice_kernel) THEN
 
-        IF (.not.allocated(idStrc))                                     &
-     &    allocate ( idStrc(MT) )
-        Dmem(1)=Dmem(1)+REAL(MT,r8)
-        idStrc(1:MT)=0
+        IF (.not.allocated(idStrc)) THEN
+          allocate ( idStrc(MT) )
+          Dmem(1)=Dmem(1)+REAL(MT,r8)
+          idStrc(1:MT)=0
+        END IF
 
 #ifdef AVERAGES
-
-        IF (.not.allocated(LiceFavg))                                   &
+        IF (.not.allocated(LiceFavg)) THEN
           allocate ( LiceFavg(nIceF,Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(nIceF*Ngrids,r8)
-        LiceFavg(1:nIceF,1:Ngrids)=.FALSE.
+          Dmem(1)=Dmem(1)+REAL(nIceF*Ngrids,r8)
+          LiceFavg(1:nIceF,1:Ngrids)=.FALSE.
+        END IF
 
-        IF (.not.allocated(LiceSavg))                                   &
+        IF (.not.allocated(LiceSavg)) THEN
           allocate ( LiceSavg(nIceS,Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(nIceS*Ngrids,r8)
-        LiceSavg(1:nIceS,1:Ngrids)=.FALSE.
+          Dmem(1)=Dmem(1)+REAL(nIceS*Ngrids,r8)
+          LiceSavg(1:nIceS,1:Ngrids)=.FALSE.
+        END IF
 
-        IF (.not.allocated(LiceTavg))                                   &
+        IF (.not.allocated(LiceTavg)) THEN
           allocate ( LiceTavg(MT,Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
-        LiceTavg(1:MT,1:Ngrids)=.FALSE.
+          Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
+          LiceTavg(1:MT,1:Ngrids)=.FALSE.
+        END IF
+
 #endif
-        IF (.not.allocated(iEVP))                                       &
-     &    allocate ( iEVP(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        iEVP(1:Ngrids)=0
+        IF (.not.allocated(iEVP)) THEN
+          allocate ( iEVP(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          iEVP(1:Ngrids)=0
+        END IF
 
-        IF (.not.allocated(nEVP))                                       &
-     &    allocate ( nEVP(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        nEVP(1:Ngrids)=0
+        IF (.not.allocated(nEVP)) THEN
+          allocate ( nEVP(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          nEVP(1:Ngrids)=0
+        END IF
 
-        IF (.not.allocated(dtice))                                      &
-     &    allocate ( dtice(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        dtice(1:Ngrids)=IniVal
+        IF (.not.allocated(dtice)) THEN
+          allocate ( dtice(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          dtice(1:Ngrids)=IniVal
+        END IF
 
-        IF (.not.allocated(dtevp))                                      &
-     &    allocate ( dtevp(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        dtevp(1:Ngrids)=IniVal
+        IF (.not.allocated(dtevp)) THEN
+          allocate ( dtevp(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          dtevp(1:Ngrids)=IniVal
+        END IF
 
-        IF (.not.allocated(AirRho))                                     &
-     &    allocate ( AirRho(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        AirRho(1:Ngrids)=IniVal
+        IF (.not.allocated(AirRho)) THEN
+          allocate ( AirRho(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          AirRho(1:Ngrids)=IniVal
+        END IF
 
-        IF (.not.allocated(IceRho))                                     &
-     &    allocate ( IceRho(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        IceRho(1:Ngrids)=IniVal
+        IF (.not.allocated(IceRho)) THEN
+          allocate ( IceRho(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          IceRho(1:Ngrids)=IniVal
+        END IF
 
-        IF (.not.allocated(SnowDryRho))                                &
-     &    allocate ( SnowDryRho(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        SnowDryRho(1:Ngrids)=IniVal
+        IF (.not.allocated(SnowDryRho)) THEN
+          allocate ( SnowDryRho(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          SnowDryRho(1:Ngrids)=IniVal
+        END IF
 
-        IF (.not.allocated(SnowWetRho))                                &
-     &    allocate ( SnowWetRho(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        SnowWetRho(1:Ngrids)=IniVal
+        IF (.not.allocated(SnowWetRho)) THEN
+          allocate ( SnowWetRho(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          SnowWetRho(1:Ngrids)=IniVal
+        END IF
 
-        IF (.not.allocated(Cd_ai))                                      &
-     &    allocate ( Cd_ai(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        Cd_ai(1:Ngrids)=IniVal
+        IF (.not.allocated(Cd_ai)) THEN
+          allocate ( Cd_ai(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          Cd_ai(1:Ngrids)=IniVal
+        END IF
 
-        IF (.not.allocated(Cd_io))                                      &
-     &    allocate ( Cd_io(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        Cd_io(1:Ngrids)=IniVal
+        IF (.not.allocated(Cd_io)) THEN
+          allocate ( Cd_io(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          Cd_io(1:Ngrids)=IniVal
+        END IF
 
-        IF (.not.allocated(Astrength))                                  &
-     &    allocate ( Astrength(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        Astrength(1:Ngrids)=IniVal
+        IF (.not.allocated(Astrength)) THEN
+          allocate ( Astrength(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          Astrength(1:Ngrids)=IniVal
+        END IF
 
-        IF (.not.allocated(Pstar))                                      &
-     &    allocate ( Pstar(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        Pstar(1:Ngrids)=IniVal
+        IF (.not.allocated(Pstar)) THEN
+          allocate ( Pstar(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          Pstar(1:Ngrids)=IniVal
+        END IF
 
-        IF (.not.allocated(Pstar_e))                                    &
-     &    allocate ( Pstar_e(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        Pstar_e(1:Ngrids)=IniVal
+        IF (.not.allocated(Pstar_e)) THEN
+          allocate ( Pstar_e(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          Pstar_e(1:Ngrids)=IniVal
+        END IF
 
-        IF (.not.allocated(min_ai))                                     &
-     &    allocate ( min_ai(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        min_ai(1:Ngrids)=IniVal
+        IF (.not.allocated(min_ai)) THEN
+          allocate ( min_ai(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          min_ai(1:Ngrids)=IniVal
+        END IF
 
-        IF (.not.allocated(max_ai))                                     &
-     &    allocate ( max_ai(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        max_ai(1:Ngrids)=IniVal
+        IF (.not.allocated(max_ai)) THEN
+          allocate ( max_ai(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          max_ai(1:Ngrids)=IniVal
+        END IF
 
-        IF (.not.allocated(min_hi))                                     &
-     &    allocate ( min_hi(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        min_hi(1:Ngrids)=IniVal
+        IF (.not.allocated(min_hi)) THEN
+          allocate ( min_hi(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          min_hi(1:Ngrids)=IniVal
+        END IF
 
-        IF (.not.allocated(max_hmelt))                                  &
-     &    allocate ( max_hmelt(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        max_hmelt(1:Ngrids)=IniVal
+        IF (.not.allocated(max_hmelt)) THEN
+          allocate ( max_hmelt(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          max_hmelt(1:Ngrids)=IniVal
+        END IF
 
-        IF (.not.allocated(zetaMin))                                    &
-     &    allocate ( zetaMin(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        zetaMin(1:Ngrids)=IniVal
+        IF (.not.allocated(zetaMin)) THEN
+          allocate ( zetaMin(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          zetaMin(1:Ngrids)=IniVal
+        END IF
 
-        IF (.not.allocated(zetaMax))                                    &
-     &    allocate ( zetaMax(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        zetaMax(1:Ngrids)=IniVal
+        IF (.not.allocated(zetaMax)) THEN
+          allocate ( zetaMax(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          zetaMax(1:Ngrids)=IniVal
+        END IF
 
-        IF (.not.allocated(stressAng))                                  &
-     &    allocate ( stressAng(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        stressAng(1:Ngrids)=IniVal
+        IF (.not.allocated(stressAng)) THEN
+          allocate ( stressAng(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          stressAng(1:Ngrids)=IniVal
+        END IF
 
-        IF (.not.allocated(ellip_sq))                                   &
-     &    allocate ( ellip_sq(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        ellip_sq(1:Ngrids)=IniVal
+        IF (.not.allocated(ellip_sq)) THEN
+          allocate ( ellip_sq(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          ellip_sq(1:Ngrids)=IniVal
+        END IF
 
-        IF (.not.allocated(NTICE))                                      &
-     &    allocate ( NTICE(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        NTICE(1:Ngrids)=0
+        IF (.not.allocated(NTICE)) THEN
+          allocate ( NTICE(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          NTICE(1:Ngrids)=0
+        END IF
 
-        IF (.not.allocated(Licetrc))                                    &
-     &    allocate ( Licetrc(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        Licetrc(1:Ngrids)=.FALSE.
+        IF (.not.allocated(Licetrc)) THEN
+          allocate ( Licetrc(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          Licetrc(1:Ngrids)=.FALSE.
+        END IF
 
-        IF (.not.allocated(LtracerIce))                                 &
-     &    allocate ( LtracerIce(MT,Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
-        LtracerIce(1:MT,1:Ngrids)=.FALSE.
+        IF (.not.allocated(LtracerIce)) THEN
+          allocate ( LtracerIce(MT,Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
+          LtracerIce(1:MT,1:Ngrids)=.FALSE.
+        END IF
 
-        IF (.not.allocated(Licesrc))                                    &
-     &    allocate ( Licesrc(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        Licesrc(1:Ngrids)=.FALSE.
+        IF (.not.allocated(Licesrc)) THEN
+          allocate ( Licesrc(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          Licesrc(1:Ngrids)=.FALSE.
+        END IF
 
-        IF (.not.allocated(LsourceIce))                                 &
-     &    allocate ( LsourceIce(MT,Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
-        LsourceIce(1:MT,1:Ngrids)=.FALSE.
+        IF (.not.allocated(LsourceIce)) THEN
+          allocate ( LsourceIce(MT,Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
+          LsourceIce(1:MT,1:Ngrids)=.FALSE.
+        END IF
 
-        IF (.not.allocated(Lfrzsrc))                                    &
-     &    allocate ( Lfrzsrc(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        Lfrzsrc(1:Ngrids)=.FALSE.
+        IF (.not.allocated(Lfrzsrc)) THEN
+          allocate ( Lfrzsrc(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          Lfrzsrc(1:Ngrids)=.FALSE.
+        END IF
 
-        IF (.not.allocated(LsourceFrz))                                 &
-     &    allocate ( LsourceFrz(MT,Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
-        LsourceFrz(1:MT,1:Ngrids)=.FALSE.
+        IF (.not.allocated(LsourceFrz)) THEN
+          allocate ( LsourceFrz(MT,Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
+          LsourceFrz(1:MT,1:Ngrids)=.FALSE.
+        END IF
 
-        IF (.not.allocated(trcIce))                                     &
-     &    allocate ( trcIce(MT,Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
-        trcIce(1:MT,1:Ngrids)=IniVal
+        IF (.not.allocated(trcIce)) THEN
+          allocate ( trcIce(MT,Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
+          trcIce(1:MT,1:Ngrids)=IniVal
+        END IF
 
-        IF (.not.allocated(trcFrz))                                     &
-     &    allocate ( trcFrz(MT,Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
-        trcFrz(1:MT,1:Ngrids)=IniVal
+        IF (.not.allocated(trcFrz)) THEN
+          allocate ( trcFrz(MT,Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
+          trcFrz(1:MT,1:Ngrids)=IniVal
+        END IF
 
       ELSE
 !
@@ -714,8 +748,8 @@
             END IF
           END DO
         END IF
-      END IF
 #endif
+      END IF
 !
       RETURN
       END SUBROUTINE allocate_ice

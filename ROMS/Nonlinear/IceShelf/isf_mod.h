@@ -300,83 +300,98 @@
 !
       IF (.not.isf_kernel) THEN
 
-        IF (.not.allocated(idItrc))                                     &
-     &    allocate ( idItrc(MT) )
-        Dmem(1)=Dmem(1)+REAL(MT,r8)
-        idItrc(1:MT)=0
+        IF (.not.allocated(idItrc)) THEN
+          allocate ( idItrc(MT) )
+          Dmem(1)=Dmem(1)+REAL(MT,r8)
+          idItrc(1:MT)=0
+        END IF
 
-        IF (.not.allocated(lsnew))                                      &
+        IF (.not.allocated(lsnew)) THEN
           allocate ( lsnew(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        lsnew(1:Ngrids)=1
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          lsnew(1:Ngrids)=1
+        END IF
 
-        IF (.not.allocated(lsold))                                      &
+        IF (.not.allocated(lsold)) THEN
           allocate ( lsold(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        lsold(1:Ngrids)=1
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          lsold(1:Ngrids)=1
+        END IF
 
 #ifdef AVERAGES
 
-        IF (.not.allocated(LisfFavg))                                   &
+        IF (.not.allocated(LisfFavg)) THEN
           allocate ( LisfFavg(nIsfF,Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(nIsfF*Ngrids,r8)
-        LisfFavg(1:nIsfF,1:Ngrids)=.FALSE.
+          Dmem(1)=Dmem(1)+REAL(nIsfF*Ngrids,r8)
+          LisfFavg(1:nIsfF,1:Ngrids)=.FALSE.
+        END IF
 
-        IF (.not.allocated(LisfSavg))                                   &
+        IF (.not.allocated(LisfSavg)) THEN
           allocate ( LisfSavg(nIsfS,Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(nIsfS*Ngrids,r8)
-        LisfSavg(1:nIsfS,1:Ngrids)=.FALSE.
+          Dmem(1)=Dmem(1)+REAL(nIsfS*Ngrids,r8)
+          LisfSavg(1:nIsfS,1:Ngrids)=.FALSE.
+        END IF
 
-        IF (.not.allocated(LisfVavg))                                   &
+        IF (.not.allocated(LisfVavg)) THEN
           allocate ( LisfVavg(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        LisfVavg(1:Ngrids)=.FALSE.
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          LisfVavg(1:Ngrids)=.FALSE.
+        END IF
 
-        IF (.not.allocated(LisfTavg))                                   &
+        IF (.not.allocated(LisfTavg)) THEN
           allocate ( LisfTavg(MT,Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
-        LisfTavg(1:MT,1:Ngrids)=.FALSE.
+          Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
+          LisfTavg(1:MT,1:Ngrids)=.FALSE.
+        END IF
 #endif
 
-        IF (.not.allocated(gamU))                                       &
-     &    allocate ( gamU(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        gamU(1:Ngrids)=IniVal
+        IF (.not.allocated(gamU)) THEN
+          allocate ( gamU(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          gamU(1:Ngrids)=IniVal
+        END IF
 
-        IF (.not.allocated(min_ustar))                                  &
-     &    allocate ( min_ustar(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        min_ustar(1:Ngrids)=IniVal
+        IF (.not.allocated(min_ustar)) THEN
+          allocate ( min_ustar(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          min_ustar(1:Ngrids)=IniVal
+        END IF
 
-        IF (.not.allocated(NTISF))                                      &
-     &    allocate ( NTISF(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        NTISF(1:Ngrids)=0
+        IF (.not.allocated(NTISF)) THEN
+          allocate ( NTISF(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          NTISF(1:Ngrids)=0
+        END IF
 
-        IF (.not.allocated(Lisftrc))                                    &
-     &    allocate ( Lisftrc(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        Lisftrc(1:Ngrids)=.FALSE.
+        IF (.not.allocated(Lisftrc)) THEN
+          allocate ( Lisftrc(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          Lisftrc(1:Ngrids)=.FALSE.
+        END IF
 
-        IF (.not.allocated(LtracerIsf))                                 &
-     &    allocate ( LtracerIsf(MT,Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
-        LtracerIsf(1:MT,1:Ngrids)=.FALSE.
+        IF (.not.allocated(LtracerIsf)) THEN
+          allocate ( LtracerIsf(MT,Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
+          LtracerIsf(1:MT,1:Ngrids)=.FALSE.
+        END IF
 
-        IF (.not.allocated(Lisfsrc))                                    &
-     &    allocate ( Lisfsrc(Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-        Lisfsrc(1:Ngrids)=.FALSE.
+        IF (.not.allocated(Lisfsrc)) THEN
+          allocate ( Lisfsrc(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          Lisfsrc(1:Ngrids)=.FALSE.
+        END IF
 
-        IF (.not.allocated(LsourceIsf))                                 &
-     &    allocate ( LsourceIsf(MT,Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
-        LsourceIsf(1:MT,1:Ngrids)=.FALSE.
+        IF (.not.allocated(LsourceIsf)) THEN
+          allocate ( LsourceIsf(MT,Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
+          LsourceIsf(1:MT,1:Ngrids)=.FALSE.
+        END IF
 
-        IF (.not.allocated(trcIsf))                                     &
-     &    allocate ( trcIsf(MT,Ngrids) )
-        Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
-        trcIsf(1:MT,1:Ngrids)=IniVal
+        IF (.not.allocated(trcIsf)) THEN
+          allocate ( trcIsf(MT,Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
+          trcIsf(1:MT,1:Ngrids)=IniVal
+        END IF
 
       ELSE
 !
@@ -509,8 +524,8 @@
             END IF
           END DO
         END IF
-      END IF
 #endif
+      END IF
 !
       RETURN
       END SUBROUTINE allocate_isf
