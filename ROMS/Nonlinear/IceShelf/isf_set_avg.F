@@ -1,6 +1,6 @@
 #include "cppdefs.h"
       MODULE isf_set_avg_mod
-#ifdef ICESHELF_THERMO
+#if defined ICESHELF_THERMO && defined AVERAGES
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
