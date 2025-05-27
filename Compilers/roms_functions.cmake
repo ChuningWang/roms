@@ -1,6 +1,6 @@
 # git $Id$
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::: David Robertson :::
-# Copyright (c) 2002-2024 The ROMS/TOMS Group                           :::
+# Copyright (c) 2002-2025 The ROMS Group                                :::
 #   Licensed under a MIT/X style license                                :::
 #   See License_ROMS.md                                                 :::
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -130,8 +130,8 @@ endfunction()
 ###########################################################################
 # The "get_options" function is used by roms_config.cmake to determine if
 # the adjoint, tangent linear, and/or representer model(s) are needed
-# and whether to add ARPACK/PARPACK and/or parallel I/O using SCORPIO
-# to link into the executable.
+# and whether to add ARPACK/PARPACK and/or parallel I/O (PIO) to link
+# into the executable.
 ###########################################################################
 
 function(get_options roms_header)

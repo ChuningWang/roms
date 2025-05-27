@@ -1,6 +1,6 @@
 # git $Id$
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-# Copyright (c) 2002-2024 The ROMS/TOMS Group                           :::
+# Copyright (c) 2002-2025 The ROMS Group                                :::
 #   Licensed under a MIT/X style license                                :::
 #   See License_ROMS.md                                                 :::
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -8,7 +8,7 @@
 # Include file for GNU G95 compiler on Linux
 # -------------------------------------------------------------------------
 #
-# ARPACK_LIBDIR  ARPACK libary directory
+# ARPACK_LIBDIR  ARPACK library directory
 # FC             Name of the fortran compiler to use
 # FFLAGS         Flags to the fortran compiler
 # CPP            Name of the C-preprocessor
@@ -22,11 +22,11 @@
 # NETCDF_INCDIR  NetCDF include directory
 # NETCDF_LIBDIR  NetCDF library directory
 # NETCDF_LIBS    NetCDF library switches
-# PIO_INCDIR     Parallel-IO (PIO) from SCORPIO library include directory
-# PIO_LIBDIR     Parallel-IO (PIO) from SCORPIO libary directory
-# PIO_LIBS       Parallel-IO (PIO) from SCORPIO library switches
+# PIO_INCDIR     Parallel-IO (PIO) library include directory
+# PIO_LIBDIR     Parallel-IO (PIO) library directory
+# PIO_LIBS       Parallel-IO (PIO) library switches
 # PNETCDF_INCDIR PNetCDF include directory
-# PNETCDF_LIBDIR PNetCDF libary directory
+# PNETCDF_LIBDIR PNetCDF library directory
 # PNETCDF_LIBS   PNetCDF library switches
 
 # LD             Program to load the objects into an executable or shared library
@@ -156,18 +156,6 @@ ifdef USE_PIO
              LIBS += -L$(PNETCDF_LIBDIR) -lpnetcdf
 endif
 
-ifdef USE_SCORPIO
-       PIO_INCDIR ?= /usr/local/include
-       PIO_LIBDIR ?= /usr/local/lib
-           FFLAGS += -I$(PIO_INCDIR)
-             LIBS += -L$(PIO_LIBDIR) -lpiof -lpioc
-
-   PNETCDF_INCDIR ?= /usr/local/include
-   PNETCDF_LIBDIR ?= /usr/local/lib
-           FFLAGS += -I$(PNETCDF_INCDIR)
-             LIBS += -L$(PNETCDF_LIBDIR) -lpnetcdf
-endif
-
 ifdef USE_NETCDF4
         NC_CONFIG ?= nc-config
    TEST_NC_CONFIG := $(shell which $(NC_CONFIG))
@@ -251,11 +239,11 @@ endif
 ifdef SHARED
  ifdef EXEC
   ifndef STATIC
-	CYG_DLL_CP := cyg_dll_cp
+       CYG_DLL_CP := cyg_dll_cp
 
 .PHONY: cyg_dll_cp
 cyg_dll_cp: $(BIN)
-	$(CP) $(BUILD_DIR)/$(SH_LIB_NAME) $(BINDIR)
+            $(CP) $(BUILD_DIR)/$(SH_LIB_NAME) $(BINDIR)
 
   endif
  endif

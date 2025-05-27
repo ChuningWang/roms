@@ -3,7 +3,7 @@
 !
 !git $Id$
 !=======================================================================
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2025 The ROMS Group                              !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !================================================== Hernan G. Arango ===
@@ -138,19 +138,11 @@
           ELSE IF (model.eq.iTLM) THEN
             NEXTtime=time(ng)+RunInterval
             ENDtime=INItime(ng)+ntimes(ng)*dt(ng)
-            IF (iic(ng).eq.ntend(ng)) THEN
-              extra=1
-            ELSE
-              extra=0
-            END IF
+            extra=0
           ELSE IF (model.eq.iADM) THEN
             NEXTtime=time(ng)-RunInterval
             ENDtime=INItime(ng)+ntimes(ng)*dt(ng)
-            IF (iic(ng).eq.ntstart(ng)) THEN
-              extra=1
-            ELSE
-              extra=0
-            END IF
+            extra=0
           END IF
 #else
 !
@@ -263,7 +255,7 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2025 The ROMS Group            Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================

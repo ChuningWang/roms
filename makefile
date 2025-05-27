@@ -1,11 +1,11 @@
 # git $Id$
 #::::::::::::::::::::::::::::::::::::::::::::::::::::: Hernan G. Arango :::
-# Copyright (c) 2002-2024 The ROMS/TOMS Group             Kate Hedstrom :::
+# Copyright (c) 2002-2025 The ROMS Group                  Kate Hedstrom :::
 #   Licensed under a MIT/X style license                                :::
 #   See License_ROMS.md                                                 :::
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 #                                                                       :::
-#  ROMS/TOMS Framework Master Makefile                                  :::
+#  ROMS Framework Master Makefile                                       :::
 #                                                                       :::
 #  This makefile is designed to work only with GNU Make version 3.80 or :::
 #  higher. It can be used in any architecture provided that there is a  :::
@@ -321,7 +321,7 @@ define one-compile-rule
 endef
 
 #--------------------------------------------------------------------------
-#  Set ROMS/TOMS executable file name.
+#  Set ROMS executable file name.
 #--------------------------------------------------------------------------
 
 ifdef EXEC
@@ -364,11 +364,6 @@ CPU := $(shell uname -m | sed 's/[\/ ]/-/g')
 
 GITURL := $(shell git config remote.origin.url)
 GITREV := $(shell git log -n 1 --format=%H)
-
-SVNURL := $(shell grep HeadURL ./ROMS/Version | \
-            sed 's/.* \(https.*\)\/ROMS\/Version.*/\1/')
-SVNREV := $(shell grep Revision ./ROMS/Version | \
-            sed 's/.* \([0-9]*\) .*/\1/')
 
 ROOTDIR := $(shell pwd)
 
@@ -427,8 +422,6 @@ endif
 
 CPPFLAGS += -D'GIT_URL="$(GITURL)"'
 CPPFLAGS += -D'GIT_REV="$(GITREV)"'
-CPPFLAGS += -D'SVN_URL="$(SVNURL)"'
-CPPFLAGS += -D'SVN_REV="$(SVNREV)"'
 
 #--------------------------------------------------------------------------
 #  Build target directories.
@@ -461,6 +454,7 @@ endif
 		ROMS/Nonlinear/BBL \
 		ROMS/Nonlinear/Biology \
 		ROMS/Nonlinear/Sediment \
+		ROMS/Nonlinear/WEC \
 		ROMS/Functionals \
 		ROMS/Utility \
 		ROMS/Drivers \
@@ -547,7 +541,7 @@ $(BUILD_DIR)/mod_strings.f90: CPPFLAGS += -DMY_OS='"$(OS)"' \
               -DMY_FC='"$(FC)"' -DMY_FFLAGS='"$(FFLAGS)"'
 
 #--------------------------------------------------------------------------
-#  ROMS/TOMS libraries.
+#  ROMS libraries.
 #--------------------------------------------------------------------------
 
 ifdef SHARED
@@ -565,7 +559,7 @@ MYLIB := libroms.a
 libraries: $(libraries)
 
 #--------------------------------------------------------------------------
-#  Target to create ROMS/TOMS dependecies.
+#  Target to create ROMS dependecies.
 #--------------------------------------------------------------------------
 
 ifneq ($(MAKECMDGOALS),tarfile)
@@ -595,23 +589,23 @@ ifneq ($(MAKECMDGOALS),clean)
 endif
 
 #--------------------------------------------------------------------------
-#  Target to create ROMS/TOMS tar file.
+#  Target to create ROMS tar file.
 #--------------------------------------------------------------------------
 
 .PHONY: tarfile
 
 tarfile:
-		tar --exclude=".svn" -cvf roms-3_7.tar *
+		tar --exclude=".git" -cvf roms-4_2.tar *
 
 .PHONY: zipfile
 
 zipfile:
-		zip -r roms-3_7.zip *
+		zip -r roms-4_2.zip *
 
 .PHONY: gzipfile
 
 gzipfile:
-		gzip -v roms-3_7.gzip *
+		gzip -v roms-4_2.gzip *
 
 #--------------------------------------------------------------------------
 #  Cleaning targets.

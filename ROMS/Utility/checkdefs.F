@@ -3,7 +3,7 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2025 The ROMS Group                              !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
@@ -564,13 +564,6 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+18)=' ASYNCHRONOUS_PIO,'
 #endif
-#if defined ASYNCHRONOUS_SCORPIO && defined PIO_LIB && defined DISTRIBUTE
-!
-      IF (Master) WRITE (stdout,20) 'ASYNCHRONOUS_SCORPIO',             &
-     &   'SCORPIO library with disjointed dedicated I/O processes'
-      is=LEN_TRIM(Coptions)+1
-      Coptions(is:is+22)=' ASYNCHRONOUS_SCORPIO,'
-#endif
 #ifdef ATM_PRESS
 !
       IF (Master) WRITE (stdout,20) 'ATM_PRESS',                        &
@@ -742,7 +735,7 @@
 #endif
 #if defined BOTTOM_STREAMING && defined WEC_VF
       IF (Master) WRITE (stdout,20) 'BOTTOM_STREAMING',                 &
-     &   'Wave current streaming term'
+     &   'Wave current bottom streaming term'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+18)=' BOTTOM_STREAMING,'
 #endif
@@ -1242,6 +1235,19 @@
       Coptions(is:is+12)=' !FULL_GRID,'
 # endif
 #endif
+#ifdef DISTRIBUTE
+# ifdef GATHER_SENDRECV
+      IF (Master) WRITE (stdout,20) 'GATHER_SENDRECV',                  &
+     &   'Using mpi_isend/mpi_irecv in mp_gather2d/mp_gather3d routines'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+17)=' GATHER_SENDRECV,'
+# else
+      IF (Master) WRITE (stdout,20) '!GATHER_SENDRECV',                 &
+     &   'Using mpi_gatherv in mp_gather2d/mp_gather3d routines'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+18)=' !GATHER_SENDRECV,'
+# endif
+#endif
 #ifdef GENERIC_DSTART
 !
       IF (Master) WRITE (stdout,20) 'GENERIC_DSTART',                   &
@@ -1375,14 +1381,19 @@
      &   'Including sea ice in bulk flux computation'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+17)=' ICE_BULK_FLUXES,'
-#  ifdef ICE_ALB_EC92
+# ifdef ICE_ALBEDO
+!
+      IF (Master) WRITE (stdout,20) 'ICE_ALBEDO',                       &
+     &   'Surface albedo computation over seawater, snow, or ice'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+12)=' ICE_ALBEDO,'
+#  if defined ICE_ALB_EC92
 !
       IF (Master) WRITE (stdout,20) 'ICE_ALB_EC92',                     &
      &   'Albedo computation from Ebert and Curry'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+14)=' ICE_ALB_EC92,'
-#  endif
-#  ifdef ICE_ALB_CSIM
+#  elif defined ICE_ALB_CSIM
 !
       IF (Master) WRITE (stdout,20) 'ICE_ALB_CSIM',                     &
      &   'Albedo computation from CSIM/CICE 5.1'
@@ -1783,6 +1794,21 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+4)=' MPI,'
 #endif
+#if defined DISTRIBUTE
+# if defined MULTI_THREAD
+!
+      IF (Master) WRITE (stdout,20) 'MULTI_THREAD',                     &
+     &   'Using mpi_init_thread with multiple thread level processing'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+17)=' MULTIPLE_THREAD,'
+# else
+!
+      IF (Master) WRITE (stdout,20) '!MULTI_THREAD',                    &
+     &   'Using mpi_init with single thread level processing'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+18)=' !MULTIPLE_THREAD,'
+# endif
+#endif
 #if defined MULTIPLE_TLM && defined TANGENT
 !
       IF (Master) WRITE (stdout,20) 'MULTIPLE_TLM',                     &
@@ -2043,6 +2069,13 @@
      &   'Parallel I/O processing'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+13)=' PARALLEL_IO,'
+#endif
+#if defined PBLH && defined BULK_FLUXES && defined FRC_COUPLING
+!
+      IF (Master) WRITE (stdout,20) 'PBLH',                             &
+     &   'Use atmosphere boundary layer thickness for wind gustiness'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+10)=' PBLH,'
 #endif
 #if defined CARBON && defined BIO_FENNEL
 # if defined PCO2AIR_DATA
@@ -2526,6 +2559,19 @@
       Coptions(is:is+14)=' SANITY_CHECK,'
       idriver=idriver+1
 #endif
+#ifdef DISTRIBUTE
+# ifdef SCATTER_BCAST
+      IF (Master) WRITE (stdout,20) 'SCATTER_BCAST',                    &
+     &   'Using mpi_bcast in mp_scatter2d/mp_scatter3d routines'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+15)=' SCATTER_BCAST,'
+# else
+      IF (Master) WRITE (stdout,20) '!SCATTER_BCAST',                    &
+     &   'Using mpi_scatterv in mp_scatter2d/mp_scatter3d routines'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+16)=' !SCATTER_BCAST,'
+# endif
+#endif
 #ifdef SCORRECTION
 !
       IF (Master) WRITE (stdout,20) 'SCORRECTION',                      &
@@ -2560,6 +2606,15 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+10)=' SUSPLOAD,'
 # endif
+#endif
+#if defined SPLIT_EXECUTABLE && \
+   (defined SPLIT_I4DVAR     || defined SPLIT_RBL4DVAR || \
+    defined SPLIT_R4DVAR     || defined SPLIT_SP4DVAR)
+!
+      IF (Master) WRITE (stdout,20) 'SPLIT_EXECUTABLE',                 &
+     &   'Split 4D-Var executable for background/analysis phases'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+18)=' SPLIT_EXECUTABLE,'
 #endif
 #if defined STD_MODEL && defined FOUR_DVAR
 !
@@ -3096,6 +3151,13 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+8)=' UV_COR,'
 #endif
+#ifdef UV_DESTAGGERED
+!
+      IF (Master) WRITE (stdout,20) 'UV_DESTAGGERED',                   &
+     &   'Currents destaggering to cell-center for data assimilation'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+16)=' UV_DESTAGGERED,'
+#endif
 #ifdef UV_ADV
 # ifdef UV_C2ADVECTION
 !
@@ -3283,14 +3345,14 @@
 #if defined WDISS_THORGUZA && defined WEC_VF
 !
       IF (Master) WRITE (stdout,20) 'WDISS_THORGUZA',                   &
-     &   'Wave energy dissipation computed from Thorton/Guza 1986'
+     &   'Wave energy dissipation from Thornton and Guza 1986'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+16)=' WDISS_THORGUZA,'
 #endif
 #if defined WDISS_CHURTHOR && defined WEC_VF
 !
       IF (Master) WRITE (stdout,20) 'WDISS_CHURTHOR',                   &
-     &   'Wave energy dissipation computed from Church/Thorton 1986'
+     &   'Wave energy dissipation from Church and Thornton 1993'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+16)=' WDISS_CHURTHOR,'
 #endif

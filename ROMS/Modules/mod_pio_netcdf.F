@@ -4,24 +4,18 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2025 The ROMS Group                              !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
 !  This MODULE contains all Parallel-IO (PIO) variables definitions.   !
 !  It also contains several variables and routines to facilitate the   !
-!  manipulations of NetCDF data in parallel.  The PIO library was      !
-!  developed at NCAR and it is the basis for the SCORPIO library.      !
+!  manipulations of NetCDF data in parallel.                           !
 !                                                                      !
-!  For more information check:                                         !
-!                                                                      !
-!    https://e3sm.org/scorpio-parallel-io-library                      !
-!                                                                      !
-!  The libraries are available at GitHub:                              !
+!  The library are available at GitHub:                                !
 !                                                                      !
 !    https://github.com/NCAR/ParallelIO                                !
-!    https://github.com/E3SM-Project/scorpio                           !
 !                                                                      !
 !=======================================================================
 !
@@ -187,8 +181,8 @@
 !
 !  IO descriptor structures for tile decomposition of single and double
 !  precision data. They are used for the mapping between computational
-!  and I/O processes. It describes how the data is distributed on the
-!  computer.
+!  and I/O processes. It describes how the data is distributed on a
+!  tiled parallel application.
 !
       TYPE (IO_desc_t), pointer :: ioDesc_sp_p2dvar(:) ! (i,j)
       TYPE (IO_desc_t), pointer :: ioDesc_sp_r2dvar(:) ! (i,j)
@@ -210,6 +204,11 @@
       TYPE (IO_desc_t), pointer :: ioDesc_sp_u3dvar(:) ! (i,j,N)
       TYPE (IO_desc_t), pointer :: ioDesc_sp_v3dvar(:) ! (i,j,N)
       TYPE (IO_desc_t), pointer :: ioDesc_sp_w3dvar(:) ! (i,j,0:N)
+
+      TYPE (IO_desc_t), pointer :: ioDesZ_sp_p3dvar(:) ! (i,j,Nslice)
+      TYPE (IO_desc_t), pointer :: ioDesZ_sp_r3dvar(:) ! (i,j,Nslice)
+      TYPE (IO_desc_t), pointer :: ioDesZ_sp_u3dvar(:) ! (i,j,Nslice)
+      TYPE (IO_desc_t), pointer :: ioDesZ_sp_v3dvar(:) ! (i,j,Nslice)
 # endif
 # ifdef ADJUST_BOUNDARY
       TYPE (IO_desc_t), pointer :: ioDesc_sp_r2dobc(:) ! (ij,4,Nbrec)
@@ -249,6 +248,11 @@
       TYPE (IO_desc_t), pointer :: ioDesc_dp_u3dvar(:) ! (i,j,N)
       TYPE (IO_desc_t), pointer :: ioDesc_dp_v3dvar(:) ! (i,j,N)
       TYPE (IO_desc_t), pointer :: ioDesc_dp_w3dvar(:) ! (i,j,0:N)
+
+      TYPE (IO_desc_t), pointer :: ioDesZ_dp_p3dvar(:) ! (i,j,Nslice)
+      TYPE (IO_desc_t), pointer :: ioDesZ_dp_r3dvar(:) ! (i,j,Nslice)
+      TYPE (IO_desc_t), pointer :: ioDesZ_dp_u3dvar(:) ! (i,j,Nslice)
+      TYPE (IO_desc_t), pointer :: ioDesZ_dp_v3dvar(:) ! (i,j,Nslice)
 # endif
 # ifdef ADJUST_BOUNDARY
       TYPE (IO_desc_t), pointer :: ioDesc_dp_r2dobc(:) ! (ij,4,Nbrec)
@@ -492,8 +496,7 @@
 !  a disjointed set of dedicated I/O processes and do not  perform
 !  computations. It is possible to have several groups of computational
 !  units running separate models (coupling) where all the I/O data are
-!  sent to dedicated processes. This interface is still experimental in
-!  the SCORPIO library and not recommended for use at this time.
+!  sent to dedicated processes.
 !
 !  PIO number of mpi-aggregators to use in intra-communication mode
 !  to improve mpi-collective I/O performance.
@@ -9307,7 +9310,7 @@
 !  Synchronize requested NetCDF file.
 !-----------------------------------------------------------------------
 !
-# if defined ASYNCHRONOUS_PIO || defined ASYNCHRONOUS_SCORPIO
+# if defined ASYNCHRONOUS_PIO
       exit_flag=NoError
 # else
       CALL PIO_syncfile (pioFile)

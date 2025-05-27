@@ -4,7 +4,7 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2025 The ROMS Group            Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
@@ -1157,7 +1157,7 @@
 !
 !  Western edge, clamped boundary condition.
 !
-        ELSE IF (ad_LBC(iwest,isFsur,ng)%gradient) THEN
+        ELSE IF (ad_LBC(iwest,isFsur,ng)%clamped) THEN
           DO j=Jstr,Jend
             IF (LBC_apply(ng)%west(j)) THEN
 # ifdef MASKING

@@ -2,7 +2,7 @@
 !
 !git $Id$
 !========================================================= Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                                !
+!  Copyright (c) 2002-2025 The ROMS Group                                     !
 !    Licensed under a MIT/X style license                                     !
 !    See License_ROMS.md                                                      !
 !==============================================================================
@@ -164,6 +164,11 @@ balance(isVvel) =  T                      ! 3D momentum (u, v)
       tl_M3diff == 100.0d0                ! 3D momentum
 
        tl_Tdiff ==  50.0d0  50.0d0        ! NT tracers
+
+! Duration of the Incremental Analysis Update (days) [1:Ngrids].
+! NOTE: This option is only available for RBL4DVAR and when using RPCG.
+
+        timeIAU == 0.0d0
 
 ! Switches (T/F) to create and write error covariance normalization
 ! factors for model, initial conditions, boundary conditions, and
@@ -482,6 +487,12 @@ Sigma_max(isTvar) == 0.33d0   0.056d0  ! 1:NT tracers maximum STD
        OIFnameA == roms_oif_a.nc
        OIFnameB == roms_oif_b.nc
 
+! Input coarser grid increment file name, [1:Ngrids]. It is used in
+! mixed-resolution split 4D-Var for regridding (coarse-to-fine), where
+! the inner loops are run at lower resolution to accelerate the computations.
+
+        INCname == roms_inc.nc
+
 !
 !  GLOSSARY:
 !  =========
@@ -709,6 +720,25 @@ Sigma_max(isTvar) == 0.33d0   0.056d0  ! 1:NT tracers maximum STD
 !
 !  tl_Tdiff       Tracers type variables diffusion relaxation coefficients
 !                 (m2/s).  NT values are expected.
+!
+!------------------------------------------------------------------------------
+! Incremental Analysis Update (IAU)
+!------------------------------------------------------------------------------
+!
+!  timeIAU        Duration of the Incremental Analysis Update (days),
+!                 [1:Ngrids]. It controls the time interval over which
+!                 the IAU is applied.
+!
+!                 This option is only available for RBL4DVAR and when using
+!                 RPCG minimizer.
+!
+!                 In SPLIT_RBL4DVAR, you can the analysis phase multiple 
+!                 times experimenting with different values of timeIAU
+!                 to see which works best, without having to rerun the
+!                 inner-loops again (increment phase). You can only do
+!                 this if SPLIT_RBL4DVAR is first run with a non-zero
+!                 value of timeIAU, otherwise the initial condition will
+!                 get overwritten in the initial NetCDF file.
 !
 !------------------------------------------------------------------------------
 ! Background/model correlation parameters.
@@ -1037,13 +1067,19 @@ Sigma_max(isTvar) == 0.33d0   0.056d0  ! 1:NT tracers maximum STD
 !
 !  ERRname        Output posterior error covariance matrix file name.
 !
+! Input coarser grid increment file name, [1:Ngrids]. It is used in
+! mixed-resolution split 4D-Var for regridding (coarse-to-fine), where
+! the inner loops are run at lower resolution to accelerate the computations.
+!
+!  INCname        Coarse grid increment file name.
+!
 ! Input forcing filenames at observation locations for computing observations
 ! impacts during the analysis-forecast cycle when RBL4DVAR_FCT_SENSITIVITY and
 ! OBS_SPACE are activated:
 !
 ! (See www.myroms.org/wiki/Analysis-Forecast_Cycle_Observation_Impacts)
 !
-!  OIFnameA    Forecast initialized with 4D-Var analysis (red curve)
+!  OIFnameA       Forecast initialized with 4D-Var analysis (red curve).
 !
-!  OIFnameB    Forecast initialized with 4D_Var background (blue curve)
+!  OIFnameB       Forecast initialized with 4D_Var background (blue curve).
 !

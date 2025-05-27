@@ -4,7 +4,7 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2025 The ROMS Group                              !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
@@ -200,6 +200,8 @@
                   tl_Tdiff(itrc,ng)=Rtracer(itrc,ng)
                 END DO
               END DO
+            CASE ('timeIAU')
+              Npts=load_r(Nval, Rval, Ngrids, timeIAU)
             CASE ('LdefNRM')
               Npts=load_l(Nval, Cval, 4, Ngrids, LdefNRM)
             CASE ('LwrtNRM')
@@ -734,6 +736,14 @@
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
      &                      Ngrids, Nfiles, inp_lib, OIFB)
 #  endif
+            CASE ('IMPname')
+              label='IMP - Coarser inners loop impulse forcing'
+              Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
+     &                      Ngrids, Nfiles, out_lib, IMP)
+            CASE ('INCname')
+              label='INC - Coarser inners loops increments'
+              Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
+     &                      Ngrids, Nfiles, out_lib, INC)
           END SELECT
         END IF
       END DO
@@ -855,6 +865,8 @@
 #     endif
 #    endif
 #   endif
+          WRITE (out,100) timeIAU(ng), 'timeIAU',                       &
+     &            'Duration of the incremental analysis update (days).'
 #   ifndef I4DVAR_ANA_SENSITIVITY
 #    ifdef I4DVAR
           WRITE (out,100) GradErr, 'GradErr',                           &
@@ -1577,7 +1589,17 @@
         fname=OIFB(ng)%name
         IF (Master.and.Lwrite) WRITE (out,160)                          &
      &    'Input Obs Impacts Background File:  ', TRIM(fname)
-#   endif
+#  endif
+#  if defined SPLIT_RBL4DVAR
+        fname=IMP(ng)%name
+        IF (Master.and.Lwrite) WRITE (out,160)                          &
+     &    ' Input Coarser Grid Impulses File:  ', TRIM(fname)
+!
+        fname=INC(ng)%name
+        IF (Master.and.Lwrite) WRITE (out,160)                          &
+     &    'Input Coarser Grid Icrements File:  ', TRIM(fname)
+
+#  endif
       END DO
 
 #  if defined WEAK_CONSTRAINT && defined RPCG
@@ -1598,19 +1620,21 @@
         END IF
       END DO
 #  endif
-
-#  if defined WEAK_CONSTRAINT && defined TIME_CONV
 !
 !-----------------------------------------------------------------------
-!  Convert time decorrelation scales to seconds.
+!  Convert time scales to seconds.
 !-----------------------------------------------------------------------
 !
       DO ng=1,Ngrids
+#  ifdef FOUR_DVAR
+         timeIAU(ng)=timeIAU(ng)*86400.0_dp
+#  endif
+#  if defined WEAK_CONSTRAINT && defined TIME_CONV
         DO i=1,MstateVar
           Tdecay(i,ng)=Tdecay(i,ng)*86400.0_r8
         END DO
-      END DO
 #  endif
+      END DO
 !
   50  FORMAT (/,' READ_AssPar - Error while processing line: ',/,a)
   55  FORMAT (/,' READ_AssPar - ',a,i4,2x,i4,/,15x,a)

@@ -2,7 +2,7 @@
 #
 # git $Id$
 #######################################################################
-## Copyright (c) 2002-2024 The ROMS/TOMS Group                        #
+## Copyright (c) 2002-2025 The ROMS Group                             #
 ##   Licensed under a MIT/X style license                             #
 ##   See License_ROMS.md                                              #
 ################################################## Hernan G. Arango ###
@@ -546,7 +546,7 @@ while [ $SDAY -le $L_DN ]; do
         echo
         echo "Error while running 4D-Var System:  Cycle = ${Cycle}" \
                                                "  Outer = ${OuterLoop}" \
-			                       "  Phase = ${Phase4DVAR}"
+                                               "  Phase = ${Phase4DVAR}"
         echo "Check ${RunDir}/log.roms for details ..."
         exit 1
       fi
@@ -559,7 +559,7 @@ while [ $SDAY -le $L_DN ]; do
     echo
     echo "Running 4D-Var System:  Cycle = ${Cycle}" \
                                "  Outer = ${OuterLoop}" \
-			       "  Phase = ${Phase4DVAR}"
+                               "  Phase = ${Phase4DVAR}"
 
     My4DVarScript ${DataDir} ${SUBSTITUTE} ${OuterLoop} ${Phase4DVAR} \
                   ${OBSname} ${Fprefix} ${Fsuffix} ${Inp4DVAR}
@@ -578,7 +578,7 @@ while [ $SDAY -le $L_DN ]; do
         echo
         echo "Error while running 4D-Var System:  Cycle = ${Cycle}" \
                                                "  Outer = ${OuterLoop}" \
-			                       "  Phase = ${Phase4DVAR}"
+                                               "  Phase = ${Phase4DVAR}"
         echo "Check ${RunDir}/log.roms for details ..."
         exit 1
       fi
@@ -620,7 +620,7 @@ while [ $SDAY -le $L_DN ]; do
       if [ $? -ne 0 ] ; then
         echo
         echo "Error while running 4D-Var System:  Cycle = ${Cycle}" \
-			                       "  Phase = ${Phase4DVAR}"
+                                               "  Phase = ${Phase4DVAR}"
         echo "Check ${RunDir}/log.roms for details ..."
         exit 1
       fi

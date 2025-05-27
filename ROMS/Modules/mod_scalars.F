@@ -3,7 +3,7 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2025 The ROMS Group                              !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
@@ -407,6 +407,14 @@
 !
         logical, allocatable :: SetGridConfig(:)
 !
+!  Switch to procces (Get/Set) all input data in an application. It is
+!  set to .TRUE. by default. It is manipulated by the ROMS-JEDI
+!  interface during ROMS Phase 3 initialization that applies lateral
+!  boundary condition to the initial state vector passed by OOPS. Some
+!  applications requited input data for lateral boundary conditons.
+!
+        logical, allocatable :: ProcessInputData(:)
+!
 !  Switch to proccess nudging coefficients for radiation open boundary
 !  conditions.
 !
@@ -791,9 +799,19 @@
         real(dp) :: Ritz_tol = 1.0E-15_dp
 #endif
 !
+!  Number of output field horizontal slices and their depths (negative)
+!  in meters. It is possible to extract selected state fields like
+!  temperature, salinity, and velocity components at a constant depth
+!  in the QUICKSAVE NetCDF file. Use wise depth values based on dynamics
+!  and model bathymetry and make sure that "Nslice" is small (between 1
+!  and 4) to keep the QUICKSAVE file sizemanageable.
+!
+        integer :: Nslice = 0
+        real(r8), allocatable :: Zslice(:)
+!
 !  Vector containing USER generic parameters.
 !
-        integer :: Nuser
+        integer :: Nuser = 0
         real(r8), allocatable :: user(:)
 !
 !  Weights for the time average of 2D fields.
@@ -1261,6 +1279,14 @@
 !
         logical, allocatable :: SporadicImpulse(:)     ! intermittent
         logical, allocatable :: FrequentImpulse(:)     ! continuous
+!
+!  Logical switch to control 4D-Var incremental analysis update forcing.
+!
+        logical, allocatable :: IAUswitch(:)
+!
+!  Duration of the 4D-Var incremental inalysis update (seconds).
+!
+        real(dp), allocatable :: timeIAU(:)
 !
 !  Stability and accuracy factor used to scale the time-step of the
 !  horizontal and vertical convolution operator below its theoretical
@@ -1989,6 +2015,7 @@
 #ifdef JEDI
       IF (.not.allocated(jic)) THEN
         allocate ( jic(Ngrids) )
+        jic=0
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
 #endif
@@ -2140,6 +2167,11 @@
 
       IF (.not.allocated(SetGridConfig)) THEN
         allocate ( SetGridConfig(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+      END IF
+
+      IF (.not.allocated(ProcessInputData)) THEN
+        allocate ( ProcessInputData(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
 
@@ -3180,6 +3212,17 @@
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
       END IF
 
+      IF (.not.allocated(IAUswitch)) THEN
+        allocate ( IAUswitch(Ngrids) )
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+      END IF
+
+      IF (.not.allocated(timeIAU)) THEN
+        allocate ( timeIAU(Ngrids) )
+        timeIAU=0.0_dp
+        Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+      END IF
+
       IF (.not.allocated(dTdz_min)) THEN
         allocate ( dTdz_min(Ngrids) )
         Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
@@ -3555,6 +3598,8 @@
       IF (allocated(NrecFrc))           deallocate ( NrecFrc )
 
       IF (allocated(SetGridConfig))     deallocate ( SetGridConfig )
+
+      IF (allocated(ProcessInputData))  deallocate ( ProcessInputData )
 
       IF (allocated(NudgingCoeff))      deallocate ( NudgingCoeff )
 
@@ -4405,6 +4450,7 @@
         NudgingCoeff(ng)=.FALSE.
         ObcData(ng)=.FALSE.
         SetGridConfig(ng)=.TRUE.
+        ProcessInputData(ng)=.TRUE.
         ExtractFlag(ng)=0
         RefineScale(ng)=0
         gamma2(ng)=-1.0_r8

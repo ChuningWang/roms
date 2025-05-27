@@ -4,12 +4,12 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2025 The ROMS Group            Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
-!  This subroutine is the main driver for adjoint  ROMS/TOMS  when     !
+!  This subroutine is the main driver for adjoint  ROMS  when          !
 !  configurated as shallow water (barotropic) ocean model only. It     !
 !  advances backward  the  adjoint model  for all nested grids, if     !
 !  any, by the specified time interval (seconds), RunInterval.         !
@@ -55,9 +55,6 @@
 # endif
 # ifdef ADJUST_BOUNDARY
       USE ad_obc_adjust_mod,       ONLY : ad_obc_adjust
-# endif
-# ifdef NEARSHORE_MELLOR_NOT_YET
-!!    USE ad_radiation_stress_mod, ONLY : ad_radiation_stress
 # endif
 # ifdef AD_AVERAGES
       USE ad_set_avg_mod,          ONLY : ad_set_avg
@@ -344,19 +341,6 @@
             CALL ad_set_vbc (ng, tile)
           END DO
         END DO
-
-# ifdef NEARSHORE_MELLOR_NOT_YET
-!
-!-----------------------------------------------------------------------
-!  Compute radiation stress terms.
-!-----------------------------------------------------------------------
-!
-        DO ng=1,Ngrids
-          DO tile=last_tile(ng),first_tile(ng),-1
-            CALL ad_radiation_stress (ng, tile)
-          END DO
-        END DO
-# endif
 
 # if defined WAV_COUPLING_NOT_YET && defined MCT_LIB
 !

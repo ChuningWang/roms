@@ -1,6 +1,6 @@
 # git $Id$
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::: David Robertson :::
-# Copyright (c) 2002-2024 The ROMS/TOMS Group                           :::
+# Copyright (c) 2002-2025 The ROMS Group                                :::
 #   Licensed under a MIT/X style license                                :::
 #   See License_ROMS.md                                                 :::
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -42,6 +42,7 @@ list( APPEND _files
       ROMS/Adjoint/ad_obc_volcons.F
       ROMS/Adjoint/ad_omega.F
       ROMS/Adjoint/ad_output.F
+      ROMS/Adjoint/ad_post_initial.F
       ROMS/Adjoint/ad_pre_step3d.F
       ROMS/Adjoint/ad_prsgrd.F
       ROMS/Adjoint/ad_rho_eos.F

@@ -2,7 +2,7 @@
 #
 # git $Id$
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-# Copyright (c) 2002-2024 The ROMS/TOMS Group                           :::
+# Copyright (c) 2002-2025 The ROMS Group                                :::
 #   Licensed under a MIT/X style license                                :::
 #   See License_ROMS.md                                                 :::
 #::::::::::::::::::::::::::::::::::::::::::::::::::::: Hernan G. Arango :::
@@ -178,7 +178,7 @@ case "$FORT" in
           export      NF_CONFIG=${NETCDF}/bin/nf-config
           export  NETCDF_INCDIR=${NETCDF}/include
           export        NETCDF4=1
-	fi
+        fi
       else
         export         ESMF_DIR=${MPI_SOFT}/esmf_nc3
         export           NETCDF=/opt/intelsoft/serial/netcdf3
@@ -192,15 +192,6 @@ case "$FORT" in
       export              PIO=${MPI_SOFT}/pio
       export       PIO_LIBDIR=${PIO}/lib
       export       PIO_INCDIR=${PIO}/include
-      export          PNETCDF=${MPI_SOFT}/pnetcdf
-      export   PNETCDF_LIBDIR=${PNETCDF}/lib
-      export   PNETCDF_INCDIR=${PNETCDF}/include
-    fi
-
-    if [ -n "${USE_SCORPIO:+1}" ]; then
-      export          SCORPIO=${MPI_SOFT}/scorpio
-      export       PIO_LIBDIR=${SCORPIO}/lib
-      export       PIO_INCDIR=${SCORPIO}/include
       export          PNETCDF=${MPI_SOFT}/pnetcdf
       export   PNETCDF_LIBDIR=${PNETCDF}/lib
       export   PNETCDF_INCDIR=${PNETCDF}/include
@@ -283,15 +274,6 @@ case "$FORT" in
       export   PNETCDF_INCDIR=${PNETCDF}/include
     fi
 
-    if [ -n "${USE_SCORPIO:+1}" ]; then
-      export          SCORPIO=${MPI_SOFT}/scorpio
-      export       PIO_LIBDIR=${SCORPIO}/lib
-      export       PIO_INCDIR=${SCORPIO}/include
-      export          PNETCDF=${MPI_SOFT}/pnetcdf
-      export   PNETCDF_LIBDIR=${PNETCDF}/lib
-      export   PNETCDF_INCDIR=${PNETCDF}/include
-    fi
-
     if [ -n "${USE_HDF5:+1}" ]; then
       if [ -n "${USE_PARALLEL_IO:+1}" ] && [ -n "${USE_MPI:+1}" ]; then
         export           HDF5=${MPI_SOFT}/hdf5
@@ -362,15 +344,6 @@ case "$FORT" in
       export              PIO=${MPI_SOFT}/pio
       export       PIO_LIBDIR=${PIO}/lib
       export       PIO_INCDIR=${PIO}/include
-      export          PNETCDF=${MPI_SOFT}/pnetcdf
-      export   PNETCDF_LIBDIR=${PNETCDF}/lib
-      export   PNETCDF_INCDIR=${PNETCDF}/include
-    fi
-
-    if [ -n "${USE_SCORPIO:+1}" ]; then
-      export          SCORPIO=${MPI_SOFT}/scorpio
-      export       PIO_LIBDIR=${SCORPIO}/lib
-      export       PIO_INCDIR=${SCORPIO}/include
       export          PNETCDF=${MPI_SOFT}/pnetcdf
       export   PNETCDF_LIBDIR=${PNETCDF}/lib
       export   PNETCDF_INCDIR=${PNETCDF}/include

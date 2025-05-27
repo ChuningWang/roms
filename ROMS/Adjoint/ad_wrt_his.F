@@ -4,7 +4,7 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2025 The ROMS Group                              !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
@@ -94,7 +94,7 @@
 !
       SELECT CASE (ADM(ng)%IOtype)
         CASE (io_nf90)
-          CALL ad_wrt_his_nf90 (ng, tile,                               &
+          CALL ad_wrt_his_nf90 (ng, iADM, tile,                         &
 # ifdef ADJUST_BOUNDARY
      &                          LBij, UBij,                             &
 # endif
@@ -102,7 +102,7 @@
 
 # if defined PIO_LIB && defined DISTRIBUTE
         CASE (io_pio)
-          CALL ad_wrt_his_pio (ng, tile,                                &
+          CALL ad_wrt_his_pio (ng, iADM, tile,                          &
 #  ifdef ADJUST_BOUNDARY
      &                         LBij, UBij,                              &
 #  endif
@@ -121,7 +121,7 @@
       END SUBROUTINE ad_wrt_his
 !
 !***********************************************************************
-      SUBROUTINE ad_wrt_his_nf90 (ng, tile,                             &
+      SUBROUTINE ad_wrt_his_nf90 (ng, model, tile,                      &
 # ifdef ADJUST_BOUNDARY
      &                            LBij, UBij,                           &
 # endif
@@ -132,7 +132,7 @@
 !
 !  Imported variable declarations.
 !
-      integer, intent(in) :: ng, tile
+      integer, intent(in) :: ng, model, tile
 # ifdef ADJUST_BOUNDARY
       integer, intent(in) :: LBij, UBij
 # endif
@@ -244,7 +244,7 @@
           Tval(1)=time(ng)
 # endif
         END IF
-        CALL netcdf_put_fvar (ng, iADM, ADM(ng)%name,                   &
+        CALL netcdf_put_fvar (ng, model, ADM(ng)%name,                  &
      &                        TRIM(Vname(1,idtime)), tval,              &
      &                        (/ADM(ng)%Rindex/), (/1/),                &
      &                        ncid = ADM(ng)%ncid,                      &
@@ -260,7 +260,7 @@
 !
       scale=1.0_dp                          ! m2/s2
       gtype=gfactor*u3dvar
-      status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idUsms,                &
+      status=nf_fwrite3d(ng, model, ADM(ng)%ncid, idUsms,               &
      &                   ADM(ng)%Vid(idUsms),                           &
      &                   ADM(ng)%Rindex, gtype,                         &
      &                   LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,       &
@@ -277,11 +277,13 @@
         RETURN
       END IF
 !
-!  Write out surface V-momentum stress.
+!  Write out surface V-momentum stress.   Notice that the stress has its
+!  own fixed time-dimension (of size Nfrec) to allow 4DVAR adjustments
+!  at other times in addition to initialization time.
 !
       scale=1.0_dp                          ! m2/s2
       gtype=gfactor*v3dvar
-      status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idVsms,                &
+      status=nf_fwrite3d(ng, model, ADM(ng)%ncid, idVsms,               &
      &                   ADM(ng)%Vid(idVsms),                           &
      &                   ADM(ng)%Rindex, gtype,                         &
      &                   LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,       &
@@ -308,7 +310,7 @@
         IF (Lstflux(itrc,ng)) THEN
           scale=1.0_dp                      ! kinematic flux units
           gtype=gfactor*r3dvar
-          status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idTsur(itrc),      &
+          status=nf_fwrite3d(ng, model, ADM(ng)%ncid, idTsur(itrc),     &
      &                       ADM(ng)%Vid(idTsur(itrc)),                 &
      &                       ADM(ng)%Rindex, gtype,                     &
      &                       LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,   &
@@ -333,7 +335,7 @@
       IF (Hout(idbath,ng)) THEN
         scale=1.0_dp
         gtype=gfactor*r2dvar
-        status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idbath,              &
+        status=nf_fwrite2d(ng, model, ADM(ng)%ncid, idbath,             &
      &                     ADM(ng)%Vid(idbath),                         &
      &                     ADM(ng)%Rindex, gtype,                       &
      &                     LBi, UBi, LBj, UBj, scale,                   &
@@ -351,6 +353,57 @@
           RETURN
         END IF
       END IF
+
+# ifdef SOLVE3D
+!
+!  Write time-varying depths of RHO-points.
+!
+      IF (Hout(idpthR,ng)) THEN
+        scale=1.0_dp
+        gtype=gfactor*r3dvar
+        status=nf_fwrite3d(ng, model, ADM(ng)%ncid, idpthR,             &
+     &                     ADM(ng)%Vid(idpthR),                         &
+     &                     ADM(ng)%Rindex, gtype,                       &
+     &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
+#  ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#  endif
+     &                     GRID(ng) % ad_z_r,                           &
+     &                     SetFillVal = .FALSE.)
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+          IF (Master) THEN
+            WRITE (stdout,20) TRIM(Vname(1,idpthR)), ADM(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+!
+!  Write time-varying depths of W-points.
+!
+      IF (Hout(idpthW,ng)) THEN
+        scale=1.0_dp
+        gtype=gfactor*w3dvar
+        status=nf_fwrite3d(ng, model, ADM(ng)%ncid, idpthW,             &
+     &                     ADM(ng)%Vid(idpthW),                         &
+     &                     ADM(ng)%Rindex, gtype,                       &
+     &                     LBi, UBi, LBj, UBj, 0, N(ng), scale,         &
+#  ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#  endif
+     &                     GRID(ng) % ad_z_w,                           &
+     &                     SetFillVal = .FALSE.)
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+          IF (Master) THEN
+            WRITE (stdout,20) TRIM(Vname(1,idpthW)), ADM(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+# endif
 !
 !  Write out free-surface (m).
 !
@@ -359,7 +412,7 @@
         IF (WRTforce(ng)) THEN
           scale=1.0_dp
           gtype=gfactor*r2dvar
-          status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idFsur,            &
+          status=nf_fwrite2d(ng, model, ADM(ng)%ncid, idFsur,           &
      &                       ADM(ng)%Vid(idFsur),                       &
      &                       ADM(ng)%Rindex, gtype,                     &
      &                       LBi, UBi, LBj, UBj, scale,                 &
@@ -380,7 +433,7 @@
           scale=1.0_dp
           gtype=gfactor*r2dvar
           IF (LwrtState2d(ng)) THEN
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idFsur,          &
+            status=nf_fwrite2d(ng, model, ADM(ng)%ncid, idFsur,         &
      &                         ADM(ng)%Vid(idFsur),                     &
      &                         ADM(ng)%Rindex, gtype,                   &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -394,7 +447,7 @@
      &                         OCEAN(ng)% ad_zeta(:,:,kout))
 # endif
           ELSE
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idFsur,          &
+            status=nf_fwrite2d(ng, model, ADM(ng)%ncid, idFsur,         &
      &                         ADM(ng)%Vid(idFsur),                     &
      &                         ADM(ng)%Rindex, gtype,                   &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -427,7 +480,7 @@
 !
       IF (ANY(Lobc(:,isFsur,ng))) THEN
         scale=1.0_dp
-        status=nf_fwrite2d_bry(ng, iADM, ADM(ng)%name, ADM(ng)%ncid,    &
+        status=nf_fwrite2d_bry(ng, model, ADM(ng)%name, ADM(ng)%ncid,   &
      &                         Vname(1,idSbry(isFsur)),                 &
      &                         ADM(ng)%Vid(idSbry(isFsur)),             &
      &                         ADM(ng)%Rindex, r2dvar,                  &
@@ -453,7 +506,7 @@
         IF (WRTforce(ng)) THEN
           scale=1.0_dp
           gtype=gfactor*u2dvar
-          status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idUbar,            &
+          status=nf_fwrite2d(ng, model, ADM(ng)%ncid, idUbar,           &
      &                       ADM(ng)%Vid(idUbar),                       &
      &                       ADM(ng)%Rindex, gtype,                     &
      &                       LBi, UBi, LBj, UBj, scale,                 &
@@ -474,7 +527,7 @@
           scale=1.0_dp
           gtype=gfactor*u2dvar
           IF (LwrtState2d(ng)) THEN
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idUbar,          &
+            status=nf_fwrite2d(ng, model, ADM(ng)%ncid, idUbar,         &
      &                         ADM(ng)%Vid(idUbar),                     &
      &                         ADM(ng)%Rindex, gtype,                   &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -483,7 +536,7 @@
 # endif
      &                         OCEAN(ng) % ad_ubar(:,:,kout))
           ELSE
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idUbar,          &
+            status=nf_fwrite2d(ng, model, ADM(ng)%ncid, idUbar,         &
      &                         ADM(ng)%Vid(idUbar),                     &
      &                         ADM(ng)%Rindex, gtype,                   &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -511,7 +564,7 @@
 !
       IF (ANY(Lobc(:,isUbar,ng))) THEN
         scale=1.0_dp
-        status=nf_fwrite2d_bry(ng, iADM, ADM(ng)%name, ADM(ng)%ncid,    &
+        status=nf_fwrite2d_bry(ng, model, ADM(ng)%name, ADM(ng)%ncid,   &
      &                         Vname(1,idSbry(isUbar)),                 &
      &                         ADM(ng)%Vid(idSbry(isUbar)),             &
      &                         ADM(ng)%Rindex, u2dvar,                  &
@@ -537,7 +590,7 @@
         IF (WRTforce(ng)) THEN
           scale=1.0_dp
           gtype=gfactor*v2dvar
-          status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idVbar,            &
+          status=nf_fwrite2d(ng, model, ADM(ng)%ncid, idVbar,           &
      &                       ADM(ng)%Vid(idVbar),                       &
      &                       ADM(ng)%Rindex, gtype,                     &
      &                       LBi, UBi, LBj, UBj, scale,                 &
@@ -558,7 +611,7 @@
           scale=1.0_dp
           gtype=gfactor*v2dvar
           IF (LwrtState2d(ng)) THEN
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idVbar,          &
+            status=nf_fwrite2d(ng, model, ADM(ng)%ncid, idVbar,         &
      &                         ADM(ng)%Vid(idVbar),                     &
      &                         ADM(ng)%Rindex, gtype,                   &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -567,7 +620,7 @@
 # endif
      &                         OCEAN(ng) % ad_vbar(:,:,kout))
           ELSE
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idVbar,          &
+            status=nf_fwrite2d(ng, model, ADM(ng)%ncid, idVbar,         &
      &                         ADM(ng)%Vid(idVbar),                     &
      &                         ADM(ng)%Rindex, gtype,                   &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -595,7 +648,7 @@
 !
       IF (ANY(Lobc(:,isVbar,ng))) THEN
         scale=1.0_dp
-        status=nf_fwrite2d_bry(ng, iADM, ADM(ng)%name, ADM(ng)%ncid,    &
+        status=nf_fwrite2d_bry(ng, model, ADM(ng)%name, ADM(ng)%ncid,   &
      &                         Vname(1,idSbry(isVbar)),                 &
      &                         ADM(ng)%Vid(idSbry(isVbar)),             &
      &                         ADM(ng)%Rindex, v2dvar,                  &
@@ -623,7 +676,7 @@
         IF (WRTforce(ng)) THEN
           scale=1.0_dp
           gtype=gfactor*u3dvar
-          status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idUvel,            &
+          status=nf_fwrite3d(ng, model, ADM(ng)%ncid, idUvel,           &
      &                       ADM(ng)%Vid(idUvel),                       &
      &                       ADM(ng)%Rindex, gtype,                     &
      &                       LBi, UBi, LBj, UBj, 1, N(ng), scale,       &
@@ -646,7 +699,7 @@
 #  ifdef AD_OUTPUT_STATE
           IF (LwrtState3d(ng)) THEN
 #  endif
-            status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idUvel,          &
+            status=nf_fwrite3d(ng, model, ADM(ng)%ncid, idUvel,         &
      &                         ADM(ng)%Vid(idUvel),                     &
      &                         ADM(ng)%Rindex, gtype,                   &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
@@ -656,7 +709,7 @@
      &                         OCEAN(ng) % ad_u(:,:,:,nout))
 #  ifdef AD_OUTPUT_STATE
           ELSE
-            status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idUvel,          &
+            status=nf_fwrite3d(ng, model, ADM(ng)%ncid, idUvel,         &
      &                         ADM(ng)%Vid(idUvel),                     &
      &                         ADM(ng)%Rindex, gtype,                   &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
@@ -685,7 +738,7 @@
 !
       IF (ANY(Lobc(:,isUvel,ng))) THEN
         scale=1.0_dp
-        status=nf_fwrite3d_bry(ng, iADM, ADM(ng)%name, ADM(ng)%ncid,    &
+        status=nf_fwrite3d_bry(ng, model, ADM(ng)%name, ADM(ng)%ncid,   &
      &                         Vname(1,idSbry(isUvel)),                 &
      &                         ADM(ng)%Vid(idSbry(isUvel)),             &
      &                         ADM(ng)%Rindex, u3dvar,                  &
@@ -711,7 +764,7 @@
         IF (WRTforce(ng)) THEN
           scale=1.0_dp
           gtype=gfactor*v3dvar
-          status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idVvel,            &
+          status=nf_fwrite3d(ng, model, ADM(ng)%ncid, idVvel,           &
      &                       ADM(ng)%Vid(idVvel),                       &
      &                       ADM(ng)%Rindex, gtype,                     &
      &                       LBi, UBi, LBj, UBj, 1, N(ng), scale,       &
@@ -734,7 +787,7 @@
 #  ifdef AD_OUTPUT_STATE
           IF (LwrtState3d(ng)) THEN
 #  endif
-            status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idVvel,          &
+            status=nf_fwrite3d(ng, model, ADM(ng)%ncid, idVvel,         &
      &                         ADM(ng)%Vid(idVvel),                     &
      &                         ADM(ng)%Rindex, gtype,                   &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
@@ -744,7 +797,7 @@
      &                         OCEAN(ng) % ad_v(:,:,:,nout))
 #  ifdef AD_OUTPUT_STATE
           ELSE
-            status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idVvel,          &
+            status=nf_fwrite3d(ng, model, ADM(ng)%ncid, idVvel,         &
      &                         ADM(ng)%Vid(idVvel),                     &
      &                         ADM(ng)%Rindex, gtype,                   &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
@@ -773,7 +826,7 @@
 !
       IF (ANY(Lobc(:,isVvel,ng))) THEN
         scale=1.0_dp
-        status=nf_fwrite3d_bry(ng, iADM, ADM(ng)%name, ADM(ng)%ncid,    &
+        status=nf_fwrite3d_bry(ng, model, ADM(ng)%name, ADM(ng)%ncid,   &
      &                         Vname(1,idSbry(isVvel)),                 &
      &                         ADM(ng)%Vid(idSbry(isVvel)),             &
      &                         ADM(ng)%Rindex, v3dvar,                  &
@@ -784,6 +837,52 @@
           IF (Master) THEN
             WRITE (stdout,20) TRIM(Vname(1,idSbry(isVvel))),            &
      &                        ADM(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+#  endif
+#  if defined JEDI || defined UV_DESTAGGERED
+!
+!  Write out 3D Eastward momentum (m/s) at RHO-points, A-grid.
+!
+      IF (Hout(idu3dE,ng)) THEN
+        scale=1.0_dp
+        gtype=gfactor*r3dvar
+        status=nf_fwrite3d(ng, model, ADM(ng)%ncid, idu3dE,             &
+     &                     ADM(ng)%Vid(idu3dE),                         &
+     &                     ADM(ng)%Rindex, gtype,                       &
+     &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
+#   ifdef MASKING
+     &                     GRID(ng) % rmask_full,                       &
+#   endif
+     &                     OCEAN(ng) % ad_ua)
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+          IF (Master) THEN
+            WRITE (stdout,20) TRIM(Vname(1,idu3dE)), ADM(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+!
+!  Write out 3D Northward momentum (m/s) at RHO-points, A-grid.
+!
+      IF (Hout(idv3dN,ng)) THEN
+        status=nf_fwrite3d(ng, model, ADM(ng)%ncid, idv3dN,             &
+     &                     ADM(ng)%Vid(idv3dN),                         &
+     &                     ADM(ng)%Rindex, gtype,                       &
+     &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
+#   ifdef MASKING
+     &                     GRID(ng) % rmask_full,                       &
+#   endif
+     &                     OCEAN(ng) % ad_va)
+        IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+          IF (Master) THEN
+            WRITE (stdout,20) TRIM(Vname(1,idv3dN)), ADM(ng)%Rindex
           END IF
           exit_flag=3
           ioerror=status
@@ -806,7 +905,7 @@
      &                    GRID(ng) % pn,                                &
      &                    OCEAN(ng) % ad_W_sol,                         &
      &                    Wr3d)
-        status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idOvel,              &
+        status=nf_fwrite3d(ng, model, ADM(ng)%ncid, idOvel,             &
      &                     ADM(ng)%Vid(idOvel),                         &
      &                     ADM(ng)%Rindex, gtype,                       &
      &                     LBi, UBi, LBj, UBj, 0, N(ng), scale,         &
@@ -833,7 +932,7 @@
           IF (WRTforce(ng)) THEN
             scale=1.0_dp
             gtype=gfactor*r3dvar
-            status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idTvar(itrc),    &
+            status=nf_fwrite3d(ng, model, ADM(ng)%ncid, idTvar(itrc),   &
      &                         ADM(ng)%Tid(itrc),                       &
      &                         ADM(ng)%Rindex, gtype,                   &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
@@ -857,7 +956,7 @@
 #  ifdef AD_OUTPUT_STATE
             IF (LwrtState3d(ng)) THEN
 #  endif
-              status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idTvar(itrc),  &
+              status=nf_fwrite3d(ng, model, ADM(ng)%ncid, idTvar(itrc), &
      &                           ADM(ng)%Tid(itrc),                     &
      &                           ADM(ng)%Rindex, gtype,                 &
      &                           LBi, UBi, LBj, UBj, 1, N(ng), scale,   &
@@ -867,7 +966,7 @@
      &                           OCEAN(ng) % ad_t(:,:,:,nout,itrc))
 #  ifdef AD_OUTPUT_STATE
             ELSE
-              status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idTvar(itrc),  &
+              status=nf_fwrite3d(ng, model, ADM(ng)%ncid, idTvar(itrc), &
      &                           ADM(ng)%Tid(itrc),                     &
      &                           ADM(ng)%Rindex, gtype,                 &
      &                           LBi, UBi, LBj, UBj, 1, N(ng), scale,   &
@@ -899,7 +998,7 @@
       DO itrc=1,NT(ng)
         IF (ANY(Lobc(:,isTvar(itrc),ng))) THEN
           scale=1.0_dp
-          status=nf_fwrite3d_bry(ng, iADM, ADM(ng)%name, ADM(ng)%ncid,  &
+          status=nf_fwrite3d_bry(ng, model, ADM(ng)%name, ADM(ng)%ncid, &
      &                           Vname(1,idSbry(isTvar(itrc))),         &
      &                           ADM(ng)%Vid(idSbry(isTvar(itrc))),     &
      &                           ADM(ng)%Rindex, r3dvar,                &
@@ -925,7 +1024,7 @@
       IF (Hout(idDano,ng)) THEN
         scale=1.0_dp
         gtype=gfactor*r3dvar
-        status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idDano,              &
+        status=nf_fwrite3d(ng, model, ADM(ng)%ncid, idDano,             &
      &                     ADM(ng)%Vid(idDano),                         &
      &                     ADM(ng)%Rindex, gtype,                       &
      &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
@@ -948,7 +1047,7 @@
       IF (Hout(idVvis,ng)) THEN
         scale=1.0_dp
         gtype=gfactor*w3dvar
-        status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idVvis,              &
+        status=nf_fwrite3d(ng, model, ADM(ng)%ncid, idVvis,             &
      &                     ADM(ng)%Vid(idVvis),                         &
      &                     ADM(ng)%Rindex, gtype,                       &
      &                     LBi, UBi, LBj, UBj, 0, N(ng), scale,         &
@@ -972,7 +1071,7 @@
       IF (Hout(idTdif,ng)) THEN
         scale=1.0_dp
         gtype=gfactor*w3dvar
-        status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idTdif,              &
+        status=nf_fwrite3d(ng, model, ADM(ng)%ncid, idTdif,             &
      &                     ADM(ng)%Vid(idTdif),                         &
      &                     ADM(ng)%Rindex, gtype,                       &
      &                     LBi, UBi, LBj, UBj, 0, N(ng), scale,         &
@@ -997,7 +1096,7 @@
       IF (Hout(idSdif,ng)) THEN
         scale=1.0_dp
         gtype=gfactor*w3dvar
-        status=nf_fwrite3d(ng, iADM, ADM(ng)%ncid, idSdif,              &
+        status=nf_fwrite3d(ng, model, ADM(ng)%ncid, idSdif,             &
      &                     ADM(ng)%Vid(idSdif),                         &
      &                     ADM(ng)%Rindex, gtype,                       &
      &                     LBi, UBi, LBj, UBj, 0, N(ng), scale,         &
@@ -1034,7 +1133,7 @@
           scale=1.0_dp
 #   endif
           gtype=gfactor*r2dvar
-          status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idTsur(itrc),      &
+          status=nf_fwrite2d(ng, model, ADM(ng)%ncid, idTsur(itrc),     &
      &                       ADM(ng)%Vid(idTsur(itrc)),                 &
      &                       ADM(ng)%Rindex, gtype,                     &
      &                       LBi, UBi, LBj, UBj, scale,                 &
@@ -1068,7 +1167,7 @@
         scale=1.0_dp
 #  endif
         gtype=gfactor*u2dvar
-        status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idUsms,              &
+        status=nf_fwrite2d(ng, model, ADM(ng)%ncid, idUsms,             &
      &                     ADM(ng)%Vid(idUsms),                         &
      &                     ADM(ng)%Rindex, gtype,                       &
      &                     LBi, UBi, LBj, UBj, scale,                   &
@@ -1097,7 +1196,7 @@
         scale=1.0_dp
 #  endif
         gtype=gfactor*v2dvar
-        status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idVsms,              &
+        status=nf_fwrite2d(ng, model, ADM(ng)%ncid, idVsms,             &
      &                     ADM(ng)%Vid(idVsms),                         &
      &                     ADM(ng)%Rindex, gtype,                       &
      &                     LBi, UBi, LBj, UBj, scale,                   &
@@ -1122,7 +1221,7 @@
 !!      scale=-rho0
         scale=1.0_dp
         gtype=gfactor*u2dvar
-        status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idUbms,              &
+        status=nf_fwrite2d(ng, model, ADM(ng)%ncid, idUbms,             &
      &                     ADM(ng)%Vid(idUbms),                         &
      &                     ADM(ng)%Rindex, gtype,                       &
      &                     LBi, UBi, LBj, UBj, scale,                   &
@@ -1146,7 +1245,7 @@
 !!      scale=-rho0
         scale=1.0_dp
         gtype=gfactor*v2dvar
-        status=nf_fwrite2d(ng, iADM, ADM(ng)%ncid, idVbms,              &
+        status=nf_fwrite2d(ng, model, ADM(ng)%ncid, idVbms,             &
      &                     ADM(ng)%Vid(idVbms),                         &
      &                     ADM(ng)%Rindex, gtype,                       &
      &                     LBi, UBi, LBj, UBj, scale,                   &
@@ -1169,7 +1268,7 @@
 !  processes to access data immediately after it is written.
 !-----------------------------------------------------------------------
 !
-      CALL netcdf_sync (ng, iADM, ADM(ng)%name, ADM(ng)%ncid)
+      CALL netcdf_sync (ng, model, ADM(ng)%name, ADM(ng)%ncid)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
   10  FORMAT (2x,'AD_WRT_HIS_NF90  - writing adjoint', t42,             &
@@ -1195,7 +1294,7 @@
 # if defined PIO_LIB && defined DISTRIBUTE
 !
 !***********************************************************************
-      SUBROUTINE ad_wrt_his_pio (ng, tile,                              &
+      SUBROUTINE ad_wrt_his_pio (ng, model, tile,                       &
 #  ifdef ADJUST_BOUNDARY
      &                           LBij, UBij,                            &
 #  endif
@@ -1206,7 +1305,7 @@
 !
 !  Imported variable declarations.
 !
-      integer, intent(in) :: ng, tile
+      integer, intent(in) :: ng, model, tile
 #  ifdef ADJUST_BOUNDARY
       integer, intent(in) :: LBij, UBij
 #  endif
@@ -1311,7 +1410,7 @@
           Tval(1)=time(ng)
 #  endif
         END IF
-        CALL pio_netcdf_put_fvar (ng, iADM, ADM(ng)%name,               &
+        CALL pio_netcdf_put_fvar (ng, model, ADM(ng)%name,              &
      &                            TRIM(Vname(1,idtime)), tval,          &
      &                            (/ADM(ng)%Rindex/), (/1/),            &
      &                            pioFile = ADM(ng)%pioFile,            &
@@ -1332,7 +1431,7 @@
         ioDesc => ioDesc_sp_u2dfrc(ng)
       END IF
 !
-      status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idUsms,             &
+      status=nf_fwrite3d(ng, model, ADM(ng)%pioFile, idUsms,            &
      &                   ADM(ng)%pioVar(idUsms),                        &
      &                   ADM(ng)%Rindex, ioDesc,                        &
      &                   LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,       &
@@ -1358,7 +1457,7 @@
         ioDesc => ioDesc_sp_v2dfrc(ng)
       END IF
 !
-      status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idVsms,             &
+      status=nf_fwrite3d(ng, model, ADM(ng)%pioFile, idVsms,            &
      &                   ADM(ng)%pioVar(idVsms),                        &
      &                   ADM(ng)%Rindex, ioDesc,                        &
      &                   LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,       &
@@ -1390,7 +1489,7 @@
             ioDesc => ioDesc_sp_r2dfrc(ng)
           END IF
 !
-          status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idTsur(itrc),   &
+          status=nf_fwrite3d(ng, model, ADM(ng)%pioFile, idTsur(itrc),  &
      &                       ADM(ng)%pioVar(idTsur(itrc)),              &
      &                       ADM(ng)%Rindex, ioDesc,                    &
      &                       LBi, UBi, LBj, UBj, 1, Nfrec(ng), scale,   &
@@ -1420,7 +1519,7 @@
           ioDesc => ioDesc_sp_r2dvar(ng)
         END IF
 !
-        status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idbath,           &
+        status=nf_fwrite2d(ng, model, ADM(ng)%pioFile, idbath,          &
      &                     ADM(ng)%pioVar(idbath),                      &
      &                     ADM(ng)%Rindex, ioDesc,                      &
      &                     LBi, UBi, LBj, UBj, scale,                   &
@@ -1438,6 +1537,67 @@
           RETURN
         END IF
       END IF
+
+#  ifdef SOLVE3D
+!
+!  Write time-varying depths of RHO-points.
+!
+      IF (Hout(idpthR,ng)) THEN
+        scale=1.0_dp
+        IF (HIS(ng)%pioVar(idpthR)%dkind.eq.PIO_double) THEN
+          ioDesc => ioDesc_dp_r3dvar(ng)
+        ELSE
+          ioDesc => ioDesc_sp_r3dvar(ng)
+        END IF
+        status=nf_fwrite3d(ng, model, ADM(ng)%pioFile, idpthR,          &
+     &                     ADM(ng)%pioVar(idpthR),                      &
+     &                     ADM(ng)%Rindex,                              &
+     &                     ioDesc,                                      &
+     &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
+#   ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#   endif
+     &                     GRID(ng) % ad_z_r,                           &
+     &                     SetFillVal = .FALSE.)
+        IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+          IF (Master) THEN
+            WRITE (stdout,20) TRIM(Vname(1,idpthR)), ADM(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+!
+!  Write time-varying depths of W-points.
+!
+      IF (Hout(idpthW,ng)) THEN
+        scale=1.0_dp
+        IF (HIS(ng)%pioVar(idpthW)%dkind.eq.PIO_double) THEN
+          ioDesc => ioDesc_dp_w3dvar(ng)
+        ELSE
+          ioDesc => ioDesc_sp_w3dvar(ng)
+        END IF
+        status=nf_fwrite3d(ng, model, ADM(ng)%pioFile, idpthW,          &
+     &                     ADM(ng)%pioVar(idpthW),                      &
+     &                     ADM(ng)%Rindex,                              &
+     &                     ioDesc,                                      &
+     &                     LBi, UBi, LBj, UBj, 0, N(ng), scale,         &
+#   ifdef MASKING
+     &                     GRID(ng) % rmask,                            &
+#   endif
+     &                     GRID(ng) % ad_z_w,                           &
+     &                     SetFillVal = .FALSE.)
+        IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+          IF (Master) THEN
+            WRITE (stdout,20) TRIM(Vname(1,idpthW)), ADM(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+#  endif
 !
 !  Write out free-surface (m).
 !
@@ -1451,7 +1611,7 @@
       IF (Hout(idFsur,ng)) THEN
 #  ifdef WEAK_CONSTRAINT
         IF (WRTforce(ng)) THEN
-          status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idFsur,         &
+          status=nf_fwrite2d(ng, model, ADM(ng)%pioFile, idFsur,        &
      &                       ADM(ng)%pioVar(idFsur),                    &
      &                       ADM(ng)%Rindex, ioDesc,                    &
      &                       LBi, UBi, LBj, UBj, scale,                 &
@@ -1470,7 +1630,7 @@
         ELSE
 #  endif
           IF (LwrtState2d(ng)) THEN
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idFsur,       &
+            status=nf_fwrite2d(ng, model, ADM(ng)%pioFile, idFsur,      &
      &                         ADM(ng)%pioVar(idFsur),                  &
      &                         ADM(ng)%Rindex, ioDesc,                  &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -1484,7 +1644,7 @@
      &                         OCEAN(ng)% ad_zeta(:,:,kout))
 #  endif
           ELSE
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idFsur,       &
+            status=nf_fwrite2d(ng, model, ADM(ng)%pioFile, idFsur,      &
      &                         ADM(ng)%pioVar(idFsur),                  &
      &                         ADM(ng)%Rindex, ioDesc,                  &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -1523,7 +1683,7 @@
           ioDesc => ioDesc_sp_r2dobc(ng)
         END IF
 !
-        status=nf_fwrite2d_bry(ng, iADM, ADM(ng)%name,                  &
+        status=nf_fwrite2d_bry(ng, model, ADM(ng)%name,                 &
      &                         ADM(ng)%pioFile,                         &
      &                         Vname(1,idSbry(isFsur)),                 &
      &                         ADM(ng)%pioVar(idSbry(isFsur)),          &
@@ -1555,7 +1715,7 @@
       IF (Hout(idUbar,ng)) THEN
 #  ifdef WEAK_CONSTRAINT
         IF (WRTforce(ng)) THEN
-          status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idUbar,         &
+          status=nf_fwrite2d(ng, model, ADM(ng)%pioFile, idUbar,        &
      &                       ADM(ng)%pioVar(idUbar),                    &
      &                       ADM(ng)%Rindex, ioDesc,                    &
      &                       LBi, UBi, LBj, UBj, scale,                 &
@@ -1574,7 +1734,7 @@
         ELSE
 #  endif
           IF (LwrtState2d(ng)) THEN
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idUbar,       &
+            status=nf_fwrite2d(ng, model, ADM(ng)%pioFile, idUbar,      &
      &                         ADM(ng)%pioVar(idUbar),                  &
      &                         ADM(ng)%Rindex, ioDesc,                  &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -1583,7 +1743,7 @@
 #  endif
      &                         OCEAN(ng) % ad_ubar(:,:,kout))
           ELSE
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idUbar,       &
+            status=nf_fwrite2d(ng, model, ADM(ng)%pioFile, idUbar,      &
      &                         ADM(ng)%pioVar(idUbar),                  &
      &                         ADM(ng)%Rindex, ioDesc,                  &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -1617,7 +1777,7 @@
           ioDesc => ioDesc_sp_u2dobc(ng)
         END IF
 !
-        status=nf_fwrite2d_bry(ng, iADM, ADM(ng)%name,                  &
+        status=nf_fwrite2d_bry(ng, model, ADM(ng)%name,                 &
      &                         ADM(ng)%pioFile,                         &
      &                         Vname(1,idSbry(isUbar)),                 &
      &                         ADM(ng)%pioVar(idSbry(isUbar)),          &
@@ -1650,7 +1810,7 @@
 
 #  ifdef WEAK_CONSTRAINT
         IF (WRTforce(ng)) THEN
-          status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idVbar,         &
+          status=nf_fwrite2d(ng, model, ADM(ng)%pioFile, idVbar,        &
      &                       ADM(ng)%pioVar(idVbar),                    &
      &                       ADM(ng)%Rindex, ioDesc,                    &
      &                       LBi, UBi, LBj, UBj, scale,                 &
@@ -1669,7 +1829,7 @@
         ELSE
 #  endif
           IF (LwrtState2d(ng)) THEN
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idVbar,       &
+            status=nf_fwrite2d(ng, model, ADM(ng)%pioFile, idVbar,      &
      &                         ADM(ng)%pioVar(idVbar),                  &
      &                         ADM(ng)%Rindex, ioDesc,                  &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -1678,7 +1838,7 @@
 #  endif
      &                         OCEAN(ng) % ad_vbar(:,:,kout))
           ELSE
-            status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idVbar,       &
+            status=nf_fwrite2d(ng, model, ADM(ng)%pioFile, idVbar,      &
      &                         ADM(ng)%pioVar(idVbar),                  &
      &                         ADM(ng)%Rindex, ioDesc,                  &
      &                         LBi, UBi, LBj, UBj, scale,               &
@@ -1712,7 +1872,7 @@
           ioDesc => ioDesc_sp_v2dobc(ng)
         END IF
 !
-        status=nf_fwrite2d_bry(ng, iADM, ADM(ng)%name,                  &
+        status=nf_fwrite2d_bry(ng, model, ADM(ng)%name,                 &
      &                         ADM(ng)%pioFile,                         &
      &                         Vname(1,idSbry(isVbar)),                 &
      &                         ADM(ng)%pioVar(idSbry(isVbar)),          &
@@ -1746,7 +1906,7 @@
       IF (Hout(idUvel,ng)) THEN
 #   ifdef WEAK_CONSTRAINT
         IF (WRTforce(ng)) THEN
-          status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idUvel,         &
+          status=nf_fwrite3d(ng, model, ADM(ng)%pioFile, idUvel,        &
      &                       ADM(ng)%pioVar(idUvel),                    &
      &                       ADM(ng)%Rindex, ioDesc,                    &
      &                       LBi, UBi, LBj, UBj, 1, N(ng), scale,       &
@@ -1767,7 +1927,7 @@
 #   ifdef AD_OUTPUT_STATE
           IF (LwrtState3d(ng)) THEN
 #   endif
-            status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idUvel,       &
+            status=nf_fwrite3d(ng, model, ADM(ng)%pioFile, idUvel,      &
      &                         ADM(ng)%pioVar(idUvel),                  &
      &                         ADM(ng)%Rindex, ioDesc,                  &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
@@ -1777,7 +1937,7 @@
      &                         OCEAN(ng) % ad_u(:,:,:,nout))
 #   ifdef AD_OUTPUT_STATE
           ELSE
-            status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idUvel,       &
+            status=nf_fwrite3d(ng, model, ADM(ng)%pioFile, idUvel,      &
      &                         ADM(ng)%pioVar(idUvel),                  &
      &                         ADM(ng)%Rindex, ioDesc,                  &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
@@ -1812,7 +1972,7 @@
           ioDesc => ioDesc_sp_u3dobc(ng)
         END IF
 !
-        status=nf_fwrite3d_bry(ng, iADM, ADM(ng)%name,                  &
+        status=nf_fwrite3d_bry(ng, model, ADM(ng)%name,                 &
      &                         ADM(ng)%pioFile,                         &
      &                         Vname(1,idSbry(isUvel)),                 &
      &                         ADM(ng)%pioVar(idSbry(isUvel)),          &
@@ -1844,7 +2004,7 @@
       IF (Hout(idVvel,ng)) THEN
 #   ifdef WEAK_CONSTRAINT
         IF (WRTforce(ng)) THEN
-          status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idVvel,         &
+          status=nf_fwrite3d(ng, model, ADM(ng)%pioFile, idVvel,        &
      &                       ADM(ng)%pioVar(idVvel),                    &
      &                       ADM(ng)%Rindex, ioDesc,                    &
      &                       LBi, UBi, LBj, UBj, 1, N(ng), scale,       &
@@ -1865,7 +2025,7 @@
 #   ifdef AD_OUTPUT_STATE
           IF (LwrtState3d(ng)) THEN
 #   endif
-            status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idVvel,       &
+            status=nf_fwrite3d(ng, model, ADM(ng)%pioFile, idVvel,      &
      &                         ADM(ng)%pioVar(idVvel),                  &
      &                         ADM(ng)%Rindex, ioDesc,                  &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
@@ -1875,7 +2035,7 @@
      &                         OCEAN(ng) % ad_v(:,:,:,nout))
 #   ifdef AD_OUTPUT_STATE
           ELSE
-            status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idVvel,       &
+            status=nf_fwrite3d(ng, model, ADM(ng)%pioFile, idVvel,      &
      &                         ADM(ng)%pioVar(idVvel),                  &
      &                         ADM(ng)%Rindex, ioDesc,                  &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
@@ -1910,7 +2070,7 @@
           ioDesc => ioDesc_sp_v3dobc(ng)
         END IF
 !
-        status=nf_fwrite3d_bry(ng, iADM, ADM(ng)%name,                  &
+        status=nf_fwrite3d_bry(ng, model, ADM(ng)%name,                 &
      &                         ADM(ng)%pioFile,                         &
      &                         Vname(1,idSbry(isVvel)),                 &
      &                         ADM(ng)%pioVar(idSbry(isVvel)),          &
@@ -1922,6 +2082,63 @@
           IF (Master) THEN
             WRITE (stdout,20) TRIM(Vname(1,idSbry(isVvel))),            &
      &                        ADM(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+#   endif
+#   if defined JEDI || defined UV_DESTAGGERED
+!
+!  Write out 3D Eastward momentum (m/s) at RHO-points, A-grid
+!
+      IF (Hout(idu3dE,ng)) THEN
+        scale=1.0_dp
+        IF (ADM(ng)%pioVar(idu3dE)%dkind.eq.PIO_double) THEN
+          ioDesc => ioDesc_dp_r3dvar(ng)
+        ELSE
+          ioDesc => ioDesc_sp_r3dvar(ng)
+        END IF
+        status=nf_fwrite3d(ng, model, ADM(ng)%pioFile, idu3dE,          &
+     &                     ADM(ng)%pioVar(idu3dE),                      &
+     &                     ADM(ng)%Rindex,                              &
+     &                     ioDesc,                                      &
+     &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
+#    ifdef MASKING
+     &                     GRID(ng) % rmask_full,                       &
+#    endif
+     &                     OCEAN(ng) % ad_ua)
+        IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+          IF (Master) THEN
+            WRITE (stdout,20) TRIM(Vname(1,idu3dE)), ADM(ng)%Rindex
+          END IF
+          exit_flag=3
+          ioerror=status
+          RETURN
+        END IF
+      END IF
+!
+!  Write out 3D Northward momentum (m/s) at RHO-points, A-grid
+!
+      IF (Hout(idv3dN,ng)) THEN
+        IF (ADM(ng)%pioVar(idV3dN)%dkind.eq.PIO_double) THEN
+          ioDesc => ioDesc_dp_r3dvar(ng)
+        ELSE
+          ioDesc => ioDesc_sp_r3dvar(ng)
+        END IF
+        status=nf_fwrite3d(ng, model, ADM(ng)%pioFile, idv3dN,          &
+     &                     ADM(ng)%pioVar(idv3dN),                      &
+     &                     ADM(ng)%Rindex,                              &
+     &                     ioDesc,                                      &
+     &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
+#    ifdef MASKING
+     &                     GRID(ng) % rmask_full,                       &
+#    endif
+     &                     OCEAN(ng) % ad_va)
+        IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+          IF (Master) THEN
+            WRITE (stdout,20) TRIM(Vname(1,idv3dN)), ADM(ng)%Rindex
           END IF
           exit_flag=3
           ioerror=status
@@ -1949,7 +2166,7 @@
         ELSE
           ioDesc => ioDesc_sp_w3dvar(ng)
         END IF
-        status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idOvel,           &
+        status=nf_fwrite3d(ng, model, ADM(ng)%pioFile, idOvel,          &
      &                     ADM(ng)%pioVar(idOvel),                      &
      &                     ADM(ng)%Rindex, ioDesc,                      &
      &                     LBi, UBi, LBj, UBj, 0, N(ng), scale,         &
@@ -1982,7 +2199,7 @@
 
 #   ifdef WEAK_CONSTRAINT
           IF (WRTforce(ng)) THEN
-            status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idTvar(itrc), &
+            status=nf_fwrite3d(ng, model, ADM(ng)%pioFile, idTvar(itrc),&
      &                         ADM(ng)%pioTrc(itrc),                    &
      &                         ADM(ng)%Rindex, ioDesc,                  &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
@@ -2004,7 +2221,7 @@
 #   ifdef AD_OUTPUT_STATE
             IF (LwrtState3d(ng)) THEN
 #   endif
-              status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile,             &
+              status=nf_fwrite3d(ng, model, ADM(ng)%pioFile,            &
      &                           idTvar(itrc), ADM(ng)%pioTrc(itrc),    &
      &                           ADM(ng)%Rindex, ioDesc,                &
      &                           LBi, UBi, LBj, UBj, 1, N(ng), scale,   &
@@ -2014,7 +2231,7 @@
      &                           OCEAN(ng) % ad_t(:,:,:,nout,itrc))
 #   ifdef AD_OUTPUT_STATE
             ELSE
-              status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile,             &
+              status=nf_fwrite3d(ng, model, ADM(ng)%pioFile,            &
      &                           idTvar(itrc), ADM(ng)%pioTrc(itrc),    &
      &                           ADM(ng)%Rindex, ioDesc,                &
      &                           LBi, UBi, LBj, UBj, 1, N(ng), scale,   &
@@ -2053,7 +2270,7 @@
             ioDesc => ioDesc_sp_r3dobc(ng)
           END IF
 !
-          status=nf_fwrite3d_bry(ng, iADM, ADM(ng)%name,                &
+          status=nf_fwrite3d_bry(ng, model, ADM(ng)%name,               &
      &                           ADM(ng)%pioFile,                       &
      &                           Vname(1,ifield),                       &
      &                           ADM(ng)%pioVar(ifield),                &
@@ -2084,7 +2301,7 @@
           ioDesc => ioDesc_sp_r3dvar(ng)
         END IF
 !
-        status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idDano,           &
+        status=nf_fwrite3d(ng, model, ADM(ng)%pioFile, idDano,          &
      &                     ADM(ng)%pioVar(idDano),                      &
      &                     ADM(ng)%Rindex, ioDesc,                      &
      &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
@@ -2112,7 +2329,7 @@
           ioDesc => ioDesc_sp_w3dvar(ng)
         END IF
 !
-        status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idVvis,           &
+        status=nf_fwrite3d(ng, model, ADM(ng)%pioFile, idVvis,          &
      &                     ADM(ng)%pioVar(idVvis),                      &
      &                     ADM(ng)%Rindex, ioDesc,                      &
      &                     LBi, UBi, LBj, UBj, 0, N(ng), scale,         &
@@ -2141,7 +2358,7 @@
           ioDesc => ioDesc_sp_w3dvar(ng)
         END IF
 !
-        status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idTdif,           &
+        status=nf_fwrite3d(ng, model, ADM(ng)%pioFile, idTdif,          &
      &                     ADM(ng)%pioVar(idTdif),                      &
      &                     ADM(ng)%Rindex, ioDesc,                      &
      &                     LBi, UBi, LBj, UBj, 0, N(ng), scale,         &
@@ -2172,7 +2389,7 @@
           ioDesc => ioDesc_sp_w3dvar(ng)
         END IF
 !
-        status=nf_fwrite3d(ng, iADM, ADM(ng)%pioFile, idSdif,           &
+        status=nf_fwrite3d(ng, model, ADM(ng)%pioFile, idSdif,          &
      &                     ADM(ng)%pioVar(idSdif),                      &
      &                     ADM(ng)%Rindex, ioDesc,                      &
      &                     LBi, UBi, LBj, UBj, 0, N(ng), scale,         &
@@ -2214,7 +2431,7 @@
             ioDesc => ioDesc_sp_r2dvar(ng)
           END IF
 !
-          status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idTsur(itrc),   &
+          status=nf_fwrite2d(ng, model, ADM(ng)%pioFile, idTsur(itrc),  &
      &                       ADM(ng)%pioVar(idTsur(itrc)),              &
      &                       ADM(ng)%Rindex, ioDesc,                    &
      &                       LBi, UBi, LBj, UBj, scale,                 &
@@ -2253,7 +2470,7 @@
           ioDesc => ioDesc_sp_u2dvar(ng)
         END IF
 !
-        status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idUsms,           &
+        status=nf_fwrite2d(ng, model, ADM(ng)%pioFile, idUsms,          &
      &                     ADM(ng)%pioVar(idUsms),                      &
      &                     ADM(ng)%Rindex, ioDesc,                      &
      &                     LBi, UBi, LBj, UBj, scale,                   &
@@ -2287,7 +2504,7 @@
           ioDesc => ioDesc_sp_v2dvar(ng)
         END IF
 !
-        status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idVsms,           &
+        status=nf_fwrite2d(ng, model, ADM(ng)%pioFile, idVsms,          &
      &                     ADM(ng)%pioVar(idVsms),                      &
      &                     ADM(ng)%Rindex, ioDesc,                      &
      &                     LBi, UBi, LBj, UBj, scale,                   &
@@ -2317,7 +2534,7 @@
           ioDesc => ioDesc_sp_u2dvar(ng)
         END IF
 !
-        status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idUbms,           &
+        status=nf_fwrite2d(ng, model, ADM(ng)%pioFile, idUbms,          &
      &                     ADM(ng)%pioVar(idUbms),                      &
      &                     ADM(ng)%Rindex, ioDesc,                      &
      &                     LBi, UBi, LBj, UBj, scale,                   &
@@ -2346,7 +2563,7 @@
           ioDesc => ioDesc_sp_v2dvar(ng)
         END IF
 !
-        status=nf_fwrite2d(ng, iADM, ADM(ng)%pioFile, idVbms,           &
+        status=nf_fwrite2d(ng, model, ADM(ng)%pioFile, idVbms,          &
      &                     ADM(ng)%pioVar(idVbms),                      &
      &                     ADM(ng)%Rindex, ioDesc,                      &
      &                     LBi, UBi, LBj, UBj, scale,                   &
@@ -2369,7 +2586,7 @@
 !  processes to access data immediately after it is written.
 !-----------------------------------------------------------------------
 !
-      CALL pio_netcdf_sync (ng, iADM, ADM(ng)%name, ADM(ng)%pioFile)
+      CALL pio_netcdf_sync (ng, model, ADM(ng)%name, ADM(ng)%pioFile)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
   10  FORMAT (2x,'AD_WRT_HIS_PIO   - writing adjoint', t42,             &

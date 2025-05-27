@@ -3,7 +3,7 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2025 The ROMS Group                              !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
@@ -340,7 +340,7 @@
 !
 ! Set global geometry 1D arrays, packed in column-major order, needed
 ! for field extraction by interpolation during writing to the proper
-! output NetCDF file. 
+! output NetCDF file.
 !
          real(r8), pointer :: Gangle_psi(:)
          real(r8), pointer :: Gangle_rho(:)

@@ -3,7 +3,7 @@
 !
 !git $Id$
 !========================================================= Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                                !
+!  Copyright (c) 2002-2025 The ROMS Group                                     !
 !    Licensed under a MIT/X style license                                     !
 !    See License_ROMS.md                                                      !
 !==============================================================================
@@ -253,6 +253,7 @@ WeightsFile(atmos) =  meld_weights_atm.nc
 ! Ustr        atmos   roms, cice         surface U-momentum stress
 ! Vstr        atmos   roms, cice         surface V-momentum stress
 ! Wstar       atmos   roms               turbulent frictional wind magnitude
+! pblh        atmos   roms               atmosphere boundary layer thickness
 !
 ! zlvl        atmos   cice               atmspheric height lowest level
 ! rhoa        atmos   cice               surface air density

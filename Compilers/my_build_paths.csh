@@ -2,7 +2,7 @@
 #
 # git $Id$
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-# Copyright (c) 2002-2024 The ROMS/TOMS Group                           :::
+# Copyright (c) 2002-2025 The ROMS Group                                :::
 #   Licensed under a MIT/X style license                                :::
 #   See License_ROMS.md                                                 :::
 #::::::::::::::::::::::::::::::::::::::::::::::::::::: Hernan G. Arango :::
@@ -204,15 +204,6 @@ switch ($FORT)
       setenv PNETCDF_INCDIR     ${PNETCDF}/include
     endif
 
-    if ($?USE_SCORPIO) then
-      setenv SCORPIO            ${MPI_SOFT}/scorpio
-      setenv PIO_LIBDIR         ${SCORPIO}/lib
-      setenv PIO_INCDIR         ${SCORPIO}/include
-      setenv PNETCDF            ${MPI_SOFT}/pnetcdf
-      setenv PNETCDF_LIBDIR     ${PNETCDF}/lib
-      setenv PNETCDF_INCDIR     ${PNETCDF}/include
-    endif
-
     if ($?USE_HDF5) then
       if ($?USE_PARALLEL_IO && $?USE_MPI) then
         setenv HDF5             ${MPI_SOFT}/hdf5
@@ -293,15 +284,6 @@ switch ($FORT)
       setenv PNETCDF_INCDIR     ${PNETCDF}/include
     endif
 
-    if ($?USE_SCORPIO) then
-      setenv SCORPIO            ${MPI_SOFT}/scorpio
-      setenv PIO_LIBDIR         ${SCORPIO}/lib
-      setenv PIO_INCDIR         ${SCORPIO}/include
-      setenv PNETCDF            ${MPI_SOFT}/pnetcdf
-      setenv PNETCDF_LIBDIR     ${PNETCDF}/lib
-      setenv PNETCDF_INCDIR     ${PNETCDF}/include
-    endif
-
     if ($?USE_HDF5) then
       if ($?USE_PARALLEL_IO && $?USE_MPI) then
         setenv HDF5             ${MPI_SOFT}/hdf5
@@ -375,15 +357,6 @@ switch ($FORT)
       setenv PIO                ${MPI_SOFT}/pio
       setenv PIO_LIBDIR         ${PIO}/lib
       setenv PIO_INCDIR         ${PIO}/include
-      setenv PNETCDF            ${MPI_SOFT}/pnetcdf
-      setenv PNETCDF_LIBDIR     ${PNETCDF}/lib
-      setenv PNETCDF_INCDIR     ${PNETCDF}/include
-    endif
-
-    if ($?USE_SCORPIO) then
-      setenv SCORPIO            ${MPI_SOFT}/scorpio
-      setenv PIO_LIBDIR         ${SCORPIO}/lib
-      setenv PIO_INCDIR         ${SCORPIO}/include
       setenv PNETCDF            ${MPI_SOFT}/pnetcdf
       setenv PNETCDF_LIBDIR     ${PNETCDF}/lib
       setenv PNETCDF_INCDIR     ${PNETCDF}/include

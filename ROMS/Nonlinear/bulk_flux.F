@@ -8,7 +8,7 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2025 The ROMS Group                              !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
@@ -40,7 +40,7 @@
 !      409-438.                                                        !
 !                                                                      !
 !    Fairall, C.W., Bradley, E.F., Hare, J.E., Grachev, A.A. and       !
-!      Edson, J.B., 2003. Bulk parameterization of air–sea fluxes:     !
+!      Edson, J.B., 2003. Bulk parameterization of air-sea fluxes:     !
 !      Updates and verification for the COARE algorithm. Journal of    !
 !      Climate, 16, 571-591.                                           !
 !                                                                      !
@@ -159,6 +159,9 @@
 # ifdef CLOUDS
      &                     FORCES(ng) % cloud,                          &
 # endif
+# if defined FRC_COUPLING && defined PBLH
+     &                     FORCES(ng) % PBLh,                           &
+# endif
 # if defined COARE_TAYLOR_YELLAND || defined DRENNAN
      &                     FORCES(ng) % Hwave,                          &
 # endif
@@ -222,6 +225,9 @@
      &                           Hair, Pair, Tair, Uwind, Vwind,        &
 # ifdef CLOUDS
      &                           cloud,                                 &
+# endif
+# if defined FRC_COUPLING && defined PBLH
+     &                           PBLh,                                  &
 # endif
 # if defined COARE_TAYLOR_YELLAND || defined DRENNAN
      &                           Hwave,                                 &
@@ -288,18 +294,21 @@
 #  ifdef CLOUDS
       real(r8), intent(in   ) :: cloud(LBi:,LBj:)
 #  endif
-# if defined COARE_TAYLOR_YELLAND || defined DRENNAN
+#  if defined FRC_COUPLING && defined PBLH
+      real(r8), intent(in   ) :: PBLh(LBi:,LBj:)
+#  endif
+#  if defined COARE_TAYLOR_YELLAND || defined DRENNAN
       real(r8), intent(in   ) :: Hwave(LBi:,LBj:)
-# endif
-# if defined COARE_TAYLOR_YELLAND || defined COARE_OOST || \
+#  endif
+#  if defined COARE_TAYLOR_YELLAND || defined COARE_OOST || \
       defined DRENNAN
       real(r8), intent(in   ) :: Pwave_top(LBi:,LBj:)
-# endif
-# if !defined DEEPWATER_WAVES      && \
+#  endif
+#  if !defined DEEPWATER_WAVES      && \
      (defined COARE_TAYLOR_YELLAND || defined COARE_OOST || \
       defined DRENNAN)
       real(r8), intent(in   ) :: Lwavep(LBi:,LBj:)
-# endif
+#  endif
       real(r8), intent(in   ) :: rain(LBi:,LBj:)
       real(r8), intent(inout) :: lhflx(LBi:,LBj:)
       real(r8), intent(inout) :: lrflx(LBi:,LBj:)
@@ -350,19 +359,22 @@
 #  ifdef CLOUDS
       real(r8), intent(in   ) :: cloud(LBi:UBi,LBj:UBj)
 #  endif
-# if defined COARE_TAYLOR_YELLAND || \
+#  if defined FRC_COUPLING && defined PBLH
+      real(r8), intent(in   ) :: PBLh(LBi:UBi,LBj:UBj)
+#  endif
+#  if defined COARE_TAYLOR_YELLAND || \
       defined DRENNAN
       real(r8), intent(in   ) :: Hwave(LBi:UBi,LBj:UBj)
-# endif
-# if defined COARE_TAYLOR_YELLAND || defined COARE_OOST || \
+#  endif
+#  if defined COARE_TAYLOR_YELLAND || defined COARE_OOST || \
       defined DRENNAN
       real(r8), intent(in   ) :: Pwave_top(LBi:UBi,LBj:UBj)
-# endif
-# if !defined DEEPWATER_WAVES      && \
+#  endif
+#  if !defined DEEPWATER_WAVES      && \
      (defined COARE_TAYLOR_YELLAND || defined COARE_OOST || \
       defined DRENNAN)
       real(r8), intent(in   ) :: Lwavep(LBi:UBi,LBj:UBj)
-# endif
+#  endif
       real(r8), intent(in   ) :: rain(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: lhflx(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: lrflx(LBi:UBi,LBj:UBj)
@@ -730,6 +742,9 @@
           Cd=(vonKar/LOG(blk_ZW(ng)/Zo10(i)))**2
 !
 !  Compute Richardson number.
+# if defined FRC_COUPLING && defined PBLH
+!  Use atmosphere boundary layer thickness from coupled model.
+# endif
 !
           Ct(i)=vonKar/LOG(blk_ZT(ng)/ZoT10(i))  ! T transfer coefficient
           CC(i)=vonKar*Ct(i)/Cd
@@ -737,7 +752,11 @@
 # ifdef COOL_SKIN
           delTc(i)=blk_dter
 # endif
+# if defined FRC_COUPLING && defined PBLH
+          Ribcu(i)=-blk_ZW(ng)/(PBLh(i,j)*0.004_r8*blk_beta**3)
+# else
           Ribcu(i)=-blk_ZW(ng)/(blk_Zabl*0.004_r8*blk_beta**3)
+# endif
           Ri(i)=-g*blk_ZW(ng)*((delT(i)-delTc(i))+                      &
      &                          0.61_r8*TairK(i)*delQ(i))/              &
      &          (TairK(i)*delW(i)*delW(i)+eps)
@@ -865,11 +884,18 @@
      &               (LOG(blk_ZQ(ng)/ZoQ(i))-Qpsi(i))
 !
 !  Compute gustiness in wind speed.
+# if defined FRC_COUPLING && defined PBLH
+!  Use atmosphere boundary layer thickness from coupled model.
+# endif
 !
-            Bf=-g/TairK(i)*                                             &
+            Bf=-g/(TairK(i)+0.61_r8*Qstar(i))*                          &
      &         Wstar(i)*(Tstar(i)+0.61_r8*TairK(i)*Qstar(i))
             IF (Bf.gt.0.0_r8) THEN
+# if defined FRC_COUPLING && defined PBLH
+              Wgus(i)=blk_beta*(Bf*PBLh(i,j))**r3
+# else
               Wgus(i)=blk_beta*(Bf*blk_Zabl)**r3
+# endif
             ELSE
               Wgus(i)=0.2_r8
             END IF

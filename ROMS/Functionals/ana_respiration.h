@@ -3,7 +3,7 @@
 !
 !! git $Id$
 !!======================================================================
-!! Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
+!! Copyright (c) 2002-2025 The ROMS Group                              !
 !!   Licensed under a MIT/X style license                              !
 !!   See License_ROMS.md                                               !
 !=======================================================================
@@ -101,7 +101,7 @@
       DO k=1,N(ng)
         DO j=JstrT,JendT
           DO i=IstrT,IendT
-	    respiration(i,j,k)=ResRate(ng)
+            respiration(i,j,k)=ResRate(ng)
           END DO
         END DO
       END DO

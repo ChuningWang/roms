@@ -1,6 +1,6 @@
 # git $Id$
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::: David Robertson :::
-# Copyright (c) 2002-2024 The ROMS/TOMS Group                           :::
+# Copyright (c) 2002-2025 The ROMS Group                                :::
 #   Licensed under a MIT/X style license                                :::
 #   See License_ROMS.md                                                 :::
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -23,6 +23,7 @@ list( APPEND _files
       ROMS/Nonlinear/exchange_2d.F
       ROMS/Nonlinear/exchange_2d_xtr.F
       ROMS/Nonlinear/exchange_3d.F
+      ROMS/Nonlinear/exchange_3d_xtr.F
       ROMS/Nonlinear/exchange_4d.F
       ROMS/Nonlinear/forcing.F
       ROMS/Nonlinear/frc_adjust.F
@@ -48,6 +49,7 @@ list( APPEND _files
       ROMS/Nonlinear/obc_volcons.F
       ROMS/Nonlinear/omega.F
       ROMS/Nonlinear/output.F
+      ROMS/Nonlinear/post_initial.F
       ROMS/Nonlinear/pre_step3d.F
       ROMS/Nonlinear/prsgrd.F
       ROMS/Nonlinear/rho_eos.F

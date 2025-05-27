@@ -3,7 +3,7 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2025 The ROMS Group                              !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
@@ -93,7 +93,7 @@
 !  Set type of IO NetCDF files interface library
 !
       integer, parameter :: io_nf90 = 1   ! standard NetCDF-3, NetCDF-4
-      integer, parameter :: io_pio  = 2   ! Parallel-IO, SCORPIO
+      integer, parameter :: io_pio  = 2   ! Parallel-IO
 !
       integer :: inp_lib                  ! input  NetCDF library
       integer :: out_lib                  ! output NetCDF library
@@ -107,7 +107,7 @@
 !  Maximum number of dimension IDs stored in local array DimIDs used to
 !  defined variable dimensions in output NetCDF files.
 !
-      integer, parameter :: nDimID = 33
+      integer, parameter :: nDimID = 34
 !
 !  Number of horizontal interior and boundary water points.
 !
@@ -211,6 +211,7 @@
       integer  :: idJWTy        ! Jerlov water type
       integer  :: idHbbl        ! depth of bottom boundary layer
       integer  :: idHsbl        ! depth of surface boundary layer
+      integer  :: idHzdz        ! level thickness
       integer  :: idIncr        ! 4D-Var analysis increment
       integer  :: idInno        ! 4D-Var innovation vector
       integer  :: idKhor        ! convolution horizontal diffusion
@@ -260,7 +261,9 @@
       integer  :: idOvel        ! omega vertical velocity
       integer  :: idOvil        ! omega vertical velocity implicit
       integer  :: idPair        ! surface air pressure
+      integer  :: idPBLh        ! planetary boundary layer height
       integer  :: idPbar        ! streamfunction
+      integer  :: idPVzs        ! potential vorticity depth slices
       integer  :: idPwet        ! wet/dry mask on PSI-points
       integer  :: idpmdx        ! inverse grid x-spacing
       integer  :: idpndy        ! inverse grid y-spacing
@@ -281,6 +284,7 @@
       integer  :: idRv3d        ! RHS of total V-momentum
       integer  :: idRxpo        ! river runoff XI-positions
       integer  :: idRvsh        ! river runoff transport profile
+      integer  :: idRVzs        ! relative vorticity depth slices
       integer  :: idRwet        ! wet/dry mask on RHO-points
       integer  :: idRzet        ! RHS of free-surface
       integer  :: idrain        ! rainfall rate
@@ -344,6 +348,8 @@
       integer  :: idUVwc        ! bottom wave-current stress magnitude
       integer  :: idUwav        ! 2D U-velocity Kirby and Chen
       integer  :: idUwet        ! wet/dry mask on U-points
+      integer  :: idUzsE        ! 3D U-eastward constant depth slices
+      integer  :: idUzsl        ! 3D U-velocity constant depth slices
       integer  :: idu2dD        ! detided 2D U-velocity
       integer  :: idu2dH        ! 2D U-velocity tide harmonics
       integer  :: idu2dE        ! 2D eastward velocity at RHO-points
@@ -382,6 +388,8 @@
       integer  :: idVvis        ! vertical viscosity coefficient
       integer  :: idVwav        ! 2D V-velocity Kirby and Chen
       integer  :: idVwet        ! wet/dry mask on V-points
+      integer  :: idVzsN        ! 3D V-northward constant depth slices
+      integer  :: idVzsl        ! 3D V-velocity constant depth slices
       integer  :: idv2dD        ! detided 2D U-velocity
       integer  :: idv2dH        ! 2D U-velocity tide harmonics
       integer  :: idv2dN        ! 2D northward velocity at RHO-points
@@ -444,7 +452,8 @@
 !  Input/output identification tracer indices.
 !
       integer, allocatable :: idRtrc(:)    ! river runoff for tracers
-      integer, allocatable :: idsurT(:)    ! model surface tracers
+      integer, allocatable :: idsurT(:)    ! surface tracers
+      integer, allocatable :: idzslT(:)    ! tracers depth slices
       integer, allocatable :: idTads(:)    ! tracers adjoint sentivity
       integer, allocatable :: idTbot(:)    ! bottom flux for tracers
       integer, allocatable :: idTbry(:,:)  ! tracers boundary
@@ -583,7 +592,7 @@
       real(dp), allocatable :: Tintrp(:,:,:)
       real(dp), allocatable :: Vtime(:,:,:)
 !
-      character (len=5  )    :: version = '4.2  '
+      character (len=5  )    :: version = '4.3  '
       character (len=40 )    :: varnam(MV)
       character (len=44 )    :: date_str
       character (len=46 )    :: Tname(0:NV)
@@ -797,6 +806,10 @@
       END IF
       IF (.not.allocated(idsurT)) THEN
         allocate ( idsurT(MT) )
+        Dmem(1)=Dmem(1)+REAL(MT,r8)
+      END IF
+      IF (.not.allocated(idzslT)) THEN
+        allocate ( idzslT(MT) )
         Dmem(1)=Dmem(1)+REAL(MT,r8)
       END IF
       IF (.not.allocated(idTads)) THEN
@@ -1074,6 +1087,7 @@
 !
       IF (allocated(idRtrc))      deallocate ( idRtrc )
       IF (allocated(idsurT))      deallocate ( idsurT )
+      IF (allocated(idzslT))      deallocate ( idzslT )
       IF (allocated(idTads))      deallocate ( idTads )
       IF (allocated(idTbot))      deallocate ( idTbot )
       IF (allocated(idTbry))      deallocate ( idTbry )
@@ -1566,6 +1580,10 @@
             idUsuE=varid
           CASE ('idUvel')
             idUvel=varid
+          CASE ('idUzsl')
+            idUzsl=varid
+          CASE ('idUzsE')
+            idUzsE=varid
           CASE ('idu3dE')
             idu3dE=varid
           CASE ('idRu3d')
@@ -1576,10 +1594,18 @@
             idVsuN=varid
           CASE ('idVvel')
             idVvel=varid
+          CASE ('idVzsl')
+            idVzsl=varid
+          CASE ('idVzsN')
+            idVzsN=varid
           CASE ('idv3dN')
             idv3dN=varid
           CASE ('idRv3d')
             idRv3d=varid
+          CASE ('idPVzs')
+            idPVzs=varid
+          CASE ('idRVzs')
+            idRVzs=varid
           CASE ('idWvel')
             idWvel=varid
           CASE ('idOvil')
@@ -1590,9 +1616,13 @@
             idDano=varid
           CASE ('idsurT(itemp)')
             idsurT(itemp)=varid
+          CASE ('idzslT(itemp)')
+            idzslT(itemp)=varid
 #ifdef SALINITY
           CASE ('idsurT(isalt)')
             idsurT(isalt)=varid
+          CASE ('idzslT(isalt)')
+            idzslT(isalt)=varid
 #endif
           CASE ('idTvar(itemp)')
             idTvar(itemp)=varid
@@ -1728,6 +1758,8 @@
             idVwet=varid
           CASE ('idPair')
             idPair=varid
+          CASE ('idPBLh')
+            idPBLh=varid
           CASE ('idTair')
             idTair=varid
           CASE ('idQair')
@@ -1876,6 +1908,8 @@
             idHsbl=varid
           CASE ('idHbbl')
             idHbbl=varid
+          CASE ('idHzdz')
+            idHzdz=varid
 #ifdef UV_DRAG_GRID
           CASE ('idragL')
             idragL=varid
@@ -3150,12 +3184,42 @@
         CALL StandardName (Vname(6,varid), Vname(2,idTvar(i)),          &
      &                     prefix='sea_surface_')
       END DO
+!
+!-----------------------------------------------------------------------
+!  Set passive tracers depth slices metadata. The variable name is the
+!  same as the basic tracer but with the _slice suffix.
+!-----------------------------------------------------------------------
+!
+      DO i=NAT+1,MT
+        varid=varid+1
+        IF (varid.gt.MV) THEN
+          WRITE (stdout,10) MV, varid
+          STOP
+        END IF
+        idzslT(i)=varid
+        DO ng=1,Ngrids
+          Fscale(varid,ng)=1.0_r8
+          Iinfo(1,varid,ng)=r3dvar
+        END DO
+        WRITE (Vname(1,varid),'(a,a)')                                  &
+     &        TRIM(ADJUSTL(Vname(1,idTvar(i)))), '_slice'
+        WRITE (Vname(2,varid),'(2a)')                                   &
+     &        TRIM(ADJUSTL(Vname(2,idTvar(i))))
+        WRITE (Vname(3,varid),'(a)')                                    &
+     &        TRIM(ADJUSTL(Vname(3,idTvar(i))))
+        WRITE (Vname(4,varid),'(a)')                                    &
+     &        TRIM(Vname(2,varid))
+        WRITE (Vname(5,varid),'(a)')                                    &
+     &        TRIM(ADJUSTL(Vname(5,idTvar(i))))
+        WRITE (Vname(6,varid),'(a)')                                    &
+     &        TRIM(ADJUSTL(Vname(6,idTvar(i))))
+      END DO
 #endif
 #ifdef WEAK_CONSTRAINT
 !
 !-----------------------------------------------------------------------
 !  Set passive tracers impulse forcing. The metadata values are the
-!  same as the basic tracer but with different indices sinc they are
+!  same as the basic tracer but with different indices since they are
 !  used at the same time. This allows flexibility in the time
 !  interpolation.
 !-----------------------------------------------------------------------

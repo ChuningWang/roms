@@ -4,7 +4,7 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2025 The ROMS Group                              !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
@@ -67,7 +67,7 @@
 # ifdef PROFILE
       CALL wclock_on (ng, iNLM, 5, __LINE__, MyFile)
 # endif
-      CALL set_avg_tile (ng, tile,                                      &
+      CALL set_avg_tile (ng, tile, iNLM,                                &
      &                   LBi, UBi, LBj, UBj,                            &
      &                   IminS, ImaxS, JminS, JmaxS,                    &
 # ifdef SOLVE3D
@@ -126,7 +126,7 @@
       END SUBROUTINE set_avg
 !
 !***********************************************************************
-      SUBROUTINE set_avg_tile (ng, tile,                                &
+      SUBROUTINE set_avg_tile (ng, tile, model,                         &
      &                         LBi, UBi, LBj, UBj,                      &
      &                         IminS, ImaxS, JminS, JmaxS,              &
 # ifdef SOLVE3D
@@ -170,13 +170,13 @@
 # ifdef SOLVE3D
       USE uv_rotate_mod, ONLY : uv_rotate3d
 # endif
-      USE vorticity_mod, ONLY : vorticity_tile
+      USE vorticity_mod, ONLY : vorticity_avg_tile
 !
       implicit none
 !
 !  Imported variable declarations.
 !
-      integer, intent(in) :: ng, tile
+      integer, intent(in) :: ng, tile, model
       integer, intent(in) :: LBi, UBi, LBj, UBj
       integer, intent(in) :: IminS, ImaxS, JminS, JmaxS
       integer, intent(in) :: Kout
@@ -220,41 +220,41 @@
 !
       IF (Aout(id2dPV,ng).or.Aout(id2dRV,ng).or.                        &
      &    Aout(id3dPV,ng).or.Aout(id3dRV,ng)) THEN
-        CALL vorticity_tile (ng, tile,                                  &
-     &                       LBi, UBi, LBj, UBj,                        &
-     &                       IminS, ImaxS, JminS, JmaxS,                &
+        CALL vorticity_avg_tile (ng, model, tile,                       &
+     &                           LBi, UBi, LBj, UBj,                    &
+     &                           IminS, ImaxS, JminS, JmaxS,            &
 # ifdef SOLVE3D
-     &                       Kout, Nout,                                &
+     &                           Kout, Nout,                            &
 # else
-     &                       Kout,                                      &
+     &                           Kout,                                  &
 # endif
 # ifdef MASKING
-     &                       GRID(ng) % pmask,                          &
-     &                       GRID(ng) % umask,                          &
-     &                       GRID(ng) % vmask,                          &
+     &                           GRID(ng) % pmask,                      &
+     &                           GRID(ng) % umask,                      &
+     &                           GRID(ng) % vmask,                      &
 # endif
-     &                       GRID(ng) % fomn,                           &
-     &                       GRID(ng) % h,                              &
-     &                       GRID(ng) % om_u,                           &
-     &                       GRID(ng) % on_v,                           &
-     &                       GRID(ng) % pm,                             &
-     &                       GRID(ng) % pn,                             &
+     &                           GRID(ng) % f,                          &
+     &                           GRID(ng) % h,                          &
+     &                           GRID(ng) % om_u,                       &
+     &                           GRID(ng) % on_v,                       &
+     &                           GRID(ng) % pm,                         &
+     &                           GRID(ng) % pn,                         &
 # ifdef ICESHELF
-     &                       GRID(ng) % zice,                           &
+     &                           GRID(ng) % zice,                       &
 # endif
 # ifdef SOLVE3D
-     &                       GRID(ng) % z_r,                            &
-     &                       OCEAN(ng) % pden,                          &
-     &                       OCEAN(ng) % u,                             &
-     &                       OCEAN(ng) % v,                             &
+     &                           GRID(ng) % z_r,                        &
+     &                           OCEAN(ng) % pden,                      &
+     &                           OCEAN(ng) % u,                         &
+     &                           OCEAN(ng) % v,                         &
 # endif
-     &                       OCEAN(ng) % ubar,                          &
-     &                       OCEAN(ng) % vbar,                          &
-     &                       OCEAN(ng) % zeta,                          &
+     &                           OCEAN(ng) % ubar,                      &
+     &                           OCEAN(ng) % vbar,                      &
+     &                           OCEAN(ng) % zeta,                      &
 # ifdef SOLVE3D
-     &                       potvor, relvor,                            &
+     &                           potvor, relvor,                        &
 # endif
-     &                       potvor_bar, relvor_bar)
+     &                           potvor_bar, relvor_bar)
       END IF
 !
 !-----------------------------------------------------------------------
@@ -383,18 +383,31 @@
           END DO
         END IF
 
-        IF (Aout(idu3dE,ng).and.Aout(idv3dN,ng)) THEN
-          CALL uv_rotate3d (ng, tile, .FALSE., .FALSE.,                 &
-     &                      LBi, UBi, LBj, UBj, 1, N(ng),               &
-     &                      GRID(ng) % CosAngler,                       &
-     &                      GRID(ng) % SinAngler,                       &
-#  ifdef MASKING
-     &                      GRID(ng)%rmask_full,                        &
+        IF (Aout(idu3dE,ng)) THEN
+          DO k=1,N(ng)
+            DO j=JstrR,JendR
+              DO i=IstrR,IendR
+                AVERAGE(ng)%avgu3dE(i,j,k)=OCEAN(ng)%ua(i,j,k)
+#  ifdef WET_DRY
+                AVERAGE(ng)%avgu3dE(i,j,k)=AVERAGE(ng)%avgu3dE(i,j,k)*  &
+     &                                     GRID(ng)%vmask_full(i,j)
 #  endif
-     &                      OCEAN(ng) % u(:,:,:,Nout),                  &
-     &                      OCEAN(ng) % v(:,:,:,Nout),                  &
-     &                      AVERAGE(ng)%avgu3dE,                        &
-     &                      AVERAGE(ng)%avgv3dN)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (Aout(idv3dN,ng)) THEN
+          DO k=1,N(ng)
+            DO j=JstrR,JendR
+              DO i=IstrR,IendR
+                AVERAGE(ng)%avgv3dN(i,j,k)=OCEAN(ng)%va(i,j,k)
+#  ifdef WET_DRY
+                AVERAGE(ng)%avgv3dN(i,j,k)=AVERAGE(ng)%avgv3dN(i,j,k)*  &
+     &                                     GRID(ng)%vmask_full(i,j)
+#  endif
+              END DO
+            END DO
+          END DO
         END IF
 
         IF (Aout(idOvel,ng)) THEN
@@ -1725,18 +1738,31 @@
           END DO
         END IF
 
-        IF (Aout(idu3dE,ng).and.Aout(idv3dN,ng)) THEN
-          CALL uv_rotate3d (ng, tile, .TRUE., .FALSE.,                  &
-     &                      LBi, UBi, LBj, UBj, 1, N(ng),               &
-     &                      GRID(ng) % CosAngler,                       &
-     &                      GRID(ng) % SinAngler,                       &
-#  ifdef MASKING
-     &                      GRID(ng)%rmask_full,                        &
+        IF (Aout(idu3dE,ng)) THEN
+          DO k=1,N(ng)
+            DO j=JstrR,JendR
+              DO i=IstrR,IendR
+                AVERAGE(ng)%avgu3dE(i,j,k)=AVERAGE(ng)%avgu3dE(i,j,k)+  &
+#  ifdef WET_DRY
+     &                                     GRID(ng)%umask_full(i,j)*    &
 #  endif
-     &                      OCEAN(ng) % u(:,:,:,Nout),                  &
-     &                      OCEAN(ng) % v(:,:,:,Nout),                  &
-     &                      AVERAGE(ng)%avgu3dE,                        &
-     &                      AVERAGE(ng)%avgv3dN)
+     &                                     OCEAN(ng)%ua(i,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (Aout(idv3dN,ng)) THEN
+          DO k=1,N(ng)
+            DO j=JstrR,JendR
+              DO i=IstrR,IendR
+                AVERAGE(ng)%avgv3dN(i,j,k)=AVERAGE(ng)%avgv3dN(i,j,k)+  &
+#  ifdef WET_DRY
+     &                                    GRID(ng)%vmask_full(i,j)*     &
+#  endif
+     &                                    OCEAN(ng)%va(i,j,k)
+              END DO
+            END DO
+          END DO
         END IF
 
         IF (Aout(idOvel,ng)) THEN
@@ -3001,7 +3027,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgzeta)
 # ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3022,7 +3048,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgu2d)
 # ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3043,7 +3069,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgv2d)
 # ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3069,7 +3095,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgv2dN)
 # ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 2,                      &
+            CALL mp_exchange2d (ng, tile, model, 2,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3094,7 +3120,7 @@
      &                              LBi, UBi, LBj, UBj, 1, N(ng),       &
      &                              AVERAGE(ng)%avgu3d)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange3d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3117,7 +3143,7 @@
      &                              LBi, UBi, LBj, UBj, 1, N(ng),       &
      &                              AVERAGE(ng)%avgv3d)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange3d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3126,12 +3152,33 @@
           END IF
         END IF
 
-        IF (Aout(idu3dE,ng).and.Aout(idv3dN,ng)) THEN
+        IF (Aout(idu3dE,ng)) THEN
           DO k=1,N(ng)
-            DO j=Jstr,Jend
-              DO i=Istr,Iend
+            DO j=JstrR,JendR
+              DO i=IstrR,IendR
                 AVERAGE(ng)%avgu3dE(i,j,k)=rfac(i,j)*                   &
      &                                     AVERAGE(ng)%avgu3dE(i,j,k)
+              END DO
+            END DO
+          END DO
+          IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+            CALL exchange_r3d_tile (ng, tile,                           &
+     &                              LBi, UBi, LBj, UBj, 1, N(ng),       &
+     &                              AVERAGE(ng)%avgu3dE)
+#  ifdef DISTRIBUTE
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
+     &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          AVERAGE(ng)%avgu3dE)
+#  endif
+          END IF
+        END IF
+
+        IF (Aout(idv3dN,ng)) THEN
+          DO k=1,N(ng)
+            DO j=JstrR,JendR
+              DO i=IstrR,IendR
                 AVERAGE(ng)%avgv3dN(i,j,k)=rfac(i,j)*                   &
      &                                     AVERAGE(ng)%avgv3dN(i,j,k)
               END DO
@@ -3140,16 +3187,12 @@
           IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
             CALL exchange_r3d_tile (ng, tile,                           &
      &                              LBi, UBi, LBj, UBj, 1, N(ng),       &
-     &                              AVERAGE(ng)%avgu3dE)
-            CALL exchange_r3d_tile (ng, tile,                           &
-     &                              LBi, UBi, LBj, UBj, 1, N(ng),       &
      &                              AVERAGE(ng)%avgv3dN)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange3d (ng, tile, iNLM, 2,                      &
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
-     &                          AVERAGE(ng)%avgu3dE,                    &
      &                          AVERAGE(ng)%avgv3dN)
 #  endif
           END IF
@@ -3169,7 +3212,7 @@
      &                              LBi, UBi, LBj, UBj, 0, N(ng),       &
      &                              AVERAGE(ng)%avgw3d)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange3d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3192,7 +3235,7 @@
      &                              LBi, UBi, LBj, UBj, 0, N(ng),       &
      &                              AVERAGE(ng)%avgwvel)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange3d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3215,7 +3258,7 @@
      &                              LBi, UBi, LBj, UBj, 1, N(ng),       &
      &                              AVERAGE(ng)%avgrho)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange3d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3239,7 +3282,7 @@
      &                                LBi, UBi, LBj, UBj, 1, N(ng),     &
      &                                AVERAGE(ng)%avgt(:,:,:,it))
 #  ifdef DISTRIBUTE
-              CALL mp_exchange3d (ng, tile, iNLM, 1,                    &
+              CALL mp_exchange3d (ng, tile, model, 1,                   &
      &                            LBi, UBi, LBj, UBj, 1, N(ng),         &
      &                            NghostPoints,                         &
      &                            EWperiodic(ng), NSperiodic(ng),       &
@@ -3264,7 +3307,7 @@
      &                                LBi, UBi, LBj, UBj,               &
      &                                SEDBED(ng)%avgbedldu(:,:,it))
 #   ifdef DISTRIBUTE
-              CALL mp_exchange2d (ng, tile, iNLM, 1,                    &
+              CALL mp_exchange2d (ng, tile, model, 1,                   &
      &                            LBi, UBi, LBj, UBj,                   &
      &                            NghostPoints,                         &
      &                            EWperiodic(ng), NSperiodic(ng),       &
@@ -3286,7 +3329,7 @@
      &                                LBi, UBi, LBj, UBj,               &
      &                                SEDBED(ng)%avgbedldv(:,:,it))
 #   ifdef DISTRIBUTE
-              CALL mp_exchange2d (ng, tile, iNLM, 1,                    &
+              CALL mp_exchange2d (ng, tile, model, 1,                   &
      &                            LBi, UBi, LBj, UBj,                   &
      &                            NghostPoints,                         &
      &                            EWperiodic(ng), NSperiodic(ng),       &
@@ -3312,7 +3355,7 @@
      &                              LBi, UBi, LBj, UBj, 0, N(ng),       &
      &                              AVERAGE(ng)%avgAKv)
 #   ifdef DISTRIBUTE
-            CALL mp_exchange3d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3335,7 +3378,7 @@
      &                              LBi, UBi, LBj, UBj, 0, N(ng),       &
      &                              AVERAGE(ng)%avgAKt)
 #   ifdef DISTRIBUTE
-            CALL mp_exchange3d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3358,7 +3401,7 @@
      &                              LBi, UBi, LBj, UBj, 0, N(ng),       &
      &                              AVERAGE(ng)%avgAKs)
 #    ifdef DISTRIBUTE
-            CALL mp_exchange3d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj, 0, N(ng),           &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3382,7 +3425,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avghsbl)
 #   ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3405,7 +3448,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avghbbl)
 #   ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3432,7 +3475,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgDU_avg1)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3453,7 +3496,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgDU_avg2)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3474,7 +3517,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgDV_avg1)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3495,7 +3538,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgDV_avg2)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3519,7 +3562,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgsus)
 # ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3540,7 +3583,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgsvs)
 # ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3561,7 +3604,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgbus)
 # ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3582,7 +3625,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgbvs)
 # ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3603,7 +3646,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgUbrs)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3623,7 +3666,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgVbrs)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3643,7 +3686,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgUbws)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3663,7 +3706,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgVbws)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3683,7 +3726,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgUbcs)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3703,7 +3746,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgVbcs)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3723,7 +3766,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgUVwc)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3743,7 +3786,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgUbot)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3763,7 +3806,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgVbot)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3783,7 +3826,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgUbur)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3803,7 +3846,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgVbvr)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3826,7 +3869,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgPair)
 #   ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3849,7 +3892,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgTair)
 #   ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3872,7 +3915,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgUwind)
 #   ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3893,7 +3936,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgVwind)
 #   ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3919,7 +3962,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgVwindN)
 #   ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 2,                      &
+            CALL mp_exchange2d (ng, tile, model, 2,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3942,7 +3985,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgstf)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3964,7 +4007,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgswf)
 #   ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -3987,7 +4030,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgsrf)
 #   ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4010,7 +4053,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avglhf)
 #   ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4031,7 +4074,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgshf)
 #   ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4052,7 +4095,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avglrf)
 #   ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4075,7 +4118,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgevap)
 #   ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4096,7 +4139,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgrain)
 #   ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4122,7 +4165,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgu2Sd)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4143,7 +4186,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgv2Sd)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4164,7 +4207,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgu2rs)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4185,7 +4228,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgv2rs)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4210,7 +4253,7 @@
      &                              LBi, UBi, LBj, UBj, 1, N(ng),       &
      &                              AVERAGE(ng)%avgu3Sd)
 #   ifdef DISTRIBUTE
-            CALL mp_exchange3d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4233,7 +4276,7 @@
      &                              LBi, UBi, LBj, UBj, 1, N(ng),       &
      &                              AVERAGE(ng)%avgv3Sd)
 #   ifdef DISTRIBUTE
-            CALL mp_exchange3d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4256,7 +4299,7 @@
      &                              LBi, UBi, LBj, UBj, 1, N(ng),       &
      &                              AVERAGE(ng)%avgu3rs)
 #   ifdef DISTRIBUTE
-            CALL mp_exchange3d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4279,7 +4322,7 @@
      &                              LBi, UBi, LBj, UBj, 1, N(ng),       &
      &                              AVERAGE(ng)%avgv3RS)
 #   ifdef DISTRIBUTE
-            CALL mp_exchange3d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4302,7 +4345,7 @@
      &                              LBi, UBi, LBj, UBj, 1, N(ng),       &
      &                              AVERAGE(ng)%avgW3Sd)
 #   ifdef DISTRIBUTE
-            CALL mp_exchange3d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4324,7 +4367,7 @@
      &                              LBi, UBi, LBj, UBj, 1, N(ng),       &
      &                              AVERAGE(ng)%avgW3St)
 #   ifdef DISTRIBUTE
-            CALL mp_exchange3d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4347,7 +4390,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgWztw)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4367,7 +4410,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgWqsp)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4387,7 +4430,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgWbeh)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4409,7 +4452,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgWamp)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4429,7 +4472,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgWam2)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4451,7 +4494,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgWlen)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4473,7 +4516,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgWlep)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4495,7 +4538,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgWdir)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4517,7 +4560,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgWdip)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4539,7 +4582,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgWptp)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4561,7 +4604,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgWpbt)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4583,7 +4626,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgWorb)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4605,7 +4648,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgWdif)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4628,7 +4671,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgWdib)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4648,7 +4691,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgWdiw)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4670,7 +4713,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgWbrk)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4692,7 +4735,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgWdis)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4712,7 +4755,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgWrol)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4734,7 +4777,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgUwav)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4754,7 +4797,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgVwav)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4778,7 +4821,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgpvor2d)
 # ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4799,7 +4842,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgrvor2d)
 # ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4823,7 +4866,7 @@
      &                              LBi, UBi, LBj, UBj, 1, N(ng),       &
      &                              AVERAGE(ng)%avgpvor3d)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange3d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4846,7 +4889,7 @@
      &                              LBi, UBi, LBj, UBj, 1, N(ng),       &
      &                              AVERAGE(ng)%avgrvor3d)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange3d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4870,7 +4913,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgZZ)
 # ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4891,7 +4934,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgU2)
 # ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4912,7 +4955,7 @@
      &                              LBi, UBi, LBj, UBj,                 &
      &                              AVERAGE(ng)%avgV2)
 # ifdef DISTRIBUTE
-            CALL mp_exchange2d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4936,7 +4979,7 @@
      &                              LBi, UBi, LBj, UBj, 1, N(ng),       &
      &                              AVERAGE(ng)%avgUU)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange3d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4959,7 +5002,7 @@
      &                              LBi, UBi, LBj, UBj, 1, N(ng),       &
      &                              AVERAGE(ng)%avgVV)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange3d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -4982,7 +5025,7 @@
      &                              LBi, UBi, LBj, UBj, 1, N(ng),       &
      &                              AVERAGE(ng)%avgUV)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange3d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -5005,7 +5048,7 @@
      &                              LBi, UBi, LBj, UBj, 1, N(ng),       &
      &                              AVERAGE(ng)%avgHuon)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange3d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -5028,7 +5071,7 @@
      &                              LBi, UBi, LBj, UBj, 1, N(ng),       &
      &                              AVERAGE(ng)%avgHvom)
 #  ifdef DISTRIBUTE
-            CALL mp_exchange3d (ng, tile, iNLM, 1,                      &
+            CALL mp_exchange3d (ng, tile, model, 1,                     &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
@@ -5052,7 +5095,7 @@
      &                                LBi, UBi, LBj, UBj, 1, N(ng),     &
      &                                AVERAGE(ng)%avgTT(:,:,:,it))
 #  ifdef DISTRIBUTE
-              CALL mp_exchange3d (ng, tile, iNLM, 1,                    &
+              CALL mp_exchange3d (ng, tile, model, 1,                   &
      &                            LBi, UBi, LBj, UBj, 1, N(ng),         &
      &                            NghostPoints,                         &
      &                            EWperiodic(ng), NSperiodic(ng),       &
@@ -5075,7 +5118,7 @@
      &                                LBi, UBi, LBj, UBj, 1, N(ng),     &
      &                                AVERAGE(ng)%avgUT(:,:,:,it))
 #  ifdef DISTRIBUTE
-              CALL mp_exchange3d (ng, tile, iNLM, 1,                    &
+              CALL mp_exchange3d (ng, tile, model, 1,                   &
      &                            LBi, UBi, LBj, UBj, 1, N(ng),         &
      &                            NghostPoints,                         &
      &                            EWperiodic(ng), NSperiodic(ng),       &
@@ -5098,7 +5141,7 @@
      &                                LBi, UBi, LBj, UBj, 1, N(ng),     &
      &                                AVERAGE(ng)%avgVT(:,:,:,it))
 #  ifdef DISTRIBUTE
-              CALL mp_exchange3d (ng, tile, iNLM, 1,                    &
+              CALL mp_exchange3d (ng, tile, model, 1,                   &
      &                            LBi, UBi, LBj, UBj, 1, N(ng),         &
      &                            NghostPoints,                         &
      &                            EWperiodic(ng), NSperiodic(ng),       &
@@ -5121,7 +5164,7 @@
      &                                LBi, UBi, LBj, UBj, 1, N(ng),     &
      &                                AVERAGE(ng)%avgHuonT(:,:,:,it))
 #  ifdef DISTRIBUTE
-              CALL mp_exchange3d (ng, tile, iNLM, 1,                    &
+              CALL mp_exchange3d (ng, tile, model, 1,                   &
      &                            LBi, UBi, LBj, UBj, 1, N(ng),         &
      &                            NghostPoints,                         &
      &                            EWperiodic(ng), NSperiodic(ng),       &
@@ -5144,7 +5187,7 @@
      &                                LBi, UBi, LBj, UBj, 1, N(ng),     &
      &                                AVERAGE(ng)%avgHvomT(:,:,:,it))
 #  ifdef DISTRIBUTE
-              CALL mp_exchange3d (ng, tile, iNLM, 1,                    &
+              CALL mp_exchange3d (ng, tile, model, 1,                   &
      &                            LBi, UBi, LBj, UBj, 1, N(ng),         &
      &                            NghostPoints,                         &
      &                            EWperiodic(ng), NSperiodic(ng),       &

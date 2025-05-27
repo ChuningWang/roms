@@ -3,7 +3,7 @@
 **
 ** git $Id$
 ********************************************************** Hernan G. Arango ***
-** Copyright (c) 2002-2024 The ROMS/TOMS Group                               **
+** Copyright (c) 2002-2025 The ROMS Group                                    **
 **   Licensed under a MIT/X style license                                    **
 **   See License_ROMS.md                                                     **
 *******************************************************************************
@@ -347,7 +347,7 @@
 ** ADD_FSOBC               to add tidal elevation to processed OBC data      **
 ** ADD_M2OBC               to add tidal currents  to processed OBC data      **
 **                                                                           **
-** ROMS/TOMS driver OPTIONS:                                                 **
+** ROMS driver OPTIONS:                                                      **
 **                                                                           **
 ** ADM_DRIVER                 if generic adjoint model                       **
 ** AD_SENSITIVITY             if adjoint sensitivity                         **
@@ -382,6 +382,7 @@
 ** SANITY_CHECK               if tangent/adjoint codes sanity check          **
 ** SO_SEMI                    if stochastic optimals driver, semi-norm       **
 ** SO_TRACE                   if stochastic optimals, randomized trace       **
+** SPLIT_EXECUTABLE           if split executable for backround/analysis     **
 ** SPLIT_I4DVAR               if split I4D-Var data assimilation             **
 ** SPLIT_RBL4DVAR             if split RBL4D-Var data assimilation           **
 ** SPLIT_R4DVAR               if split R4D-Var data assimilation             **
@@ -524,10 +525,10 @@
 ** ROLLER_RENIERS      activate wave roller based on Reniers                 **
 ** SURFACE_STREAMING   activate wave enhanced surface streaming              **
 ** WAVE_MIXING         activate enhanced vertical viscosity mixing from waves**
-** WDISS_CHURTHOR      activate wave dissipation from Church/Thorton.        **
+** WDISS_CHURTHOR      activate wave dissipation from Church/Thornton.       **
 ** WDISS_GAMMA         activate wave dissipation when using InWave           **
 ** WDISS_ROELVINK      activate wave dissipation Roelvink when using InWave  **
-** WDISS_THORGUZA      activate wave dissipation from Thorton/Guza.          **
+** WDISS_THORGUZA      activate wave dissipation from Thornton/Guza.         **
 ** WDISS_WAVEMOD       activate wave dissipation from a wave model           **
 ** WEC_VF              activate wave-current stresses from Uchiyama et al.   **
 ** WET_DRY             activate wetting and drying                           **

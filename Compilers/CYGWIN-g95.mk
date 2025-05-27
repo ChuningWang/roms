@@ -1,6 +1,6 @@
 # git $Id$
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-# Copyright (c) 2002-2024 The ROMS/TOMS Group                           :::
+# Copyright (c) 2002-2025 The ROMS Group                                :::
 #   Licensed under a MIT/X style license                                :::
 #   See License_ROMS.md                                                 :::
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -8,7 +8,7 @@
 # Include file for GNU g95 on Cygwin
 # -------------------------------------------------------------------------
 #
-# ARPACK_LIBDIR  ARPACK libary directory
+# ARPACK_LIBDIR  ARPACK library directory
 # FC             Name of the fortran compiler to use
 # FFLAGS         Flags to the fortran compiler
 # CPP            Name of the C-preprocessor
@@ -22,6 +22,11 @@
 # NETCDF_INCDIR  NetCDF include directory
 # NETCDF_LIBDIR  NetCDF library directory
 # NETCDF_LIBS    NetCDF library switches
+# PIO_LIBDIR     Parallel-IO (PIO) library directory
+# PIO_LIBS       Parallel-IO (PIO) library switches
+# PNETCDF_INCDIR PNetCDF include directory
+# PNETCDF_LIBDIR PNetCDF library directory
+# PNETCDF_LIBS   PNetCDF library switches
 
 # LD             Program to load the objects into an executable or shared library
 # LDFLAGS        Flags to the loader
@@ -232,11 +237,11 @@ endif
 ifdef SHARED
  ifdef EXEC
   ifndef STATIC
-	CYG_DLL_CP := cyg_dll_cp
+       CYG_DLL_CP := cyg_dll_cp
 
 .PHONY: cyg_dll_cp
 cyg_dll_cp: $(BIN)
-	$(CP) $(BUILD_DIR)/$(SH_LIB_NAME) $(BINDIR)
+            $(CP) $(BUILD_DIR)/$(SH_LIB_NAME) $(BINDIR)
 
   endif
  endif

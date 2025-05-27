@@ -8,7 +8,7 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2025 The ROMS Group                              !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
@@ -159,7 +159,14 @@
 !-----------------------------------------------------------------------
 !
       IF (DOMAIN(ng)%SouthWest_Corner(tile)) THEN
-        IF (Master) WRITE (stdout,10) time_code(ng)
+        IF (FrequentImpulse(ng)) THEN
+          IF (Master) WRITE (stdout,10) time_code(ng)
+        END IF
+# ifdef RPCG
+        IF (IAUswitch(ng)) THEN
+          IF (Master) WRITE (stdout,20) time_code(ng)
+        END IF
+# endif
       END IF
 !
 !  Free-surface.
@@ -235,6 +242,10 @@
 !
  10   FORMAT (2x,'NL_FORCING       - added convolved adjoint impulse,', &
      &        t71,'t = ', a)
+# ifdef RPCG
+ 20   FORMAT (2x,'NL_FORCING       - incremental analysis update,    ', &
+     &        t71,'t = ', a)
+# endif
 !
       RETURN
       END SUBROUTINE forcing_tile

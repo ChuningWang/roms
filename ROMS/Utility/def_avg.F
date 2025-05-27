@@ -7,7 +7,7 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2025 The ROMS Group                              !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
@@ -4683,7 +4683,8 @@
 !-----------------------------------------------------------------------
 !
         CALL sediment_def_pio (ng, model, ldef, Aout, AVG,              &
-     &                         t2dgrd, u2dgrd, v2dgrd)
+     &                         t2dgrd, u2dgrd, v2dgrd,                  &
+     &                         b3dgrd)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  endif
 

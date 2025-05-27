@@ -3,7 +3,7 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2025 The ROMS Group                              !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
@@ -959,6 +959,13 @@
           get_var(idBott(itrc))=.TRUE.
         END DO
 #   endif
+#  endif
+#  ifdef ICE_MODEL
+        DO i=1,nIceS
+          IF (iSice(i).gt.0) THEN
+            get_var(iSice(i))=.TRUE.
+          END IF
+        END DO
 #  endif
 # endif
 # ifdef PERFECT_RESTART

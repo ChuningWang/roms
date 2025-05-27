@@ -5,7 +5,7 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2025 The ROMS Group                              !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
@@ -16,7 +16,7 @@
 !                                                                      !
 !  If ExtractFlag > 1:   Decimation                                    !
 !                                                                      !
-!  It decimates the field solution at the prescribed integer factor,   !    
+!  It decimates the field solution at the prescribed integer factor,   !
 !  ExtractFlag . For example, if ExtractFlag=2 (recommended), the      !
 !  output fieldsare written at every other point, resulting in coarser !
 !  data resolution. This strategy is advantageous in mixed resolution, !

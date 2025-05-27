@@ -5,7 +5,7 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2025 The ROMS Group                              !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
@@ -16,7 +16,7 @@
 !                                                                      !
 !  If ExtractFlag > 1:   Decimation                                    !
 !                                                                      !
-!  It decimates the field solution at the prescribed integer factor,   !    
+!  It decimates the field solution at the prescribed integer factor,   !
 !  ExtractFlag . For example, if ExtractFlag=2 (recommended), the      !
 !  output fieldsare written at every other point, resulting in coarser !
 !  data resolution. This strategy is advantageous in mixed resolution, !
@@ -165,13 +165,10 @@
 #  ifdef SEDIMENT
       integer :: b3dgrd(4)
 #  endif
-      integer :: t3dgrd(4), u3dgrd(4), v3dgrd(4), w3dgrd(4)
+      integer :: p2grd(3), t3dgrd(4), u3dgrd(4), v3dgrd(4), w3dgrd(4)
 #  ifdef ADJUST_BOUNDARY
       integer :: t3dobc(5)
 #  endif
-# endif
-# ifdef WET_DRY
-      integer :: sp2dgrd(3)
 # endif
 !
       real(r8) :: Aval(6)
@@ -411,14 +408,12 @@
         t3dobc(5)=DimIDs(12)
 #  endif
 # endif
-# ifdef WET_DRY
 !
 !  Define dimension vectors for staggered type variables at PSI-points.
 !
-        sp2dgrd(1)=DimIDs( 4)
-        sp2dgrd(2)=DimIDs( 8)
-        sp2dgrd(3)=DimIDs(12)
-# endif
+        p2grd(1)=DimIDs( 4)
+        p2grd(2)=DimIDs( 8)
+        p2grd(3)=DimIDs(12)
 !
 !  Define dimension vectors for staggered u-momentum type variables.
 !
@@ -563,7 +558,7 @@
         Vinfo(22)='coordinates'
         Aval(5)=REAL(Iinfo(1,idPwet,ng),r8)
         status=def_var(ng, model, XTR(ng)%ncid, XTR(ng)%Vid(idPwet),    &
-     &                 NF_FOUT, nvd3, sp2dgrd, Aval, Vinfo, ncname,     &
+     &                 NF_FOUT, nvd3, p2grd, Aval, Vinfo, ncname,       &
      &                 SetFillVal = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
@@ -2842,13 +2837,10 @@
 #   ifdef SEDIMENT
       integer :: b3dgrd(4)
 #   endif
-      integer :: t3dgrd(4), u3dgrd(4), v3dgrd(4), w3dgrd(4)
+      integer :: p2grd(3), t3dgrd(4), u3dgrd(4), v3dgrd(4), w3dgrd(4)
 #   ifdef ADJUST_BOUNDARY
       integer :: t3dobc(5)
 #   endif
-#  endif
-#  ifdef WET_DRY
-      integer :: sp2dgrd(3)
 #  endif
 !
       real(r8) :: Aval(6)
@@ -3090,14 +3082,12 @@
         t3dobc(5)=DimIDs(12)
 #   endif
 #  endif
-#  ifdef WET_DRY
 !
 !  Define dimension vectors for staggered type variables at PSI-points.
 !
-        sp2dgrd(1)=DimIDs( 4)
-        sp2dgrd(2)=DimIDs( 8)
-        sp2dgrd(3)=DimIDs(12)
-#  endif
+        p2grd(1)=DimIDs( 4)
+        p2grd(2)=DimIDs( 8)
+        p2grd(3)=DimIDs(12)
 !
 !  Define dimension vectors for staggered u-momentum type variables.
 !
@@ -3249,7 +3239,7 @@
 !
         status=def_var(ng, model, XTR(ng)%pioFile,                      &
      &                 XTR(ng)%pioVar(idPwet)%vd,                       &
-     &                 PIO_FOUT, nvd3, sp2dgrd, Aval, Vinfo, ncname,    &
+     &                 PIO_FOUT, nvd3, p2grd, Aval, Vinfo, ncname,      &
      &                 SetFillVal = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
@@ -4903,7 +4893,8 @@
 !-----------------------------------------------------------------------
 !
         CALL sediment_def_pio (ng, model, ldef, Hout, XTR,              &
-     &                         t2dgrd, u2dgrd, v2dgrd)
+     &                         t2dgrd, u2dgrd, v2dgrd,                  &
+     &                         b3dgrd)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  endif
 
@@ -5874,17 +5865,17 @@
         XTR(ng)%Rindex=MIN(XTR(ng)%Rindex,rec_size)
       END IF QUERY
 !
-  10  FORMAT (2x,'DEF_EXTRACT_PIO  - creating decimate file,',t56,          &
+  10  FORMAT (2x,'DEF_EXTRACT_PIO  - creating decimate file,',t56,      &
      &        'Grid ',i2.2,': ',a)
-  20  FORMAT (2x,'DEF_EXTRACT_PIO  - inquiring decimate file,',t56,         &
+  20  FORMAT (2x,'DEF_EXTRACT_PIO  - inquiring decimate file,',t56,     &
      &        'Grid ',i2.2,': ',a)
-  30  FORMAT (/,' DEF_EXTRACT_PIO - unable to create decimate NetCDF',      &
+  30  FORMAT (/,' DEF_EXTRACT_PIO - unable to create decimate NetCDF',  &
      &        ' file: ',a)
   40  FORMAT ('time dependent',1x,a)
   50  FORMAT (1pe11.4,1x,'millimeter')
-  60  FORMAT (/,' DEF_EXTRACT_PIO - unable to open decimate NetCDF file: ', &
-     &        a)
-  70  FORMAT (/,' DEF_EXTRACT_PIO - unable to find variable: ',a,2x,        &
+  60  FORMAT (/,' DEF_EXTRACT_PIO - unable to open decimate NetCDF',    &
+     &        ' file: ', a)
+  70  FORMAT (/,' DEF_EXTRACT_PIO - unable to find variable: ',a,2x,    &
      &        ' in decimate NetCDF file: ',a)
 !
       RETURN

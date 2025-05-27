@@ -4,7 +4,7 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2025 The ROMS Group                              !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
@@ -3250,7 +3250,7 @@
 !  Scan sediment model variables from input NetCDF and activate
 !  switches for station variables. Get variable IDs.
 !
-        CALL sediment_def_pio (ng, model, ldef, Sout, STA)
+        CALL sediment_def_station_pio (ng, model, ldef, Sout, STA)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  endif
 

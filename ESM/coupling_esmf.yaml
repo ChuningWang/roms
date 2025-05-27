@@ -2,7 +2,7 @@
 #
 #git $Id$
 #========================================================== Hernan G. Arango ==#
-#  Copyright (c) 2002-2024 The ROMS/TOMS Group                                 #
+#  Copyright (c) 2002-2025 The ROMS Group                                      #
 #    Licensed under a MIT/X style license                                      #
 #    See License_ROMS.md                                                       #
 #==============================================================================#
@@ -343,6 +343,21 @@ metadata:
     destination_units:   m2 s-2
     source_grid:         cell_center
     destination_grid:    lower_upper_edge
+    add_offset:          0.0d0
+    scale:               1.0d0
+    debug_write:         false
+    connected_to:        *ATM
+    regrid_method:       bilinear
+    extrapolate_method:  nearest
+
+  - standard_name:       atmosphere_boundary_layer_thickness
+    long_name:           atmosphere boundary layer thickness
+    short_name:          pblh
+    data_variables:      [pblh, time]
+    source_units:        m
+    destination_units:   m
+    source_grid:         cell_center
+    destination_grid:    cell_center
     add_offset:          0.0d0
     scale:               1.0d0
     debug_write:         false

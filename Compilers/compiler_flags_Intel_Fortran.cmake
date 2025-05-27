@@ -1,6 +1,6 @@
 # git $Id$
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::: David Robertson :::
-# Copyright (c) 2002-2024 The ROMS/TOMS Group                           :::
+# Copyright (c) 2002-2025 The ROMS Group                                :::
 #   Licensed under a MIT/X style license                                :::
 #   See License_ROMS.md                                                 :::
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -15,16 +15,16 @@ if( MPI )
   if( ${COMM} MATCHES "intel")
     execute_process( COMMAND which mpiifort
                      OUTPUT_VARIABLE CMAKE_Fortran_COMPILER
-                     OUTPUT_STRIP_TRAILING_WHITESPACE ) 
+                     OUTPUT_STRIP_TRAILING_WHITESPACE )
   else()
     execute_process( COMMAND which mpif90
                      OUTPUT_VARIABLE CMAKE_Fortran_COMPILER
-                     OUTPUT_STRIP_TRAILING_WHITESPACE ) 
+                     OUTPUT_STRIP_TRAILING_WHITESPACE )
   endif()
 else()
   execute_process( COMMAND which ifort
                    OUTPUT_VARIABLE CMAKE_Fortran_COMPILER
-                   OUTPUT_STRIP_TRAILING_WHITESPACE ) 
+                   OUTPUT_STRIP_TRAILING_WHITESPACE )
 endif()
 
 ###########################################################################

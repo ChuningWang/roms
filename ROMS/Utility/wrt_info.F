@@ -3,7 +3,7 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2025 The ROMS Group                              !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
@@ -1469,6 +1469,15 @@
      &                      ncid = ncid)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
+!
+!  Depths of horizontal slices.
+!
+      IF (Nslice.gt.0) THEN
+        CALL netcdf_put_fvar (ng, model, ncname, 'z_slice',             &
+     &                        Zslice, (/1/), (/Nslice/),                &
+     &                        ncid = ncid)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+      END IF
 !
 !  User generic parameters.
 !
@@ -3555,6 +3564,23 @@
      &                          pioFile = pioFile)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
+# ifdef GRID_EXTRACT
+      CALL pio_netcdf_put_ivar (ng, model, ncname, 'nXTR',              &
+     &                          nXTR(ng), (/0/), (/0/),                 &
+     &                          pioFile = pioFile)
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
+      CALL pio_netcdf_put_ivar (ng, model, ncname, 'ndefXTR',           &
+     &                          ndefXTR(ng), (/0/), (/0/),              &
+     &                          pioFile = pioFile)
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+
+      CALL pio_netcdf_put_ivar (ng, model, ncname, 'ExtractFlag',       &
+     &                          ExtractFlag(ng), (/0/), (/0/),          &
+     &                          pioFile = pioFile)
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+# endif
+
       CALL pio_netcdf_put_ivar (ng, model, ncname, 'nRST',              &
      &                          nRST(ng), (/0/), (/0/),                 &
      &                          pioFile = pioFile)
@@ -4810,6 +4836,15 @@
      &                          pioFile = pioFile)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
+!
+!  Depths of horizontal slices.
+!
+      IF (Nslice.gt.0) THEN
+        CALL pio_netcdf_put_fvar (ng, model, ncname, 'z_slice',         &
+     &                            Zslice, (/1/), (/Nslice/),            &
+     &                            pioFile = pioFile)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+      END IF
 !
 !  User generic parameters.
 !

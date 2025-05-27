@@ -4,12 +4,12 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2025 The ROMS Group            Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
-!  This subroutine is the main driver for adjoint  ROMS/TOMS when      !
+!  This subroutine is the main driver for adjoint  ROMS when           !
 !  configurated as a full 3D baroclinic  ocean model. It advances      !
 !  backwards the adjoint model equations for all nested grids, if      !
 !  any, by the specified time interval (seconds), RunInterval.         !
@@ -60,7 +60,6 @@
 # if defined ADJUST_STFLUX || defined ADJUST_WSTRESS
       USE ad_frc_adjust_mod,       ONLY : ad_frc_adjust
 # endif
-      USE ad_ini_fields_mod,       ONLY : ad_ini_fields, ad_ini_zeta
 # ifdef AD_OUTPUT_STATE
       USE ad_ini_fields_mod,       ONLY : ad_out_fields, ad_out_zeta
 # endif
@@ -101,8 +100,8 @@
       USE ad_set_depth_mod,        ONLY : ad_set_depth_bry
 # endif
       USE ad_omega_mod,            ONLY : ad_omega
-# ifdef NEARSHORE_MELLOR_NOT_YET
-!!    USE ad_radiation_stress_mod, ONLY : ad_radiation_stress
+# ifndef FORCING_SV
+      USE ad_post_initial_mod,     ONLY : ad_post_initial
 # endif
 # ifndef TS_FIXED
       USE ad_rho_eos_mod,          ONLY : ad_rho_eos
@@ -307,7 +306,7 @@
               ng=GridNumber(ig,nl)
               DO tile=first_tile(ng),last_tile(ng),+1
                 CALL ad_set_data (ng, tile)
-# ifdef FORWARD_READ
+# if defined FORWARD_READ || defined JEDI
                 CALL set_depth (ng, tile, iADM)
 # endif
 # ifdef TIDE_GENERATING_FORCES
@@ -317,7 +316,7 @@
             END DO
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 
-# ifdef FORWARD_READ
+# if defined FORWARD_READ || defined JEDI
 !
 !-----------------------------------------------------------------------
 !  Compute BASIC STATE horizontal mass fluxes (Hz*u/n and Hz*v/m).
@@ -900,20 +899,6 @@
               END DO
             END DO
 
-# ifdef NEARSHORE_MELLOR_NOT_YET
-!
-!-----------------------------------------------------------------------
-!  Compute radiation stress terms.
-!-----------------------------------------------------------------------
-!
-            DO ig=1,GridsInLayer(nl)
-              ng=GridNumber(ig,nl)
-              DO tile=last_tile(ng),first_tile(ng),-1
-                CALL ad_radiation_stress (ng, tile)
-              END DO
-            END DO
-# endif
-
 # if defined WAV_COUPLING_NOT_YET && defined MCT_LIB
 !
 !-----------------------------------------------------------------------
@@ -1050,36 +1035,16 @@
 # ifndef FORCING_SV
 !
 !-----------------------------------------------------------------------
-!  If not a restart, initialize all time levels and compute other
-!  initial fields.
+!  On the last timestep, it computes the adjoint of initial depths and
+!  level thicknesses from the initial free-surface field. Additionally,
+!  it initializes the adjoint state variables for all time levels and
+!  and applies lateral boundary conditions.
 !-----------------------------------------------------------------------
 !
             DO ig=1,GridsInLayer(nl)
               ng=GridNumber(ig,nl)
               IF (iic(ng).eq.ntend(ng)) THEN
-#  ifdef NESTING
-!
-!  Extract donor grid initial data at contact points and store it in
-!  REFINED structure so it can be used for the space-time interpolation.
-!
-                IF (RefinedGrid(ng)) THEN
-                  CALL ad_nesting (ng, iADM, ngetD)
-                END IF
-#  endif
-!
-!  Adjoint of initialize other state variables.
-!
-                DO tile=last_tile(ng),first_tile(ng),-1
-                  CALL ad_ini_fields (ng, tile, iADM)
-                END DO
-!
-!  Adjoint of initialize free-surface and compute initial level
-!  thicknesses and depths.
-!
-                DO tile=first_tile(ng),last_tile(ng),+1
-                  CALL ad_set_depth (ng, tile, iADM)
-                  CALL ad_ini_zeta (ng, tile, iADM)
-                END DO
+                CALL ad_post_initial (ng, iADM)
               END IF
             END DO
 # endif

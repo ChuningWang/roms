@@ -5,7 +5,7 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2025 The ROMS Group            Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
@@ -1840,8 +1840,7 @@
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
         DO tile=first_tile(ng),last_tile(ng),+1
-          CALL ini_adjust (ng, tile, LTLM1, Lini)
-!!        CALL ini_fields (ng, tile, iNLM)
+          CALL ini_adjust (ng, tile, iTLM, LTLM1, Lini)
         END DO
       END DO
 !

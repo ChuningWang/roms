@@ -4,12 +4,12 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2025 The ROMS Group                              !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
-!  This routine is the main driver for tangent linear  ROMS/TOMS when  !
+!  This routine is the main driver for tangent linear  ROMS when       !
 !  configurated as shallow water  (barotropic ) ocean model only.  It  !
 !  advances forward  the  tangent linear model  for all nested grids,  !
 !  if any, by the specified time interval (seconds), RunInterval.      !
@@ -49,9 +49,6 @@
       USE tl_ini_fields_mod,    ONLY : tl_ini_fields, tl_ini_zeta
 # ifdef ADJUST_BOUNDARY
       USE tl_obc_adjust_mod,    ONLY : tl_obc_adjust
-# endif
-# ifdef NEARSHORE_MELLOR_NOT_YET
-!!    USE tl_radiation_stress_mod, ONLY : tl_radiation_stress
 # endif
 # ifdef TL_AVERAGES
       USE tl_set_avg_mod,       ONLY : tl_set_avg
@@ -286,20 +283,6 @@
             END DO
 !$OMP BARRIER
           END IF
-        END DO
-# endif
-
-# ifdef NEARSHORE_MELLOR_NOT_YET
-!
-!-----------------------------------------------------------------------
-!  Compute radiation stress terms.
-!-----------------------------------------------------------------------
-!
-        DO ng=1,Ngrids
-          DO tile=last_tile(ng),first_tile(ng),-1
-            CALL tl_radiation_stress (ng, tile)
-          END DO
-!$OMP BARRIER
         END DO
 # endif
 !

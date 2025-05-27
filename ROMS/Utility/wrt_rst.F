@@ -3,7 +3,7 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2025 The ROMS Group                              !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
@@ -1404,7 +1404,7 @@
       status=nf_fwrite2d(ng, model, RST(ng)%pioFile, idPwet,            &
      &                   RST(ng)%pioVar(idPwet),                        &
      &                   RST(ng)%Rindex,                                &
-     &                   ioDesc(ng),                                    &
+     &                   ioDesc,                                        &
      &                   LBi, UBi, LBj, UBj, scale,                     &
 #  ifdef MASKING
      &                   GRID(ng) % pmask,                              &
@@ -2541,7 +2541,7 @@
      &                     RST(ng)%pioVar(idV3Sd),                      &
      &                     RST(ng)%Rindex,                              &
      &                     ioDesc,                                      &
-&     &                    LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
+     &                     LBi, UBi, LBj, UBj, 1, N(ng), scale,         &
 #   ifdef MASKING
      &                     GRID(ng) % vmask,                            &
 #   endif

@@ -4,7 +4,7 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group       Andrew M. Moore   !
+!  Copyright (c) 2002-2025 The ROMS Group            Andrew M. Moore   !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
@@ -15,11 +15,51 @@
 !                                                                      !
 !=======================================================================
 !
+      USE mod_param
+      USE mod_grid
+# ifdef SOLVE3D
+      USE mod_coupling
+# endif
+      USE mod_ncparam
+      USE mod_ocean
+      USE mod_scalars
+# if defined SOLVE3D && (defined SEDIMENT || defined BBL_MODEL)
+      USE mod_sedbed
+      USE mod_sediment
+# endif
+!
+      USE exchange_2d_mod
+# ifdef SOLVE3D
+      USE exchange_3d_mod
+# endif
+# ifdef DISTRIBUTE
+      USE mp_exchange_mod,   ONLY : mp_exchange2d
+#  ifdef SOLVE3D
+      USE mp_exchange_mod,   ONLY : mp_exchange3d, mp_exchange4d
+#  else
+#   ifdef PERFECT_RESTART
+      USE mp_exchange_mod,   ONLY : mp_exchange3d
+#   endif
+#  endif
+# endif
+# ifdef SOLVE3D
+      USE t3dbc_mod,         ONLY : t3dbc_tile
+      USE uv_var_change_mod, ONLY : uv_C2A_grid
+      USE u3dbc_mod,         ONLY : u3dbc_tile
+      USE v3dbc_mod,         ONLY : v3dbc_tile
+# endif
+      USE u2dbc_mod,         ONLY : u2dbc_tile
+      USE v2dbc_mod,         ONLY : v2dbc_tile
+      USE zetabc_mod,        ONLY : zetabc_tile
+!
       implicit none
 !
       PRIVATE
       PUBLIC :: ini_fields
       PUBLIC :: ini_zeta
+# ifdef SOLVE3D
+      PUBLIC :: set_zeta_timeavg
+# endif
 !
       CONTAINS
 !
@@ -27,15 +67,6 @@
       SUBROUTINE ini_fields (ng, tile, model)
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_grid
-# ifdef SOLVE3D
-      USE mod_coupling
-# endif
-      USE mod_ocean
-# if defined SOLVE3D && (defined SEDIMENT || defined BBL_MODEL)
-      USE mod_sedbed
-# endif
       USE mod_stepping
 !
 !  Imported variable declarations.
@@ -50,7 +81,7 @@
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 2, __LINE__, MyFile)
+      CALL wclock_on (ng, model, 2, __LINE__, MyFile)
 # endif
       CALL ini_fields_tile (ng, tile, model,                            &
      &                      LBi, UBi, LBj, UBj,                         &
@@ -96,7 +127,7 @@
      &                      OCEAN(ng) % vbar,                           &
      &                      OCEAN(ng) % zeta)
 # ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 2, __LINE__, MyFile)
+      CALL wclock_off (ng, model, 2, __LINE__, MyFile)
 # endif
 !
       RETURN
@@ -134,35 +165,6 @@
 # endif
      &                            ubar, vbar, zeta)
 !***********************************************************************
-!
-      USE mod_param
-      USE mod_ncparam
-      USE mod_scalars
-# if defined SEDIMENT || defined BBL_MODEL
-      USE mod_sediment
-# endif
-!
-      USE exchange_2d_mod
-# ifdef SOLVE3D
-      USE exchange_3d_mod
-# endif
-# ifdef DISTRIBUTE
-      USE mp_exchange_mod, ONLY : mp_exchange2d
-#  ifdef SOLVE3D
-      USE mp_exchange_mod, ONLY : mp_exchange3d, mp_exchange4d
-#  else
-#   ifdef PERFECT_RESTART
-      USE mp_exchange_mod, ONLY : mp_exchange3d
-#   endif
-#  endif
-# endif
-# ifdef SOLVE3D
-      USE t3dbc_mod, ONLY : t3dbc_tile
-      USE u3dbc_mod, ONLY : u3dbc_tile
-      USE v3dbc_mod, ONLY : v3dbc_tile
-# endif
-      USE u2dbc_mod, ONLY : u2dbc_tile
-      USE v2dbc_mod, ONLY : v2dbc_tile
 !
 !  Imported variable declarations.
 !
@@ -293,7 +295,6 @@
               cff1=cff1*umask_wet(i,j)
 #  endif
               u(i,j,k,nstp)=cff1
-              u(i,j,k,nnew)=cff1
             END DO
           END DO
 !
@@ -308,7 +309,6 @@
                 cff2=cff2*vmask_wet(i,j)
 #  endif
                 v(i,j,k,nstp)=cff2
-                v(i,j,k,nnew)=cff2
               END DO
             END DO
           END IF
@@ -326,17 +326,6 @@
      &                   IminS, ImaxS, JminS, JmaxS,                    &
      &                   nstp, nstp,                                    &
      &                   v)
-
-        CALL u3dbc_tile (ng, tile,                                      &
-     &                   LBi, UBi, LBj, UBj, N(ng),                     &
-     &                   IminS, ImaxS, JminS, JmaxS,                    &
-     &                   nstp, nnew,                                    &
-     &                   u)
-        CALL v3dbc_tile (ng, tile,                                      &
-     &                   LBi, UBi, LBj, UBj, N(ng),                     &
-     &                   IminS, ImaxS, JminS, JmaxS,                    &
-     &                   nstp, nnew,                                    &
-     &                   v)
       END IF
 !
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
@@ -346,25 +335,23 @@
         CALL exchange_v3d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
      &                          v(:,:,:,nstp))
-
-        CALL exchange_u3d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
-     &                          u(:,:,:,nnew))
-        CALL exchange_v3d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj, 1, N(ng),           &
-     &                          v(:,:,:,nnew))
       END IF
 
 #  ifdef DISTRIBUTE
 !
-      CALL mp_exchange3d (ng, tile, model, 4,                           &
+      CALL mp_exchange3d (ng, tile, model, 2,                           &
      &                    LBi, UBi, LBj, UBj, 1, N(ng),                 &
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    u(:,:,:,nstp), v(:,:,:,nstp),                 &
-     &                    u(:,:,:,nnew), v(:,:,:,nnew))
+     &                    u(:,:,:,nstp), v(:,:,:,nstp))
 #  endif
 # endif
+!
+!  Compute 3D momentum (ua, va) at RHO-points (A-Grid) for output
+!  purposes and data assimilation where the observations and state
+!  vector is located at the cell-center.
+!
+      CALL uv_C2A_grid (ng, tile, iNLM, nstp)
 
 # ifdef SOLVE3D
 !
@@ -398,12 +385,7 @@
 #  ifdef WET_DRY
             cff2=cff2*umask_wet(i,j)
 #  endif
-#  if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
             ubar(i,j,kstp)=cff2
-#  else
-            ubar(i,j,kstp)=cff2
-            ubar(i,j,knew)=cff2
-#  endif
           END DO
 !
           IF (j.ge.JstrM) THEN
@@ -427,12 +409,7 @@
 #  ifdef WET_DRY
               cff2=cff2*vmask_wet(i,j)
 #  endif
-#  if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
               vbar(i,j,kstp)=cff2
-#  else
-              vbar(i,j,kstp)=cff2
-              vbar(i,j,knew)=cff2
-#  endif
             END DO
           END IF
         END DO
@@ -453,19 +430,6 @@
      &                     IminS, ImaxS, JminS, JmaxS,                  &
      &                     krhs, kstp, kstp,                            &
      &                     ubar, vbar, zeta)
-
-#  if !(defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3)
-          CALL u2dbc_tile (ng, tile,                                    &
-     &                     LBi, UBi, LBj, UBj,                          &
-     &                     IminS, ImaxS, JminS, JmaxS,                  &
-     &                     krhs, kstp, knew,                            &
-     &                     ubar, vbar, zeta)
-          CALL v2dbc_tile (ng, tile,                                    &
-     &                     LBi, UBi, LBj, UBj,                          &
-     &                     IminS, ImaxS, JminS, JmaxS,                  &
-     &                     krhs, kstp, knew,                            &
-     &                     ubar, vbar, zeta)
-#  endif
         END IF
       END IF
 !
@@ -476,39 +440,22 @@
         CALL exchange_v2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          vbar(:,:,kstp))
-
-#  if !(defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3)
-        CALL exchange_u2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          ubar(:,:,knew))
-        CALL exchange_v2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          vbar(:,:,knew))
-#  endif
       END IF
 
 #  ifdef DISTRIBUTE
 !
-#   if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
       CALL mp_exchange2d (ng, tile, model, 2,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    ubar(:,:,kstp), vbar(:,:,kstp))
-#   else
-      CALL mp_exchange2d (ng, tile, model, 4,                           &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    NghostPoints,                                 &
-     &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    ubar(:,:,kstp), vbar(:,:,kstp),               &
-     &                    ubar(:,:,knew), vbar(:,:,knew))
-#   endif
 #  endif
 
 # else
 !
 !-----------------------------------------------------------------------
-!  If not perfect restart, initialize other time levels for 2D momentum.
+!  If not perfect restart, initialize other time levels for 2D momentum
+!  (shallow-water model).
 !-----------------------------------------------------------------------
 !
       IF (.not.PerfectRST(ng)) THEN
@@ -522,8 +469,8 @@
             cff1=cff1*umask_wet(i,j)
 #  endif
             ubar(i,j,kstp)=cff1
-            ubar(i,j,krhs)=cff1
           END DO
+!
           IF (j.ge.JstrM) THEN
             DO i=IstrB,IendB
               cff2=vbar(i,j,kstp)
@@ -534,7 +481,6 @@
               cff2=cff2*vmask_wet(i,j)
 #  endif
               vbar(i,j,kstp)=cff2
-              vbar(i,j,krhs)=cff2
             END DO
           END IF
         END DO
@@ -555,17 +501,6 @@
      &                     IminS, ImaxS, JminS, JmaxS,                  &
      &                     krhs, kstp, kstp,                            &
      &                     ubar, vbar, zeta)
-
-          CALL u2dbc_tile (ng, tile,                                    &
-     &                     LBi, UBi, LBj, UBj,                          &
-     &                     IminS, ImaxS, JminS, JmaxS,                  &
-     &                     krhs, kstp, krhs,                            &
-     &                     ubar, vbar, zeta)
-          CALL v2dbc_tile (ng, tile,                                    &
-     &                     LBi, UBi, LBj, UBj,                          &
-     &                     IminS, ImaxS, JminS, JmaxS,                  &
-     &                     krhs, kstp, krhs,                            &
-     &                     ubar, vbar, zeta)
         END IF
       END IF
 !
@@ -576,14 +511,6 @@
         CALL exchange_v2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          vbar(:,:,kstp))
-
-        CALL exchange_u2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          ubar(:,:,krhs))
-        CALL exchange_v2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          vbar(:,:,krhs))
-
         IF (PerfectRST(ng)) THEN
           CALL exchange_u2d_tile (ng, tile,                             &
      &                            LBi, UBi, LBj, UBj,                   &
@@ -596,13 +523,11 @@
 
 #  ifdef DISTRIBUTE
 !
-      CALL mp_exchange2d (ng, tile, model, 4,                           &
+      CALL mp_exchange2d (ng, tile, model, 2,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    ubar(:,:,kstp), vbar(:,:,kstp),               &
-     &                    ubar(:,:,krhs), vbar(:,:,krhs))
-
+     &                    ubar(:,:,kstp), vbar(:,:,kstp))
       IF (PerfectRST(ng)) THEN
         CALL mp_exchange2d (ng, tile, model, 2,                         &
      &                      LBi, UBi, LBj, UBj,                         &
@@ -633,7 +558,6 @@
                 cff1=cff1*rmask(i,j)
 #  endif
                 t(i,j,k,nstp,itrc)=cff1
-                t(i,j,k,nnew,itrc)=cff1
               END DO
             END DO
           END DO
@@ -645,11 +569,6 @@
      &                     IminS, ImaxS, JminS, JmaxS,                  &
      &                     nstp, nstp,                                  &
      &                     t)
-          CALL t3dbc_tile (ng, tile, itrc, ic,                          &
-     &                     LBi, UBi, LBj, UBj, N(ng), NT(ng),           &
-     &                     IminS, ImaxS, JminS, JmaxS,                  &
-     &                     nstp, nnew,                                  &
-     &                     t)
         END DO
       END IF
 !
@@ -658,20 +577,16 @@
           CALL exchange_r3d_tile (ng, tile,                             &
      &                            LBi, UBi, LBj, UBj, 1, N(ng),         &
      &                            t(:,:,:,nstp,itrc))
-          CALL exchange_r3d_tile (ng, tile,                             &
-     &                            LBi, UBi, LBj, UBj, 1, N(ng),         &
-     &                            t(:,:,:,nnew,itrc))
         END DO
       END IF
 
 #  ifdef DISTRIBUTE
 !
-      CALL mp_exchange4d (ng, tile, model, 2,                           &
+      CALL mp_exchange4d (ng, tile, model, 1,                           &
      &                    LBi, UBi, LBj, UBj, 1, N(ng), 1, NT(ng),      &
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    t(:,:,:,nstp,:),                              &
-     &                    t(:,:,:,nnew,:))
+     &                    t(:,:,:,nstp,:))
 #  endif
 
 #  if defined BBL_MODEL || defined SEDIMENT
@@ -800,15 +715,6 @@
       SUBROUTINE ini_zeta (ng, tile, model)
 !***********************************************************************
 !
-      USE mod_param
-      USE mod_grid
-# ifdef SOLVE3D
-      USE mod_coupling
-# endif
-      USE mod_ocean
-# if defined SOLVE3D && defined SEDIMENT && defined SED_MORPH
-      USE mod_sedbed
-# endif
       USE mod_stepping
 !
 !  Imported variable declarations.
@@ -823,7 +729,7 @@
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, iNLM, 2, __LINE__, MyFile)
+      CALL wclock_on (ng, model, 2, __LINE__, MyFile)
 # endif
       CALL ini_zeta_tile (ng, tile, model,                              &
      &                    LBi, UBi, LBj, UBj,                           &
@@ -842,11 +748,10 @@
      &                    SEDBED(ng) % bed_thick0,                      &
      &                    SEDBED(ng) % bed_thick,                       &
 #  endif
-     &                    COUPLING(ng) % Zt_avg1,                       &
 # endif
      &                    OCEAN(ng) % zeta)
 # ifdef PROFILE
-      CALL wclock_off (ng, iNLM, 2, __LINE__, MyFile)
+      CALL wclock_off (ng, model, 2, __LINE__, MyFile)
 # endif
 !
       RETURN
@@ -868,23 +773,9 @@
 #  if defined SEDIMENT && defined SED_MORPH
      &                          bed, bed_thick0, bed_thick,             &
 #  endif
-     &                          Zt_avg1,                                &
 # endif
      &                          zeta)
 !***********************************************************************
-!
-      USE mod_param
-      USE mod_ncparam
-      USE mod_scalars
-# if defined SEDIMENT && defined SED_MORPH
-      USE mod_sediment
-# endif
-!
-      USE exchange_2d_mod, ONLY : exchange_r2d_tile
-# ifdef DISTRIBUTE
-      USE mp_exchange_mod, ONLY : mp_exchange2d
-# endif
-      USE zetabc_mod, ONLY : zetabc_tile
 !
 !  Imported variable declarations.
 !
@@ -908,9 +799,6 @@
 #  ifdef WET_DRY
       real(r8), intent(inout) :: rmask_wet(LBi:,LBj:)
 #  endif
-#  ifdef SOLVE3D
-      real(r8), intent(inout) :: Zt_avg1(LBi:,LBj:)
-#  endif
       real(r8), intent(inout) :: zeta(LBi:,LBj:,:)
 
 # else
@@ -928,9 +816,6 @@
 #  endif
 #  ifdef WET_DRY
       real(r8), intent(inout) :: rmask_wet(LBi:UBi,LBj:UBj)
-#  endif
-#  ifdef SOLVE3D
-      real(r8), intent(inout) :: Zt_avg1(LBi:UBi,LBj:UBj)
 #  endif
       real(r8), intent(inout) :: zeta(LBi:UBi,LBj:UBj,:)
 # endif
@@ -976,16 +861,7 @@
 !!            rmask_wet(i,j)=1.0_r8*rmask(i,j)
             END IF
 # endif
-# if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
             zeta(i,j,kstp)=cff1
-# else
-            zeta(i,j,kstp)=cff1
-#  ifdef SOLVE3D
-            zeta(i,j,knew)=cff1
-#  else
-            zeta(i,j,krhs)=cff1
-#  endif
-# endif
           END DO
         END DO
 !
@@ -999,22 +875,6 @@
      &                      IminS, ImaxS, JminS, JmaxS,                 &
      &                      krhs, kstp, kstp,                           &
      &                      zeta)
-
-# if !(defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3)
-#  ifdef SOLVE3D
-          CALL zetabc_tile (ng, tile,                                   &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      IminS, ImaxS, JminS, JmaxS,                 &
-     &                      krhs, kstp, knew,                           &
-     &                      zeta)
-#  else
-          CALL zetabc_tile (ng, tile,                                   &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      IminS, ImaxS, JminS, JmaxS,                 &
-     &                      krhs, kstp, krhs,                           &
-     &                      zeta)
-#  endif
-# endif
         END IF
       END IF
 !
@@ -1022,18 +882,6 @@
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          zeta(:,:,kstp))
-# if !(defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3)
-#  ifdef SOLVE3D
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          zeta(:,:,knew))
-#  else
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          zeta(:,:,krhs))
-#  endif
-# endif
-
         IF (PerfectRST(ng)) THEN
 # ifdef SOLVE3D
           CALL exchange_r2d_tile (ng, tile,                             &
@@ -1054,30 +902,11 @@
       END IF
 
 # ifdef DISTRIBUTE
-#  if defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3
       CALL mp_exchange2d (ng, tile, model, 1,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    zeta(:,:,kstp))
-#  else
-#   ifdef SOLVE3D
-      CALL mp_exchange2d (ng, tile, model, 2,                           &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    NghostPoints,                                 &
-     &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    zeta(:,:,kstp),                               &
-     &                    zeta(:,:,knew))
-#   else
-      CALL mp_exchange2d (ng, tile, model, 2,                           &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    NghostPoints,                                 &
-     &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    zeta(:,:,kstp),                               &
-     &                    zeta(:,:,krhs))
-#   endif
-#  endif
-
       IF (PerfectRST(ng)) THEN
 #  ifdef SOLVE3D
         CALL mp_exchange2d (ng, tile, model, 1,                         &
@@ -1110,25 +939,7 @@
 !  free-surface
 !-----------------------------------------------------------------------
 !
-      DO j=JstrT,JendT
-        DO i=IstrT,IendT
-          Zt_avg1(i,j)=zeta(i,j,kstp)
-        END DO
-      END DO
-!
-      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Zt_avg1)
-      END IF
-
-#  ifdef DISTRIBUTE
-      CALL mp_exchange2d (ng, tile, model, 1,                           &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    NghostPoints,                                 &
-     &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    Zt_avg1)
-#  endif
+      CALL set_zeta_timeavg (ng, tile, model)
 
 #  if defined SEDIMENT && defined SED_MORPH
 !
@@ -1171,6 +982,100 @@
 # endif
 !
       RETURN
+!
       END SUBROUTINE ini_zeta_tile
+
+# ifdef SOLVE3D
+!
+!
+!***********************************************************************
+      SUBROUTINE set_zeta_timeavg (ng, tile, model)
+!***********************************************************************
+!
+      USE mod_stepping
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: ng, tile, model
+!
+!  Local variable declarations.
+!
+      character (len=*), parameter :: MyFile =                          &
+     &  __FILE__//", set_zeta_timeavg"
+!
+#  include "tile.h"
+!
+#  ifdef PROFILE
+      CALL wclock_on (ng, model, 2, __LINE__, MyFile)
+#  endif
+      CALL set_zeta_timeavg_tile (ng, tile, model,                      &
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            kstp(ng),                             &
+     &                            OCEAN(ng) % zeta,                     &
+     &                            COUPLING(ng) % Zt_avg1)
+#  ifdef PROFILE
+      CALL wclock_off (ng, model, 2, __LINE__, MyFile)
+#  endif
+!
+      RETURN
+      END SUBROUTINE set_zeta_timeavg
+!
+!***********************************************************************
+      SUBROUTINE set_zeta_timeavg_tile (ng, tile, model,                &
+     &                                  LBi, UBi, LBj, UBj,             &
+     &                                  kstp,                           &
+     &                                  zeta,                           &
+     &                                  Zt_avg1)
+!***********************************************************************
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: ng, tile, model
+      integer, intent(in) :: LBi, UBi, LBj, UBj
+      integer, intent(in) :: kstp
+!
+#  ifdef ASSUMED_SHAPE
+      real(r8), intent(in)    :: zeta(LBi:,LBj:,:)
+      real(r8), intent(inout) :: Zt_avg1(LBi:,LBj:)
+#  else
+      real(r8), intent(in)    :: zeta(LBi:UBi,LBj:UBj,:)
+      real(r8), intent(inout) :: Zt_avg1(LBi:UBi,LBj:UBj)
+#  endif
+!
+!  Local variable declarations.
+!
+      integer :: i, j
+!
+#  include "set_bounds.h"
+!
+!-----------------------------------------------------------------------
+!  Initialize fast-time averaged free-surface (Zt_avg1) with the inital
+!  free-surface.
+!-----------------------------------------------------------------------
+!
+      DO j=JstrT,JendT
+        DO i=IstrT,IendT
+          Zt_avg1(i,j)=zeta(i,j,kstp)
+        END DO
+      END DO
+!
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Zt_avg1)
+      END IF
+
+#  ifdef DISTRIBUTE
+!
+      CALL mp_exchange2d (ng, tile, model, 1,                           &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+     &                    Zt_avg1)
+#  endif
+!
+      RETURN
+      END SUBROUTINE set_zeta_timeavg_tile
+# endif
 #endif
       END MODULE ini_fields_mod

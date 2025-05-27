@@ -1,6 +1,6 @@
 # git $Id$
 #:::::::::::::::::::::::::::::::::::::::::::::::::::::: David Robertson :::
-# Copyright (c) 2002-2024 The ROMS/TOMS Group                           :::
+# Copyright (c) 2002-2025 The ROMS Group                                :::
 #   Licensed under a MIT/X style license                                :::
 #   See License_ROMS.md                                                 :::
 #::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -55,6 +55,7 @@ list( APPEND _files
       ROMS/Utility/erf.F
       ROMS/Utility/extract_field.F
       ROMS/Utility/extract_obs.F
+      ROMS/Utility/extract_slice.F
       ROMS/Utility/extract_sta.F
       ROMS/Utility/frc_weak.F
       ROMS/Utility/gasdev.F
@@ -98,6 +99,7 @@ list( APPEND _files
       ROMS/Utility/nf_fread2d_xtr.F
       ROMS/Utility/nf_fread2d.F
       ROMS/Utility/nf_fread3d_bry.F
+      ROMS/Utility/nf_fread3d_xtr.F
       ROMS/Utility/nf_fread3d.F
       ROMS/Utility/nf_fread4d.F
       ROMS/Utility/nf_fwrite2d_bry.F
@@ -131,6 +133,7 @@ list( APPEND _files
       ROMS/Utility/read_stapar.F
       ROMS/Utility/regrid.F
       ROMS/Utility/rep_matrix.F
+      ROMS/Utility/roms_interp.F
       ROMS/Utility/round.F
       ROMS/Utility/rpcg_lanczos.F
       ROMS/Utility/set_2dfld.F
@@ -149,12 +152,14 @@ list( APPEND _files
       ROMS/Utility/shapiro.F
       ROMS/Utility/sqlq.F
       ROMS/Utility/state_addition.F
+      ROMS/Utility/state_assign.F
       ROMS/Utility/state_copy.F
       ROMS/Utility/state_dotprod.F
       ROMS/Utility/state_initialize.F
       ROMS/Utility/state_join.F
       ROMS/Utility/state_product.F
       ROMS/Utility/state_read.F
+      ROMS/Utility/state_regrid.F
       ROMS/Utility/state_scale.F
       ROMS/Utility/stats.F
       ROMS/Utility/stats_modobs.F
@@ -170,6 +175,7 @@ list( APPEND _files
       ROMS/Utility/time_corr.F
       ROMS/Utility/timers.F
       ROMS/Utility/uv_rotate.F
+      ROMS/Utility/uv_var_change.F
       ROMS/Utility/vorticity.F
       ROMS/Utility/white_noise.F
       ROMS/Utility/wpoints.F

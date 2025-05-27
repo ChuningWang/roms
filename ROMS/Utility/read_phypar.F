@@ -3,7 +3,7 @@
 !
 !git $Id$
 !================================================== Hernan G. Arango ===
-!  Copyright (c) 2002-2024 The ROMS/TOMS Group                         !
+!  Copyright (c) 2002-2025 The ROMS Group                              !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
@@ -1517,6 +1517,38 @@
               END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Hout(idv3dN,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Hout(id3dPV)')
+              IF (id3dPV.eq.0) THEN
+                IF (Master) WRITE (out,280) 'id3dPV'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(id3dPV,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Hout(idPVzs)')
+              IF (idPVzs.eq.0) THEN
+                IF (Master) WRITE (out,280) 'idPVzs'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(idPVzs,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Hout(id3dRV)')
+              IF (id3dRV.eq.0) THEN
+                IF (Master) WRITE (out,280) 'id3dRV'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(id3dRV,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Hout(idRVzs)')
+              IF (idRVzs.eq.0) THEN
+                IF (Master) WRITE (out,280) 'idRVzs'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(idRVzs,1:Ngrids)=Lswitch(1:Ngrids)
 #ifdef SOLVE3D
             CASE ('Hout(idTvar)')
               IF (MAXVAL(idTvar).eq.0) THEN
@@ -1528,6 +1560,53 @@
               DO ng=1,Ngrids
                 DO itrc=1,NAT
                   i=idTvar(itrc)
+                  Hout(i,ng)=Ltracer(itrc,ng)
+                END DO
+              END DO
+#endif
+            CASE ('Hout(idUzsl)')
+              IF (idUzsl.eq.0) THEN
+                IF (Master) WRITE (out,280) 'idUzsl'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(idUzsl,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Hout(idVzsl)')
+              IF (idVzsl.eq.0) THEN
+                IF (Master) WRITE (out,280) 'idVzsl'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(idVzsl,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Hout(idUzsE)')
+              IF (idUzsE.eq.0) THEN
+                IF (Master) WRITE (out,280) 'idUzsE'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(idUzsE,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Hout(idVzsN)')
+              IF (idVzsN.eq.0) THEN
+                IF (Master) WRITE (out,280) 'idVzsN'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(idVzsN,1:Ngrids)=Lswitch(1:Ngrids)
+#ifdef SOLVE3D
+            CASE ('Hout(idzslT)')
+              IF (MAXVAL(idzslT).eq.0) THEN
+                IF (Master) WRITE (out,280) 'idzslT'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, NAT+NPT, Ngrids, Ltracer)
+              DO ng=1,Ngrids
+                DO itrc=1,NAT
+                  i=idzslT(itrc)
                   Hout(i,ng)=Ltracer(itrc,ng)
                 END DO
               END DO
@@ -2212,6 +2291,14 @@
                   Hout(itrc,ng)=Linert(i,ng)
                 END DO
               END DO
+            CASE ('Hout(Znert)')
+              Npts=load_l(Nval, Cval, NPT, Ngrids, Linert)
+              DO ng=1,Ngrids
+                DO i=1,NPT
+                  itrc=idzslT(inert(i))
+                  Hout(itrc,ng)=Linert(i,ng)
+                END DO
+              END DO
 #endif
             CASE ('Qout(idUvel)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
@@ -2293,6 +2380,22 @@
               END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idVsuN,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Qout(idPVzs)')
+              IF (idPVzs.eq.0) THEN
+                IF (Master) WRITE (out,280) 'idPVzs'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Qout(idPVzs,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Qout(idRVzs)')
+              IF (idRVzs.eq.0) THEN
+                IF (Master) WRITE (out,280) 'idRVzs'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Qout(idRVzs,1:Ngrids)=Lswitch(1:Ngrids)
 #ifdef SOLVE3D
             CASE ('Qout(idsurT)')
               IF (MAXVAL(idsurT).eq.0) THEN
@@ -2304,6 +2407,54 @@
               DO ng=1,Ngrids
                 DO itrc=1,NAT
                   i=idsurT(itrc)
+                  Qout(i,ng)=Ltracer(itrc,ng)
+                END DO
+              END DO
+#endif
+            CASE ('Qout(idUzsl)')
+              IF (idUzsl.eq.0) THEN
+                IF (Master) WRITE (out,280) 'idUzsl'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Qout(idUzsl,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Qout(idVzsl)')
+              IF (idVzsl.eq.0) THEN
+                IF (Master) WRITE (out,280) 'idVzsl'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Qout(idVzsl,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Qout(idUzsE)')
+              IF (idUzsE.eq.0) THEN
+                IF (Master) WRITE (out,280) 'idUzsE'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Qout(idUzsE,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Qout(idVzsN)')
+              IF (idVzsN.eq.0) THEN
+                IF (Master) WRITE (out,280) 'idVzsN'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Qout(idVzsN,1:Ngrids)=Lswitch(1:Ngrids)
+#ifdef SOLVE3D
+            CASE ('Qout(idzslT)')
+              IF (MAXVAL(idzslT).eq.0) THEN
+
+                 IF (Master) WRITE (out,280) 'idzslT'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, NAT+NPT, Ngrids, Ltracer)
+              DO ng=1,Ngrids
+                DO itrc=1,NAT
+                  i=idzslT(itrc)
                   Qout(i,ng)=Ltracer(itrc,ng)
                 END DO
               END DO
@@ -2498,6 +2649,16 @@
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idPair,1:Ngrids)=Lswitch(1:Ngrids)
 # endif
+# if defined BULK_FLUXES && defined FRC_COUPLING && defined PBLH
+            CASE ('Qout(idPBLh)')
+              IF (idPBLh.eq.0) THEN
+                IF (Master) WRITE (out,280) 'idPBLh'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Qout(idPBLh,1:Ngrids)=Lswitch(1:Ngrids)
+# endif
 # if defined BULK_FLUXES
             CASE ('Qout(idTair)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
@@ -2579,6 +2740,14 @@
               DO ng=1,Ngrids
                 DO i=1,NPT
                   itrc=idTvar(inert(i))
+                  Qout(itrc,ng)=Linert(i,ng)
+                END DO
+              END DO
+            CASE ('Qout(Znert)')
+              Npts=load_l(Nval, Cval, NPT, Ngrids, Linert)
+              DO ng=1,Ngrids
+                DO i=1,NPT
+                  itrc=idzslT(inert(i))
                   Qout(itrc,ng)=Linert(i,ng)
                 END DO
               END DO
@@ -3795,6 +3964,24 @@
 # endif
               END DO
 #endif
+            CASE ('NSLICE')
+              Npts=load_i(Nval, Rval, 1, Ivalue)
+              Nslice=Ivalue(1)
+              IF (Nslice.gt.0) THEN
+                IF (allocated(Zslice)) deallocate (Zslice)
+                allocate ( Zslice(Nslice) )
+                Zslice=spval
+              END IF
+            CASE ('Z_SLICE')
+              IF (Nslice.gt.0) THEN
+                Npts=load_r(Nval, Rval, Nslice, Zslice)
+                Zslice=-ABS(Zslice)
+                DO i=1,Nslice
+                  IF (Zslice(i).gt.0.0_r8) THEN
+                    Zslice(i)=-Zslice(i)
+                  END IF
+                END DO
+              END IF
             CASE ('NUSER')
               Npts=load_i(Nval, Rval, 1, Ivalue)
               Nuser=Ivalue(1)
@@ -4022,7 +4209,7 @@
             CASE ('XTRNAME')
               label='XTR - nonlinear model extraction history fields'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, out_lib, XTR)
+     &                      Ngrids, Nfiles, io_nf90, XTR)
             CASE ('QCKNAME')
               label='QCK - nonlinear model quicksave fields'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
@@ -4066,11 +4253,11 @@
             CASE ('GRXNAME')
               label='GRX - I/O histrory extract grid'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, inp_lib, GRX)
+     &                      Ngrids, Nfiles, io_nf90, GRX)
             CASE ('ININAME')
               label='INI - nonlinear model initial conditions'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
-     &                      Ngrids, Nfiles, inp_lib, INI)
+     &                      Ngrids, Nfiles, io_nf90, INI)
             CASE ('IRPNAME')
               label='IRP - representer model initial conditions'
               Npts=load_s1d(Nval, Cval, Cdim, line, label, igrid,       &
@@ -4589,7 +4776,7 @@
         nADJ(ng)=ntimes(ng)/Nintervals
 #endif
 #if defined FOUR_DVAR || defined IMPULSE
-!
+
 !  Set size of additonal dimension for error covariance normalization
 !  and standard deviation factors.
 !
@@ -4828,22 +5015,23 @@
         END DO
       END DO
 #endif
+
+#if defined PIO_LIB && defined DISTRIBUTE
+!
+!  Ensure that input or output files are processed with the standard
+!  NetCDF-3 or NetCDF-4 library to avoid parallel I/O issues.
+!
+      DO ng=1,Ngrids
+        BRY(:,ng)%IOtype=io_nf90            ! lateral boundary file(s)
+        SSF(ng)%IOtype=io_nf90              ! Sources/Sink forcing file
+      END DO
+#endif
 !
 !-----------------------------------------------------------------------
 !  Report input parameters.
 !-----------------------------------------------------------------------
 !
 #if defined PIO_LIB && defined DISTRIBUTE
-# ifdef ASYNCHRONOUS_SCORPIO
-!
-!  If SCORPIO library and asynchronous I/O, split the distributed-
-!  memory communicator into disjointed computational and dedicated
-!  I/O processes. (HGA: It doesn't work. There are bugs in the
-!  SCORPIO library).
-!
-      CALL set_pio_async
-      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-# endif
 !
 !  Initialize PIO system for either synchronous or asynchronous I/O.
 !
@@ -4863,14 +5051,10 @@
         WRITE (out,60) TRIM(title), TRIM(my_os), TRIM(my_cpu),          &
      &                 TRIM(my_fort), TRIM(my_fc), my_fflags(1:lstr),   &
 #ifdef DISTRIBUTE
-# if defined PIO_LIB          && \
-    (defined ASYNCHRONOUS_PIO || defined ASYNCHRONOUS_SCORPIO)
+# if defined PIO_LIB && defined ASYNCHRONOUS_PIO
      &                 PEER_COMM_WORLD, PeerSize,                       &
      &                 OCN_COMM_WORLD, numthreads,                      &
      &                 IO_COMM_WORLD, pio_NumIOtasks, TRIM(CioRanks),   &
-#  ifdef ASYNCHRONOUS_SCORPIO
-     &                 INTER_COMM_WORLD,                                &
-#  endif
 # endif
 # ifdef DISJOINTED
      &                 FULL_COMM_WORLD, FullSize, NsubGroups,           &
@@ -4881,8 +5065,7 @@
      &                 0, (FullSize/TaskSize)-1,                        &
 #  endif
 # endif
-# if !(defined PIO_LIB           && \
-       (defined ASYNCHRONOUS_PIO || defined ASYNCHRONOUS_SCORPIO)) && \
+# if !(defined PIO_LIB   && defined ASYNCHRONOUS_PIO) && \
      !defined DISJOINTED
      &                 OCN_COMM_WORLD, numthreads,                      &
 # endif
@@ -4890,8 +5073,9 @@
 #endif
 #ifdef GIT_URL
      &                 TRIM(git_url), TRIM(git_rev),                    &
-#endif
+#else
      &                 TRIM(svn_url), TRIM(svn_rev),                    &
+#endif
      &                 TRIM(Rdir), TRIM(Hdir), TRIM(Hfile), TRIM(Adir)
 !
         DO ng=1,Ngrids
@@ -4928,7 +5112,7 @@
 #  endif
 # endif
 # if defined PIO_LIB          && defined DISTRIBUTE            && \
-    (defined ASYNCHRONOUS_PIO || defined ASYNCHRONOUS_SCORPIO)
+     defined ASYNCHRONOUS_PIO
           maxPETs=PeerSize
           IF ((inp_lib.eq.io_pio).or.(out_lib.eq.io_pio)) THEN
             nPETs=(NtileI(ng)*NtileJ(ng))+pio_NumIOtasks
@@ -5919,6 +6103,18 @@
             IF (Hout(idv3dN,ng)) WRITE (out,170) Hout(idv3dN,ng),       &
      &         'Hout(idv3dN)',                                          &
      &         'Write out 3D V-northward component at RHO-points.'
+            IF (Hout(id3dPV,ng)) WRITE (out,170) Hout(id3dPV,ng),       &
+     &         'Hout(id3dPV)',                                          &
+     &         'Write out 3D potential vorticity.'
+            IF (Hout(idPVzs,ng)) WRITE (out,170) Hout(idPVzs,ng),       &
+     &         'Hout(idPVzs)',                                          &
+     &         'Write out potential vorticity depth slices.'
+            IF (Hout(id3dRV,ng)) WRITE (out,170) Hout(id3dRV,ng),       &
+     &         'Hout(id3dRV)',                                          &
+     &         'Write out 3D relative vorticity.'
+            IF (Hout(idRVzs,ng)) WRITE (out,170) Hout(idRVzs,ng),       &
+     &         'Hout(idRVzs)',                                          &
+     &         'Write out relative vorticity depth slices.'
             IF (Hout(idWvel,ng)) WRITE (out,170) Hout(idWvel,ng),       &
      &         'Hout(idWvel)',                                          &
      &         'Write out W-momentum component.'
@@ -5934,6 +6130,30 @@
               IF (Hout(idTvar(itrc),ng)) WRITE (out,180)                &
      &            Hout(idTvar(itrc),ng), 'Hout(idTvar)',                &
      &            'Write out tracer ', itrc, TRIM(Vname(1,idTvar(itrc)))
+            END DO
+            IF (Hout(idUzsl,ng)) WRITE (out,170) Hout(idUzsl,ng),       &
+     &         'Hout(idUzsl)',                                          &
+     &         'Write out 3D U-momentum component depth slices.'
+            IF (Hout(idVzsl,ng)) WRITE (out,170) Hout(idVzsl,ng),       &
+     &         'Hout(idVzsl)',                                          &
+     &         'Write out 3D V-momentum component depth slices.'
+            IF (Hout(idUzsE,ng)) WRITE (out,170) Hout(idUzsE,ng),       &
+     &         'Hout(idUzlE)',                                          &
+     &         'Write out 3D U-eastward  component depth slices.'
+            IF (Hout(idVzsN,ng)) WRITE (out,170) Hout(idVzsN,ng),       &
+     &         'Hout(idVzsN)',                                          &
+     &         'Write out 3D V-northward component depth slices.'
+            DO itrc=1,NAT
+              IF (Qout(idzslT(itrc),ng)) WRITE (out,180)                &
+     &            Qout(idzslT(itrc),ng), 'Qout(idzslT)',                &
+     &            'Write out tracer depth slices ', itrc,               &
+     &            TRIM(Vname(1,idzslT(itrc)))
+            END DO
+            DO itrc=1,NAT
+              IF (Hout(idzslT(itrc),ng)) WRITE (out,180)                &
+     &            Hout(idzslT(itrc),ng), 'Hout(idzslT)',                &
+     &            'Write out tracer depth slices ', itrc,               &
+     &            TRIM(Vname(1,idzslT(itrc)))
             END DO
             IF (Hout(idpthR,ng)) WRITE (out,170) Hout(idpthR,ng),       &
      &         'Hout(idpthR)',                                          &
@@ -6153,6 +6373,12 @@
      &            'Write out inert passive tracer ', itrc,              &
      &            TRIM(Vname(1,idTvar(inert(itrc))))
             END DO
+            DO itrc=1,NPT
+              IF (Hout(idzslT(inert(itrc)),ng)) WRITE (out,180)         &
+     &            Hout(idzslT(inert(itrc)),ng), 'Hout(ZnerT)',          &
+     &            'Write out depth slices inert passive tracer ', itrc, &
+     &            TRIM(Vname(1,idTvar(inert(itrc))))
+            END DO
 #endif
 #ifdef SOLVE3D
 # if defined BULK_FLUXES || defined ECOSIM || defined ATM_PRESS
@@ -6286,18 +6512,37 @@
             IF (Qout(idVsur,ng)) WRITE (out,170) Qout(idVsur,ng),       &
      &         'Qout(idVsur)',                                          &
      &         'Write out surface V-momentum component.'
+
+            IF (Qout(idUzsl,ng)) WRITE (out,170) Qout(idUzsl,ng),       &
+     &         'Qout(idUzsl)',                                          &
+     &         'Write out 3D U-momentum component depth slices.'
+            IF (Qout(idVzsl,ng)) WRITE (out,170) Qout(idVzsl,ng),       &
+     &         'Qout(idVzsl)',                                          &
+     &         'Write out 3D V-momentum component depth slices.'
             IF (Qout(idu3dE,ng)) WRITE (out,170) Qout(idu3dE,ng),       &
      &         'Qout(idu3dE)',                                          &
-     &         'Write out 3D U-wastward  component at RHO-points.'
+     &         'Write out 3D U-eastward  component at RHO-points.'
             IF (Qout(idv3dN,ng)) WRITE (out,170) Qout(idv3dN,ng),       &
      &         'Qout(idv3dN)',                                          &
      &         'Write out 3D V-northward component at RHO-points.'
-            IF (Qout(idu3dE,ng)) WRITE (out,170) Qout(idu3dE,ng),       &
-     &         'Qout(idu3dE)',                                          &
-     &         'Write out surface U-wastward  component at RHO-points.'
-            IF (Qout(idv3dN,ng)) WRITE (out,170) Qout(idv3dN,ng),       &
-     &         'Qout(idv3dN)',                                          &
+            IF (Qout(idUsuE,ng)) WRITE (out,170) Qout(idUsuE,ng),       &
+     &         'Qout(idUsuE)',                                          &
+     &         'Write out surface U-eastward  component at RHO-points.'
+            IF (Qout(idVsuN,ng)) WRITE (out,170) Qout(idVsuN,ng),       &
+     &         'Qout(idVsuN)',                                          &
      &         'Write out surface V-northward component at RHO-points.'
+            IF (Qout(idUzsE,ng)) WRITE (out,170) Qout(idUzsE,ng),       &
+     &         'Qout(idUzlE)',                                          &
+     &         'Write out 3D U-eastward  component depth slices.'
+            IF (Qout(idVzsN,ng)) WRITE (out,170) Qout(idVzsN,ng),       &
+     &         'Qout(idVzsN)',                                          &
+     &         'Write out 3D V-northward component depth slices.'
+            IF (Qout(idPVzs,ng)) WRITE (out,170) Qout(idPVzs,ng),       &
+     &         'Qout(idPVzs)',                                          &
+     &         'Write out potential vorticity depth slices.'
+            IF (Qout(idRVzs,ng)) WRITE (out,170) Qout(idRVzs,ng),       &
+     &         'Qout(idRVzs)',                                          &
+     &         'Write out relative vorticity depth slices.'
             IF (Qout(idWvel,ng)) WRITE (out,170) Qout(idWvel,ng),       &
      &         'Qout(idWvel)',                                          &
      &         'Write out W-momentum component.'
@@ -6314,6 +6559,12 @@
      &            Qout(idsurT(itrc),ng), 'Qout(idsurT)',                &
      &            'Write out surface tracer ', itrc,                    &
      &            TRIM(Vname(1,idsurT(itrc)))
+            END DO
+            DO itrc=1,NAT
+              IF (Qout(idzslT(itrc),ng)) WRITE (out,180)                &
+     &            Qout(idzslT(itrc),ng), 'Qout(idzslT)',                &
+     &            'Write out tracer depth slices ', itrc,               &
+     &            TRIM(Vname(1,idzslT(itrc)))
             END DO
             IF (Qout(idpthR,ng)) WRITE (out,170) Qout(idpthR,ng),       &
      &         'Qout(idpthR)',                                          &
@@ -6514,6 +6765,12 @@
      &            TRIM(Vname(1,idTvar(inert(itrc))))
             END DO
             DO itrc=1,NPT
+              IF (Qout(idzslT(inert(itrc)),ng)) WRITE (out,180)         &
+     &            Qout(idzslT(inert(itrc)),ng), 'Qout(Znert)',          &
+     &            'Write out depth slices inert passive tracer ', itrc, &
+     &            TRIM(Vname(1,idTvar(inert(itrc))))
+            END DO
+            DO itrc=1,NPT
               IF (Qout(idsurT(inert(itrc)),ng)) WRITE (out,180)         &
      &            Qout(idsurT(inert(itrc)),ng), 'Qout(Snert)',          &
      &            'Write out inert passive tracer ', itrc,              &
@@ -6525,6 +6782,11 @@
             IF (Qout(idPair,ng)) WRITE (out,170) Qout(idPair,ng),       &
      &         'Qout(idPair)',                                          &
      &         'Write out surface air pressure.'
+# endif
+# if defined BULK_FLUXES && defined FRC_COUPLING && defined PBLH
+            IF (Qout(idPBLh,ng)) WRITE (out,170) Qout(idPBLh,ng),       &
+     &         'Qout(idPBLh)',                                          &
+     &         'Write out atmosphere boundary layer thickness.'
 # endif
 # if defined BULK_FLUXES
             IF (Qout(idTair,ng)) WRITE (out,170) Qout(idTair,ng),       &
@@ -7758,12 +8020,25 @@
       END IF
 !
 !-----------------------------------------------------------------------
+!  Report depths for horizontal slices.
+!-----------------------------------------------------------------------
+!
+      IF (Nslice.gt.0) THEN
+        IF (Master.and.Lwrite) THEN
+          WRITE (out,'(/,a,/)') ' Horizontal slice Parameters:'
+          DO i=1,Nslice
+            WRITE (out,240) Zslice(i), i, i
+          END DO
+        END IF
+      END IF
+!
+!-----------------------------------------------------------------------
 !  Report generic USER parameters.
 !-----------------------------------------------------------------------
 !
       IF (Nuser.gt.0) THEN
         IF (Master.and.Lwrite) THEN
-          WRITE (out,240)
+          WRITE (out,'(/,a,/)') ' Generic User Parameters:'
           DO i=1,Nuser
             WRITE (out,250) user(i), i, i
           END DO
@@ -7901,15 +8176,11 @@
      &        /,1x,'Compiler command  : ',a,                            &
      &        /,1x,'Compiler flags    : ',a,                            &
 #ifdef DISTRIBUTE
-# if defined PIO_LIB          && \
-    (defined ASYNCHRONOUS_PIO || defined ASYNCHRONOUS_SCORPIO)
+# if defined PIO_LIB && defined ASYNCHRONOUS_PIO 
      &        /,1x,'Peer Communicator : ',i0,',  PET size = ',i0,       &
      &        /,1x,'OCN  Communicator : ',i0,',  PET size = ',i0,       &
      &        /,1x,'I/O  Communicator : ',i0,',  PET size = ',i0,       &
      &        2x,'(Peer Ranks: ',a,')',                                 &
-#  ifdef ASYNCHRONOUS_SCORPIO
-     &        /,1x,'InterCommunicator : ',i0,                           &
-#  endif
 # endif
 # ifdef DISJOINTED
      &        /,1x,'Full Communicator : ',i0,',  PET size = ',i0,       &
@@ -7921,8 +8192,7 @@
      &         ',  Color Range = ',i0,' to ',i0,                        &
 #  endif
 # endif
-# if !(defined PIO_LIB           && \
-       (defined ASYNCHRONOUS_PIO || defined ASYNCHRONOUS_SCORPIO)) && \
+# if !(defined PIO_LIB   && defined ASYNCHRONOUS_PIO ) && \
      !defined DISJOINTED
      &        /,1x,'OCN Communicator  : ',i0,',  PET size = ',i0,/,     &
 # endif
@@ -7931,9 +8201,10 @@
 #ifdef GIT_URL
      &        /,1x,'GIT Root URL      : ',a,                            &
      &        /,1x,'GIT Revision      : ',a,                            &
-#endif
+#else
      &        /,1x,'SVN Root URL      : ',a,                            &
      &        /,1x,'SVN Revision      : ',a,/,                          &
+#endif
      &        /,1x,'Local Root        : ',a,                            &
      &        /,1x,'Header Dir        : ',a,                            &
      &        /,1x,'Header file       : ',a,                            &
@@ -7941,7 +8212,7 @@
   70  FORMAT (/,' Resolution, Grid ',i2.2,': ',i0,'x',i0,'x',i0,        &
      &        ',',2x,'Parallel Nodes: ',i0,',',2x,'Tiling: ',i0,        &
      &        'x',i0)
-  80  FORMAT (/,' ROMS/TOMS: Wrong choice of grid ',i2.2,1x,            &
+  80  FORMAT (/,' ROMS: Wrong choice of grid ',i2.2,1x,                 &
      &        'partition or number of parallel nodes.',                 &
      &        /,12x,a,1x,i0,/,12x,                                      &
      &        'must be equal to the number of parallel processes = ',   &
@@ -7950,7 +8221,7 @@
   90  FORMAT (/,' Resolution, Grid ',i2.2,': ',i0,'x',i0,'x',i0,        &
      &        ',',2x,'Parallel Threads: ',i0,',',2x,'Tiling: ',i0,      &
      &        'x',i0)
- 100  FORMAT (/,' ROMS/TOMS: Wrong choice of grid ',i2.2,1x,            &
+ 100  FORMAT (/,' ROMS: Wrong choice of grid ',i2.2,1x,                 &
      &        'partition or number of parallel threads.',               &
      &        /,12x,'NtileI*NtileJ must be a positive multiple of the', &
      &        ' number of threads.',                                    &
@@ -7972,7 +8243,8 @@
  210  FORMAT (1p,e11.4,2x,a,t32,a,/,t34,a)
  220  FORMAT (/,' Output/Input Files:',/)
  230  FORMAT (2x,a,a)
- 240  FORMAT (/,' Generic User Parameters:',/)
+ 240  FORMAT (1p,e11.4,2x,'Zslice(',i2.2,')',t32,                       &
+     &        'Slice depth ',i2.2,'.')
  250  FORMAT (1p,e11.4,2x,'user(',i2.2,')',t32,                         &
      &        'User parameter ',i2.2,'.')
  260  FORMAT (/,' READ_PHYPAR - Invalid input parameter, ',a,           &
