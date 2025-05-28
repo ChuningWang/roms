@@ -123,6 +123,9 @@
       integer :: sp2dgrd(3), sr2dgrd(3), su2dgrd(3), sv2dgrd(3)
       integer :: sr3dgrd(4), su3dgrd(4), sv3dgrd(4)
       integer :: t2dgrd(4), u2dgrd(4), v2dgrd(4)
+#if defined ICE_MODEL || defined ICESHELF_DYNAM
+      integer :: i2dgrd(4)
+#endif
 
 #ifdef SOLVE3D
       integer :: itrc
@@ -587,6 +590,26 @@
         sv3dgrd(2)=DimIDs( 7)
         sv3dgrd(3)=DimIDs( 9)
         sv3dgrd(4)=DimIDs(12)
+# endif
+#endif
+#if defined ICE_MODEL || defined ICESHELF_DYNAM
+!
+!  Define dimension vectors for sea ice/ice shelf variables.
+!
+# ifdef PERFECT_RESTART
+        i2dgrd(1)=DimIDs( 1)
+        i2dgrd(2)=DimIDs( 5)
+        i2dgrd(3)=DimIDs(30)
+        i2dgrd(4)=DimIDs(12)
+# else
+#  if (defined WRITE_WATER && defined MASKING)
+        i2dgrd(1)=DimIDs(17)
+        i2dgrd(2)=DimIDs(12)
+#  else
+        i2dgrd(1)=DimIDs( 1)
+        i2dgrd(2)=DimIDs( 5)
+        i2dgrd(3)=DimIDs(12)
+#  endif
 # endif
 #endif
 !
@@ -1585,7 +1608,7 @@
 !-----------------------------------------------------------------------
 !
         CALL ice_def_nf90 (ng, model, Ldefine, Hout, RST,               &
-                           r2dgrd, u2dgrd, v2dgrd, sr2dgrd)
+                           i2dgrd, u2dgrd, v2dgrd, sr2dgrd)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
 #ifdef ICESHELF_DYNAM
@@ -1595,7 +1618,7 @@
 !-----------------------------------------------------------------------
 !
         CALL isf_def_nf90 (ng, model, Ldefine, Hout, RST,               &
-                           r2dgrd, u2dgrd, v2dgrd, sr2dgrd)
+                           i2dgrd, u2dgrd, v2dgrd, sr2dgrd)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
 !

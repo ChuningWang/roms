@@ -4017,10 +4017,19 @@
       integer :: Lstr, MyError, MyType, Serror, Srequest
       integer :: i, ic, ij, j, jc, nc
 !
+# ifdef TILEMASK
+      integer, dimension(0:tile_sum(ng)-1) :: counts, displs
+# else
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: counts, displs
+# endif
 # ifdef GATHER_SENDRECV
+#  ifdef TILEMASK
+      integer, dimension(0:tile_sum(ng)-1) :: MySize
+      integer, dimension(0:tile_sum(ng)-1) :: Rrequest
+#  else
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: MySize
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: Rrequest
+#  endif
 
       integer, dimension(MPI_STATUS_SIZE) :: Rstatus
       integer, dimension(MPI_STATUS_SIZE) :: Sstatus
@@ -4035,19 +4044,6 @@
 
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__//", mp_gather2d"
-
-# ifdef TILEMASK
-!     integer, dimension(0:tile_sum(ng)-1) :: MySize
-!     integer, dimension(0:tile_sum(ng)-1) :: Rrequest
-!     integer, dimension(MPI_STATUS_SIZE) :: Rstatus
-!     integer, dimension(MPI_STATUS_SIZE) :: Sstatus
-!     real(r8), dimension(TileSize(ng)) :: Asend
-!     real(r8), dimension(TileSize(ng),tile_sum(ng)-1) :: Arecv
-# else
-!     real(r8), dimension(TileSize(ng)) :: Asend
-!     real(r8), dimension(TileSize(ng),                                 &
-!    &                    NtileI(ng)*NtileJ(ng)-1) :: Arecv
-# endif
 
 # ifdef PROFILE
 !
@@ -4136,7 +4132,11 @@
 !
       Ntasks=NtileI(ng)*NtileJ(ng)
       nc=0
+# ifdef TILEMASK
+      DO rank=0,tile_sum(ng)-1
+# else
       DO rank=0,Ntasks-1
+# endif
         iLB=BOUNDS(ng) % Imin(Cgrid,ghost,rank)
         iUB=BOUNDS(ng) % Imax(Cgrid,ghost,rank)
         jLB=BOUNDS(ng) % Jmin(Cgrid,ghost,rank)
@@ -4161,22 +4161,6 @@
       Imax=BOUNDS(ng) % Imax(Cgrid,ghost,MyRank)
       Jmin=BOUNDS(ng) % Jmin(Cgrid,ghost,MyRank)
       Jmax=BOUNDS(ng) % Jmax(Cgrid,ghost,MyRank)
-!
-!  Compute size of distributed buffers.
-!
-# ifdef TILEMASK
-!     DO rank=0,tile_sum(ng)-1
-# else
-!     DO rank=0,NtileI(ng)*NtileJ(ng)-1
-# endif
-!       MySize(rank)=(BOUNDS(ng) % Imax(Cgrid,ghost,rank)-              &
-!    &                BOUNDS(ng) % Imin(Cgrid,ghost,rank)+1)*           &
-!    &               (BOUNDS(ng) % Jmax(Cgrid,ghost,rank)-              &
-!    &                BOUNDS(ng) % Jmin(Cgrid,ghost,rank)+1)
-!     END DO
-!
-!  Initialize local arrays to avoid denormalized numbers. This
-!  facilitates processing and debugging.
 !
       Asize=(Imax-Imin+1)*(Jmax-Jmin+1)
       allocate ( Asend(Asize) )
@@ -4229,7 +4213,11 @@
 
 # ifdef GATHER_SENDRECV
 !
+#  ifdef TILEMASK
+      allocate ( Arecv(IJsize, tile_sum(ng)-1) )
+#  else
       allocate ( Arecv(IJsize, Ntasks-1) )
+#  endif
       Arecv=0.0_r8
 !
 !  If master processor, unpack the send buffer since there is not
@@ -4250,22 +4238,20 @@
 !  Send, receive, and unpack data.
 !
       IF (MyRank.eq.MyMaster) THEN
-# ifdef TILEMASK
-!       DO rank=1,tile_sum(ng)-1
-# else
-!       DO rank=1,NtileI(ng)*NtileJ(ng)-1
-# endif
+#  ifdef TILEMASK
+        DO rank=1,tile_sum(ng)-1
+#  else
         DO rank=1,Ntasks-1
+#  endif
           CALL mpi_irecv (Arecv(1,rank), MySize(rank), MP_FLOAT, rank,  &
      &                    rank+5, OCN_COMM_WORLD, Rrequest(rank),       &
      &                    MyError)
         END DO
-# ifdef TILEMASK
-!       DO rank=1,tile_sum(ng)-1
-# else
-!       DO rank=1,NtileI(ng)*NtileJ(ng)-1
-# endif
+#  ifdef TILEMASK
+        DO rank=1,tile_sum(ng)-1
+#  else
         DO rank=1,Ntasks-1
+#  endif
           CALL mpi_wait (Rrequest(rank), Rstatus, MyError)
           IF (MyError.ne.MPI_SUCCESS) THEN
             CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -4328,7 +4314,11 @@
 !  task segment.
 !
       nc=0
+#  ifdef TILEMASK
+      DO rank=0,tile_sum(ng)-1
+#  else
       DO rank=0,Ntasks-1
+#  endif
         iLB=BOUNDS(ng) % Imin(Cgrid,ghost,rank)
         iUB=BOUNDS(ng) % Imax(Cgrid,ghost,rank)
         jLB=BOUNDS(ng) % Jmin(Cgrid,ghost,rank)
@@ -4447,10 +4437,19 @@
       integer :: Lstr, MyError, MyType, Serror, Srequest
       integer :: i, ic, ij, j, jc, nc
 !
+#  ifdef TILEMASK
+      integer, dimension(0:tile_sum(ng)-1) :: counts, displs
+#  else
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: counts, displs
+#  endif
 #  ifdef GATHER_SENDRECV
+#   ifdef TILEMASK
+      integer, dimension(0:tile_sum(ng)-1) :: MySize
+      integer, dimension(0:tile_sum(ng)-1) :: Rrequest
+#   else
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: MySize
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: Rrequest
+#   endif
 
       integer, dimension(MPI_STATUS_SIZE) :: Rstatus
       integer, dimension(MPI_STATUS_SIZE) :: Sstatus
@@ -4465,19 +4464,6 @@
 
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__//", mp_gather2d_xtr"
-
-# ifdef TILEMASK
-!     integer, dimension(0:tile_sum(ng)-1) :: MySize
-!     integer, dimension(0:tile_sum(ng)-1) :: Rrequest
-!     integer, dimension(MPI_STATUS_SIZE) :: Rstatus
-!     integer, dimension(MPI_STATUS_SIZE) :: Sstatus
-!     real(r8), dimension(TileSize(ng)) :: Asend
-!     real(r8), dimension(TileSize(ng),tile_sum(ng)-1) :: Arecv
-# else
-!     real(r8), dimension(TileSize(ng)) :: Asend
-!     real(r8), dimension(TileSize(ng),                                 &
-!    &                    NtileI(ng)*NtileJ(ng)-1) :: Arecv
-# endif
 
 #  ifdef PROFILE
 !
@@ -4566,7 +4552,11 @@
 !
       Ntasks=NtileI(ng)*NtileJ(ng)
       nc=0
+#  ifdef TILEMASK
+      DO rank=0,tile_sum(ng)-1
+#  else
       DO rank=0,Ntasks-1
+#  endif
         iLB=xtr_BOUNDS(ng) % Imin(Cgrid,ghost,rank)
         iUB=xtr_BOUNDS(ng) % Imax(Cgrid,ghost,rank)
         jLB=xtr_BOUNDS(ng) % Jmin(Cgrid,ghost,rank)
@@ -4591,22 +4581,6 @@
       Imax=xtr_BOUNDS(ng) % Imax(Cgrid,ghost,MyRank)
       Jmin=xtr_BOUNDS(ng) % Jmin(Cgrid,ghost,MyRank)
       Jmax=xtr_BOUNDS(ng) % Jmax(Cgrid,ghost,MyRank)
-!
-!  Compute size of distributed buffers.
-!
-# ifdef TILEMASK
-!     DO rank=0,tile_sum(ng)-1
-# else
-!     DO rank=0,NtileI(ng)*NtileJ(ng)-1
-# endif
-!       MySize(rank)=(xtr_BOUNDS(ng) % Imax(Cgrid,ghost,rank)-          &
-!    &                xtr_BOUNDS(ng) % Imin(Cgrid,ghost,rank)+1)*       &
-!    &               (xtr_BOUNDS(ng) % Jmax(Cgrid,ghost,rank)-          &
-!    &                xtr_BOUNDS(ng) % Jmin(Cgrid,ghost,rank)+1)
-!     END DO
-!
-!  Initialize local arrays to avoid denormalized numbers. This
-!  facilitates processing and debugging.
 !
       Asize=(Imax-Imin+1)*(Jmax-Jmin+1)
       allocate ( Asend(Asize) )
@@ -4659,7 +4633,11 @@
 
 #  ifdef GATHER_SENDRECV
 !
+#   ifdef TILEMASK
+      allocate ( Arecv(IJsize, tile_sum(ng)-1) )
+#   else
       allocate ( Arecv(IJsize, Ntasks-1) )
+#   endif
       Arecv=0.0_r8
 !
 !  If master processor, unpack the send buffer since there is not
@@ -4680,22 +4658,20 @@
 !  Send, receive, and unpack data.
 !
       IF (MyRank.eq.MyMaster) THEN
-# ifdef TILEMASK
-!       DO rank=1,tile_sum(ng)-1
-# else
-!       DO rank=1,NtileI(ng)*NtileJ(ng)-1
-# endif
+#   ifdef TILEMASK
+        DO rank=1,tile_sum(ng)-1
+#   else
         DO rank=1,Ntasks-1
+#   endif
           CALL mpi_irecv (Arecv(1,rank), MySize(rank), MP_FLOAT, rank,  &
      &                    rank+5, OCN_COMM_WORLD, Rrequest(rank),       &
      &                    MyError)
         END DO
-# ifdef TILEMASK
-!       DO rank=1,tile_sum(ng)-1
-# else
-!       DO rank=1,NtileI(ng)*NtileJ(ng)-1
-# endif
+#   ifdef TILEMASK
+        DO rank=1,tile_sum(ng)-1
+#   else
         DO rank=1,Ntasks-1
+#   endif
           CALL mpi_wait (Rrequest(rank), Rstatus, MyError)
           IF (MyError.ne.MPI_SUCCESS) THEN
             CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -4758,7 +4734,11 @@
 !  task segment.
 !
       nc=0
+#   ifdef TILEMASK
+      DO rank=0,tile_sum(ng)-1
+#   else
       DO rank=0,Ntasks-1
+#   endif
         iLB=xtr_BOUNDS(ng) % Imin(Cgrid,ghost,rank)
         iUB=xtr_BOUNDS(ng) % Imax(Cgrid,ghost,rank)
         jLB=xtr_BOUNDS(ng) % Jmin(Cgrid,ghost,rank)
@@ -4879,10 +4859,19 @@
       integer :: Lstr, MyError, MyType, Serror, Srequest
       integer :: i, ic, ijk, j, jc, k, kc, nc
 !
+# ifdef TILEMASK
+      integer, dimension(0:tile_sum(ng)-1) :: counts, displs
+# else
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: counts, displs
+# endif
 # ifdef GATHER_SENDRECV
+#  ifdef TILEMASK
+      integer, dimension(0:tile_sum(ng)-1) :: MySize
+      integer, dimension(0:tile_sum(ng)-1) :: Rrequest
+#  else
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: MySize
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: Rrequest
+#  endif
 
       integer, dimension(MPI_STATUS_SIZE) :: Rstatus
       integer, dimension(MPI_STATUS_SIZE) :: Sstatus
@@ -4897,20 +4886,6 @@
 
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__//", mp_gather3d"
-
-# ifdef TILEMASK
-!     integer, dimension(0:tile_sum(ng)-1) :: MySize
-!     integer, dimension(0:tile_sum(ng)-1) :: Rrequest
-!     integer, dimension(MPI_STATUS_SIZE) :: Rstatus
-!     integer, dimension(MPI_STATUS_SIZE) :: Sstatus
-!     real(r8), dimension(TileSize(ng)*(UBk-LBk+1)) :: Asend
-!     real(r8), dimension(TileSize(ng)*(UBk-LBk+1),                     &
-!    &                    tile_sum(ng)-1) :: Arecv
-# else
-!     real(r8), dimension(TileSize(ng)*(UBk-LBk+1)) :: Asend
-!     real(r8), dimension(TileSize(ng)*(UBk-LBk+1),                     &
-!    &                    NtileI(ng)*NtileJ(ng)-1) :: Arecv
-# endif
 
 # ifdef PROFILE
 !
@@ -5006,7 +4981,11 @@
 !
       Ntasks=NtileI(ng)*NtileJ(ng)
       nc=0
+# ifdef TILEMASK
+      DO rank=0,tile_sum(ng)-1
+# else
       DO rank=0,Ntasks-1
+# endif
         iLB=BOUNDS(ng) % Imin(Cgrid,ghost,rank)
         iUB=BOUNDS(ng) % Imax(Cgrid,ghost,rank)
         jLB=BOUNDS(ng) % Jmin(Cgrid,ghost,rank)
@@ -5033,23 +5012,6 @@
       Imax=BOUNDS(ng) % Imax(Cgrid,ghost,MyRank)
       Jmin=BOUNDS(ng) % Jmin(Cgrid,ghost,MyRank)
       Jmax=BOUNDS(ng) % Jmax(Cgrid,ghost,MyRank)
-!
-!  Compute size of distributed buffers.
-!
-# ifdef TILEMASK
-!     DO rank=0,tile_sum(ng)-1
-# else
-!     DO rank=0,NtileI(ng)*NtileJ(ng)-1
-# endif
-!       MySize(rank)=(BOUNDS(ng) % Imax(Cgrid,ghost,rank)-              &
-!    &                BOUNDS(ng) % Imin(Cgrid,ghost,rank)+1)*           &
-!    &               (BOUNDS(ng) % Jmax(Cgrid,ghost,rank)-              &
-!    &                BOUNDS(ng) % Jmin(Cgrid,ghost,rank)+1)*           &
-!    &               (UBk-LBk+1)
-!     END DO
-!
-!  Initialize local arrays to avoid denormalized numbers. This
-!  facilitates processing and debugging.
 !
       Asize=(Imax-Imin+1)*(Jmax-Jmin+1)*(UBk-LBk+1)
       allocate ( Asend(Asize) )
@@ -5108,7 +5070,11 @@
 
 # ifdef GATHER_SENDRECV
 !
+#  ifdef TILEMASK
+      allocate ( Arecv(IJsize*Ksize, tile_sum(ng)-1) )
+#  else
       allocate ( Arecv(IJsize*Ksize, Ntasks-1) )
+#  endif
       Arecv=0.0_r8
 !
 !  If master processor, unpack the send buffer since there is not
@@ -5132,22 +5098,20 @@
 !  Send, receive, and unpack data.
 !
       IF (MyRank.eq.MyMaster) THEN
-# ifdef TILEMASK
-!       DO rank=1,tile_sum(ng)-1
-# else
-!       DO rank=1,NtileI(ng)*NtileJ(ng)-1
-# endif
+#  ifdef TILEMASK
+        DO rank=1,tile_sum(ng)-1
+#  else
         DO rank=1,Ntasks-1
+#  endif
           CALL mpi_irecv (Arecv(1,rank), MySize(rank), MP_FLOAT, rank,  &
      &                    rank+5, OCN_COMM_WORLD, Rrequest(rank),       &
      &                    MyError)
         END DO
-# ifdef TILEMASK
-!       DO rank=1,tile_sum(ng)-1
-# else
-!       DO rank=1,NtileI(ng)*NtileJ(ng)-1
-# endif
+#  ifdef TILEMASK
+        DO rank=1,tile_sum(ng)-1
+#  else
         DO rank=1,Ntasks-1
+#  endif
           CALL mpi_wait (Rrequest(rank), Rstatus, MyError)
           IF (MyError.ne.MPI_SUCCESS) THEN
             CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -5213,7 +5177,11 @@
 !  task segment.
 !
       nc=0
+#  ifdef TILEMASK
+      DO rank=0,tile_sum(ng)-1
+#  else
       DO rank=0,Ntasks-1
+#  endif
         iLB=BOUNDS(ng) % Imin(Cgrid,ghost,rank)
         iUB=BOUNDS(ng) % Imax(Cgrid,ghost,rank)
         jLB=BOUNDS(ng) % Jmin(Cgrid,ghost,rank)
@@ -5339,10 +5307,19 @@
       integer :: Lstr, MyError, MyType, Serror, Srequest
       integer :: i, ic, ijk, j, jc, k, kc, nc
 !
+#  ifdef TILEMASK
+      integer, dimension(0:tile_sum(ng)-1) :: counts, displs
+#  else
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: counts, displs
+#  endif
 #  ifdef GATHER_SENDRECV
+#   ifdef TILEMASK
+      integer, dimension(0:tile_sum(ng)-1) :: MySize
+      integer, dimension(0:tile_sum(ng)-1) :: Rrequest
+#   else
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: MySize
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: Rrequest
+#   endif
 
       integer, dimension(MPI_STATUS_SIZE) :: Rstatus
       integer, dimension(MPI_STATUS_SIZE) :: Sstatus
@@ -5452,7 +5429,11 @@
 !
       Ntasks=NtileI(ng)*NtileJ(ng)
       nc=0
+#  ifdef TILEMASK
+      DO rank=0,tile_sum(ng)-1
+#  else
       DO rank=0,Ntasks-1
+#  endif
         iLB=xtr_BOUNDS(ng) % Imin(Cgrid,ghost,rank)
         iUB=xtr_BOUNDS(ng) % Imax(Cgrid,ghost,rank)
         jLB=xtr_BOUNDS(ng) % Jmin(Cgrid,ghost,rank)
@@ -5537,7 +5518,11 @@
 
 #  ifdef GATHER_SENDRECV
 !
+#   ifdef TILEMASK
+      allocate ( Arecv(IJsize*Ksize, tile_sum(ng)-1) )
+#   else
       allocate ( Arecv(IJsize*Ksize, Ntasks-1) )
+#   endif
       Arecv=0.0_r8
 !
 !  If master processor, unpack the send buffer since there is not
@@ -5561,12 +5546,20 @@
 !  Send, receive, and unpack data.
 !
       IF (MyRank.eq.MyMaster) THEN
+#   ifdef TILEMASK
+        DO rank=1,tile_sum(ng)-1
+#   else
         DO rank=1,Ntasks-1
+#   endif
           CALL mpi_irecv (Arecv(1,rank), MySize(rank), MP_FLOAT, rank,  &
      &                    rank+5, OCN_COMM_WORLD, Rrequest(rank),       &
      &                    MyError)
         END DO
+#   ifdef TILEMASK
+        DO rank=1,tile_sum(ng)-1
+#   else
         DO rank=1,Ntasks-1
+#   endif
           CALL mpi_wait (Rrequest(rank), Rstatus, MyError)
           IF (MyError.ne.MPI_SUCCESS) THEN
             CALL mpi_error_string (MyError, string, Lstr, Serror)
@@ -5632,7 +5625,11 @@
 !  task segment.
 !
       nc=0
+#   ifdef TILEMASK
+      DO rank=0,tile_sum(ng)-1
+#   else
       DO rank=0,Ntasks-1
+#   endif
         iLB=xtr_BOUNDS(ng) % Imin(Cgrid,ghost,rank)
         iUB=xtr_BOUNDS(ng) % Imax(Cgrid,ghost,rank)
         jLB=xtr_BOUNDS(ng) % Jmin(Cgrid,ghost,rank)
@@ -7989,7 +7986,11 @@
       integer :: Lstr, MyError, MySize, MyType, Ntasks, Serror, ghost
       integer :: Cgrid, i, ic, ij, j, jc, mc, nc, rank
 !
+# ifdef TILEMASK
+      integer, dimension(0:tile_sum(ng)-1) :: counts, displs
+# else
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: counts, displs
+# endif
 !
 # ifndef SCATTER_BCAST
       integer, allocatable :: ij_global(:,:)
@@ -8093,7 +8094,11 @@
 !
       Ntasks=NtileI(ng)*NtileJ(ng)
       nc=0
+# ifdef TILEMASK
+      DO rank=0,tile_sum(ng)-1
+# else
       DO rank=0,Ntasks-1
+# endif
         iLB=BOUNDS(ng) % Imin(Cgrid,ghost,rank)
         iUB=BOUNDS(ng) % Imax(Cgrid,ghost,rank)
         jLB=BOUNDS(ng) % Jmin(Cgrid,ghost,rank)
@@ -8114,7 +8119,7 @@
       Vglobal=0.0_r8
       Vsize=Npts
 !
-      IF (MyRank.eq.MyMaster) Then
+      IF (MyRank.eq.MyMaster) THEN
         IF (gtype.gt.0) THEN
           Vglobal(1:Vsize)=A(1:Vsize)
 # if defined READ_WATER && defined MASKING
@@ -8161,7 +8166,7 @@
 !
 !  Append Min/Max values since they are only known by root process
 !
-      IF (MyRank.eq.MyMaster) Then
+      IF (MyRank.eq.MyMaster) THEN
         Vglobal(Vsize+1)=Amin
         Vglobal(Vsize+2)=Amax
       END IF
@@ -8220,7 +8225,11 @@
 !  sections.
 !
         nc=0
+#  ifdef TILEMASK
+        DO rank=0,tile_sum(ng)-1
+#  else
         DO rank=0,Ntasks-1
+#  endif
           iLB=BOUNDS(ng) % Imin(Cgrid,ghost,rank)
           iUB=BOUNDS(ng) % Imax(Cgrid,ghost,rank)
           jLB=BOUNDS(ng) % Jmin(Cgrid,ghost,rank)
@@ -8378,7 +8387,11 @@
       integer :: Lstr, MyError, MySize, MyType, Ntasks, Serror, ghost
       integer :: Cgrid, i, ic, ij, j, jc, mc, nc, rank
 !
+# ifdef TILEMASK
+      integer, dimension(0:tile_sum(ng)-1) :: counts, displs
+# else
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: counts, displs
+# endif
 !
 #  ifndef SCATTER_BCAST
       integer, allocatable :: ij_global(:,:)
@@ -8480,7 +8493,11 @@
 !
       Ntasks=NtileI(ng)*NtileJ(ng)
       nc=0
+# ifdef TILEMASK
+      DO rank=0,tile_sum(ng)-1
+# else
       DO rank=0,Ntasks-1
+# endif
         iLB=xtr_BOUNDS(ng) % Imin(Cgrid,ghost,rank)
         iUB=xtr_BOUNDS(ng) % Imax(Cgrid,ghost,rank)
         jLB=xtr_BOUNDS(ng) % Jmin(Cgrid,ghost,rank)
@@ -8501,32 +8518,32 @@
       Vglobal=0.0_r8
       Vsize=Npts
 !
-      IF (MyRank.eq.MyMaster) Then
+      IF (MyRank.eq.MyMaster) THEN
         IF (gtype.gt.0) THEN
           Vglobal(1:Vsize)=A(1:Vsize)
 #  if defined READ_WATER && defined MASKING
-          ELSE
-            ij=0
-            mc=0
-            nc=0
-            DO j=Jo,Je
-              jc=(j-Joff)*Ilen
-              DO i=Io,Ie
-                ij=ij+1
-                ic=i+Ioff+jc
-                IF (IJ_water(mc+1).eq.ij) THEN
-                  mc=mc+1
-                  nc=nc+1
-                  Vglobal(ic)=A(nc)
-                ELSE
-                  Vglobal(ic)=0.0_r8
-                END IF
-              END DO
+        ELSE
+          ij=0
+          mc=0
+          nc=0
+          DO j=Jo,Je
+            jc=(j-Joff)*Isize
+            DO i=Io,Ie
+              ij=ij+1
+              ic=i+Ioff+jc
+              IF (IJ_water(mc+1).eq.ij) THEN
+                mc=mc+1
+                nc=nc+1
+                Vglobal(ic)=A(nc)
+              ELSE
+                Vglobal(ic)=0.0_r8
+              END IF
             END DO
-            Vsize=ic
+          END DO
+          Vsize=ic
 #  endif
-          END IF
         END IF
+      END IF
 !
 !-----------------------------------------------------------------------
 !  Scatter requested global data.
@@ -8548,7 +8565,7 @@
 !
 !  Append Min/Max values since they are only known by root process.
 !
-      IF (MyRank.eq.MyMaster) Then
+      IF (MyRank.eq.MyMaster) THEN
         Vglobal(Vsize+1)=Amin
         Vglobal(Vsize+2)=Amax
       END IF
@@ -8607,7 +8624,11 @@
 !  sections.
 !
         nc=0
+#  ifdef TILEMASK
+        DO rank=0,tile_sum(ng)-1
+#  else
         DO rank=0,Ntasks-1
+#  endif
           iLB=xtr_BOUNDS(ng) % Imin(Cgrid,ghost,rank)
           iUB=xtr_BOUNDS(ng) % Imax(Cgrid,ghost,rank)
           jLB=xtr_BOUNDS(ng) % Jmin(Cgrid,ghost,rank)
@@ -8756,7 +8777,11 @@
       integer :: Lstr, MyError, MySize, MyType, Ntasks, Serror, ghost
       integer :: Cgrid, i, ic, ij, ijk, j, jc, k, kc, mc, nc, rank
 !
+# ifdef TILEMASK
+      integer, dimension(0:tile_sum(ng)-1) :: counts, displs
+# else
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: counts, displs
+# endif
 !
 # ifndef SCATTER_BCAST
       integer, allocatable :: ijk_global(:,:,:)
@@ -8867,7 +8892,11 @@
 !
       Ntasks=NtileI(ng)*NtileJ(ng)
       nc=0
+# ifdef TILEMASK
+      DO rank=0,tile_sum(ng)-1
+# else
       DO rank=0,Ntasks-1
+# endif
         ILB=BOUNDS(ng) % Imin(Cgrid,ghost,rank)
         IUB=BOUNDS(ng) % Imax(Cgrid,ghost,rank)
         JLB=BOUNDS(ng) % Jmin(Cgrid,ghost,rank)
@@ -8890,7 +8919,7 @@
       Vglobal=0.0_r8
       Vsize=Npts
 !
-      IF (MyRank.eq.MyMaster) Then
+      IF (MyRank.eq.MyMaster) THEN
         IF (gtype.gt.0) THEN
           Vglobal(1:Vsize)=A(1:Vsize)
 # if defined READ_WATER && defined MASKING
@@ -8940,7 +8969,7 @@
 !
 !  Append Min/Max values since they are only known by root.
 !
-      IF (MyRank.eq.MyMaster) Then
+      IF (MyRank.eq.MyMaster) THEN
         Vglobal(Vsize+1)=Amin
         Vglobal(Vsize+2)=Amax
       END IF
@@ -9005,7 +9034,11 @@
 !  sections.
 !
         nc=0
+#  ifdef TILEMASK
+        DO rank=0,tile_sum(ng)-1
+#  else
         DO rank=0,Ntasks-1
+#  endif
           iLB=BOUNDS(ng) % Imin(Cgrid,ghost,rank)
           iUB=BOUNDS(ng) % Imax(Cgrid,ghost,rank)
           jLB=BOUNDS(ng) % Jmin(Cgrid,ghost,rank)
@@ -9171,7 +9204,11 @@
       integer :: Lstr, MyError, MySize, MyType, Ntasks, Serror, ghost
       integer :: Cgrid, i, ic, ij, ijk, j, jc, k, kc, mc, nc, rank
 !
+# ifdef TILEMASK
+      integer, dimension(0:tile_sum(ng)-1) :: counts, displs
+# else
       integer, dimension(0:NtileI(ng)*NtileJ(ng)-1) :: counts, displs
+# endif
 !
 #  ifndef SCATTER_BCAST
       integer, allocatable :: ijk_global(:,:,:)
@@ -9282,7 +9319,11 @@
 !
       Ntasks=NtileI(ng)*NtileJ(ng)
       nc=0
+# ifdef TILEMASK
+      DO rank=0,tile_sum(ng)-1
+# else
       DO rank=0,Ntasks-1
+# endif
         ILB=xtr_BOUNDS(ng) % Imin(Cgrid,ghost,rank)
         IUB=xtr_BOUNDS(ng) % Imax(Cgrid,ghost,rank)
         JLB=xtr_BOUNDS(ng) % Jmin(Cgrid,ghost,rank)
@@ -9305,7 +9346,7 @@
       Vglobal=0.0_r8
       Vsize=Npts
 !
-      IF (MyRank.eq.MyMaster) Then
+      IF (MyRank.eq.MyMaster) THEN
         IF (gtype.gt.0) THEN
           Vglobal(1:Vsize)=A(1:Vsize)
 #  if defined READ_WATER && defined MASKING
@@ -9355,7 +9396,7 @@
 !
 !  Append Min/Max values since they are only known by root.
 !
-      IF (MyRank.eq.MyMaster) Then
+      IF (MyRank.eq.MyMaster) THEN
         Vglobal(Vsize+1)=Amin
         Vglobal(Vsize+2)=Amax
       END IF
@@ -9420,7 +9461,11 @@
 !  sections.
 !
         nc=0
+#  ifdef TILEMASK
+        DO rank=0,tile_sum(ng)-1
+#  else
         DO rank=0,Ntasks-1
+#  endif
           iLB=xtr_BOUNDS(ng) % Imin(Cgrid,ghost,rank)
           iUB=xtr_BOUNDS(ng) % Imax(Cgrid,ghost,rank)
           jLB=xtr_BOUNDS(ng) % Jmin(Cgrid,ghost,rank)

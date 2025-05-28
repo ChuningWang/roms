@@ -1361,7 +1361,7 @@
       Coptions(is:is+9)=' ICE_EVP,'
 #  endif
 # endif
-# ifdef ICE_MOMENTUM
+# ifdef ICE_THERMO
 !
       IF (Master) WRITE (stdout,20) 'ICE_THERMO',                       &
      &   'Including sea ice thermodynamics'
@@ -1381,24 +1381,25 @@
      &   'Including sea ice in bulk flux computation'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+17)=' ICE_BULK_FLUXES,'
-# ifdef ICE_ALBEDO
+#  ifdef ICE_ALBEDO
 !
       IF (Master) WRITE (stdout,20) 'ICE_ALBEDO',                       &
      &   'Surface albedo computation over seawater, snow, or ice'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+12)=' ICE_ALBEDO,'
-#  if defined ICE_ALB_EC92
+#   if defined ICE_ALB_EC92
 !
       IF (Master) WRITE (stdout,20) 'ICE_ALB_EC92',                     &
      &   'Albedo computation from Ebert and Curry'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+14)=' ICE_ALB_EC92,'
-#  elif defined ICE_ALB_CSIM
+#   elif defined ICE_ALB_CSIM
 !
       IF (Master) WRITE (stdout,20) 'ICE_ALB_CSIM',                     &
      &   'Albedo computation from CSIM/CICE 5.1'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+14)=' ICE_ALB_CSIM,'
+#   endif
 #  endif
 # endif
 # ifdef ICE_CONVSNOW
