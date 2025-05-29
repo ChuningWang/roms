@@ -449,7 +449,7 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+9)=' ANA_SSS,'
 #endif
-#if defined ANA_SST && defined QCORRECTION
+#if defined ANA_SST && (defined QCORRECTION || defined TCORRECTION)
 !
       IF (Master) WRITE (stdout,20) 'ANA_SST',                          &
      &   'Analytical sea surface temperature, SST'
@@ -2221,6 +2221,13 @@
      &   'Surface net heat flux correction'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+13)=' QCORRECTION,'
+#endif
+#ifdef TCORRECTION
+!
+      IF (Master) WRITE (stdout,20) 'TCORRECTION',                      &
+     &   'Surface temperature correction'
+      is=LEN_TRIM(Coptions)+1
+      Coptions(is:is+13)=' TCORRECTION,'
 #endif
 #ifdef OBSERVATIONS
 # ifdef RADIAL_ANGLE_CCW_EAST

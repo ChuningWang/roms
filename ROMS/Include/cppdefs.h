@@ -70,6 +70,7 @@
 ** AGE_MEAN                if computing Mean Age of inert passive tracers    **
 ** NONLIN_EOS              if using nonlinear equation of state              **
 ** QCORRECTION             if net heat flux correction                       **
+** TCORRECTION             if surface temperature correction                 **
 ** SALINITY                if having salinity                                **
 ** SCORRECTION             if freshwater flux correction                     **
 ** SOLAR_SOURCE            if solar radiation source term                    **

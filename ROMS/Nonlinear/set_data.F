@@ -530,6 +530,21 @@
      &                     update)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #   endif
+#  elif defined TCORRECTION
+!
+!  Set sea surface temperature (SST) which are used for surface
+!  temperature correction.
+!
+#   ifdef ANA_SST
+      CALL ana_sst (ng, tile, iNLM)
+#   else
+      CALL set_2dfld_tile (ng, tile, iNLM, idSSTc,                      &
+     &                     LBi, UBi, LBj, UBj,                          &
+     &                     FORCES(ng)%sstG,                             &
+     &                     FORCES(ng)%sst,                              &
+     &                     update)
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#   endif
 #  endif
 !
 !  Set kinematic bottom net heat flux (degC m/s).

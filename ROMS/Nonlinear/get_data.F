@@ -703,7 +703,7 @@
       END IF
 # endif
 
-# if !defined ANA_SST && defined QCORRECTION
+# if !defined ANA_SST && (defined QCORRECTION || defined TCORRECTION)
 !
 !  Surface net heat flux correction fields: sea surface temperature
 !  (SST).
