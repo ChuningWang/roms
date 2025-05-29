@@ -1060,6 +1060,7 @@
 #  ifndef ANA_SST
       allocate ( FORCES(ng) % sstG(LBi:UBi,LBj:UBj,2) )
       Dmem(ng)=Dmem(ng)+2.0_r8*size2d
+#  endif
 # endif
 
 # if defined SALINITY && (defined SCORRECTION || defined SRELAXATION)
