@@ -1052,7 +1052,8 @@
             CASE ('BVF_BAK')
               Npts=load_r(Nval, Rval, 1, Rvalue)
               bvf_bak=Rvalue(1)
-#ifdef TIDE_GENERATING_FORCES
+#if defined TIDE_GENERATING_FORCES || \
+    (defined SSH_TIDE || defined UV_TIDE)
             CASE ('Lnodal')
               Npts=load_l(Nval, Cval, 1, Lvalue)
               Lnodal=Lvalue(1)

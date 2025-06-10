@@ -26,6 +26,7 @@
 !  SSH_Tamp     Tidal elevation amplitude (m) at RHO-points.           !
 !  SSH_Tphase   Tidal elevation phase (degrees/360) at RHO-points.     !
 !  Tperiod      Tidal period (s).                                      !
+!  Tname        Tidal constituent names.                               !
 !  UV_Tangle    Tidal current angle (radians; counterclockwise         !
 !                 from EAST and rotated to curvilinear grid) at        !
 !                 RHO-points.                                          !
@@ -86,6 +87,7 @@
         TYPE T_TIDES
 
           real(r8), pointer :: Tperiod(:)
+          character (len=4), pointer :: Tname(:)
 # if defined AVERAGES && defined AVERAGES_DETIDE
           real(r8), pointer :: CosOmega(:)
           real(r8), pointer :: SinOmega(:)
@@ -234,6 +236,8 @@
       allocate ( TIDES(ng) % Tperiod(MTC)  )
       Dmem(ng)=Dmem(ng)+REAL(MTC,r8)
 
+      allocate ( TIDES(ng) % Tname(MTC)  )
+
 # if defined SSH_TIDES
       allocate ( TIDES(ng) % SSH_Tamp(LBi:UBi,LBj:UBj,MTC) )
       Dmem(ng)=Dmem(ng)+REAL(MTC,r8)*size2d
@@ -377,6 +381,9 @@
 !
       IF (.not.destroy(ng, TIDES(ng)%Tperiod, MyFile,                   &
      &                 __LINE__, 'TIDES(ng)%Tperiod')) RETURN
+
+      IF (.not.destroy(ng, TIDES(ng)%Tname, MyFile,                     &
+     &                 __LINE__, 'TIDES(ng)%Tname')) RETURN
 
 #  if defined SSH_TIDES
       IF (.not.destroy(ng, TIDES(ng)%SSH_Tamp, MyFile,                  &

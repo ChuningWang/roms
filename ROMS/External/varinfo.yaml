@@ -2294,7 +2294,7 @@ metadata:
     index_code:     idTvan
     type:           r2dvar
     add_offset:     0.0d0
-    scale:          0.017453292519943295                             # pi/180
+    scale:          0.017453292519943295d0                           # pi/180
 
   - variable:       tide_Cmax                                        # Input
     standard_name:  ocean_tidal_constituent_major_axis_maximum_current_velocity

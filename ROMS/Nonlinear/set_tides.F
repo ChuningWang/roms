@@ -223,6 +223,8 @@
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: Vtide
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: Vwrk
 
+      real(r8), dimension(MTC) :: fnodal, unodal
+
 # include "set_bounds.h"
 
 # ifdef DISTRIBUTE
@@ -270,6 +272,12 @@
           END IF
         END DO
 # endif
+        IF (Lnodal) THEN
+          CALL nodal_modulation (NTC, fnodal, unodal)
+        ELSE
+          fnodal(:) = 1.0_r8
+          unodal(:) = 0.0_r8
+        END IF
 # ifdef SSH_TIDES
 !
 !-----------------------------------------------------------------------
@@ -284,8 +292,9 @@
             DO j=JstrR,JendR
               DO i=IstrR,IendR
                 Etide(i,j)=Etide(i,j)+                                  &
-     &                     ramp*SSH_Tamp(i,j,itide)*                    &
-     &                     COS(omega-SSH_Tphase(i,j,itide))
+     &                     ramp*fnodal(itide)*SSH_Tamp(i,j,itide)*      &
+     &                     COS(omega-SSH_Tphase(i,j,itide)+             &
+     &                         unodal(itide))
 #  ifdef MASKING
                 Etide(i,j)=Etide(i,j)*rmask(i,j)
 #  endif
@@ -443,7 +452,7 @@
                 angle=UV_Tangle(i,j,itide)-angler(i,j)
                 Cangle=COS(angle)
                 Sangle=SIN(angle)
-                phase=omega-UV_Tphase(i,j,itide)
+                phase=omega-UV_Tphase(i,j,itide)+unodal(itide)
                 Cphase=COS(phase)
                 Sphase=SIN(phase)
                 Uwrk(i,j)=UV_Tmajor(i,j,itide)*Cangle*Cphase-           &
@@ -455,7 +464,8 @@
             DO j=JstrR,JendR
               DO i=Istr,IendR
                 Utide(i,j)=Utide(i,j)+                                  &
-     &                     ramp*0.5_r8*(Uwrk(i-1,j)+Uwrk(i,j))
+     &                     ramp*fnodal(itide)*                          &
+     &                     0.5_r8*(Uwrk(i-1,j)+Uwrk(i,j))
 #  ifdef MASKING
                 Utide(i,j)=Utide(i,j)*umask(i,j)
 #  endif
@@ -463,8 +473,9 @@
             END DO
             DO j=Jstr,JendR
               DO i=IstrR,IendR
-                Vtide(i,j)=(Vtide(i,j)+                                 &
-     &                      ramp*0.5_r8*(Vwrk(i,j-1)+Vwrk(i,j)))
+                Vtide(i,j)=Vtide(i,j)+                                  &
+     &                     ramp*fnodal(itide)*                          &
+     &                     0.5_r8*(Vwrk(i,j-1)+Vwrk(i,j))
 #  ifdef MASKING
                 Vtide(i,j)=Vtide(i,j)*vmask(i,j)
 #  endif
@@ -641,5 +652,124 @@
 !
       RETURN
       END SUBROUTINE set_tides_tile
+!
+!***********************************************************************
+      SUBROUTINE nodal_modulation (fnodal, unodal)
+!***********************************************************************
+!
+      USE dateclock_mod,   ONLY : datenum
+      USE mod_scalars,     ONLY : Rclock
+!
+!  Imported variables declarations.
+!
+      integer, intent(in) :: NTC
+      real(r8), intent(out) :: fnodal(MTC), unodal(MTC)
+!
+!  Local variables declarations.
+!
+      integer :: i
+
+      real(r8) :: N, T, h, p, s
+      real(r8) :: cosn, cos2n, sinn, sin2n, sin3n
+
+      real(dp) :: Astro_DateNumber(2)     ! Jan 1, 2000 12:00:00
+!
+!-----------------------------------------------------------------------
+!  Compute fundamental astronomical parameters. Adapted from Egbert and
+!  Ray, 2017, Table 1.
+!-----------------------------------------------------------------------
+!
+!  Set Egbert and Ray time reference for their astronomical parameters
+!  (Table 1): days since 2000-01-01:12:00:00.
+!
+      CALL datenum (Astro_DateNumber, 2000, 1, 1, 12, 0, 0.0_dp)
+!
+!  Terrestial time (in centuries) since tide reference date number. It
+!  is set-up according to the chosen "tide_start" in standard input file
+!  or the tidal forcing NetCDF file if found (default, recommended).
+!
+!  Recall that the length of a year is 365.2425 days for the now called
+!  Gregorian Calendar (corrected after 15 October 1582).
+!
+      T=(Rclock%tide_DateNumber(1)-Astro_DateNumber(1))/36524.25_r8
+!
+!  Mean longitude of the moon (Period = tropical month).
+!
+      s=218.316_r8+481267.8812_r8*T
+!
+!  Mean longitude of the sun (Period = tropical year).
+!
+      h=280.466_r8+36000.7698_r8*T
+!
+!  Mean longitude of lunar perigee (Period = 8.85 years).
+!
+      p=83.353_r8+4069.0137_r8*T
+!
+!  Mean longitude of lunar node (Period = 18.6 years).
+!
+      N=-234.955_r8-1934.1363_r8*T                       ! degrees
+      N=N*deg2rad                                        ! radians
+!
+!-----------------------------------------------------------------------
+!  Compute the harmonic constituents of the equilibrium tide at
+!  Greenwich. Adapted from Doodson and Warburg, 1941, Table 1.
+!-----------------------------------------------------------------------
+!
+!  Nodal factors "f" and "nu" account for the slow modulation of the
+!  tidal constituents due (principally) to the 18.6-year lunar nodal
+!  cycle.
+!
+      sinn = SIN(N)
+      cosn = COS(N)
+      sin2n = SIN(2.0_r8*N)
+      cos2n = COS(2.0_r8*N)
+      sin3n = SIN(3.0_r8*N)
+      DO i=1,NTC
+        SELECT CASE (TRIM(TIDES(ng)%Tname(i)))
+          CASE ('M2', 'N2', 'MS4', '2N2')
+            fnodal(i) = SQRT((1._r8-.03731_r8*cosn+.00052_r8*cos2n)**2+ &
+     &                       (.03731_r8*sinn-.00052_r8*sin2n)**2)
+            unodal(i) = ATAN2((-.03731_r8*sinn+.00052_r8*sin2n),        &
+     &                        (1._r8-.03731_r8*cosn+.00052_r8*cos2n))
+          CASE ('S2', 'P1', 'S1')
+            fnodal(i) = 1._r8
+            unodal(i) = 0._r8
+          CASE ('K2')
+            fnodal(i) = SQRT((1._r8+.2852_r8*cosn+.0324_r8*cos2n)**2+   &
+     &                       (.3108_r8*sinn+.0324_r8*sin2n)**2)
+            unodal(i) = ATAN2(-(.3108_r8*sinn+.0324_r8*sin2n),          &
+     &                        (1._r8+.2852_r8*cosn+.0324_r8*cos2n))
+          CASE ('K1')
+            fnodal(i) = SQRT((1._r8+.1158_r8*cosn-.0029_r8*cos2n)**2+   &
+     &                       (.1554_r8*sinn-.0029_r8*sin2n)**2)
+            unodal(i) = ATAN2((-.1554_r8*sinn+.0029_r8*sin2n),          &
+                              (1._r8+.1158_r8*cosn-.0029_r8*cos2n))
+          CASE ('O1')
+            fnodal(i) = SQRT((1.0_r8+0.189_r8*cosn-0.0058_r8*cos2n)**2+ &
+                             (0.189_r8*sinn-0.0058_r8*sin2n)**2)
+            unodal(i) = (10.8_r8*sinn-1.3_r8*sin2n+0.2_r8*sin3n)*       &
+     &                  deg2rad
+          CASE ('Q1')
+            fnodal(i) = SQRT((1._r8+.188_r8*cosn)**2+(.188_r8*sinn)**2)
+            unodal(i) = ATAN2(.189_r8*sinn, (1._r8+.189_r8*cosn))
+          CASE ('MF')
+            fnodal(i) = 1.043_r8 + 0.414_r8*cosn
+            unodal(i) = (-23.7_r8*sinn+2.7_r8*sin2n-0.4_r8*sin3n)*      &
+     &                  deg2rad
+          CASE ('MM')
+            fnodal(i) = 1._r8 - 0.130_r8*cosn
+            unodal(i) = 0._r8
+          CASE ('M4', 'MN4')
+            fnodal(i) = (1._r8-.03731_r8*cosn+.00052_r8*cos2n)**2+      &
+     &                  (.03731_r8*sinn-.00052_r8*sin2n)**2
+            unodal(i) = 2._r8*                                          &
+     &                  ATAN2((-.03731_r8*sinn+.00052_r8*sin2n),        &
+     &                        (1._r8-.03731_r8*cosn+.00052_r8*cos2n))
+          CASE ('S1')
+        END SELECT
+      END DO
+!
+      RETURN
+      END SUBROUTINE harmonic_constituents
 #endif
       END MODULE set_tides_mod
