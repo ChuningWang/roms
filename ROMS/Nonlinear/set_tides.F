@@ -273,7 +273,7 @@
         END DO
 # endif
         IF (Lnodal) THEN
-          CALL nodal_modulation (NTC, fnodal, unodal)
+          CALL nodal_modulation (ng, NTC, fnodal, unodal)
         ELSE
           fnodal(:) = 1.0_r8
           unodal(:) = 0.0_r8
@@ -654,22 +654,28 @@
       END SUBROUTINE set_tides_tile
 !
 !***********************************************************************
-      SUBROUTINE nodal_modulation (fnodal, unodal)
+      SUBROUTINE nodal_modulation (ng, NTC, fnodal, unodal)
 !***********************************************************************
 !
+      USE mod_param
+      USE mod_scalars,     ONLY : deg2rad, Rclock
       USE dateclock_mod,   ONLY : datenum
-      USE mod_scalars,     ONLY : Rclock
+      USE mod_tides
 !
 !  Imported variables declarations.
 !
-      integer, intent(in) :: NTC
+      integer, intent(in) :: ng, NTC
+# ifdef ASSUMED_SHAPE
+      real(r8), intent(out) :: fnodal(:), unodal(:)
+# else
       real(r8), intent(out) :: fnodal(MTC), unodal(MTC)
+# endif
 !
 !  Local variables declarations.
 !
       integer :: i
 
-      real(r8) :: N, T, h, p, s
+      real(r8) :: Nnm, T, h, p, s
       real(r8) :: cosn, cos2n, sinn, sin2n, sin3n
 
       real(dp) :: Astro_DateNumber(2)     ! Jan 1, 2000 12:00:00
@@ -707,8 +713,7 @@
 !
 !  Mean longitude of lunar node (Period = 18.6 years).
 !
-      N=-234.955_r8-1934.1363_r8*T                       ! degrees
-      N=N*deg2rad                                        ! radians
+      Nnm=(-234.955_r8-1934.1363_r8*T)*deg2rad
 !
 !-----------------------------------------------------------------------
 !  Compute the harmonic constituents of the equilibrium tide at
@@ -719,11 +724,11 @@
 !  tidal constituents due (principally) to the 18.6-year lunar nodal
 !  cycle.
 !
-      sinn = SIN(N)
-      cosn = COS(N)
-      sin2n = SIN(2.0_r8*N)
-      cos2n = COS(2.0_r8*N)
-      sin3n = SIN(3.0_r8*N)
+      sinn = SIN(Nnm)
+      cosn = COS(Nnm)
+      sin2n = SIN(2.0_r8*Nnm)
+      cos2n = COS(2.0_r8*Nnm)
+      sin3n = SIN(3.0_r8*Nnm)
       DO i=1,NTC
         SELECT CASE (TRIM(TIDES(ng)%Tname(i)))
           CASE ('M2', 'N2', 'MS4', '2N2')
@@ -765,11 +770,13 @@
             unodal(i) = 2._r8*                                          &
      &                  ATAN2((-.03731_r8*sinn+.00052_r8*sin2n),        &
      &                        (1._r8-.03731_r8*cosn+.00052_r8*cos2n))
-          CASE ('S1')
+          CASE DEFAULT
+            fnodal(i) = 1._r8
+            unodal(i) = 0._r8
         END SELECT
       END DO
 !
       RETURN
-      END SUBROUTINE harmonic_constituents
+      END SUBROUTINE nodal_modulation
 #endif
       END MODULE set_tides_mod

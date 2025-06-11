@@ -96,8 +96,13 @@
       END SELECT
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
+      IF (Master) THEN
+        WRITE (stdout,60) TRIM(Vname(2,ifield)), ng
+      END IF
+!
   10  FORMAT (' GET_TIDENAME - Illegal input file type, io_type = ',i0, &
      &        /,13x,'Check KeyWord ''INP_LIB'' in ''roms.in''.')
+  60  FORMAT (2x,'GET_TIDENAME     - ',a,/,22x,'(Grid = ',i2.2,44x,')')
 !
       RETURN
       END SUBROUTINE get_tidename

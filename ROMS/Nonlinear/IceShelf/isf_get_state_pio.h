@@ -190,16 +190,16 @@
 #    endif
                   END IF
                 END IF
-              END IF
-            ELSE
-              IF (Master) THEN
-                WRITE (stdout,80) string, TRIM(Vname(1,ifield)),        &
-     &                            TRIM(ncname)
-              END IF
-              exit_flag=4
-              IF (FoundError(exit_flag, PIO_noerr,                      &
-     &                       __LINE__, MyFile)) THEN
-                RETURN
+              ELSE
+                IF (Master) THEN
+                  WRITE (stdout,80) string, TRIM(Vname(1,ifield)),      &
+     &                              TRIM(ncname)
+                END IF
+                exit_flag=4
+                IF (FoundError(exit_flag, PIO_noerr,                    &
+     &                         __LINE__, MyFile)) THEN
+                  RETURN
+                END IF
               END IF
             END IF
           END IF
@@ -257,6 +257,16 @@
                     WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
 #    endif
                   END IF
+                END IF
+              ELSE
+                IF (Master) THEN
+                  WRITE (stdout,80) string, TRIM(Vname(1,ifield)),      &
+     &                              TRIM(ncname)
+                END IF
+                exit_flag=4
+                IF (FoundError(exit_flag, PIO_noerr,                    &
+     &                         __LINE__, MyFile)) THEN
+                  RETURN
                 END IF
               END IF
             END IF
