@@ -1375,25 +1375,14 @@
 !
 !  Local variable declarations.
 !
-<<<<<<< HEAD
       logical :: LdefVar, got_var(NV)
 !
       integer, parameter :: Natt = 25
 !
-      integer :: i, j, ifield, nf, nvd3, nvd4, nvd, status, vtype
+      integer :: FileH, i, j, ifield, nf, nvd3, nvd4, nvd, status, vtype
       integer :: ic, itrc
 !
       integer, pointer :: icegrd(:)
-=======
-      logical :: got_var(NV)
-      logical :: LdefVar
-!
-      integer, parameter :: Natt = 25
-
-      integer :: FileH, i, ifield, j, nf, nvd3, status, vtype
-
-      integer :: icegrd(3)
->>>>>>> develop
 !
       real(r8) :: Aval(6)
 !
@@ -1411,10 +1400,7 @@
 !
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
       ncname=S(ng)%name
-<<<<<<< HEAD
-=======
       FileH=ABS(S(ng)%pioFile%fh)
->>>>>>> develop
 !
       DEFINE : IF (ldef) THEN
 !
@@ -1422,7 +1408,7 @@
 !
 #  if defined WRITE_WATER && defined MASKING
 #   ifdef PERFECT_RESTART
-        IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+        IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
           nvd3=3
           nvd4=4
         ELSE
@@ -1468,7 +1454,7 @@
               LdefVar=VarOut(ifield,ng)
               vtype=PIO_FOUT
               nvd=nvd3
-           END IF
+            END IF
             IF (LdefVar) THEN
               Vinfo( 1)=Vname(1,ifield)
               Vinfo( 2)=Vname(2,ifield)
@@ -1485,7 +1471,7 @@
                   icegrd => u2dgrd
 #  if defined WRITE_WATER && defined MASKING
 #   if !defined WET_DRY && defined PERFECT_RESTART
-                  IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+                  IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
                     Vinfo(24)='_FillValue'
                     Aval(6)=spval
                   END IF
@@ -1498,7 +1484,7 @@
                   icegrd => v2dgrd
 #  if defined WRITE_WATER && defined MASKING
 #   if !defined WET_DRY && defined PERFECT_RESTART
-                  IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+                  IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
                     Vinfo(24)='_FillValue'
                     Aval(6)=spval
                   END IF
@@ -1511,7 +1497,7 @@
                   icegrd => t2dgrd
 #  if defined WRITE_WATER && defined MASKING
 #   if !defined WET_DRY && defined PERFECT_RESTART
-                  IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+                  IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
                     Vinfo(24)='_FillValue'
                     Aval(6)=spval
                   END IF
@@ -1524,12 +1510,7 @@
 !
               status=def_var(ng, model, S(ng)%pioFile,                  &
      &                       S(ng)%pioVar(ifield)%vd,                   &
-<<<<<<< HEAD
      &                       vtype, nvd, icegrd, Aval, Vinfo, ncname)
-=======
-     &                       vtype, nvd3, icegrd,                       &
-     &                       Aval, Vinfo, ncname)
->>>>>>> develop
               IF (FoundError(exit_flag, NoError,                        &
      &                       __LINE__, MyFile)) RETURN
             END IF
@@ -1538,7 +1519,7 @@
 !
 !  Reset icegrid dimension info.
 !
-        IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+        IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
           icegrd => sr2dgrd
         ELSE
           icegrd => t2dgrd
@@ -1556,7 +1537,7 @@
           Vinfo(16)=Vname(1,idtime)
 #  if defined WRITE_WATER && defined MASKING
 #   if !defined WET_DRY && defined PERFECT_RESTART
-          IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+          IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
             Vinfo(24)='_FillValue'
             Aval(6)=spval
           END IF
@@ -1587,7 +1568,7 @@
           Vinfo(16)=Vname(1,idtime)
 #  if defined WRITE_WATER && defined MASKING
 #   if !defined WET_DRY && defined PERFECT_RESTART
-          IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+          IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
             Vinfo(24)='_FillValue'
             Aval(6)=spval
           END IF
@@ -1623,7 +1604,7 @@
               Vinfo(16)=Vname(1,idtime)
 #  if defined WRITE_WATER && defined MASKING
 #   if !defined WET_DRY && defined PERFECT_RESTART
-              IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+              IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
                 Vinfo(24)='_FillValue'
                 Aval(6)=spval
               END IF
@@ -1651,12 +1632,7 @@
 !
               status=def_var(ng, model, S(ng)%pioFile,                  &
      &                       S(ng)%pioVar(ifield)%vd,                   &
-<<<<<<< HEAD
      &                       vtype, nvd, icegrd, Aval, Vinfo, ncname)
-=======
-     &                       vtype, nvd3, t2dgrd,                       &
-     &                       Aval, Vinfo, ncname)
->>>>>>> develop
               IF (FoundError(exit_flag, NoError,                        &
      &                       __LINE__, MyFile)) RETURN
             END IF
@@ -1670,7 +1646,7 @@
 !  Reset icegrid dimension info.
 !
         icegrd => t2dgrd
-        IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+        IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
 #  ifdef PERFECT_RESTART
           nvd=nvd4
 #  else
@@ -1683,7 +1659,7 @@
           DO itrc=NAT+1,NT(ng)
             IF (LtracerIce(itrc, ng)) THEN
               ifield=idStrc(itrc)
-              IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+              IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
                 LdefVar=.TRUE.
                 vtype=PIO_FRST
               ELSE
@@ -1698,7 +1674,7 @@
                 Vinfo(16)=Vname(1,idtime)
 #  if defined WRITE_WATER && defined MASKING
 #   if !defined WET_DRY && defined PERFECT_RESTART
-                IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+                IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
                   Vinfo(24)='_FillValue'
                   Aval(6)=spval
                 END IF
@@ -1888,12 +1864,8 @@
 !
       logical :: LwrtVar
 !
-<<<<<<< HEAD
-=======
-      integer :: FileH, ifield, ifld
->>>>>>> develop
       integer :: gfactor, gtype, status
-      integer :: ifield, ifld, ic, itrc
+      integer :: FileH, ifield, ifld, ic, itrc
 !
       real(dp) :: scale
 !
@@ -1915,6 +1887,8 @@
 !  Write out ice prognostic variables into specified output NetCDF file.
 !-----------------------------------------------------------------------
 !
+      FileH=ABS(S(ng)%pioFile%fh)
+
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  Set grid type factor to write full (gfactor=1) fields or water
@@ -1922,7 +1896,7 @@
 !
 #  if defined WRITE_WATER && defined MASKING
 #   ifdef PERFECT_RESTART
-      IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+      IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
         gfactor=1
       ELSE
         gfactor=-1
@@ -1938,7 +1912,6 @@
 !  write out sea-ice model state prognostic variables.
 !-----------------------------------------------------------------------
 !
-      FileH=ABS(S(ng)%pioFile%fh)
       DO ifld=1,nIceS
         IF (iSice(ifld).gt.0) THEN
           ifield=iSice(ifld)
@@ -1950,35 +1923,25 @@
 !
           IF (LwrtVar) THEN
             IF ((model.eq.iNLM).and.                                    &
-<<<<<<< HEAD
-                ((S(ng)%ncid.eq.HIS(ng)%ncid).or.                       &
-     &           (S(ng)%ncid.eq.QCK(ng)%ncid))) THEN
+     &          ((FileH.eq.ABS(HIS(ng)%pioFile%fh)).or.                 &
+     &           (FileH.eq.ABS(QCK(ng)%pioFile%fh)))) THEN
               iceField2d => ICE(ng) % Si(LBi:UBi,LBj:UBj,IOUT,ifld)
-            ELSE IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+            ELSE IF ((model.eq.iNLM).and.                               &
+     &               (FileH.eq.ABS(RST(ng)%pioFile%fh))) THEN
 #  ifdef PERFECT_RESTART
               iceField3d => ICE(ng) % Si(LBi:UBi,LBj:UBj,1:2,ifld)
 #  else
               iceField2d => ICE(ng) % Si(LBi:UBi,LBj:UBj,IOUT,ifld)
 #  endif
 #  ifdef AVERAGES
-            ELSE IF (S(ng)%ncid.eq.AVG(ng)%ncid) THEN
+            ELSE IF (FileH.eq.ABS(AVG(ng)%pioFile%fh)) THEN
               iceField2d => ICE_SAVG(ifld,ng) % var(LBi:UBi,LBj:UBj)
 #  endif
-=======
-                ((FileH.eq.ABS(HIS(ng)%pioFile%fh)).or.                 &
-     &           (FileH.eq.ABS(QCK(ng)%pioFile%fh)).or.                 &
-     &           (FileH.eq.ABS(RST(ng)%pioFile%fh)))) THEN
-              iceField => ICE(ng) % Si(LBi:UBi,LBj:UBj,IUOUT,ifld)
-# ifdef AVERAGES
-            ELSE IF (FileH.eq.ABS(AVG(ng)%pioFile%fh)) THEN
-              iceField => ICE_SAVG(ifld,ng) % var(LBi:UBi,LBj:UBj)
-# endif
->>>>>>> develop
             END IF
 !
             SELECT CASE (ifld)
               CASE (isUice)
-                IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+                IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
 #  ifdef PERFECT_RESTART
                   IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
                     ioDesc => ioDesc_dp_u3dvar(ng)
@@ -2003,7 +1966,7 @@
                 iceMask => GRID(ng) % umask_full
 #  endif
               CASE (isVice)
-                IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+                IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
 #  ifdef PERFECT_RESTART
                   IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
                     ioDesc => ioDesc_dp_v3dvar(ng)
@@ -2028,7 +1991,7 @@
                 iceMask => GRID(ng) % vmask_full
 #  endif
               CASE DEFAULT
-                IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+                IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
 #  ifdef PERFECT_RESTART
                   IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
                     ioDesc => ioDesc_dp_r3dvar(ng)
@@ -2056,7 +2019,7 @@
             scale=1.0_dp
 !
 #  ifdef PERFECT_RESTART
-            IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+            IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
               status=nf_fwrite3d(ng, model, S(ng)%pioFile, ifield,      &
      &                           S(ng)%pioVar(ifield), S(ng)%Rindex,    &
      &                           ioDesc,                                &
@@ -2181,25 +2144,14 @@
 !
           IF (LwrtVar) THEN
             IF ((model.eq.iNLM).and.                                    &
-<<<<<<< HEAD
-                ((S(ng)%ncid.eq.HIS(ng)%ncid).or.                       &
-     &           (S(ng)%ncid.eq.QCK(ng)%ncid).or.                       &
-     &           (S(ng)%ncid.eq.RST(ng)%ncid))) THEN
-              iceField2d => ICE(ng) % Fi(LBi:UBi,LBj:UBj,ifld)
-#  ifdef AVERAGES
-            ELSE IF (S(ng)%ncid.eq.AVG(ng)%ncid) THEN
-              iceField2d => ICE_FAVG(ifld,ng) % var(LBi:UBi,LBj:UBj)
-#  endif
-=======
-                ((FileH.eq.ABS(HIS(ng)%pioFile%fh)).or.                 &
+     &          ((FileH.eq.ABS(HIS(ng)%pioFile%fh)).or.                 &
      &           (FileH.eq.ABS(QCK(ng)%pioFile%fh)).or.                 &
      &           (FileH.eq.ABS(RST(ng)%pioFile%fh)))) THEN
-              iceField => ICE(ng) % Fi(LBi:UBi,LBj:UBj,ifld)
-# ifdef AVERAGES
+              iceField2d => ICE(ng) % Fi(LBi:UBi,LBj:UBj,ifld)
+#  ifdef AVERAGES
             ELSE IF (FileH.eq.ABS(AVG(ng)%pioFile%fh)) THEN
-              iceField => ICE_FAVG(ifld,ng) % var(LBi:UBi,LBj:UBj)
-# endif
->>>>>>> develop
+              iceField2d => ICE_FAVG(ifld,ng) % var(LBi:UBi,LBj:UBj)
+#  endif
             END IF
 !
 # ifdef ICE_BULK_FLUXES
@@ -2247,7 +2199,7 @@
           IF (LtracerIce(itrc, ng)) THEN
             ic=ic+1
             ifield=idStrc(itrc)
-            IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+            IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
               LwrtVar=.TRUE.
             ELSE
               LwrtVar=VarOut(ifield,ng)
@@ -2255,23 +2207,24 @@
 !
             IF (LwrtVar) THEN
               IF ((model.eq.iNLM).and.                                  &
-                  ((S(ng)%ncid.eq.HIS(ng)%ncid).or.                     &
-     &             (S(ng)%ncid.eq.QCK(ng)%ncid))) THEN
+     &            ((FileH.eq.ABS(HIS(ng)%pioFile%fh)).or.               &
+     &             (FileH.eq.ABS(QCK(ng)%pioFile%fh)))) THEN
                 iceField2d => ICE(ng) % Ti(LBi:UBi,LBj:UBj,IOUT,ic)
-              ELSE IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+              ELSE IF ((model.eq.iNLM).and.                             &
+     &                 (FileH.eq.ABS(RST(ng)%pioFile%fh))) THEN
 #  ifdef PERFECT_RESTART
                 iceField3d => ICE(ng) % Ti(LBi:UBi,LBj:UBj,1:2,ic)
 #  else
                 iceField2d => ICE(ng) % Ti(LBi:UBi,LBj:UBj,IOUT,ic)
 #  endif
 #  ifdef AVERAGES
-              ELSE IF (S(ng)%ncid.eq.AVG(ng)%ncid) THEN
+              ELSE IF (FileH.eq.ABS(AVG(ng)%pioFile%fh)) THEN
                 iceField2d => ICE_TAVG(itrc,ng) % var(LBi:UBi,LBj:UBj)
 #  endif
               END IF
 !
               scale=1.0_dp
-              IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+              IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
 #  ifdef PERFECT_RESTART
                 IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
                   ioDesc => ioDesc_dp_r3dvar(ng)
@@ -2293,7 +2246,7 @@
                 END IF
               END IF
 #  ifdef PERFECT_RESTART
-              IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+              IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
                 status=nf_fwrite3d(ng, model, S(ng)%pioFile, ifield,    &
      &                             S(ng)%pioVar(ifield), S(ng)%Rindex,  &
      &                             ioDesc,                              &
