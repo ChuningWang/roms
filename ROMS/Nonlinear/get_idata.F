@@ -127,6 +127,14 @@
 !
       IF (LprocessTides(ng)) THEN
         IF (iic(ng).eq.0) THEN
+          CALL get_ngfld (ng, iNLM, idTper, TIDE(ng)%ncid,              &
+# if defined PIO_LIB && defined DISTRIBUTE
+     &                    TIDE(ng)%pioFile,                             &
+# endif
+     &                    1, TIDE(ng), recordless, update(1),           &
+     &                    1, MTC, 1, 1, 1, NTC(ng), 1,                  &
+     &                    TIDES(ng) % Tperiod)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  Tidal harmonic constiuent names (required for nodal correction).
 !
@@ -140,15 +148,6 @@
      &                         TIDES(ng) % Tname)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
-!
-          CALL get_ngfld (ng, iNLM, idTper, TIDE(ng)%ncid,              &
-# if defined PIO_LIB && defined DISTRIBUTE
-     &                    TIDE(ng)%pioFile,                             &
-# endif
-     &                    1, TIDE(ng), recordless, update(1),           &
-     &                    1, MTC, 1, 1, 1, NTC(ng), 1,                  &
-     &                    TIDES(ng) % Tperiod)
-          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
       END IF
 #endif

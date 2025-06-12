@@ -97,12 +97,13 @@
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
       IF (Master) THEN
-        WRITE (stdout,60) TRIM(Vname(2,ifield)), ng
+        WRITE (stdout,60) 'tidal constituent name', ng
       END IF
 !
   10  FORMAT (' GET_TIDENAME - Illegal input file type, io_type = ',i0, &
      &        /,13x,'Check KeyWord ''INP_LIB'' in ''roms.in''.')
-  60  FORMAT (2x,'GET_TIDENAME     - ',a,/,22x,'(Grid = ',i2.2,44x,')')
+  60  FORMAT (2x,'GET_TIDENAME     - ',a,/,22x,'(Grid = ',i2.2,         &
+     &        ', Min =  N/A',11x,' Max =  N/A',11x,')')
 !
       RETURN
       END SUBROUTINE get_tidename
