@@ -676,7 +676,7 @@
       dkind=pioVar%dkind
       gtype=pioVar%gtype
 !
-      SELECT CASE (gtype)
+      SELECT CASE (ABS(gtype))
         CASE (p2dvar, p3dvar)
           Cgrid=1                                         ! PSI-points
         CASE (r2dvar, r3dvar)
@@ -776,7 +776,6 @@
         DO j=Jmin,Jmax
           DO i=Imin,Imax
             Awrk4(i,j)=REAL(Adat(i,j)*Ascl, r4)
-
 # ifdef MASKING
             IF((Amask(i,j).eq.0.0_r8).and.LandFill) THEN
               Awrk4(i,j)=REAL(spval, r4)
@@ -810,7 +809,7 @@
       ELSE                                          ! single precision
         CALL PIO_write_darray (pioFile,                                 &
      &                         pioVar%vd,                               &
-     &                         piodesc,                                 &
+     &                         pioDesc,                                 &
      &                         Awrk4(Imin:Imax,Jmin:Jmax),              &
      &                         status)
       END IF

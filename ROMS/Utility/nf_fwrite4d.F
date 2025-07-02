@@ -848,6 +848,7 @@
 # ifdef MASKING
                 IF ((Amask(i,j).eq.0.0_r8).and.LandFill) THEN
                   Awrk4(i,j,k,l)=REAL(spval, r4)
+                  IF (Lminmax) Lwater(i,j,k,l)=.FALSE.
                 END IF
 # endif
               END DO
@@ -880,7 +881,7 @@
       ELSE                                          ! single precision
         CALL PIO_write_darray (pioFile,                                 &
      &                         pioVar%vd,                               &
-     &                         piodesc,                                 &
+     &                         pioDesc,                                 &
      &                         Awrk4(Imin:Imax,Jmin:Jmax,               &
      &                               LBk:UBk,LBt:UBt),                  &
      &                         status)

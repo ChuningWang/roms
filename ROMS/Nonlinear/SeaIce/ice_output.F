@@ -282,6 +282,13 @@
 !  Define ice model internal variables.
 !-----------------------------------------------------------------------
 !
+        IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+          icegrd => sr2dgrd
+        ELSE
+          icegrd => t2dgrd
+        END IF
+        nvd=nvd3
+!
         DO nf=1,nIceF
           IF (iFice(nf).gt.0) THEN
             ifield=iFice(nf)
@@ -1591,6 +1598,13 @@
 !-----------------------------------------------------------------------
 !  Define ice model internal variables.
 !-----------------------------------------------------------------------
+!
+        IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+          icegrd => sr2dgrd
+        ELSE
+          icegrd => t2dgrd
+        END IF
+        nvd=nvd3
 !
         DO nf=1,nIceF
           IF (iFice(nf).gt.0) THEN

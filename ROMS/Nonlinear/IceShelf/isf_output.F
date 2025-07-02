@@ -285,6 +285,13 @@
 !  Define isf model internal variables.
 !-----------------------------------------------------------------------
 !
+        IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+          isfgrd => sr2dgrd
+        ELSE
+          isfgrd => t2dgrd
+        END IF
+        nvd=nvd3
+!
         DO nf=1,nIsfF
           IF (iFisf(nf).gt.0) THEN
             ifield=iFisf(nf)
@@ -1778,6 +1785,13 @@
 !-----------------------------------------------------------------------
 !  Define isf model internal variables.
 !-----------------------------------------------------------------------
+!
+        IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+          isfgrd => sr2dgrd
+        ELSE
+          isfgrd => t2dgrd
+        END IF
+        nvd=nvd3
 !
         DO nf=1,nIsfF
           IF (iFisf(nf).gt.0) THEN
