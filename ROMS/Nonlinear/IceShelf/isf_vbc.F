@@ -73,7 +73,7 @@
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, model, 6, __LINE__, MyFile)
+      CALL wclock_on (ng, model, 43, __LINE__, MyFile)
 # endif
       CALL isf_vbc_tile (ng, tile,                                      &
      &                   LBi, UBi, LBj, UBj,                            &
@@ -98,7 +98,7 @@
      &                   ISF(ng) % Fi,                                  &
      &                   FORCES(ng) % stflx)
 # ifdef PROFILE
-      CALL wclock_off (ng, model, 6, __LINE__, MyFile)
+      CALL wclock_off (ng, model, 43, __LINE__, MyFile)
 # endif
       RETURN
       END SUBROUTINE isf_vbc
