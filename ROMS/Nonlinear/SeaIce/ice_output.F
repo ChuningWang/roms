@@ -753,7 +753,7 @@
         IF (iFice(ifld).gt.0) THEN
           ifield=iFice(ifld)
           IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
-            LwrtVar=.FALSE.
+            LwrtVar=.True.
           ELSE
             LwrtVar=VarOut(ifield,ng)
           END IF
@@ -2151,7 +2151,7 @@
         IF (iFice(ifld).gt.0) THEN
           ifield=iFice(ifld)
           IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
-            LwrtVar=.FALSE.
+            LwrtVar=.TRUE.
           ELSE
             LwrtVar=VarOut(ifield,ng)
           END IF

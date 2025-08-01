@@ -5986,7 +5986,7 @@ metadata:
   - variable:       ice_age                                          # Input/Output
     standard_name:  age_of_sea_ice
     long_name:      age of sea ice
-    units:          second                                           # [s]
+    units:          day                                              # [day]
     field:          ice age
     time:           ocean_time
     index_code:     idIage
