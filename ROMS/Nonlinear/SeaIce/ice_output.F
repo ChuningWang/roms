@@ -280,7 +280,11 @@
           IF (iFice(nf).gt.0) THEN
             ifield=iFice(nf)
             IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+# ifdef PERFECT_RESTART
               LdefVar=.TRUE.
+# else
+              LdefVar=.FALSE.
+# endif
             ELSE
               LdefVar=VarOut(ifield,ng)
             END IF
@@ -471,7 +475,16 @@
         DO nf=1,nIceF
           IF (iFice(nf).gt.0) THEN
             ifield=iFice(nf)
-            IF (.not.got_var(ifield).and.VarOut(ifield,ng)) THEN
+            IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+# ifdef PERFECT_RESTART
+              LdefVar=.TRUE.
+# else
+              LdefVar=.FALSE.
+# endif
+            ELSE
+              LdefVar=VarOut(ifield,ng)
+            END IF
+            IF (.not.got_var(ifield).and.LdefVar) THEN
               IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),      &
      &                                      TRIM(ncname)
               exit_flag=3
@@ -742,7 +755,11 @@
         IF (iFice(ifld).gt.0) THEN
           ifield=iFice(ifld)
           IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
-            LwrtVar=.True.
+# ifdef PERFECT_RESTART
+            LwrtVar=.TRUE.
+# else
+            LwrtVar=.FALSE.
+# endif
           ELSE
             LwrtVar=VarOut(ifield,ng)
           END IF
@@ -1575,7 +1592,7 @@
 !  Define ice model internal variables.
 !-----------------------------------------------------------------------
 !
-        IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+        IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
           icegrd => sr2dgrd
         ELSE
           icegrd => t2dgrd
@@ -1585,8 +1602,12 @@
         DO nf=1,nIceF
           IF (iFice(nf).gt.0) THEN
             ifield=iFice(nf)
-            IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+            IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
+#  ifdef PERFECT_RESTART
               LdefVar=.TRUE.
+#  else
+              LdefVar=.FALSE.
+#  endif
             ELSE
               LdefVar=VarOut(ifield,ng)
             END IF
@@ -1807,7 +1828,16 @@
         DO nf=1,nIceF
           IF (iFice(nf).gt.0) THEN
             ifield=iFice(nf)
-            IF (.not.got_var(ifield).and.VarOut(ifield,ng)) THEN
+            IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
+#  ifdef PERFECT_RESTART
+              LdefVar=.TRUE.
+#  else
+              LdefVar=.FALSE.
+#  endif
+            ELSE
+              LdefVar=VarOut(ifield,ng)
+            END IF
+            IF (.not.got_var(ifield).and.LdefVar) THEN
               IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),      &
      &                                      TRIM(ncname)
               exit_flag=3
@@ -2129,7 +2159,11 @@
         IF (iFice(ifld).gt.0) THEN
           ifield=iFice(ifld)
           IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
+#  ifdef PERFECT_RESTART
             LwrtVar=.TRUE.
+#  else
+            LwrtVar=.FALSE.
+#  endif
           ELSE
             LwrtVar=VarOut(ifield,ng)
           END IF
