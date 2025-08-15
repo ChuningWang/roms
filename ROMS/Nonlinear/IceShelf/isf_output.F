@@ -134,6 +134,12 @@
         DO i=1,6
           Aval(i)=0.0_r8
         END DO
+!
+        IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+          vtype=NF_FRST
+        ELSE
+          vtype=NF_FOUT
+        END IF
 # ifdef ICESHELF_MOM
 !
 !-----------------------------------------------------------------------
@@ -145,7 +151,6 @@
             ifield=iSisf(nf)
             IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
               LdefVar=.TRUE.
-              vtype=NF_FRST
 #  ifdef PERFECT_RESTART
               nvd=nvd4
 #  else
@@ -153,7 +158,6 @@
 #  endif
             ELSE
               LdefVar=VarOut(ifield,ng)
-              vtype=NF_FOUT
               nvd=nvd3
             END IF
             IF (LdefVar) THEN
@@ -214,69 +218,52 @@
           END IF
         END DO
 !
+        IF (S(ng)%ncid.ne.RST(ng)%ncid) THEN
+!
 !  Reset isfgrid dimension info.
 !
-        IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
-          isfgrd => sr2dgrd
-        ELSE
           isfgrd => t2dgrd
-        END IF
-        nvd=nvd3
+          nvd=nvd3
 !
 !  Define isf EASTward velocity at RHO-points.
 !
-        IF (VarOut(idIuer,ng)) THEN
-          vtype=NF_FOUT
-          Vinfo( 1)=Vname(1,idIuer)
-          Vinfo( 2)=Vname(2,idIuer)
-          Vinfo( 3)=Vname(3,idIuer)
-          Vinfo(14)=Vname(4,idIuer)
-          Vinfo(16)=Vname(1,idtime)
+          IF (VarOut(idIuer,ng)) THEN
+            Vinfo( 1)=Vname(1,idIuer)
+            Vinfo( 2)=Vname(2,idIuer)
+            Vinfo( 3)=Vname(3,idIuer)
+            Vinfo(14)=Vname(4,idIuer)
+            Vinfo(16)=Vname(1,idtime)
 #  if defined WRITE_WATER && defined MASKING
-#   if !defined WET_DRY && defined PERFECT_RESTART
-          IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
-            Vinfo(24)='_FillValue'
-            Aval(6)=spval
-          END IF
-#   else
-          Vinfo(20)='mask_rho'
-#   endif
+            Vinfo(20)='mask_rho'
 #  endif
-          Vinfo(21)=Vname(6,idIuer)
-          Vinfo(22)='coordinates'
-          Aval(5)=REAL(Iinfo(1,idIuer,ng),r8)
-          status=def_var(ng, model, S(ng)%ncid,                         &
-     &                   S(ng)%Vid(idIuer),                             &
-     &                   vtype, nvd, isfgrd, Aval, Vinfo, ncname)
-          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-        END IF
+            Vinfo(21)=Vname(6,idIuer)
+            Vinfo(22)='coordinates'
+            Aval(5)=REAL(Iinfo(1,idIuer,ng),r8)
+            status=def_var(ng, model, S(ng)%ncid,                       &
+     &                     S(ng)%Vid(idIuer),                           &
+     &                     vtype, nvd, isfgrd, Aval, Vinfo, ncname)
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+          END IF
 !
 !  Define isf NORTHward velocity at RHO-points.
 !
-        IF (VarOut(idIvnr,ng)) THEN
-          vtype=NF_FOUT
-          Vinfo( 1)=Vname(1,idIvnr)
-          Vinfo( 2)=Vname(2,idIvnr)
-          Vinfo( 3)=Vname(3,idIvnr)
-          Vinfo(14)=Vname(4,idIvnr)
-          Vinfo(16)=Vname(1,idtime)
+          IF (VarOut(idIvnr,ng)) THEN
+            Vinfo( 1)=Vname(1,idIvnr)
+            Vinfo( 2)=Vname(2,idIvnr)
+            Vinfo( 3)=Vname(3,idIvnr)
+            Vinfo(14)=Vname(4,idIvnr)
+            Vinfo(16)=Vname(1,idtime)
 #  if defined WRITE_WATER && defined MASKING
-#   if !defined WET_DRY && defined PERFECT_RESTART
-          IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
-            Vinfo(24)='_FillValue'
-            Aval(6)=spval
-          END IF
-#   else
-          Vinfo(20)='mask_rho'
-#   endif
+            Vinfo(20)='mask_rho'
 #  endif
-          Vinfo(21)=Vname(6,idIvnr)
-          Vinfo(22)='coordinates'
-          Aval(5)=REAL(Iinfo(1,idIvnr,ng),r8)
-          status=def_var(ng, model, S(ng)%ncid,                         &
-     &                   S(ng)%Vid(idIvnr),                             &
-     &                   vtype, nvd, isfgrd, Aval, Vinfo, ncname)
-          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+            Vinfo(21)=Vname(6,idIvnr)
+            Vinfo(22)='coordinates'
+            Aval(5)=REAL(Iinfo(1,idIvnr,ng),r8)
+            status=def_var(ng, model, S(ng)%ncid,                       &
+     &                     S(ng)%Vid(idIvnr),                           &
+     &                     vtype, nvd, isfgrd, Aval, Vinfo, ncname)
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+          END IF
         END IF
 # endif
 # ifdef ICESHELF_THERMO
@@ -295,8 +282,12 @@
         DO nf=1,nIsfF
           IF (iFisf(nf).gt.0) THEN
             ifield=iFisf(nf)
-            IF (VarOut(ifield,ng)) THEN
-              vtype=NF_FOUT
+            IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+              LdefVar=.TRUE.
+            ELSE
+              LdefVar=VarOut(ifield,ng)
+            END IF
+            IF (LdefVar) THEN
               Vinfo( 1)=Vname(1,ifield)
               Vinfo( 2)=Vname(2,ifield)
               Vinfo( 3)=Vname(3,ifield)
@@ -345,10 +336,8 @@
           ifield=idIvol
           IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
             LdefVar=.TRUE.
-            vtype=NF_FRST
           ELSE
             LdefVar=VarOut(ifield,ng)
-            vtype=NF_FOUT
           END IF
           IF (Ldefvar) THEN
             Vinfo( 1)=Vname(1,ifield)
@@ -380,10 +369,8 @@
               ifield=idItrc(itrc)
               IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
                 LdefVar=.TRUE.
-                vtype=NF_FRST
               ELSE
                 LdefVar=VarOut(ifield,ng)
-                vtype=NF_FOUT
               END IF
               IF (LdefVar) THEN
                 Vinfo( 1)=Vname(1,ifield)
@@ -1625,6 +1612,12 @@
         DO i=1,6
           Aval(i)=0.0_r8
         END DO
+!
+        IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
+          vtype=PIO_FRST
+        ELSE
+          vtype=PIO_FOUT
+        END IF
 #  ifdef ICESHELF_MOM
 !
 !-----------------------------------------------------------------------
@@ -1636,7 +1629,6 @@
             ifield=iSisf(nf)
             IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
               LdefVar=.TRUE.
-              vtype=PIO_FRST
 #   ifdef PERFECT_RESTART
               nvd=nvd4
 #   else
@@ -1644,7 +1636,6 @@
 #   endif
             ELSE
               LdefVar=VarOut(ifield,ng)
-              vtype=PIO_FOUT
               nvd=nvd3
             END IF
             IF (LdefVar) THEN
@@ -1709,75 +1700,58 @@
           END IF
         END DO
 !
+        IF (FileH.ne.ABS(RST(ng)%pioFile%fh)) THEN
+!
 !  Reset isfgrid dimension info.
 !
-        IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
-          isfgrd => sr2dgrd
-        ELSE
           isfgrd => t2dgrd
-        END IF
-        nvd=nvd3
+          nvd=nvd3
 !
 !  Define isf EASTward velocity at RHO-points.
 !
-        IF (VarOut(idIuer,ng)) THEN
-          vtype=PIO_FOUT
-          Vinfo( 1)=Vname(1,idIuer)
-          Vinfo( 2)=Vname(2,idIuer)
-          Vinfo( 3)=Vname(3,idIuer)
-          Vinfo(14)=Vname(4,idIuer)
-          Vinfo(16)=Vname(1,idtime)
+          IF (VarOut(idIuer,ng)) THEN
+            Vinfo( 1)=Vname(1,idIuer)
+            Vinfo( 2)=Vname(2,idIuer)
+            Vinfo( 3)=Vname(3,idIuer)
+            Vinfo(14)=Vname(4,idIuer)
+            Vinfo(16)=Vname(1,idtime)
 #   if defined WRITE_WATER && defined MASKING
-#    if !defined WET_DRY && defined PERFECT_RESTART
-          IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
-            Vinfo(24)='_FillValue'
-            Aval(6)=spval
-          END IF
-#    else
-          Vinfo(20)='mask_rho'
-#    endif
+            Vinfo(20)='mask_rho'
 #   endif
-          Vinfo(21)=Vname(6,idIuer)
-          Vinfo(22)='coordinates'
-          Aval(5)=REAL(Iinfo(1,idIuer,ng),r8)
-          S(ng)%pioVar(idIuer)%dkind=PIO_FOUT
-          S(ng)%pioVar(idIuer)%gtype=r2dvar
+            Vinfo(21)=Vname(6,idIuer)
+            Vinfo(22)='coordinates'
+            Aval(5)=REAL(Iinfo(1,idIuer,ng),r8)
+            S(ng)%pioVar(idIuer)%dkind=PIO_FOUT
+            S(ng)%pioVar(idIuer)%gtype=r2dvar
 !
-          status=def_var(ng, model, S(ng)%pioFile,                      &
-     &                   S(ng)%pioVar(idIuer)%vd,                       &
-     &                   vtype, nvd, isfgrd, Aval, Vinfo, ncname)
-          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-        END IF
+            status=def_var(ng, model, S(ng)%pioFile,                    &
+     &                     S(ng)%pioVar(idIuer)%vd,                     &
+     &                     vtype, nvd, isfgrd, Aval, Vinfo, ncname)
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+          END IF
 !
 !  Define isf NORTHward velocity at RHO-points.
 !
-        IF (VarOut(idIvnr,ng)) THEN
-          vtype=PIO_FOUT
-          Vinfo( 1)=Vname(1,idIvnr)
-          Vinfo( 2)=Vname(2,idIvnr)
-          Vinfo( 3)=Vname(3,idIvnr)
-          Vinfo(14)=Vname(4,idIvnr)
-          Vinfo(16)=Vname(1,idtime)
+          IF (VarOut(idIvnr,ng)) THEN
+            Vinfo( 1)=Vname(1,idIvnr)
+            Vinfo( 2)=Vname(2,idIvnr)
+            Vinfo( 3)=Vname(3,idIvnr)
+            Vinfo(14)=Vname(4,idIvnr)
+            Vinfo(16)=Vname(1,idtime)
 #   if defined WRITE_WATER && defined MASKING
-#    if !defined WET_DRY && defined PERFECT_RESTART
-          IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
-            Vinfo(24)='_FillValue'
-            Aval(6)=spval
-          END IF
-#    else
-          Vinfo(20)='mask_rho'
-#    endif
+            Vinfo(20)='mask_rho'
 #   endif
-          Vinfo(21)=Vname(6,idIvnr)
-          Vinfo(22)='coordinates'
-          Aval(5)=REAL(Iinfo(1,idIvnr,ng),r8)
-          S(ng)%pioVar(idIvnr)%dkind=PIO_FOUT
-          S(ng)%pioVar(idIvnr)%gtype=r2dvar
+            Vinfo(21)=Vname(6,idIvnr)
+            Vinfo(22)='coordinates'
+            Aval(5)=REAL(Iinfo(1,idIvnr,ng),r8)
+            S(ng)%pioVar(idIvnr)%dkind=vtype
+            S(ng)%pioVar(idIvnr)%gtype=r2dvar
 !
-          status=def_var(ng, model, S(ng)%pioFile,                      &
-     &                   S(ng)%pioVar(idIvnr)%vd,                       &
-     &                   vtype, nvd, isfgrd, Aval, Vinfo, ncname)
-          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+            status=def_var(ng, model, S(ng)%pioFile,                    &
+     &                     S(ng)%pioVar(idIvnr)%vd,                     &
+     &                     vtype, nvd, isfgrd, Aval, Vinfo, ncname)
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+          END IF
         END IF
 #  endif
 #  ifdef ICESHELF_THERMO
@@ -1796,8 +1770,12 @@
         DO nf=1,nIsfF
           IF (iFisf(nf).gt.0) THEN
             ifield=iFisf(nf)
-            IF (VarOut(ifield,ng)) THEN
-              vtype=PIO_FOUT
+            IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+              LdefVar=.TRUE.
+            ELSE
+              LdefVar=VarOut(ifield,ng)
+            END IF
+            IF (LdefVar) THEN
               Vinfo( 1)=Vname(1,ifield)
               Vinfo( 2)=Vname(2,ifield)
               Vinfo( 3)=Vname(3,ifield)
@@ -1816,7 +1794,7 @@
               Vinfo(21)=Vname(6,ifield)
               Vinfo(22)='coordinates'
               Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
-              S(ng)%pioVar(ifield)%dkind=PIO_FOUT
+              S(ng)%pioVar(ifield)%dkind=vtype
               S(ng)%pioVar(ifield)%gtype=r2dvar
 !
               status=def_var(ng, model, S(ng)%pioFile,                  &
@@ -1848,10 +1826,8 @@
           ifield=idIvol
           IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
             LdefVar=.TRUE.
-            vtype=PIO_FRST
           ELSE
             LdefVar=VarOut(ifield,ng)
-            vtype=PIO_FOUT
           END IF
           IF (LdefVar) THEN
             Vinfo( 1)=Vname(1,ifield)
@@ -1872,7 +1848,7 @@
             Vinfo(21)=Vname(6,ifield)
             Vinfo(22)='coordinates'
             Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
-            S(ng)%pioVar(ifield)%dkind=PIO_FOUT
+            S(ng)%pioVar(ifield)%dkind=vtype
             S(ng)%pioVar(ifield)%gtype=r2dvar
 !
             status=def_var(ng, model, S(ng)%pioFile,                    &
@@ -1886,10 +1862,8 @@
               ifield=idItrc(itrc)
               IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
                 LdefVar=.TRUE.
-                vtype=PIO_FRST
               ELSE
                 LdefVar=VarOut(ifield,ng)
-                vtype=PIO_FOUT
               END IF
               IF (LdefVar) THEN
                 Vinfo( 1)=Vname(1,ifield)
@@ -1910,7 +1884,7 @@
                 Vinfo(21)=Vname(6,ifield)
                 Vinfo(22)='coordinates'
                 Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
-                S(ng)%pioVar(ifield)%dkind=PIO_FOUT
+                S(ng)%pioVar(ifield)%dkind=vtype
                 S(ng)%pioVar(ifield)%gtype=r2dvar
 !
                 status=def_var(ng, model, S(ng)%pioFile,                &

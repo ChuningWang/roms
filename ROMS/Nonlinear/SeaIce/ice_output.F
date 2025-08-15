@@ -135,6 +135,12 @@
           Aval(i)=0.0_r8
         END DO
 !
+        IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+          vtype=NF_FRST
+        ELSE
+          vtype=NF_FOUT
+        END IF
+!
 !-----------------------------------------------------------------------
 !  Define ice model state prognostic variables.
 !-----------------------------------------------------------------------
@@ -144,7 +150,6 @@
             ifield=iSice(nf)
             IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
               LdefVar=.TRUE.
-              vtype=NF_FRST
 # ifdef PERFECT_RESTART
               nvd=nvd4
 # else
@@ -152,7 +157,6 @@
 # endif
             ELSE
               LdefVar=VarOut(ifield,ng)
-              vtype=NF_FOUT
               nvd=nvd3
             END IF
             IF (LdefVar) THEN
@@ -213,69 +217,52 @@
           END IF
         END DO
 !
+        IF (S(ng)%ncid.ne.RST(ng)%ncid) THEN
+!
 !  Reset icegrid dimension info.
 !
-        IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
-          icegrd => sr2dgrd
-        ELSE
           icegrd => t2dgrd
-        END IF
-        nvd=nvd3
+          nvd=nvd3
 !
 !  Define ice EASTward velocity at RHO-points.
 !
-        IF (VarOut(idUiER,ng)) THEN
-          vtype=NF_FOUT
-          Vinfo( 1)=Vname(1,idUiER)
-          Vinfo( 2)=Vname(2,idUiER)
-          Vinfo( 3)=Vname(3,idUiER)
-          Vinfo(14)=Vname(4,idUiER)
-          Vinfo(16)=Vname(1,idtime)
+          IF (VarOut(idUiER,ng)) THEN
+            Vinfo( 1)=Vname(1,idUiER)
+            Vinfo( 2)=Vname(2,idUiER)
+            Vinfo( 3)=Vname(3,idUiER)
+            Vinfo(14)=Vname(4,idUiER)
+            Vinfo(16)=Vname(1,idtime)
 # if defined WRITE_WATER && defined MASKING
-#  if !defined WET_DRY && defined PERFECT_RESTART
-          IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
-            Vinfo(24)='_FillValue'
-            Aval(6)=spval
-          END IF
-#  else
-          Vinfo(20)='mask_rho'
-#  endif
+            Vinfo(20)='mask_rho'
 # endif
-          Vinfo(21)=Vname(6,idUiER)
-          Vinfo(22)='coordinates'
-          Aval(5)=REAL(Iinfo(1,idUiER,ng),r8)
-          status=def_var(ng, model, S(ng)%ncid,                         &
-     &                   S(ng)%Vid(idUiER),                             &
-     &                   vtype, nvd, icegrd, Aval, Vinfo, ncname)
-          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-        END IF
+            Vinfo(21)=Vname(6,idUiER)
+            Vinfo(22)='coordinates'
+            Aval(5)=REAL(Iinfo(1,idUiER,ng),r8)
+            status=def_var(ng, model, S(ng)%ncid,                       &
+     &                     S(ng)%Vid(idUiER),                           &
+     &                     vtype, nvd, icegrd, Aval, Vinfo, ncname)
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+          END IF
 !
 !  Define ice NORTHward velocity at RHO-points.
 !
-        IF (VarOut(idViNR,ng)) THEN
-          vtype=NF_FOUT
-          Vinfo( 1)=Vname(1,idViNR)
-          Vinfo( 2)=Vname(2,idViNR)
-          Vinfo( 3)=Vname(3,idViNR)
-          Vinfo(14)=Vname(4,idViNR)
-          Vinfo(16)=Vname(1,idtime)
+          IF (VarOut(idViNR,ng)) THEN
+            Vinfo( 1)=Vname(1,idViNR)
+            Vinfo( 2)=Vname(2,idViNR)
+            Vinfo( 3)=Vname(3,idViNR)
+            Vinfo(14)=Vname(4,idViNR)
+            Vinfo(16)=Vname(1,idtime)
 # if defined WRITE_WATER && defined MASKING
-#  if !defined WET_DRY && defined PERFECT_RESTART
-          IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
-            Vinfo(24)='_FillValue'
-            Aval(6)=spval
-          END IF
-#  else
-          Vinfo(20)='mask_rho'
-#  endif
+            Vinfo(20)='mask_rho'
 # endif
-          Vinfo(21)=Vname(6,idViNR)
-          Vinfo(22)='coordinates'
-          Aval(5)=REAL(Iinfo(1,idViNR,ng),r8)
-          status=def_var(ng, model, S(ng)%ncid,                         &
-     &                   S(ng)%Vid(idViNR),                             &
-     &                   vtype, nvd, icegrd, Aval, Vinfo, ncname)
-          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+            Vinfo(21)=Vname(6,idViNR)
+            Vinfo(22)='coordinates'
+            Aval(5)=REAL(Iinfo(1,idViNR,ng),r8)
+            status=def_var(ng, model, S(ng)%ncid,                       &
+     &                     S(ng)%Vid(idViNR),                           &
+     &                     vtype, nvd, icegrd, Aval, Vinfo, ncname)
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+          END IF
         END IF
 !
 !-----------------------------------------------------------------------
@@ -292,8 +279,12 @@
         DO nf=1,nIceF
           IF (iFice(nf).gt.0) THEN
             ifield=iFice(nf)
-            IF (VarOut(ifield,ng)) THEN
-              vtype=NF_FOUT
+            IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+              LdefVar=.TRUE.
+            ELSE
+              LdefVar=VarOut(ifield,ng)
+            END IF
+            IF (LdefVar) THEN
               Vinfo( 1)=Vname(1,ifield)
               Vinfo( 2)=Vname(2,ifield)
               Vinfo( 3)=Vname(3,ifield)
@@ -356,10 +347,8 @@
               ifield=idStrc(itrc)
               IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
                 LdefVar=.TRUE.
-                vtype=NF_FRST
               ELSE
                 LdefVar=VarOut(ifield,ng)
-                vtype=NF_FOUT
               END IF
               IF (LdefVar) THEN
                 Vinfo( 1)=Vname(1,ifield)
@@ -1442,6 +1431,12 @@
           Aval(i)=0.0_r8
         END DO
 !
+        IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
+          vtype=PIO_FRST
+        ELSE
+          vtype=PIO_FOUT
+        END IF
+!
 !-----------------------------------------------------------------------
 !  Define ice model state prognostic variables.
 !-----------------------------------------------------------------------
@@ -1451,7 +1446,6 @@
             ifield=iSice(nf)
             IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
               LdefVar=.TRUE.
-              vtype=PIO_FRST
 #  ifdef PERFECT_RESTART
               nvd=nvd4
 #  else
@@ -1459,7 +1453,6 @@
 #  endif
             ELSE
               LdefVar=VarOut(ifield,ng)
-              vtype=PIO_FOUT
               nvd=nvd3
             END IF
             IF (LdefVar) THEN
@@ -1471,7 +1464,7 @@
               Vinfo(21)=Vname(6,ifield)
               Vinfo(22)='coordinates'
               Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
-              S(ng)%pioVar(ifield)%dkind=PIO_FOUT
+              S(ng)%pioVar(ifield)%dkind=vtype
 !
               SELECT CASE (nf)
                 CASE (isUice)
@@ -1524,75 +1517,58 @@
           END IF
         END DO
 !
+        IF (FileH.ne.ABS(RST(ng)%pioFile%fh)) THEN
+!
 !  Reset icegrid dimension info.
 !
-        IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
-          icegrd => sr2dgrd
-        ELSE
           icegrd => t2dgrd
-        END IF
-        nvd=nvd3
+          nvd=nvd3
 !
 !  Define ice EASTward velocity at RHO-points.
 !
-        IF (VarOut(idUiER,ng)) THEN
-          vtype=PIO_FOUT
-          Vinfo( 1)=Vname(1,idUiER)
-          Vinfo( 2)=Vname(2,idUiER)
-          Vinfo( 3)=Vname(3,idUiER)
-          Vinfo(14)=Vname(4,idUiER)
-          Vinfo(16)=Vname(1,idtime)
+          IF (VarOut(idUiER,ng)) THEN
+            Vinfo( 1)=Vname(1,idUiER)
+            Vinfo( 2)=Vname(2,idUiER)
+            Vinfo( 3)=Vname(3,idUiER)
+            Vinfo(14)=Vname(4,idUiER)
+            Vinfo(16)=Vname(1,idtime)
 #  if defined WRITE_WATER && defined MASKING
-#   if !defined WET_DRY && defined PERFECT_RESTART
-          IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
-            Vinfo(24)='_FillValue'
-            Aval(6)=spval
-          END IF
-#   else
-          Vinfo(20)='mask_rho'
-#   endif
+            Vinfo(20)='mask_rho'
 #  endif
-          Vinfo(21)=Vname(6,idUiER)
-          Vinfo(22)='coordinates'
-          Aval(5)=REAL(Iinfo(1,idUiER,ng),r8)
-          S(ng)%pioVar(idUiER)%dkind=PIO_FOUT
-          S(ng)%pioVar(idUiER)%gtype=r2dvar
+            Vinfo(21)=Vname(6,idUiER)
+            Vinfo(22)='coordinates'
+            Aval(5)=REAL(Iinfo(1,idUiER,ng),r8)
+            S(ng)%pioVar(idUiER)%dkind=PIO_FOUT
+            S(ng)%pioVar(idUiER)%gtype=r2dvar
 !
-          status=def_var(ng, model, S(ng)%pioFile,                      &
-     &                   S(ng)%pioVar(idUiER)%vd,                       &
-     &                   vtype, nvd, icegrd, Aval, Vinfo, ncname)
-          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-        END IF
+            status=def_var(ng, model, S(ng)%pioFile,                    &
+     &                     S(ng)%pioVar(idUiER)%vd,                     &
+     &                     vtype, nvd, icegrd, Aval, Vinfo, ncname)
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+          END IF
 !
 !  Define ice NORTHward velocity at RHO-points.
 !
-        IF (VarOut(idViNR,ng)) THEN
-          vtype=PIO_FOUT
-          Vinfo( 1)=Vname(1,idViNR)
-          Vinfo( 2)=Vname(2,idViNR)
-          Vinfo( 3)=Vname(3,idViNR)
-          Vinfo(14)=Vname(4,idViNR)
-          Vinfo(16)=Vname(1,idtime)
+          IF (VarOut(idViNR,ng)) THEN
+            Vinfo( 1)=Vname(1,idViNR)
+            Vinfo( 2)=Vname(2,idViNR)
+            Vinfo( 3)=Vname(3,idViNR)
+            Vinfo(14)=Vname(4,idViNR)
+            Vinfo(16)=Vname(1,idtime)
 #  if defined WRITE_WATER && defined MASKING
-#   if !defined WET_DRY && defined PERFECT_RESTART
-          IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
-            Vinfo(24)='_FillValue'
-            Aval(6)=spval
-          END IF
-#   else
-          Vinfo(20)='mask_rho'
-#   endif
+            Vinfo(20)='mask_rho'
 #  endif
-          Vinfo(21)=Vname(6,idViNR)
-          Vinfo(22)='coordinates'
-          Aval(5)=REAL(Iinfo(1,idViNR,ng),r8)
-          S(ng)%pioVar(idViNR)%dkind=PIO_FOUT
-          S(ng)%pioVar(idViNR)%gtype=r2dvar
+            Vinfo(21)=Vname(6,idViNR)
+            Vinfo(22)='coordinates'
+            Aval(5)=REAL(Iinfo(1,idViNR,ng),r8)
+            S(ng)%pioVar(idViNR)%dkind=PIO_FOUT
+            S(ng)%pioVar(idViNR)%gtype=r2dvar
 !
-          status=def_var(ng, model, S(ng)%pioFile,                      &
-     &                   S(ng)%pioVar(idViNR)%vd,                       &
-     &                   vtype, nvd, icegrd, Aval, Vinfo, ncname)
-          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+            status=def_var(ng, model, S(ng)%pioFile,                    &
+     &                     S(ng)%pioVar(idViNR)%vd,                     &
+     &                     vtype, nvd, icegrd, Aval, Vinfo, ncname)
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+          END IF
         END IF
 !
 !-----------------------------------------------------------------------
@@ -1609,8 +1585,12 @@
         DO nf=1,nIceF
           IF (iFice(nf).gt.0) THEN
             ifield=iFice(nf)
-            IF (VarOut(ifield,ng)) THEN
-              vtype=PIO_FOUT
+            IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+              LdefVar=.TRUE.
+            ELSE
+              LdefVar=VarOut(ifield,ng)
+            END IF
+            IF (LdefVar) THEN
               Vinfo( 1)=Vname(1,ifield)
               Vinfo( 2)=Vname(2,ifield)
               Vinfo( 3)=Vname(3,ifield)
@@ -1629,7 +1609,7 @@
               Vinfo(21)=Vname(6,ifield)
               Vinfo(22)='coordinates'
               Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
-              S(ng)%pioVar(ifield)%dkind=PIO_FOUT
+              S(ng)%pioVar(ifield)%dkind=vtype
               S(ng)%pioVar(ifield)%gtype=r2dvar
 !
               SELECT CASE (nf)
@@ -1675,10 +1655,8 @@
               ifield=idStrc(itrc)
               IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
                 LdefVar=.TRUE.
-                vtype=PIO_FRST
               ELSE
                 LdefVar=VarOut(ifield,ng)
-                vtype=PIO_FOUT
               END IF
               IF (LdefVar) THEN
                 Vinfo( 1)=Vname(1,ifield)
@@ -1699,7 +1677,7 @@
                 Vinfo(21)=Vname(6,ifield)
                 Vinfo(22)='coordinates'
                 Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
-                S(ng)%pioVar(ifield)%dkind=PIO_FOUT
+                S(ng)%pioVar(ifield)%dkind=vtype
                 S(ng)%pioVar(ifield)%gtype=r2dvar
 !
                 status=def_var(ng, model, S(ng)%pioFile,                &
