@@ -102,7 +102,12 @@
       implicit none
 !
       PRIVATE
-      PUBLIC  :: bulk_flux, bulk_psiu, bulk_psit
+      PUBLIC  :: bulk_flux, bulk_psit
+# if defined COARE_30
+      PUBLIC  :: bulk_psiu
+# else
+      PUBLIC  :: bulk_psiu_26, bulk_psiu_40
+# endif
 !
       CONTAINS
 !
@@ -770,13 +775,23 @@
 !  First guesses for Monon-Obukhov similarity scales.
 !
           Wstar(i)=delW(i)*vonKar/(LOG(blk_ZW(ng)/Zo10(i))-             &
+# if defined COARE_30
      &                             bulk_psiu(blk_ZW(ng)/L10(i),pi))
+# else
+     &                             bulk_psiu_40(blk_ZW(ng)/L10(i),pi))
+# endif
           Tstar(i)=-(delT(i)-delTc(i))*vonKar/                          &
      &             (LOG(blk_ZT(ng)/ZoT10(i))-                           &
      &              bulk_psit(blk_ZT(ng)/L10(i),pi))
           Qstar(i)=-(delQ(i)-delQc(i))*vonKar/                          &
      &             (LOG(blk_ZQ(ng)/ZoT10(i))-                           &
      &              bulk_psit(blk_ZQ(ng)/L10(i),pi))
+# ifdef COOL_SKIN
+!
+!  Set initial guesses for cool-skin layer thickness (Hcool).
+!
+          Hcool=0.001_r8
+# endif
 
 # if defined COARE_30
 !
@@ -856,16 +871,26 @@
 !
 !  Compute Monin-Obukhov stability parameter, Z/L.
 !
+# if defined COARE_30
             ZoL(i)=vonKar*g*blk_ZW(ng)*                                 &
      &             (Tstar(i)*(1.0_r8+0.61_r8*Q(i))+                     &
      &                        0.61_r8*TairK(i)*Qstar(i))/               &
      &             (TairK(i)*Wstar(i)*Wstar(i)*                         &
      &              (1.0_r8+0.61_r8*Q(i))+eps)
+# else
+            ZoL(i)=vonKar*g*blk_ZW(ng)*                                 &
+     &             (Tstar(i)+0.61_r8*TairK(i)*Qstar(i))/                &
+     &             (TairK(i)*Wstar(i)*Wstar(i)+eps)
+# endif
             L(i)=blk_ZW(ng)/(ZoL(i)+eps)
 !
 !  Evaluate stability functions at Z/L.
 !
+# if defined COARE_30
             Wpsi(i)=bulk_psiu(ZoL(i),pi)
+# else
+            Wpsi(i)=bulk_psiu_26(ZoL(i),pi)
+# endif
             Tpsi(i)=bulk_psit(blk_ZT(ng)/L(i),pi)
             Qpsi(i)=bulk_psit(blk_ZQ(ng)/L(i),pi)
 # ifdef COOL_SKIN
@@ -888,8 +913,12 @@
 !  Use atmosphere boundary layer thickness from coupled model.
 # endif
 !
+# if defined COARE_30
             Bf=-g/(TairK(i)+0.61_r8*Qstar(i))*                          &
      &         Wstar(i)*(Tstar(i)+0.61_r8*TairK(i)*Qstar(i))
+# else
+            Bf=-g/TairK(i)*Wstar(i)*(Tstar(i)+0.61_r8*TairK(i)*Qstar(i))
+# endif
             IF (Bf.gt.0.0_r8) THEN
 # if defined FRC_COUPLING && defined PBLH
               Wgus(i)=blk_beta*(Bf*PBLh(i,j))**r3
@@ -913,10 +942,6 @@
             Clam=16.0_r8*g*blk_Cpw*(rhoSea(i)*blk_visw)**3.0_r8/        &
      &           (blk_tcw*blk_tcw*rhoAir(i)*rhoAir(i))
 !
-!  Set initial guesses for cool-skin layer thickness (Hcool).
-!
-            Hcool=0.001_r8
-!
 !  Backgound sensible and latent heat.
 !
             Hsb=-rhoAir(i)*blk_Cpa*Wstar(i)*Tstar(i)
@@ -934,6 +959,7 @@
 !
 !  Compute temperature and moisture change.
 !
+#  if defined COARE_30
             IF ((Qcool.gt.0.0_r8).and.(Qbouy.gt.0.0_r8)) THEN
               lambd=6.0_r8/                                             &
      &              (1.0_r8+                                            &
@@ -944,6 +970,21 @@
             ELSE
               delTc(i)=0.0_r8
             END IF
+#  else
+            IF (Qbouy.gt.0.0_r8) THEN
+              lambd=6.0_r8/                                             &
+     &              (1.0_r8+                                            &
+     &               (Clam*Qbouy/(Wstar(i)+eps)**4.0_r8)**0.75_r8)**r3
+              Hcool=lambd*blk_visw/(SQRT(rhoAir(i)/rhoSea(i))*          &
+     &                              Wstar(i)+eps)
+            ELSE
+              lambd=6.0_r8
+              Hcool=MIN(0.01_r8,                                        &
+     &                  lambd*blk_visw/(SQRT(rhoAir(i)/rhoSea(i))*      &
+     &                                       Wstar(i)+eps))
+            END IF
+            delTc(i)=Qcool*Hcool/blk_tcw
+#  endif
             delQc(i)=Cwet(i)*delTc(i)
 # endif
           END DO
@@ -1505,6 +1546,7 @@
       RETURN
       END SUBROUTINE bulk_flux_tile
 !
+# if defined COARE_30
       FUNCTION bulk_psiu (ZoL, pi)
 !
 !=======================================================================
@@ -1569,6 +1611,139 @@
 !
       RETURN
       END FUNCTION bulk_psiu
+# else
+      FUNCTION bulk_psiu_26 (ZoL, pi)
+!
+!=======================================================================
+!                                                                      !
+!  This function evaluates the stability function for  wind speed      !
+!  by matching Kansas  and free convection forms.  The convective      !
+!  form follows Fairall et al. (1996) with profile constants from      !
+!  Grachev et al. (2000) BLM.  The  stable  form is from Beljaars      !
+!  and Holtslag (1991).                                                !
+!                                                                      !
+!=======================================================================
+!
+      USE mod_kinds
+!
+!  Function result
+!
+      real(r8) :: bulk_psiu_26
+!
+!  Imported variable declarations.
+!
+      real(dp), intent(in) :: pi
+      real(r8), intent(in) :: ZoL
+!
+!  Local variable declarations.
+!
+      real(r8), parameter :: r3 = 1.0_r8/3.0_r8
+
+      real(r8) :: Fw, cff, psic, psik, x, y
+!
+!-----------------------------------------------------------------------
+!  Compute stability function, PSI.
+!-----------------------------------------------------------------------
+!
+!  Unstable conditions.
+!
+      IF (ZoL.lt.0.0_r8) THEN
+        x=(1.0_r8-15.0_r8*ZoL)**0.25_r8
+        psik=2.0_r8*LOG(0.5_r8*(1.0_r8+x))+                             &
+     &       LOG(0.5_r8*(1.0_r8+x*x))-                                  &
+     &       2.0_r8*ATAN(x)+0.5_r8*pi
+!
+!  For very unstable conditions, use free-convection (Fairall).
+!
+        cff=SQRT(3.0_r8)
+        y=(1.0_r8-10.15_r8*ZoL)**r3
+        psic=1.5_r8*LOG(r3*(1.0_r8+y+y*y))-                             &
+     &       cff*ATAN((1.0_r8+2.0_r8*y)/cff)+pi/cff
+!
+!  Match Kansas and free-convection forms with weighting Fw.
+!
+        cff=ZoL*ZoL
+        Fw=cff/(1.0_r8+cff)
+        bulk_psiu_26=(1.0_r8-Fw)*psik+Fw*psic
+!
+!  Stable conditions.
+!
+      ELSE
+        cff=MIN(50.0_r8,0.35_r8*ZoL)
+        bulk_psiu_26=                                                   &
+     &    -(0.7_r8*ZoL+0.75_r8*(ZoL-5.0_r8/0.35_r8)*EXP(-cff)+          &
+     &      0.75_r8*5.0_r8/0.35_r8)
+      END IF
+!
+      RETURN
+      END FUNCTION bulk_psiu_26
+!
+      FUNCTION bulk_psiu_40 (ZoL, pi)
+!
+!=======================================================================
+!                                                                      !
+!  This function evaluates the stability function for  wind speed      !
+!  by matching Kansas  and free convection forms.  The convective      !
+!  form follows Fairall et al. (1996) with profile constants from      !
+!  Grachev et al. (2000) BLM.  The  stable  form is from Beljaars      !
+!  and Holtslag (1991).                                                !
+!                                                                      !
+!=======================================================================
+!
+      USE mod_kinds
+!
+!  Function result
+!
+      real(r8) :: bulk_psiu_40
+!
+!  Imported variable declarations.
+!
+      real(dp), intent(in) :: pi
+      real(r8), intent(in) :: ZoL
+!
+!  Local variable declarations.
+!
+      real(r8), parameter :: r3 = 1.0_r8/3.0_r8
+
+      real(r8) :: Fw, cff, psic, psik, x, y
+!
+!-----------------------------------------------------------------------
+!  Compute stability function, PSI.
+!-----------------------------------------------------------------------
+!
+!  Unstable conditions.
+!
+      IF (ZoL.lt.0.0_r8) THEN
+        x=(1.0_r8-18.0_r8*ZoL)**0.25_r8
+        psik=2.0_r8*LOG(0.5_r8*(1.0_r8+x))+                             &
+     &       LOG(0.5_r8*(1.0_r8+x*x))-                                  &
+     &       2.0_r8*ATAN(x)+0.5_r8*pi
+!
+!  For very unstable conditions, use free-convection (Fairall).
+!
+        cff=SQRT(3.0_r8)
+        y=(1.0_r8-10.0_r8*ZoL)**r3
+        psic=1.5_r8*LOG(r3*(1.0_r8+y+y*y))-                             &
+     &       cff*ATAN((1.0_r8+2.0_r8*y)/cff)+pi/cff
+!
+!  Match Kansas and free-convection forms with weighting Fw.
+!
+        cff=ZoL*ZoL
+        Fw=cff/(1.0_r8+cff)
+        bulk_psiu_40=(1.0_r8-Fw)*psik+Fw*psic
+!
+!  Stable conditions.
+!
+      ELSE
+        cff=MIN(50.0_r8,0.35_r8*ZoL)
+        bulk_psiu_40=                                                   &
+     &    -(1.0_r8*ZoL+0.75_r8*(ZoL-5.0_r8/0.35_r8)*EXP(-cff)+          &
+     &      0.75_r8*5.0_r8/0.35_r8)
+      END IF
+!
+      RETURN
+      END FUNCTION bulk_psiu_40
+# endif
 !
       FUNCTION bulk_psit (ZoL, pi)
 !
