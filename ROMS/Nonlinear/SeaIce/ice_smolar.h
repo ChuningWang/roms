@@ -60,14 +60,14 @@
 #include "tile.h"
 !
 #ifdef PROFILE
-      CALL wclock_on (ng, model, 43, __LINE__, MyFile)
+      CALL wclock_on (ng, model, 42, __LINE__, MyFile)
 #endif
       CALL ice_advect_tile (ng, tile, model,                            &
      &                      LBi, UBi, LBj, UBj,                         &
      &                      IminS, ImaxS, JminS, JmaxS,                 &
      &                      linew(ng), liold(ng), liunw(ng))
 #ifdef PROFILE
-      CALL wclock_off (ng, model, 43, __LINE__, MyFile)
+      CALL wclock_off (ng, model, 42, __LINE__, MyFile)
 #endif
 !
       RETURN

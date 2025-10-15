@@ -824,6 +824,7 @@
 */
 
 #if defined BIO_FENNEL  || \
+    defined ECB         || \
     defined ECOSIM      || \
     defined HYPOXIA_SRM || \
     defined NEMURO      || \
@@ -1091,15 +1092,17 @@
 # undef ANA_SEDIMENT
 #endif
 
-#if !defined ANA_INITIAL   || \
-    (defined BIOLOGY       && \
-    !defined ANA_BIOLOGY)  || \
-    (defined T_PASSIVE     && \
-    !defined ANA_PASSIVE)  || \
-    (defined SEDIMENT      && \
-    !defined ANA_SEDIMENT) || \
-    (defined BBL_MODEL     && \
-    !defined ANA_SEDIMENT)
+#if !defined ANA_INITIAL     || \
+    (defined BIOLOGY         && \
+    !defined ANA_BIOLOGY)    || \
+    (defined T_PASSIVE       && \
+    !defined ANA_PASSIVE)    || \
+    (defined SEDIMENT        && \
+    !defined ANA_SEDIMENT)   || \
+    (defined BBL_MODEL       && \
+    !defined ANA_SEDIMENT)   || \
+    (defined VEGETATION      && \
+    !defined ANA_VEGETATION)
 # define INI_FILE
 #endif
 
@@ -1157,6 +1160,7 @@
 
 #if defined DIAGNOSTICS_BIO && \
   !(defined BIO_FENNEL      || \
+    defined ECB             || \
     defined ECOSIM          || \
     defined HYPOXIA_SRM)
 #  undef DIAGNOSTICS_BIO
@@ -1247,5 +1251,12 @@
 # define DIFF_3DCOEF
 #endif
 #if !defined VISC_3DCOEF && defined UV_SMAGORINSKY
+# define VISC_3DCOEF
+#endif
+
+/*
+** Define internal switch for vegetation horizontal mixing
+*/
+#if defined VEG_HMIXING
 # define VISC_3DCOEF
 #endif

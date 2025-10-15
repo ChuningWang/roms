@@ -78,24 +78,24 @@
 !                (39) Two-way coupling to Atmosphere Model             !
 !                (40) Two-way coupling to Sea Ice Model                !
 !                (41) Two-way coupling to Wave Model                   !
-!                (42) Waves Effect on Currents kernel                  !
-!                (43) Sea Ice and Ice Shelf kernel                     !
-!                (44) Unused 01                                        !
-!                (45) Unused 02                                        !
-!                (46) Unused 03                                        !
-!                (47) Unused 04                                        !
-!                (48) Unused 05                                        !
-!                (49) Unused 06                                        !
-!                (50) Unused 07                                        !
-!                (51) Unused 08                                        !
-!                (52) Unused 09                                        !
-!                (53) Unused 10                                        !
-!                (54) Unused 11                                        !
-!                (55) Unused 12                                        !
-!                (56) Unused 13                                        !
-!                (57) Unused 14                                        !
-!                (58) Unused 15                                        !
-!                (59) Unused 16                                        !
+!                (42) Sea-ice and Ice Shelf kernel                     !
+!                (43) Wave Effect on Currents kernel                   !
+!                (44) Submerged/emergent aquatic vegetatiion kernel    !
+!                (45) Unused 01                                        !
+!                (46) Unused 02                                        !
+!                (47) Unused 03                                        !
+!                (48) Unused 04                                        !
+!                (49) Unused 05                                        !
+!                (50) Unused 06                                        !
+!                (51) Unused 07                                        !
+!                (52) Unused 08                                        !
+!                (53) Unused 09                                        !
+!                (54) Unused 10                                        !
+!                (55) Unused 11                                        !
+!                (56) Unused 12                                        !
+!                (57) Unused 13                                        !
+!                (58) Unused 14                                        !
+!                (59) Unused 15                                        !
 !                (60) Message Passage: 2D halo exchanges               !
 !                (61) Message Passage: 3D halo exchanges               !
 !                (62) Message Passage: 4D halo exchanges               !
@@ -139,7 +139,7 @@
         integer, parameter :: Mregion = 60      ! start of mpi-region
         integer, parameter :: Nregion = 88
 !
-        character (len=48), dimension(18) :: StateMsg =                 &
+        character (len=48), dimension(19) :: StateMsg =                 &
      &    (/'state initial conditions,                       ',         & !01
      &      'previous state initial conditions,              ',         & !02
      &      'previous adjoint state solution,                ',         & !03
@@ -157,7 +157,8 @@
      &      'model error normalization factors,              ',         & !15
      &      'OBC normalization factors,                      ',         & !16
      &      'surface forcing normalization factors,          ',         & !17
-     &      'saddle-point Arnoldi state vector,              '/)          !18
+     &      'saddle-point Arnoldi state vector,              ',         & !18
+     &      'cummulative increments for IAU,                 '/)          !19
 !
         character (len=50), dimension(Nregion) :: Pregion =             &
      &    (/'Allocation and array initialization ..............',       & !01
@@ -201,24 +202,24 @@
      &      'Two-way coupling to Atmosphere Model .............',       & !39
      &      'Two-way coupling to Sea Ice Model ................',       & !40
      &      'Two-way coupling to Wave Model ...................',       & !41
-     &      'Waves Effect on Currents kernel ..................',       & !42
-     &      'Sea Ice and Ice Shelf kernel .....................',       & !43
-     &      'Unused 01 ........................................',       & !44
-     &      'Unused 02 ........................................',       & !45
-     &      'Unused 03 ........................................',       & !46
-     &      'Unused 04 ........................................',       & !47
-     &      'Unused 05 ........................................',       & !48
-     &      'Unused 06 ........................................',       & !49
-     &      'Unused 07 ........................................',       & !50
-     &      'Unused 08 ........................................',       & !51
-     &      'Unused 09 ........................................',       & !52
-     &      'Unused 10 ........................................',       & !53
-     &      'Unused 11 ........................................',       & !54
-     &      'Unused 12 ........................................',       & !55
-     &      'Unused 13 ........................................',       & !56
-     &      'Unused 14 ........................................',       & !57
-     &      'Unused 15 ........................................',       & !58
-     &      'Unused 16 ........................................',       & !59
+     &      'Sea Ice and Ice Shelf kernel .....................',       & !42
+     &      'Waves Effect on Currents kernel ..................',       & !43
+     &      'Submerged/emergent aquatic vegetatiion kernel ....',       & !44
+     &      'Unused 01 ........................................',       & !45
+     &      'Unused 02 ........................................',       & !46
+     &      'Unused 03 ........................................',       & !47
+     &      'Unused 04 ........................................',       & !48
+     &      'Unused 05 ........................................',       & !49
+     &      'Unused 06 ........................................',       & !50
+     &      'Unused 07 ........................................',       & !51
+     &      'Unused 08 ........................................',       & !52
+     &      'Unused 09 ........................................',       & !53
+     &      'Unused 10 ........................................',       & !54
+     &      'Unused 11 ........................................',       & !55
+     &      'Unused 12 ........................................',       & !56
+     &      'Unused 13 ........................................',       & !57
+     &      'Unused 14 ........................................',       & !58
+     &      'Unused 15 ........................................',       & !59
      &      'Message Passage: 2D halo exchanges ...............',       & !60
      &      'Message Passage: 3D halo exchanges ...............',       & !61
      &      'Message Passage: 4D halo exchanges ...............',       & !62

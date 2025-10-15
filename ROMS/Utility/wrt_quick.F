@@ -44,7 +44,9 @@
       USE bbl_output_mod,      ONLY : bbl_wrt_pio
 # endif
 #endif
+#ifdef SOLVE3D
       USE extract_slice_mod,   ONLY : extract_slice
+#endif
 #if defined ICE_MODEL && defined SOLVE3D
       USE ice_output_mod,      ONLY : ice_wrt_nf90
 # if defined PIO_LIB && defined DISTRIBUTE
@@ -896,8 +898,8 @@
         END IF
 !
         DO k=1,N(ng)
-          DO j=Jstr-1,Jend+1
-            DO i=Istr-1,Iend+1
+          DO j=JstrP,JendT
+            DO i=IstrP,IendT
               GRID(ng)%z_v(i,j,k)=0.25_r8*(GRID(ng)%z_r(i-1,j-1,k)+     &
      &                                     GRID(ng)%z_r(i-1,j  ,k)+     &
      &                                     GRID(ng)%z_r(i  ,j-1,k)+     &
@@ -965,8 +967,8 @@
         END IF
 !
         DO k=1,N(ng)
-          DO j=Jstr-1,Jend+1
-            DO i=Istr-1,Iend+1
+          DO j=JstrP,JendT
+            DO i=IstrP,IendT
               GRID(ng)%z_v(i,j,k)=0.25_r8*(GRID(ng)%z_r(i-1,j-1,k)+     &
      &                                     GRID(ng)%z_r(i-1,j  ,k)+     &
      &                                     GRID(ng)%z_r(i  ,j-1,k)+     &
@@ -2847,8 +2849,8 @@
         END IF
 !
         DO k=1,N(ng)
-          DO j=Jstr-1,Jend+1
-            DO i=Istr-1,Iend+1
+          DO j=JstrP,JendT
+            DO i=IstrP,IendT
               GRID(ng)%z_v(i,j,k)=0.25_r8*(GRID(ng)%z_r(i-1,j-1,k)+     &
      &                                     GRID(ng)%z_r(i-1,j  ,k)+     &
      &                                     GRID(ng)%z_r(i  ,j-1,k)+     &
@@ -2921,8 +2923,8 @@
         END IF
 !
         DO k=1,N(ng)
-          DO j=Jstr-1,Jend+1
-            DO i=Istr-1,Iend+1
+          DO j=JstrP,JendT
+            DO i=IstrP,IendT
               GRID(ng)%z_v(i,j,k)=0.25_r8*(GRID(ng)%z_r(i-1,j-1,k)+     &
      &                                     GRID(ng)%z_r(i-1,j  ,k)+     &
      &                                     GRID(ng)%z_r(i  ,j-1,k)+     &

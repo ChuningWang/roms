@@ -58,7 +58,7 @@
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, model, 43, __LINE__, MyFile)
+      CALL wclock_on (ng, model, 42, __LINE__, MyFile)
 # endif
       CALL ice_spdiw_tile (ng, tile, model,                             &
      &                     LBi, UBi, LBj, UBj,                          &
@@ -77,7 +77,7 @@
      &                     ICE(ng) % Fi,                                &
      &                     ICE(ng) % Si)
 # ifdef PROFILE
-      CALL wclock_off (ng, model, 43, __LINE__, MyFile)
+      CALL wclock_off (ng, model, 42, __LINE__, MyFile)
 # endif
 !
       RETURN

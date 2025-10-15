@@ -45,7 +45,7 @@
 # include "tile.h"
 !
 # ifdef PROFILE
-      CALL wclock_on (ng, model, 43, __LINE__, MyFile)
+      CALL wclock_on (ng, model, 42, __LINE__, MyFile)
 # endif
       CALL isf_mom_tile (ng, tile,                                      &
      &                   LBi, UBi, LBj, UBj,                            &
@@ -53,7 +53,7 @@
      &                   nrhs(ng),                                      &
      &                   ISF(ng) % Si)
 # ifdef PROFILE
-      CALL wclock_off (ng, model, 43, __LINE__, MyFile)
+      CALL wclock_off (ng, model, 42, __LINE__, MyFile)
 # endif
       RETURN
       END SUBROUTINE isf_mom
