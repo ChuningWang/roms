@@ -350,7 +350,7 @@
      &        'version 3.6 or higher',                                  &
      &        /,19x,'Alternatively, you may use  NO_LBC_ATT  at your ', &
      &        'own risk!')
-  20  FORMAT (/,' LBC_GETATT_NF90 - inconsistent ',a,' lateral',        &
+  20  FORMAT (/,' LBC_GETATT_NF90 - inconsistent ',a,' lateral ',       &
      &        'boundary condition for variable: ',2x,a,                 &
      &        /,19x,'restart file LBC keyword = ',1x,a,                 &
      &        /,19x,'but assigned structure switch: ',                  &
@@ -795,6 +795,8 @@
               string(ibry)='Fla    '
             ELSE IF (S(ibry,ifield,ng)%gradient) THEN
               string(ibry)='Gra    '
+            ELSE IF (S(ibry,ifield,ng)%mixed) THEN
+              string(ibry)='Mix    '
             ELSE IF (S(ibry,ifield,ng)%nested) THEN
               string(ibry)='Nes    '
             ELSE IF (S(ibry,ifield,ng)%periodic) THEN
@@ -967,6 +969,8 @@
               string(ibry)='Fla    '
             ELSE IF (S(ibry,ifield,ng)%gradient) THEN
               string(ibry)='Gra    '
+            ELSE IF (S(ibry,ifield,ng)%mixed) THEN
+              string(ibry)='Mix    '
             ELSE IF (S(ibry,ifield,ng)%nested) THEN
               string(ibry)='Nes    '
             ELSE IF (S(ibry,ifield,ng)%periodic) THEN
