@@ -662,7 +662,7 @@
 ** ICE_CONVSNOW            if conversion of flooded snow to ice              **
 ** ICE_MOM_BULK            if alternate ice-water stress computation         **
 ** ICE_STRENGTH_QUAD       if quadratic ice strength, a function of thickness**
-** ICE_NO_SCORRECTION      if no temperature/salinity correction under ice   **
+** ICE_NO_CORRECTION       if no temperature/salinity correction under ice   **
 ** OUTFLOW_MASK            if Hibler style outflow cells                     **
 
 **                                                                           **

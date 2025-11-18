@@ -1919,12 +1919,12 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+10)=' NONLINEAR,'
 #endif
-#if defined NO_SCORRECTION_ICE && defined ICE_MODEL && defined SOLVE3D
+#if defined ICE_NO_CORRECTION && defined ICE_MODEL && defined SOLVE3D
 !
-      IF (Master) WRITE (stdout,20) 'NO_SCORRECTION_ICE',               &
-     &   'No salinity correction under the ice'
+      IF (Master) WRITE (stdout,20) 'ICE_NO_CORRECTION',                &
+     &   'No temperature/salinity correction under the ice'
       is=LEN_TRIM(Coptions)+1
-      Coptions(is:is+20)=' NO_SCORRECTION_ICE,'
+      Coptions(is:is+19)=' ICE_NO_CORRECTION,'
 #endif
 #ifdef SOLVE3D
 # if defined NONLIN_EOS
