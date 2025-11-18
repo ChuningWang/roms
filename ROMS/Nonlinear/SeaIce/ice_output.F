@@ -28,9 +28,9 @@
       USE extract_sta_mod, ONLY : extract_sta2d
 # endif
       USE nf_fwrite2d_mod, ONLY : nf_fwrite2d
-#ifdef PERFECT_RESTART
+# ifdef PERFECT_RESTART
       USE nf_fwrite3d_mod, ONLY : nf_fwrite3d
-#endif
+# endif
       USE uv_rotate_mod,   ONLY : uv_rotate2d
       USE strings_mod,     ONLY : FoundError
 !
@@ -61,7 +61,8 @@
 !
 !***********************************************************************
       SUBROUTINE ice_def_nf90 (ng, model, ldef, VarOut, S,              &
-     &                         t2dgrd, u2dgrd, v2dgrd, sr2dgrd)
+     &                         t2dgrd, u2dgrd, v2dgrd,                  &
+     &                         sr2dgrd, ru2dgrd, rv2dgrd)
 !***********************************************************************
 !
       USE mod_netcdf
@@ -71,8 +72,9 @@
       integer, intent(in) :: ng, model
       logical, intent(in) :: ldef, VarOut(NV,Ngrids)
       TYPE(T_IO), intent(inout) :: S(Ngrids)
-      integer, intent(in), optional, target :: t2dgrd(:), u2dgrd(:),    &
-     &                                         v2dgrd(:), sr2dgrd(:)
+      integer, intent(in), optional, target ::                          &
+     &  t2dgrd(:), u2dgrd(:), v2dgrd(:),                                &
+     &  sr2dgrd(:), ru2dgrd(:), rv2dgrd(:)
 !
 !  Local variable declarations.
 !
@@ -171,7 +173,15 @@
 !
               SELECT CASE (nf)
                 CASE (isUice)
+# ifdef PERFECT_RESTART
+                  IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+                    icegrd => ru2dgrd
+                  ELSE
+                    icegrd => u2dgrd
+                  END IF
+# else
                   icegrd => u2dgrd
+# endif
 # if defined WRITE_WATER && defined MASKING
 #  if !defined WET_DRY && defined PERFECT_RESTART
                   IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
@@ -183,7 +193,15 @@
 #  endif
 # endif
                 CASE (isVice)
+# ifdef PERFECT_RESTART
+                  IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+                    icegrd => rv2dgrd
+                  ELSE
+                    icegrd => v2dgrd
+                  END IF
+# else
                   icegrd => v2dgrd
+# endif
 # if defined WRITE_WATER && defined MASKING
 #  if !defined WET_DRY && defined PERFECT_RESTART
                   IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
@@ -1305,16 +1323,16 @@
         IF (iFice(ifld).gt.0) THEN
           ifield=iFice(ifld)
           IF (VarOut(ifield,ng)) THEN
-# ifdef ICE_BULK_FLUXES
+#  ifdef ICE_BULK_FLUXES
             IF ((ifld.eq.icSics).or.(ifld.eq.icSicb).or.                &
      &          (ifld.eq.icSocn)) THEN
               scale=rho0*Cp
             ELSE
               scale=1.0_dp
             END IF
-# else
+#  else
             scale=1.0_dp
-# endif
+#  endif
             CALL extract_sta2d (ng, model, Cgrid, ifield, r2dvar,       &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          scale, ICE(ng)%Fi(:,:,ifld),            &
@@ -1373,7 +1391,8 @@
 !
 !***********************************************************************
       SUBROUTINE ice_def_pio (ng, model, ldef, VarOut, S,               &
-     &                         t2dgrd, u2dgrd, v2dgrd, sr2dgrd)
+     &                        t2dgrd, u2dgrd, v2dgrd,                   &
+     &                        sr2dgrd, ru2dgrd, rv2dgrd)
 !***********************************************************************
 !
       USE mod_pio_netcdf
@@ -1383,8 +1402,9 @@
       integer, intent(in) :: ng, model
       logical, intent(in) :: ldef, VarOut(NV,Ngrids)
       TYPE(T_IO), intent(inout) :: S(Ngrids)
-      integer, intent(in), optional, target :: t2dgrd(:), u2dgrd(:),    &
-     &                                         v2dgrd(:), sr2dgrd(:)
+      integer, intent(in), optional, target ::                          &
+     &  t2dgrd(:), u2dgrd(:), v2dgrd(:),                                &
+     &  sr2dgrd(:), ru2dgrd(:), rv2dgrd(:)
 !
 !  Local variable declarations.
 !
@@ -1485,7 +1505,15 @@
 !
               SELECT CASE (nf)
                 CASE (isUice)
+#  ifdef PERFECT_RESTART
+                  IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
+                    icegrd => ru2dgrd
+                  ELSE
+                    icegrd => u2dgrd
+                  END IF
+#  else
                   icegrd => u2dgrd
+#  endif
 #  if defined WRITE_WATER && defined MASKING
 #   if !defined WET_DRY && defined PERFECT_RESTART
                   IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
@@ -1498,7 +1526,15 @@
 #  endif
                   S(ng)%pioVar(ifield)%gtype=u2dvar
                 CASE (isVice)
+#  ifdef PERFECT_RESTART
+                  IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
+                    icegrd => rv2dgrd
+                  ELSE
+                    icegrd => v2dgrd
+                  END IF
+#  else
                   icegrd => v2dgrd
+#  endif
 #  if defined WRITE_WATER && defined MASKING
 #   if !defined WET_DRY && defined PERFECT_RESTART
                   IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
@@ -1963,20 +1999,13 @@
 !
             SELECT CASE (ifld)
               CASE (isUice)
-                IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
 #  ifdef PERFECT_RESTART
+                IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
                   IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
-                    ioDesc => ioDesc_dp_u3dvar(ng)
+                    ioDesc => ioDesc_dp_rubar(ng)
                   ELSE
-                    ioDesc => ioDesc_sp_u3dvar(ng)
+                    ioDesc => ioDesc_sp_rubar(ng)
                   END IF
-#  else
-                  IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
-                    ioDesc => ioDesc_dp_u2dvar(ng)
-                  ELSE
-                    ioDesc => ioDesc_sp_u2dvar(ng)
-                  END IF
-#  endif
                 ELSE
                   IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
                     ioDesc => ioDesc_dp_u2dvar(ng)
@@ -1984,24 +2013,24 @@
                     ioDesc => ioDesc_sp_u2dvar(ng)
                   END IF
                 END IF
+#  else
+                IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
+                  ioDesc => ioDesc_dp_u2dvar(ng)
+                ELSE
+                  ioDesc => ioDesc_sp_u2dvar(ng)
+                END IF
+#  endif
 #  ifdef MASKING
                 iceMask => GRID(ng) % umask_full
 #  endif
               CASE (isVice)
-                IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
 #  ifdef PERFECT_RESTART
+                IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
                   IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
-                    ioDesc => ioDesc_dp_v3dvar(ng)
+                    ioDesc => ioDesc_dp_rvbar(ng)
                   ELSE
-                    ioDesc => ioDesc_sp_v3dvar(ng)
+                    ioDesc => ioDesc_sp_rvbar(ng)
                   END IF
-#  else
-                  IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
-                    ioDesc => ioDesc_dp_v2dvar(ng)
-                  ELSE
-                    ioDesc => ioDesc_sp_v2dvar(ng)
-                  END IF
-#  endif
                 ELSE
                   IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
                     ioDesc => ioDesc_dp_v2dvar(ng)
@@ -2009,24 +2038,24 @@
                     ioDesc => ioDesc_sp_v2dvar(ng)
                   END IF
                 END IF
+#  else
+                IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
+                  ioDesc => ioDesc_dp_v2dvar(ng)
+                ELSE
+                  ioDesc => ioDesc_sp_v2dvar(ng)
+                END IF
+#  endif
 #  ifdef MASKING
                 iceMask => GRID(ng) % vmask_full
 #  endif
               CASE DEFAULT
-                IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
 #  ifdef PERFECT_RESTART
+                IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
                   IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
-                    ioDesc => ioDesc_dp_r3dvar(ng)
+                    ioDesc => ioDesc_dp_rzeta(ng)
                   ELSE
-                    ioDesc => ioDesc_sp_r3dvar(ng)
+                    ioDesc => ioDesc_sp_rzeta(ng)
                   END IF
-#  else
-                  IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
-                    ioDesc => ioDesc_dp_r2dvar(ng)
-                  ELSE
-                    ioDesc => ioDesc_sp_r2dvar(ng)
-                  END IF
-#  endif
                 ELSE
                   IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
                     ioDesc => ioDesc_dp_r2dvar(ng)
@@ -2034,6 +2063,13 @@
                     ioDesc => ioDesc_sp_r2dvar(ng)
                   END IF
                 END IF
+#  else
+                IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
+                  ioDesc => ioDesc_dp_r2dvar(ng)
+                ELSE
+                  ioDesc => ioDesc_sp_r2dvar(ng)
+                END IF
+#  endif
 #  ifdef MASKING
                 iceMask => GRID(ng) % rmask_full
 #  endif
@@ -2180,16 +2216,16 @@
 #  endif
             END IF
 !
-# ifdef ICE_BULK_FLUXES
+#  ifdef ICE_BULK_FLUXES
             IF ((ifld.eq.icSics).or.(ifld.eq.icSicb).or.                &
      &          (ifld.eq.icSocn)) THEN
               scale=rho0*Cp
             ELSE
               scale=1.0_dp
             END IF
-# else
+#  else
             scale=1.0_dp
-# endif
+#  endif
             IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
               ioDesc => ioDesc_dp_r2dvar(ng)
             ELSE
@@ -2250,20 +2286,13 @@
               END IF
 !
               scale=1.0_dp
-              IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
 #  ifdef PERFECT_RESTART
+              IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
                 IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
-                  ioDesc => ioDesc_dp_r3dvar(ng)
+                  ioDesc => ioDesc_dp_rzeta(ng)
                 ELSE
-                  ioDesc => ioDesc_sp_r3dvar(ng)
+                  ioDesc => ioDesc_sp_rzeta(ng)
                 END IF
-#  else
-                IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
-                  ioDesc => ioDesc_dp_r2dvar(ng)
-                ELSE
-                  ioDesc => ioDesc_sp_r2dvar(ng)
-                END IF
-#  endif
               ELSE
                 IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
                   ioDesc => ioDesc_dp_r2dvar(ng)
@@ -2271,24 +2300,31 @@
                   ioDesc => ioDesc_sp_r2dvar(ng)
                 END IF
               END IF
+#  else
+              IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
+                ioDesc => ioDesc_dp_r2dvar(ng)
+              ELSE
+                ioDesc => ioDesc_sp_r2dvar(ng)
+              END IF
+#  endif
 #  ifdef PERFECT_RESTART
               IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
                 status=nf_fwrite3d(ng, model, S(ng)%pioFile, ifield,    &
      &                             S(ng)%pioVar(ifield), S(ng)%Rindex,  &
      &                             ioDesc,                              &
      &                             LBi, UBi, LBj, UBj, 1, 2, scale,     &
-#  ifdef MASKING
+#   ifdef MASKING
      &                             GRID(ng) % rmask_full,               &
-#  endif
+#   endif
      &                             iceField3d)
               ELSE
                 status=nf_fwrite2d(ng, model, S(ng)%pioFile, ifield,    &
      &                             S(ng)%pioVar(ifield), S(ng)%Rindex,  &
      &                             ioDesc,                              &
      &                             LBi, UBi, LBj, UBj, scale,           &
-#  ifdef MASKING
+#   ifdef MASKING
      &                             GRID(ng) % rmask_full,               &
-#  endif
+#   endif
      &                             iceField2d)
               END IF
 #  else
@@ -2296,9 +2332,9 @@
      &                           S(ng)%pioVar(ifield), S(ng)%Rindex,    &
      &                           ioDesc,                                &
      &                           LBi, UBi, LBj, UBj, scale,             &
-#  ifdef MASKING
+#   ifdef MASKING
      &                           GRID(ng) % rmask_full,                 &
-#  endif
+#   endif
      &                           iceField2d)
 #  endif
               IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
