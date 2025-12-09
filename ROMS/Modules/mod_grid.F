@@ -106,6 +106,15 @@
 !  umask_wet  Wet/Dry mask at   U-points (0=dry, 1,2=wet).             !
 !  vmask_wet  Wet/Dry mask at   V-points (0=dry, 1,2=wet).             !
 #endif
+#ifdef ICESHELF
+# ifdef WET_DRY
+!  pmask_ist  ice sheet mask at PSI-points (0=dry, 1=wet, 2=no-slip).  !
+!  rmask_ist  ice sheet mask at RHO-points (0=dry, 1=wet).             !
+!  umask_ist  ice sheet mask at   U-points (0=dry, 1,2=wet).           !
+!  vmask_ist  ice sheet mask at   V-points (0=dry, 1,2=wet).           !
+# endif
+!  rmask_isf  ice shelf mask at RHO-points (0=dry, 1=wet).             !
+#endif
 #if defined UV_LOGDRAG || defined GLS_MIXING || \
     defined BBL_MODEL  || defined SEDIMENT
 !  ZoBot      Bottom roughness length (m).                             !
@@ -123,7 +132,9 @@
 !  yr         ETA-coordinates (m) at RHO-points.                       !
 !  yu         ETA-coordinates (m) at U-points.                         !
 !  yv         ETA-coordinates (m) at V-points.                         !
+#ifdef ICESHELF
 !  zice       Depth of ice shelf cavity (m, negative) at               !
+#endif
 !               RHO-points.                                            !
 !  z0_r       Time independent depths (m) at horizontal RHO-points and !
 !               vertical RHO-points.                                   !
@@ -295,6 +306,15 @@
 # ifdef SOLVE3D
           real(r8), pointer :: rmask_wet_avg(:,:)
 # endif
+#endif
+#ifdef ICESHELF
+# ifdef WET_DRY
+          real(r8), pointer :: pmask_ist(:,:)
+          real(r8), pointer :: rmask_ist(:,:)
+          real(r8), pointer :: umask_ist(:,:)
+          real(r8), pointer :: vmask_ist(:,:)
+# endif
+          real(r8), pointer :: rmask_isf(:,:)
 #endif
 #if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
     defined OPT_OBSERVATIONS || defined SENSITIVITY_4DVAR      || \
@@ -684,6 +704,24 @@
       allocate ( GRID(ng) % rmask_wet_avg(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
 # endif
+#endif
+
+#ifdef ICESHELF
+# ifdef WET_DRY
+      allocate ( GRID(ng) % pmask_ist(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
+
+      allocate ( GRID(ng) % rmask_ist(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
+
+      allocate ( GRID(ng) % umask_ist(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
+
+      allocate ( GRID(ng) % vmask_ist(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
+# endif
+      allocate ( GRID(ng) % rmask_isf(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
 #endif
 
 #if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
@@ -1157,6 +1195,25 @@
 #  endif
 # endif
 
+#ifdef ICESHELF
+# ifdef WET_DRY
+      IF (.not.destroy(ng, GRID(ng)%pmask_ist, MyFile,                  &
+     &                 __LINE__, 'GRID(ng)%pmask_ist')) RETURN
+
+      IF (.not.destroy(ng, GRID(ng)%rmask_ist, MyFile,                  &
+     &                 __LINE__, 'GRID(ng)%rmask_ist')) RETURN
+
+      IF (.not.destroy(ng, GRID(ng)%umask_ist, MyFile,                  &
+     &                 __LINE__, 'GRID(ng)%umask_ist')) RETURN
+
+      IF (.not.destroy(ng, GRID(ng)%vmask_ist, MyFile,                  &
+     &                 __LINE__, 'GRID(ng)%vmask_ist')) RETURN
+
+# endif
+      IF (.not.destroy(ng, GRID(ng)%rmask_isf, MyFile,                  &
+     &                 __LINE__, 'GRID(ng)%rmask_isf')) RETURN
+#endif
+
 # if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
      defined OPT_OBSERVATIONS || defined SENSITIVITY_4DVAR      || \
      defined SO_SEMI
@@ -1440,6 +1497,16 @@
 # ifdef SOLVE3D
             GRID(ng) % rmask_wet_avg(i,j) = IniVal
 # endif
+#endif
+
+#ifdef ICESHELF
+# ifdef WET_DRY
+            GRID(ng) % pmask_ist(i,j) = IniVal
+            GRID(ng) % rmask_ist(i,j) = IniVal
+            GRID(ng) % umask_ist(i,j) = IniVal
+            GRID(ng) % vmask_ist(i,j) = IniVal
+# endif
+            GRID(ng) % rmask_isf(i,j) = IniVal
 #endif
 
 #if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \

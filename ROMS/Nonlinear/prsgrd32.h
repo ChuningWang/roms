@@ -140,6 +140,9 @@
      &                          ru, rv)
 !***********************************************************************
 !
+#ifdef ICESHELF
+      USE mod_isf,         ONLY : isf_drdz
+#endif
       USE mod_param
       USE mod_scalars
 !
@@ -225,9 +228,6 @@
       real(r8), parameter :: OneFifth = 0.2_r8
       real(r8), parameter :: OneTwelfth = 1.0_r8/12.0_r8
       real(r8), parameter :: eps = 1.0E-10_r8
-#ifdef ICESHELF
-      real(r8), parameter :: drhodz = 0.00478_r8
-#endif
 
       real(r8) :: GRho, GRho0,  HalfGRho
       real(r8) :: cff, cff1, cff2
@@ -291,7 +291,8 @@
           P(i,j,N(ng))=g*z_w(i,j,N(ng))+                                &
 #ifdef ICESHELF
      &                 g*(-zice(i,j))-                                  &
-     &      GRho*zice(i,j)*(rho(i,j,N(ng))+0.5_r8*drhodz*zice(i,j))+    &
+     &                 GRho*zice(i,j)*(rho(i,j,N(ng)) +                 &
+     &                                 0.5_r8*isf_drdz(ng)*zice(i,j))+  &
 #endif
 #ifdef WEC_VF
      &                 zetat(i,j)+                                      &

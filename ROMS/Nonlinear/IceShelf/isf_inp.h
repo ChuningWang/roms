@@ -100,6 +100,8 @@
               Npts=load_lbc(Nval, Cval, line, nline, soff, igrid,       &
      &                      0, 0, Vname(1,idItis), LBC)
 #endif
+            CASE ('isf_drdz')
+              Npts=load_r(Nval, Rval, Ngrids, isf_drdz)
 #ifdef ICESHELF_THERMO
             CASE ('gamU')
               Npts=load_r(Nval, Rval, Ngrids, gamU)

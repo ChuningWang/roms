@@ -50,6 +50,9 @@
       USE ini_fields_mod,    ONLY : set_zeta_timeavg
 #endif
       USE ini_hmixcoef_mod,  ONLY : ini_hmixcoef
+#ifdef ICESHELF
+      USE isf_masks_mod,     ONLY : isf_masks
+#endif
 #if defined WAV_COUPLING && defined MCT_LIB
       USE mct_coupler_mod,   ONLY : ocn2wav_coupling
 #endif
@@ -498,6 +501,20 @@
           END DO
 !$OMP BARRIER
         END IF
+      END DO
+#endif
+
+#ifdef ICESHELF
+!
+!-----------------------------------------------------------------------
+!  Process initial ice shelf masks.
+!-----------------------------------------------------------------------
+!
+      DO ng=1,Ngrids
+        DO tile=first_tile(ng),last_tile(ng),+1
+          CALL isf_masks (ng, tile, iNLM)
+        END DO
+!$OMP BARRIER
       END DO
 #endif
 

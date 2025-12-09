@@ -271,6 +271,7 @@
       integer  :: idPbar        ! streamfunction
       integer  :: idPVzs        ! potential vorticity depth slices
       integer  :: idPwet        ! wet/dry mask on PSI-points
+      integer  :: idPist        ! ice sheet mask on PSI-points
       integer  :: idpmdx        ! inverse grid x-spacing
       integer  :: idpndy        ! inverse grid y-spacing
       integer  :: idpthR        ! depths of RHO-points
@@ -292,6 +293,8 @@
       integer  :: idRvsh        ! river runoff transport profile
       integer  :: idRVzs        ! relative vorticity depth slices
       integer  :: idRwet        ! wet/dry mask on RHO-points
+      integer  :: idRist        ! ice sheet mask on RHO-points
+      integer  :: idRisf        ! ice shelf mask on RHO-points
       integer  :: idRzet        ! RHS of free-surface
       integer  :: idrain        ! rainfall rate
       integer  :: idsnow        ! snowfall rate
@@ -356,6 +359,7 @@
       integer  :: idUVwc        ! bottom wave-current stress magnitude
       integer  :: idUwav        ! 2D U-velocity Kirby and Chen
       integer  :: idUwet        ! wet/dry mask on U-points
+      integer  :: idUist        ! ice sheet mask on U-points
       integer  :: idUzsE        ! 3D U-eastward constant depth slices
       integer  :: idUzsl        ! 3D U-velocity constant depth slices
       integer  :: idu2dD        ! detided 2D U-velocity
@@ -396,6 +400,7 @@
       integer  :: idVvis        ! vertical viscosity coefficient
       integer  :: idVwav        ! 2D V-velocity Kirby and Chen
       integer  :: idVwet        ! wet/dry mask on V-points
+      integer  :: idVist        ! ice sheet mask on V-points
       integer  :: idVzsN        ! 3D V-northward constant depth slices
       integer  :: idVzsl        ! 3D V-velocity constant depth slices
       integer  :: idv2dD        ! detided 2D U-velocity
@@ -1771,6 +1776,16 @@
             idUwet=varid
           CASE ('idVwet')
             idVwet=varid
+          CASE ('idPist')
+            idPist=varid
+          CASE ('idRist')
+            idRist=varid
+          CASE ('idUist')
+            idUist=varid
+          CASE ('idVist')
+            idVist=varid
+          CASE ('idRisf')
+            idRisf=varid
           CASE ('idPair')
             idPair=varid
           CASE ('idPBLh')

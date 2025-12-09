@@ -356,6 +356,118 @@
         ioerror=status
         RETURN
       END IF
+# ifdef ICESHELF
+!
+!  Write out ice sheet mask at PSI-points.
+!
+      scale=1.0_dp
+      gtype=gfactor*p2dvar
+      status=nf_fwrite2d(ng, model, HIS(ng)%ncid, idPist,               &
+     &                   HIS(ng)%Vid(idPist),                           &
+     &                   HIS(ng)%Rindex, gtype,                         &
+     &                   LBi, UBi, LBj, UBj, scale,                     &
+# ifdef MASKING
+     &                   GRID(ng) % pmask,                              &
+# endif
+     &                   GRID(ng) % pmask_ist,                          &
+     &                   SetFillVal = .FALSE.)
+      IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+        IF (Master) THEN
+          WRITE (stdout,20) TRIM(Vname(1,idPist)), HIS(ng)%Rindex
+        END IF
+        exit_flag=3
+        ioerror=status
+        RETURN
+      END IF
+!
+!  Write out ice sheet mask at RHO-points.
+!
+      scale=1.0_dp
+      gtype=gfactor*r2dvar
+      status=nf_fwrite2d(ng, model, HIS(ng)%ncid, idRist,               &
+     &                   HIS(ng)%Vid(idRist),                           &
+     &                   HIS(ng)%Rindex, gtype,                         &
+     &                   LBi, UBi, LBj, UBj, scale,                     &
+# ifdef MASKING
+     &                   GRID(ng) % rmask,                              &
+# endif
+     &                   GRID(ng) % rmask_ist,                          &
+     &                   SetFillVal = .FALSE.)
+      IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+        IF (Master) THEN
+          WRITE (stdout,20) TRIM(Vname(1,idRist)), HIS(ng)%Rindex
+        END IF
+        exit_flag=3
+        ioerror=status
+        RETURN
+      END IF
+!
+!  Write out ice sheet mask at U-points.
+!
+      scale=1.0_dp
+      gtype=gfactor*u2dvar
+      status=nf_fwrite2d(ng, model, HIS(ng)%ncid, idUist,               &
+     &                   HIS(ng)%Vid(idUist),                           &
+     &                   HIS(ng)%Rindex, gtype,                         &
+     &                   LBi, UBi, LBj, UBj, scale,                     &
+# ifdef MASKING
+     &                   GRID(ng) % umask,                              &
+# endif
+     &                   GRID(ng) % umask_ist,                          &
+     &                   SetFillVal = .FALSE.)
+      IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+        IF (Master) THEN
+          WRITE (stdout,20) TRIM(Vname(1,idUist)), HIS(ng)%Rindex
+        END IF
+        exit_flag=3
+        ioerror=status
+        RETURN
+      END IF
+!
+!  Write out ice sheet mask at V-points.
+!
+      scale=1.0_dp
+      gtype=gfactor*v2dvar
+      status=nf_fwrite2d(ng, model, HIS(ng)%ncid, idVist,               &
+     &                   HIS(ng)%Vid(idVist),                           &
+     &                   HIS(ng)%Rindex, gtype,                         &
+     &                   LBi, UBi, LBj, UBj, scale,                     &
+# ifdef MASKING
+     &                   GRID(ng) % vmask,                              &
+# endif
+     &                   GRID(ng) % vmask_ist,                          &
+     &                   SetFillVal = .FALSE.)
+      IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+        IF (Master) THEN
+          WRITE (stdout,20) TRIM(Vname(1,idVist)), HIS(ng)%Rindex
+        END IF
+        exit_flag=3
+        ioerror=status
+        RETURN
+      END IF
+!
+!  Write out ice shelf mask at RHO-points.
+!
+      scale=1.0_dp
+      gtype=gfactor*r2dvar
+      status=nf_fwrite2d(ng, model, HIS(ng)%ncid, idRisf,               &
+     &                   HIS(ng)%Vid(idRisf),                           &
+     &                   HIS(ng)%Rindex, gtype,                         &
+     &                   LBi, UBi, LBj, UBj, scale,                     &
+# ifdef MASKING
+     &                   GRID(ng) % rmask,                              &
+# endif
+     &                   GRID(ng) % rmask_isf,                          &
+     &                   SetFillVal = .FALSE.)
+      IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+        IF (Master) THEN
+          WRITE (stdout,20) TRIM(Vname(1,idRisf)), HIS(ng)%Rindex
+        END IF
+        exit_flag=3
+        ioerror=status
+        RETURN
+      END IF
+# endif
 #endif
 #ifdef SOLVE3D
 !
@@ -2596,6 +2708,143 @@
         ioerror=status
         RETURN
       END IF
+#  ifdef ICESHELF
+!
+!  Write out ice sheet mask at PSI-points.
+!
+      scale=1.0_dp
+      IF (HIS(ng)%pioVar(idPist)%dkind.eq.PIO_double) THEN
+        ioDesc => ioDesc_dp_p2dvar(ng)
+      ELSE
+        ioDesc => ioDesc_sp_p2dvar(ng)
+      END IF
+      status=nf_fwrite2d(ng, model, HIS(ng)%pioFile, idPist,            &
+     &                   HIS(ng)%pioVar(idPist),                        &
+     &                   HIS(ng)%Rindex,                                &
+     &                   ioDesc,                                        &
+     &                   LBi, UBi, LBj, UBj, scale,                     &
+#  ifdef MASKING
+     &                   GRID(ng) % pmask,                              &
+#  endif
+     &                   GRID(ng) % pmask_ist,                          &
+     &                   SetFillVal = .FALSE.)
+      IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+        IF (Master) THEN
+          WRITE (stdout,20) TRIM(Vname(1,idPist)), HIS(ng)%Rindex
+        END IF
+        exit_flag=3
+        ioerror=status
+        RETURN
+      END IF
+!
+!  Write out ice sheet mask at RHO-points.
+!
+      scale=1.0_dp
+      IF (HIS(ng)%pioVar(idRist)%dkind.eq.PIO_double) THEN
+        ioDesc => ioDesc_dp_r2dvar(ng)
+      ELSE
+        ioDesc => ioDesc_sp_r2dvar(ng)
+      END IF
+      status=nf_fwrite2d(ng, model, HIS(ng)%pioFile, idRist,            &
+     &                   HIS(ng)%pioVar(idRist),                        &
+     &                   HIS(ng)%Rindex,                                &
+     &                   ioDesc,                                        &
+     &                   LBi, UBi, LBj, UBj, scale,                     &
+#  ifdef MASKING
+     &                   GRID(ng) % rmask,                              &
+#  endif
+     &                   GRID(ng) % rmask_ist,                          &
+     &                   SetFillVal = .FALSE.)
+      IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+        IF (Master) THEN
+          WRITE (stdout,20) TRIM(Vname(1,idRist)), HIS(ng)%Rindex
+        END IF
+        exit_flag=3
+        ioerror=status
+        RETURN
+      END IF
+!
+!  Write out ice sheet mask at U-points.
+!
+      scale=1.0_dp
+      IF (HIS(ng)%pioVar(idUist)%dkind.eq.PIO_double) THEN
+        ioDesc => ioDesc_dp_u2dvar(ng)
+      ELSE
+        ioDesc => ioDesc_sp_u2dvar(ng)
+      END IF
+      status=nf_fwrite2d(ng, model, HIS(ng)%pioFile, idUist,            &
+     &                   HIS(ng)%pioVar(idUist),                        &
+     &                   HIS(ng)%Rindex,                                &
+     &                   ioDesc,                                        &
+     &                   LBi, UBi, LBj, UBj, scale,                     &
+#  ifdef MASKING
+     &                   GRID(ng) % umask,                              &
+#  endif
+     &                   GRID(ng) % umask_ist,                          &
+     &                   SetFillVal = .FALSE.)
+      IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+        IF (Master) THEN
+          WRITE (stdout,20) TRIM(Vname(1,idUist)), HIS(ng)%Rindex
+        END IF
+        exit_flag=3
+        ioerror=status
+        RETURN
+      END IF
+!
+!  Write out ice sheet mask at V-points.
+!
+      scale=1.0_dp
+      IF (HIS(ng)%pioVar(idVist)%dkind.eq.PIO_double) THEN
+        ioDesc => ioDesc_dp_v2dvar(ng)
+      ELSE
+        ioDesc => ioDesc_sp_v2dvar(ng)
+      END IF
+      status=nf_fwrite2d(ng, model, HIS(ng)%pioFile, idVist,            &
+     &                   HIS(ng)%pioVar(idVist),                        &
+     &                   HIS(ng)%Rindex,                                &
+     &                   ioDesc,                                        &
+     &                   LBi, UBi, LBj, UBj, scale,                     &
+#  ifdef MASKING
+     &                   GRID(ng) % vmask,                              &
+#  endif
+     &                   GRID(ng) % vmask_ist,                          &
+     &                   SetFillVal = .FALSE.)
+      IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+        IF (Master) THEN
+          WRITE (stdout,20) TRIM(Vname(1,idVist)), HIS(ng)%Rindex
+        END IF
+        exit_flag=3
+        ioerror=status
+        RETURN
+      END IF
+!
+!  Write out ice shelf mask at RHO-points.
+!
+      scale=1.0_dp
+      IF (HIS(ng)%pioVar(idRisf)%dkind.eq.PIO_double) THEN
+        ioDesc => ioDesc_dp_r2dvar(ng)
+      ELSE
+        ioDesc => ioDesc_sp_r2dvar(ng)
+      END IF
+      status=nf_fwrite2d(ng, model, HIS(ng)%pioFile, idRisf,            &
+     &                   HIS(ng)%pioVar(idRisf),                        &
+     &                   HIS(ng)%Rindex,                                &
+     &                   ioDesc,                                        &
+     &                   LBi, UBi, LBj, UBj, scale,                     &
+#  ifdef MASKING
+     &                   GRID(ng) % rmask,                              &
+#  endif
+     &                   GRID(ng) % rmask_isf,                          &
+     &                   SetFillVal = .FALSE.)
+      IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+        IF (Master) THEN
+          WRITE (stdout,20) TRIM(Vname(1,idRisf)), HIS(ng)%Rindex
+        END IF
+        exit_flag=3
+        ioerror=status
+        RETURN
+      END IF
+#  endif
 # endif
 # ifdef SOLVE3D
 !

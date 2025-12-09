@@ -930,6 +930,9 @@
      &                  pmask, rmask, umask, vmask,                     &
 # endif
      &                  h, zeta(:,:,kstp),                              &
+# ifdef ICESHELF
+     &                  zice,                                           &
+# endif
 # ifdef SOLVE3D
      &                  DU_avg1, DV_avg1,                               &
      &                  rmask_wet_avg,                                  &

@@ -163,6 +163,7 @@
 !
 !  Gamma constraining factors
 !
+      real(r8), allocatable :: isf_drdz(:)      ! Drho/Dz value
       real(r8), allocatable :: gamU(:)          ! gamma scaling factor
       real(r8), allocatable :: min_ustar(:)     ! minimum ustar value
 !
@@ -344,6 +345,12 @@
           LisfTavg(1:MT,1:Ngrids)=.FALSE.
         END IF
 #endif
+
+        IF (.not.allocated(isf_drdz)) THEN
+          allocate ( isf_drdz(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          isf_drdz(1:Ngrids)=IniVal
+        END IF
 
         IF (.not.allocated(gamU)) THEN
           allocate ( gamU(Ngrids) )

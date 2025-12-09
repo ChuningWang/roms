@@ -76,7 +76,7 @@
      &                   GRID(ng) % rmask_wet,                          &
 #  endif
 #  if defined ICESHELF
-     &                   GRID(ng) % zice,                               &
+     &                   GRID(ng) % rmask_isf,                          &
 #  endif
      &                   OCEAN(ng) % t,                                 &
 #  if !defined BBL_MODEL || defined ICESHELF
@@ -143,7 +143,7 @@
      &                         rmask_wet,                               &
 #  endif
 #  if defined ICESHELF
-     &                         zice,                                    &
+     &                         rmask_isf,                               &
 #  endif
      &                         t,                                       &
 #  if !defined BBL_MODEL || defined ICESHELF
@@ -215,7 +215,7 @@
       real(r8), intent(in) :: rmask_wet(LBi:,LBj:)
 #   endif
 #   if defined ICESHELF
-      real(r8), intent(in) :: zice(LBi:,LBj:)
+      real(r8), intent(in) :: rmask_isf(LBi:,LBj:)
 #   endif
       real(r8), intent(in) :: t(LBi:,LBj:,:,:,:)
 #   if !defined BBL_MODEL || defined ICESHELF
@@ -269,7 +269,7 @@
       real(r8), intent(in) :: rmask_wet(LBi:UBi,LBj:UBj)
 #   endif
 #   if defined ICESHELF
-      real(r8), intent(in) :: zice(LBi:UBi,LBj:UBj)
+      real(r8), intent(in) :: rmask_isf(LBi:UBi,LBj:UBj)
 #   endif
       real(r8), intent(in) :: t(LBi:UBi,LBj:UBj,N(ng),3,NT(ng))
 #   if !defined BBL_MODEL || defined ICESHELF
@@ -517,18 +517,14 @@
       DO itrc=1,NT(ng)
         DO j=JstrR,JendR
           DO i=IstrR,IendR
-            IF (zice(i,j).ne.0.0_r8) THEN
-              stflx(i,j,itrc)=0.0_r8
-            END IF
+            stflx(i,j,itrc)=stflx(i,j,itrc)*(1.0_r8-rmask_isf(i,j))
           END DO
         END DO
       END DO
 #   ifdef SHORTWAVE
       DO j=JstrR,JendR
         DO i=IstrR,IendR
-          IF (zice(i,j).ne.0.0_r8) THEN
-            srflx(i,j)=0.0_r8
-          END IF
+          srflx(i,j,itrc)=srflx(i,j,itrc)*(1.0_r8-rmask_isf(i,j))
         END DO
       END DO
 #   endif
@@ -551,7 +547,7 @@
       END DO
       DO j=Jstr,Jend
         DO i=IstrU,Iend
-          IF (zice(i,j)*zice(i-1,j).ne.0.0_r8) THEN
+          IF (rmask_isf(i,j)*rmask_isf(i-1,j).eq.1.0_r8) THEN
             cff1=0.25_r8*(v(i  ,j  ,N(ng),nrhs)+                        &
      &                    v(i  ,j+1,N(ng),nrhs)+                        &
      &                    v(i-1,j  ,N(ng),nrhs)+                        &
@@ -564,7 +560,7 @@
       END DO
       DO j=JstrV,Jend
         DO i=Istr,Iend
-          IF (zice(i,j)*zice(i,j-1).ne.0.0_r8) THEN
+          IF (rmask_isf(i,j)*rmask_isf(i,j-1).eq.1.0_r8) THEN
             cff1=0.25_r8*(u(i  ,j  ,N(ng),nrhs)+                        &
      &                    u(i+1,j  ,N(ng),nrhs)+                        &
      &                    u(i  ,j-1,N(ng),nrhs)+                        &
@@ -581,7 +577,7 @@
 !
       DO j=Jstr,Jend
         DO i=IstrU,Iend
-          IF (zice(i,j)*zice(i-1,j).ne.0.0_r8) THEN
+          IF (rmask_isf(i,j)*rmask_isf(i-1,j).eq.1.0_r8) THEN
             cff1=0.25_r8*(v(i  ,j  ,N(ng),nrhs)+                        &
      &                    v(i  ,j+1,N(ng),nrhs)+                        &
      &                    v(i-1,j  ,N(ng),nrhs)+                        &
@@ -594,7 +590,7 @@
       END DO
       DO j=JstrV,Jend
         DO i=Istr,Iend
-          IF (zice(i,j)*zice(i,j-1).ne.0.0_r8) THEN
+          IF (rmask_isf(i,j)*rmask_isf(i,j-1).eq.1.0_r8) THEN
             cff1=0.25_r8*(u(i  ,j  ,N(ng),nrhs)+                        &
      &                    u(i+1,j  ,N(ng),nrhs)+                        &
      &                    u(i  ,j-1,N(ng),nrhs)+                        &
@@ -611,7 +607,7 @@
 !
       DO j=Jstr,Jend
         DO i=IstrU,Iend
-          IF (zice(i,j)*zice(i-1,j).ne.0.0_r8) THEN
+          IF (rmask_isf(i,j)*rmask_isf(i-1,j).eq.1.0_r8) THEN
             sustr(i,j)=-0.5_r8*(rdrag(i-1,j)+rdrag(i,j))*               &
      &                 u(i,j,N(ng),nrhs)
           END IF
@@ -619,7 +615,7 @@
       END DO
       DO j=JstrV,Jend
         DO i=Istr,Iend
-          IF (zice(i,j)*zice(i,j-1).ne.0.0_r8) THEN
+          IF (rmask_isf(i,j)*rmask_isf(i,j-1).eq.1.0_r8) THEN
             svstr(i,j)=-0.5_r8*(rdrag(i,j-1)+rdrag(i,j))*               &
      &                 v(i,j,N(ng),nrhs)
           END IF
@@ -628,14 +624,14 @@
 #   else
       DO j=Jstr,Jend
         DO i=IstrU,Iend
-          IF (zice(i,j)*zice(i-1,j).ne.0.0_r8) THEN
+          IF (rmask_isf(i,j)*rmask_isf(i-1,j).eq.1.0_r8) THEN
             sustr(i,j)=0.0_r8
           END IF
         END DO
       END DO
       DO j=JstrV,Jend
         DO i=Istr,Iend
-          IF (zice(i,j)*zice(i,j-1).ne.0.0_r8) THEN
+          IF (rmask_isf(i,j)*rmask_isf(i,j-1).eq.1.0_r8) THEN
             svstr(i,j)=0.0_r8
           END IF
         END DO

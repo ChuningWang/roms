@@ -673,6 +673,15 @@
 #  endif
               END IF
             END IF
+#  ifdef NESTING
+            CALL fill_contact(ng, model, tile,                          &
+     &                        cr, Rcontact(cr)%Npoints, Rcontact,       &
+     &                        r2dvar, var_name(i), spval_check,         &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        CONTACT_METRIC(cr) % zice,                &
+     &                        GRID(ng) % zice)
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#  endif
             IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
               CALL exchange_r2d_tile (ng, tile,                         &
      &                                LBi, UBi, LBj, UBj,               &
@@ -2902,6 +2911,15 @@
      &                        CONTACT_METRIC(cr) % h,                   &
      &                        GRID(ng) % h)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#   ifdef ICESHELF
+            CALL fill_contact(ng, model, tile,                          &
+     &                        cr, Rcontact(cr)%Npoints, Rcontact,       &
+     &                        r2dvar, var_name(i), spval_check,         &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        CONTACT_METRIC(cr) % zice,                &
+     &                        GRID(ng) % zice)
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#   endif
 #  endif
             IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
               CALL exchange_r2d_tile (ng, tile,                         &

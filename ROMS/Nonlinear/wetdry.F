@@ -47,6 +47,9 @@
 # endif
      &                        GRID(ng)%h,                               &
      &                        OCEAN(ng)%zeta(:,:,Tindex),               &
+# ifdef ICESHELF
+     &                        GRID(ng)%zice,                            &
+# endif
 # ifdef SOLVE3D
      &                        OCEAN(ng)%ubar(:,:,Tindex),               &
      &                        OCEAN(ng)%vbar(:,:,Tindex),               &
@@ -71,6 +74,9 @@
 # endif
      &                    GRID(ng)%h,                                   &
      &                    OCEAN(ng)%zeta(:,:,Tindex),                   &
+# ifdef ICESHELF
+     &                    GRID(ng)%zice,                                &
+# endif
 # ifdef SOLVE3D
      &                    COUPLING(ng)%DU_avg1,                         &
      &                    COUPLING(ng)%DV_avg1,                         &
@@ -97,6 +103,9 @@
      &                        pmask, rmask, umask, vmask,               &
 # endif
      &                        h, zeta,                                  &
+# ifdef ICESHELF
+     &                        zice,                                     &
+# endif
 # ifdef SOLVE3D
      &                        DU_avg1, DV_avg1,                         &
      &                        rmask_wet_avg,                            &
@@ -132,6 +141,9 @@
       real(r8), intent(in) :: vmask(LBi:,LBj:)
 #  endif
       real(r8), intent(in) :: zeta(LBi:,LBj:)
+#  ifdef ICESHELF
+      real(r8), intent(in) :: zice(LBi:,LBj:)
+#  endif
 #  ifdef SOLVE3D
       real(r8), intent(in) :: DU_avg1(LBi:,LBj:)
       real(r8), intent(in) :: DV_avg1(LBi:,LBj:)
@@ -157,6 +169,9 @@
       real(r8), intent(in) :: vmask(LBi:UBi,LBj:UBj)
 #  endif
       real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj)
+#  ifdef ICESHELF
+      real(r8), intent(in) :: zice(LBi:UBi,LBj:UBj)
+#  endif
 #  ifdef SOLVE3D
       real(r8), intent(in) :: DU_avg1(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: DV_avg1(LBi:UBi,LBj:UBj)
@@ -197,7 +212,11 @@
 # ifdef MASKING
           wetdry(i,j)=wetdry(i,j)*rmask(i,j)
 # endif
+# ifdef ICESHELF
+          IF ((zeta(i,j)+h(i,j)+zice(i,j)).le.(Dcrit(ng)+eps)) THEN
+# else
           IF ((zeta(i,j)+h(i,j)).le.(Dcrit(ng)+eps)) THEN
+# endif
             wetdry(i,j)=0.0_r8
           END IF
         END DO
@@ -358,6 +377,9 @@
      &                            pmask, rmask, umask, vmask,           &
 # endif
      &                            h, zeta,                              &
+# ifdef ICESHELF
+     &                            zice,                                 &
+# endif
 # ifdef SOLVE3D
      &                            ubar, vbar,                           &
 # endif
@@ -392,6 +414,9 @@
       real(r8), intent(in) :: vmask(LBi:,LBj:)
 #  endif
       real(r8), intent(in) :: zeta(LBi:,LBj:)
+#  ifdef ICESHELF
+      real(r8), intent(in) :: zice(LBi:,LBj:)
+#  endif
 #  ifdef SOLVE3D
       real(r8), intent(in) :: ubar(LBi:,LBj:)
       real(r8), intent(in) :: vbar(LBi:,LBj:)
@@ -416,6 +441,9 @@
       real(r8), intent(in) :: vmask(LBi:UBi,LBj:UBj)
 #  endif
       real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj)
+#  ifdef ICESHELF
+      real(r8), intent(in) :: zice(LBi:UBi,LBj:UBj)
+#  endif
 #  ifdef SOLVE3D
       real(r8), intent(in) :: ubar(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: vbar(LBi:UBi,LBj:UBj)
@@ -455,7 +483,11 @@
 # ifdef MASKING
           wetdry(i,j)=wetdry(i,j)*rmask(i,j)
 # endif
+# ifdef ICESHELF
+          IF ((zeta(i,j)+h(i,j)+zice(i,j)).le.(Dcrit(ng)+eps)) THEN
+# else
           IF ((zeta(i,j)+h(i,j)).le.(Dcrit(ng)+eps)) THEN
+# endif
             wetdry(i,j)=0.0_r8
           END IF
         END DO

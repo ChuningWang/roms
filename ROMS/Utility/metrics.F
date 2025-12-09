@@ -872,8 +872,8 @@
 #endif
 #ifdef ICESHELF
             cff=dtfast(ng)*                                             &
-     &          SQRT(g*ABS(h(i,j)-ABS(zice(i,j)))*                      &
-     &              (pm(i,j)*pm(i,j)+pn(i,j)*pn(i,j)))
+     &          SQRT(g*ABS(h(i,j)+zice(i,j))*                           &
+     &               (pm(i,j)*pm(i,j)+pn(i,j)*pn(i,j)))
 #else
             cff=dtfast(ng)*                                             &
      &          SQRT(g*ABS(h(i,j))*(pm(i,j)*pm(i,j)+pn(i,j)*pn(i,j)))

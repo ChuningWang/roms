@@ -170,7 +170,7 @@
 #endif
           pvor2d(i,j)=cff*((fomn_p+dVdx_p-dUde_p)/                      &
 # ifdef ICESHELF
-     &                     (h(i,j)-ABS(zice(i,j))+zeta(i,j,kout)))
+     &                     (h(i,j)+zice(i,j)+zeta(i,j,kout)))
 # else
      &                     (h(i,j)+zeta(i,j,kout)))
 # endif
@@ -978,7 +978,7 @@
           rvor_bar(i,j)=cff*(dVdx_p-dUde_p)
           pvor_bar(i,j)=cff*((fomn_p+dVdx_p-dUde_p)/                    &
 # ifdef ICESHELF
-     &                       (h(i,j)-ABS(zice(i,j))+zeta(i,j,kout)))
+     &                       (h(i,j)+zice(i,j)+zeta(i,j,kout)))
 # else
      &                       (h(i,j)+zeta(i,j,kout)))
 # endif

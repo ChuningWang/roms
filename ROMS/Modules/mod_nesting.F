@@ -358,6 +358,9 @@
          real(r8), pointer :: dmde(:)      ! d(1/pm)/d(ETA)
          real(r8), pointer :: f(:)         ! Coriolis parameter
          real(r8), pointer :: h(:)         ! bathymetry
+# ifdef ICESHELF
+         real(r8), pointer :: zice(:)      ! ice shelf draft
+# endif
          real(r8), pointer :: rmask(:)     ! land/sea RHO-mask
          real(r8), pointer :: umask(:)     ! land/sea U-mask
          real(r8), pointer :: vmask(:)     ! land/sea V-mask
@@ -902,6 +905,9 @@
 
         IF (.not.destroy(ng, CONTACT_METRIC(cr)%h, MyFile,              &
      &                   __LINE__, 'CONTACT_METRIC(cr)%h')) RETURN
+
+        IF (.not.destroy(ng, CONTACT_METRIC(cr)%zice, MyFile,           &
+     &                   __LINE__, 'CONTACT_METRIC(cr)%zice')) RETURN
 
         IF (.not.destroy(ng, CONTACT_METRIC(cr)%rmask, MyFile,          &
      &                   __LINE__, 'CONTACT_METRIC(cr)%rmask')) RETURN

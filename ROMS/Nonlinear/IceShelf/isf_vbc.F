@@ -82,12 +82,7 @@
      &                   GRID(ng) % Hz,                                 &
      &                   GRID(ng) % zice,                               &
      &                   GRID(ng) % f,                                  &
-# ifdef MASKING
-     &                   GRID(ng) % rmask,                              &
-# endif
-# ifdef WET_DRY
-     &                   GRID(ng) % rmask_wet,                          &
-# endif
+     &                   GRID(ng) % rmask_isf,                          &
      &                   OCEAN(ng) % t,                                 &
 # ifdef ICESHELF_3EQN_VBC
      &                   FORCES(ng) % sustr,                            &
@@ -109,12 +104,7 @@
      &                         IminS, ImaxS, JminS, JmaxS,              &
      &                         nrhs,                                    &
      &                         Hz, zice, f,                             &
-# ifdef MASKING
-     &                         rmask,                                   &
-# endif
-# ifdef WET_DRY
-     &                         rmask_wet,                               &
-# endif
+     &                         rmask_isf,                               &
      &                         t,                                       &
 # ifdef ICESHELF_3EQN_VBC
      &                         sustr, svstr,                            &
@@ -143,12 +133,7 @@
       real(r8), intent(in) :: Hz(LBi:,LBj:,:)
       real(r8), intent(in) :: zice(LBi:,LBj:)
       real(r8), intent(in) :: f(LBi:,LBj:)
-#  ifdef MASKING
-      real(r8), intent(in) :: rmask(LBi:,LBj:)
-#  endif
-#  ifdef WET_DRY
-      real(r8), intent(in) :: rmask_wet(LBi:,LBj:)
-#  endif
+      real(r8), intent(in) :: rmask_isf(LBi:,LBj:)
       real(r8), intent(in) :: t(LBi:,LBj:,:,:,:)
 #  ifdef ICESHELF_3EQN_VBC
       real(r8), intent(in) :: sustr(LBi:,LBj:)
@@ -162,12 +147,7 @@
       real(r8), intent(in) :: Hz(LBi:UBi,LBj:UBj,N(ng))
       real(r8), intent(in) :: zice(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: f(LBi:UBi,LBj:UBj)
-#  ifdef MASKING
-      real(r8), intent(in) :: rmask(LBi:UBi,LBj:UBj)
-#  endif
-#  ifdef WET_DRY
-      real(r8), intent(in) :: rmask_wet(LBi:UBi,LBj:UBj)
-#  endif
+      real(r8), intent(in) :: rmask_isf(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: t(LBi:UBi,LBj:UBj,N(ng),3,NT(ng))
 #  ifdef ICESHELF_3EQN_VBC
       real(r8), intent(in) :: sustr(LBi:UBi,LBj:UBj)
@@ -204,13 +184,7 @@
 # endif
       DO j=Jstr,Jend
         DO i=Istr,Iend
-# ifdef WET_DRY
-          IF (zice(i,j).ne.0.0_r8 .and. rmask_wet(i,j).gt.0.0_r8) THEN
-# elif defined MASKING
-          IF (zice(i,j).ne.0.0_r8 .and. rmask(i,j).gt.0.0_r8) THEN
-# else
-          IF (zice(i,j).ne.0.0_r8) THEN
-# endif
+          IF (rmask_isf(i,j).eq.1.0_r8) THEN
 !
 !  Get the insitu salinity and temperature
 !
@@ -323,13 +297,7 @@
       IF (Lisftrc(ng)) THEN
         DO j=Jstr,Jend
           DO i=Istr,Iend
-# ifdef WET_DRY
-            IF (zice(i,j).ne.0.0_r8.and.rmask_wet(i,j).gt.0.0_r8) THEN
-# elif defined MASKING
-            IF (zice(i,j).ne.0.0_r8.and.rmask(i,j).gt.0.0_r8) THEN
-# else
-            IF (zice(i,j).ne.0.0_r8) THEN
-# endif
+            IF (rmask_isf(i,j).eq.1.0_r8) THEN
               IF (Fi(i,j,icImel).gt.0.0_r8 .and.                        &
      &            Vi(i,j,lsnew(ng)).gt.0.0_r8) THEN
                 cff=MIN(Fi(i,j,icImel)*dt(ng), Vi(i,j,lsnew(ng)))
@@ -376,14 +344,7 @@
           IF (LsourceIsf(itrc,ng)) THEN
             DO j=Jstr,Jend
               DO i=Istr,Iend
-# ifdef WET_DRY
-                IF (zice(i,j).ne.0.0_r8.and.                            &
-     &              rmask_wet(i,j).gt.0.0_r8) THEN
-# elif defined MASKING
-                IF (zice(i,j).ne.0.0_r8.and.rmask(i,j).gt.0.0_r8) THEN
-# else
-                IF (zice(i,j).ne.0.0_r8) THEN
-# endif
+                IF (rmask_isf(i,j).eq.1.0_r8) THEN
                   stflx(i,j,itrc)=stflx(i,j,itrc)+                      &
      &                            MAX(Fi(i,j,icImel), 0.0_r8)*          &
      &                            trcIsf(itrc,ng)
@@ -414,7 +375,7 @@
 !
 !   s                : salinity                  (psu)
 !   theta            : potential temperature     (deg C, ITS-90)
-!   ct_from_theta    : conservative temperature  (deg C, ITS-90) 
+!   ct_from_theta    : conservative temperature  (deg C, ITS-90)
 !   calls            : penthalpy_F
 !   check value      : ct_from_theta(20,20) = 20.45274961282756
 !

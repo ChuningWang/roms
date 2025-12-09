@@ -654,6 +654,93 @@
      &                 NF_FOUT, nvd3, v2dgrd, Aval, Vinfo, ncname,      &
      &                 SetFillVal = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+# ifdef ICESHELF
+!
+!  Define ice sheet mask on PSI-points.
+!
+        Vinfo( 1)=Vname(1,idPist)
+        Vinfo( 2)=Vname(2,idPist)
+        Vinfo( 3)=Vname(3,idPist)
+        Vinfo( 9)='ice_sheet'
+        Vinfo(10)='water'
+        Vinfo(14)=Vname(4,idPist)
+        Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idPist)
+        Vinfo(22)='coordinates'
+        Aval(5)=REAL(Iinfo(1,idPist,ng),r8)
+        status=def_var(ng, model, HIS(ng)%ncid, HIS(ng)%Vid(idPist),    &
+     &                 NF_FOUT, nvd3, p2dgrd, Aval, Vinfo, ncname,      &
+     &                 SetFillVal = .FALSE.)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+!  Define ice sheet mask on RHO-points.
+!
+        Vinfo( 1)=Vname(1,idRist)
+        Vinfo( 2)=Vname(2,idRist)
+        Vinfo( 3)=Vname(3,idRist)
+        Vinfo( 9)='ice_sheet'
+        Vinfo(10)='water'
+        Vinfo(14)=Vname(4,idRist)
+        Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idRist)
+        Vinfo(22)='coordinates'
+        Aval(5)=REAL(Iinfo(1,idRist,ng),r8)
+        status=def_var(ng, model, HIS(ng)%ncid, HIS(ng)%Vid(idRist),    &
+     &                 NF_FOUT, nvd3, t2dgrd, Aval, Vinfo, ncname,      &
+     &                 SetFillVal = .FALSE.)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+!  Define ice sheet mask on U-points.
+!
+        Vinfo( 1)=Vname(1,idUist)
+        Vinfo( 2)=Vname(2,idUist)
+        Vinfo( 3)=Vname(3,idUist)
+        Vinfo( 9)='ice_sheet'
+        Vinfo(10)='water'
+        Vinfo(14)=Vname(4,idUist)
+        Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idUist)
+        Vinfo(22)='coordinates'
+        Aval(5)=REAL(Iinfo(1,idUist,ng),r8)
+        status=def_var(ng, model, HIS(ng)%ncid, HIS(ng)%Vid(idUist),    &
+     &                 NF_FOUT, nvd3, u2dgrd, Aval, Vinfo, ncname,      &
+     &                 SetFillVal = .FALSE.)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+!  Define ice sheet mask on V-points.
+!
+        Vinfo( 1)=Vname(1,idVist)
+        Vinfo( 2)=Vname(2,idVist)
+        Vinfo( 3)=Vname(3,idVist)
+        Vinfo(14)=Vname(4,idVist)
+        Vinfo(16)=Vname(1,idtime)
+        Vinfo( 9)='ice_sheet'
+        Vinfo(10)='water'
+        Vinfo(21)=Vname(6,idVist)
+        Vinfo(22)='coordinates'
+        Aval(5)=REAL(Iinfo(1,idVist,ng),r8)
+        status=def_var(ng, model, HIS(ng)%ncid, HIS(ng)%Vid(idVist),    &
+     &                 NF_FOUT, nvd3, v2dgrd, Aval, Vinfo, ncname,      &
+     &                 SetFillVal = .FALSE.)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+!  Define ice shelf mask on RHO-points.
+!
+        Vinfo( 1)=Vname(1,idRisf)
+        Vinfo( 2)=Vname(2,idRisf)
+        Vinfo( 3)=Vname(3,idRisf)
+        Vinfo( 9)='ice_shelf'
+        Vinfo(10)='water'
+        Vinfo(14)=Vname(4,idRisf)
+        Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idRisf)
+        Vinfo(22)='coordinates'
+        Aval(5)=REAL(Iinfo(1,idRisf,ng),r8)
+        status=def_var(ng, model, HIS(ng)%ncid, HIS(ng)%Vid(idRisf),    &
+     &                 NF_FOUT, nvd3, t2dgrd, Aval, Vinfo, ncname,      &
+     &                 SetFillVal = .FALSE.)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+# endif
 #endif
 #ifdef SOLVE3D
 !
@@ -2271,6 +2358,23 @@
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idVwet))) THEN
             got_var(idVwet)=.TRUE.
             HIS(ng)%Vid(idVwet)=var_id(i)
+# ifdef ICESHELF
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idPist))) THEN
+            got_var(idPist)=.TRUE.
+            HIS(ng)%Vid(idPist)=var_id(i)
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idRist))) THEN
+            got_var(idRist)=.TRUE.
+            HIS(ng)%Vid(idRist)=var_id(i)
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idUist))) THEN
+            got_var(idUist)=.TRUE.
+            HIS(ng)%Vid(idUist)=var_id(i)
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idVist))) THEN
+            got_var(idVist)=.TRUE.
+            HIS(ng)%Vid(idVist)=var_id(i)
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idRisf))) THEN
+            got_var(idRisf)=.TRUE.
+            HIS(ng)%Vid(idRisf)=var_id(i)
+# endif
 #endif
 #ifdef SOLVE3D
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idpthR))) THEN
@@ -2578,6 +2682,38 @@
           exit_flag=3
           RETURN
         END IF
+# ifdef ICESHELF
+        IF (.not.got_var(idPist)) THEN
+          IF (Master) WRITE (stdout,70) TRIM(Vname(1,idPist)),          &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+        IF (.not.got_var(idRist)) THEN
+          IF (Master) WRITE (stdout,70) TRIM(Vname(1,idRist)),          &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+        IF (.not.got_var(idUist)) THEN
+          IF (Master) WRITE (stdout,70) TRIM(Vname(1,idUist)),          &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+        IF (.not.got_var(idVist)) THEN
+          IF (Master) WRITE (stdout,70) TRIM(Vname(1,idVist)),          &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+        IF (.not.got_var(idRisf)) THEN
+          IF (Master) WRITE (stdout,70) TRIM(Vname(1,idRisf)),          &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+# endif
 #endif
 #ifdef SOLVE3D
         IF (.not.got_var(idpthR).and.Hout(idpthR,ng)) THEN
@@ -3699,6 +3835,113 @@
      &                 PIO_FOUT, nvd3, v2dgrd, Aval, Vinfo, ncname,     &
      &                 SetFillVal = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#  ifdef ICESHELF
+!
+!  Define ice sheet mask on PSI-points.
+!
+        Vinfo( 1)=Vname(1,idPist)
+        Vinfo( 2)=Vname(2,idPist)
+        Vinfo( 3)=Vname(3,idPist)
+        Vinfo( 9)='ice_sheet'
+        Vinfo(10)='water'
+        Vinfo(14)=Vname(4,idPist)
+        Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idPist)
+        Vinfo(22)='coordinates'
+        Aval(5)=REAL(Iinfo(1,idPist,ng),r8)
+        HIS(ng)%pioVar(idPist)%dkind=PIO_FOUT
+        HIS(ng)%pioVar(idPist)%gtype=p2dvar
+!
+        status=def_var(ng, model, HIS(ng)%pioFile,                      &
+     &                 HIS(ng)%pioVar(idPist)%vd,                       &
+     &                 PIO_FOUT, nvd3, p2dgrd, Aval, Vinfo, ncname,     &
+     &                 SetFillVal = .FALSE.)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+!  Define ice sheet mask on RHO-points.
+!
+        Vinfo( 1)=Vname(1,idRist)
+        Vinfo( 2)=Vname(2,idRist)
+        Vinfo( 3)=Vname(3,idRist)
+        Vinfo( 9)='ice_sheet'
+        Vinfo(10)='water'
+        Vinfo(14)=Vname(4,idRist)
+        Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idRist)
+        Vinfo(22)='coordinates'
+        Aval(5)=REAL(Iinfo(1,idRist,ng),r8)
+        HIS(ng)%pioVar(idRist)%dkind=PIO_FOUT
+        HIS(ng)%pioVar(idRist)%gtype=r2dvar
+!
+        status=def_var(ng, model, HIS(ng)%pioFile,                      &
+     &                 HIS(ng)%pioVar(idRist)%vd,                       &
+     &                 PIO_FOUT, nvd3, t2dgrd, Aval, Vinfo, ncname,     &
+     &                 SetFillVal = .FALSE.)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+!  Define ice sheet mask on U-points.
+!
+        Vinfo( 1)=Vname(1,idUist)
+        Vinfo( 2)=Vname(2,idUist)
+        Vinfo( 3)=Vname(3,idUist)
+        Vinfo( 9)='ice_sheet'
+        Vinfo(10)='water'
+        Vinfo(14)=Vname(4,idUist)
+        Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idUist)
+        Vinfo(22)='coordinates'
+        Aval(5)=REAL(Iinfo(1,idUist,ng),r8)
+        HIS(ng)%pioVar(idUist)%dkind=PIO_FOUT
+        HIS(ng)%pioVar(idUist)%gtype=u2dvar
+!
+        status=def_var(ng, model, HIS(ng)%pioFile,                      &
+     &                 HIS(ng)%pioVar(idUist)%vd,                       &
+     &                 PIO_FOUT, nvd3, u2dgrd, Aval, Vinfo, ncname,     &
+     &                 SetFillVal = .FALSE.)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+!  Define ice sheet mask on V-points.
+!
+        Vinfo( 1)=Vname(1,idVist)
+        Vinfo( 2)=Vname(2,idVist)
+        Vinfo( 3)=Vname(3,idVist)
+        Vinfo(14)=Vname(4,idVist)
+        Vinfo(16)=Vname(1,idtime)
+        Vinfo( 9)='ice_sheet'
+        Vinfo(10)='water'
+        Vinfo(21)=Vname(6,idVist)
+        Vinfo(22)='coordinates'
+        Aval(5)=REAL(Iinfo(1,idVist,ng),r8)
+        HIS(ng)%pioVar(idVist)%dkind=PIO_FOUT
+        HIS(ng)%pioVar(idVist)%gtype=v2dvar
+!
+        status=def_var(ng, model, HIS(ng)%pioFile,                      &
+     &                 HIS(ng)%pioVar(idVist)%vd,                       &
+     &                 PIO_FOUT, nvd3, v2dgrd, Aval, Vinfo, ncname,     &
+     &                 SetFillVal = .FALSE.)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+!
+!  Define ice shelf mask on RHO-points.
+!
+        Vinfo( 1)=Vname(1,idRisf)
+        Vinfo( 2)=Vname(2,idRisf)
+        Vinfo( 3)=Vname(3,idRisf)
+        Vinfo( 9)='ice_shelf'
+        Vinfo(10)='water'
+        Vinfo(14)=Vname(4,idRisf)
+        Vinfo(16)=Vname(1,idtime)
+        Vinfo(21)=Vname(6,idRisf)
+        Vinfo(22)='coordinates'
+        Aval(5)=REAL(Iinfo(1,idRisf,ng),r8)
+        HIS(ng)%pioVar(idRisf)%dkind=PIO_FOUT
+        HIS(ng)%pioVar(idRisf)%gtype=r2dvar
+!
+        status=def_var(ng, model, HIS(ng)%pioFile,                      &
+     &                 HIS(ng)%pioVar(idRisf)%vd,                       &
+     &                 PIO_FOUT, nvd3, t2dgrd, Aval, Vinfo, ncname,     &
+     &                 SetFillVal = .FALSE.)
+        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#  endif
 # endif
 # ifdef SOLVE3D
 !
@@ -5614,6 +5857,33 @@
             HIS(ng)%pioVar(idVwet)%vd=var_desc(i)
             HIS(ng)%pioVar(idVwet)%dkind=PIO_FOUT
             HIS(ng)%pioVar(idVwet)%gtype=v2dvar
+#  ifdef ICESHELF
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idPist))) THEN
+            got_var(idPist)=.TRUE.
+            HIS(ng)%pioVar(idPist)%vd=var_desc(i)
+            HIS(ng)%pioVar(idPist)%dkind=PIO_FOUT
+            HIS(ng)%pioVar(idPist)%gtype=p2dvar
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idRist))) THEN
+            got_var(idRist)=.TRUE.
+            HIS(ng)%pioVar(idRist)%vd=var_desc(i)
+            HIS(ng)%pioVar(idRist)%dkind=PIO_FOUT
+            HIS(ng)%pioVar(idRist)%gtype=r2dvar
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idUist))) THEN
+            got_var(idUist)=.TRUE.
+            HIS(ng)%pioVar(idUist)%vd=var_desc(i)
+            HIS(ng)%pioVar(idUist)%dkind=PIO_FOUT
+            HIS(ng)%pioVar(idUist)%gtype=u2dvar
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idVist))) THEN
+            got_var(idVist)=.TRUE.
+            HIS(ng)%pioVar(idVist)%vd=var_desc(i)
+            HIS(ng)%pioVar(idVist)%dkind=PIO_FOUT
+            HIS(ng)%pioVar(idVist)%gtype=v2dvar
+          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idRisf))) THEN
+            got_var(idRisf)=.TRUE.
+            HIS(ng)%pioVar(idRisf)%vd=var_desc(i)
+            HIS(ng)%pioVar(idRisf)%dkind=PIO_FOUT
+            HIS(ng)%pioVar(idRisf)%gtype=r2dvar
+#  endif
 # endif
 # ifdef SOLVE3D
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idpthR))) THEN
@@ -6061,6 +6331,38 @@
           exit_flag=3
           RETURN
         END IF
+#  ifdef ICESHELF
+        IF (.not.got_var(idPist)) THEN
+          IF (Master) WRITE (stdout,70) TRIM(Vname(1,idPist)),          &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+        IF (.not.got_var(idRist)) THEN
+          IF (Master) WRITE (stdout,70) TRIM(Vname(1,idRist)),          &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+        IF (.not.got_var(idUist)) THEN
+          IF (Master) WRITE (stdout,70) TRIM(Vname(1,idUist)),          &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+        IF (.not.got_var(idVist)) THEN
+          IF (Master) WRITE (stdout,70) TRIM(Vname(1,idVist)),          &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+        IF (.not.got_var(idRisf)) THEN
+          IF (Master) WRITE (stdout,70) TRIM(Vname(1,idRisf)),          &
+     &                                  TRIM(ncname)
+          exit_flag=3
+          RETURN
+        END IF
+#  endif
 # endif
 # ifdef SOLVE3D
         IF (.not.got_var(idpthR).and.Hout(idpthR,ng)) THEN

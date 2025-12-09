@@ -793,6 +793,65 @@ metadata:
     add_offset:     0.0d0
     scale:          1.0d0
 
+  #########################
+  ###  Ice sheet masks  ###
+  #########################
+
+  - variable:       ist_mask_psi                                     # Input/Output
+    standard_name:  ice_sheet_mask_at_cell_corners
+    long_name:      ice sheet mask on PSI-points
+    units:          nondimensional
+    field:          ice sheet psi-mask
+    time:           ocean_time
+    index_code:     idPist
+    type:           p2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ist_mask_rho                                     # Input/Output
+    standard_name:  ice_sheet_mask_at_cell_center
+    long_name:      ice sheet mask on RHO-points
+    units:          nondimensional
+    field:          ice sheet rho-mask
+    time:           ocean_time
+    index_code:     idRist
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ist_mask_u                                       # Input/Output
+    standard_name:  ice_sheet_mask_at_cell_y_edges
+    long_name:      ice sheet mask on U-points
+    units:          nondimensional
+    field:          ice sheet u-mask
+    time:           ocean_time
+    index_code:     idUist
+    type:           u2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ist_mask_v                                       # Input/Output
+    standard_name:  ice_sheet_mask_at_cell_x_edges
+    long_name:      ice sheet mask on V-points
+    units:          nondimensional
+    field:          ice sheet v-mask
+    time:           ocean_time
+    index_code:     idVist
+    type:           v2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       isf_mask_rho                                     # Input/Output
+    standard_name:  ice_shelf_mask_at_cell_center
+    long_name:      ice shelf mask on RHO-points
+    units:          nondimensional
+    field:          ice shelf rho-mask
+    time:           ocean_time
+    index_code:     idRisf
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
   #############################
   ###  Detiding Parameters  ###
   #############################

@@ -30,6 +30,9 @@
       USE isf_mom_mod,      ONLY : isf_mom
 # endif
       USE strings_mod,      ONLY : FoundError, uppercase
+# ifdef WET_DRY
+      USE isf_masks_mod,    ONLY : isf_masks
+# endif
 !
       implicit none
 !
@@ -101,6 +104,20 @@
 !$OMP BARRIER
         END DO
 # endif
+
+#ifdef WET_DRY
+!
+!-----------------------------------------------------------------------
+!  Process ice shelf masks.
+!-----------------------------------------------------------------------
+!
+        DO ng=1,Ngrids
+          DO tile=first_tile(ng),last_tile(ng),+1
+            CALL isf_masks (ng, tile, iNLM)
+          END DO
+!$OMP BARRIER
+        END DO
+#endif
 
       END DO NEST_LAYER
 !

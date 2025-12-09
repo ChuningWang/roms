@@ -904,6 +904,9 @@
         allocate ( CONTACT_METRIC(cr) % dmde  (NpointsR(cr)) )
         allocate ( CONTACT_METRIC(cr) % f     (NpointsR(cr)) )
         allocate ( CONTACT_METRIC(cr) % h     (NpointsR(cr)) )
+# ifdef ICESHELF
+        allocate ( CONTACT_METRIC(cr) % zice  (NpointsR(cr)) )
+# endif
         allocate ( CONTACT_METRIC(cr) % rmask (NpointsR(cr)) )
         allocate ( CONTACT_METRIC(cr) % umask (NpointsU(cr)) )
         allocate ( CONTACT_METRIC(cr) % vmask (NpointsV(cr)) )
@@ -931,6 +934,9 @@
           CONTACT_METRIC(cr) % dmde  (m) = dmde (ip)
           CONTACT_METRIC(cr) % f     (m) = f    (ip)
           CONTACT_METRIC(cr) % h     (m) = h    (ip)
+# ifdef ICESHELF
+          CONTACT_METRIC(cr) % zice  (m) = zice (ip)
+# endif
           CONTACT_METRIC(cr) % rmask (m) = mask (ip)
           CONTACT_METRIC(cr) % pm    (m) = pm   (ip)
           CONTACT_METRIC(cr) % pn    (m) = pn   (ip)
@@ -2165,6 +2171,9 @@
         allocate ( CONTACT_METRIC(cr) % dmde  (NpointsR(cr)) )
         allocate ( CONTACT_METRIC(cr) % f     (NpointsR(cr)) )
         allocate ( CONTACT_METRIC(cr) % h     (NpointsR(cr)) )
+#  ifdef ICESHELF
+        allocate ( CONTACT_METRIC(cr) % zice  (NpointsR(cr)) )
+#  endif
         allocate ( CONTACT_METRIC(cr) % rmask (NpointsR(cr)) )
         allocate ( CONTACT_METRIC(cr) % umask (NpointsU(cr)) )
         allocate ( CONTACT_METRIC(cr) % vmask (NpointsV(cr)) )
@@ -2192,6 +2201,9 @@
           CONTACT_METRIC(cr) % dmde  (m) = dmde (ip)
           CONTACT_METRIC(cr) % f     (m) = f    (ip)
           CONTACT_METRIC(cr) % h     (m) = h    (ip)
+#  ifdef ICESHELF
+          CONTACT_METRIC(cr) % zice  (m) = zice (ip)
+#  endif
           CONTACT_METRIC(cr) % rmask (m) = mask (ip)
           CONTACT_METRIC(cr) % pm    (m) = pm   (ip)
           CONTACT_METRIC(cr) % pn    (m) = pn   (ip)

@@ -72,6 +72,10 @@
    LBC(isIvis) ==   Clo     Clo     Clo     Clo         ! V-velocity
    LBC(isItis) ==   Clo     Clo     Clo     Clo         ! temperature
 
+! C value (Drho/Dz) in Zhou and Hatterman (2020) [kg/m4].
+
+    isf_drdz == 0.00478
+
 ! Iceshelf Ustar scaling factor [non-dimensional].
 
         gamU == 1.0d0
@@ -225,6 +229,8 @@ Sout(idItrc) == T     ! Ti(...,itrc)       iceshelf refreezed tracer
 !------------------------------------------------------------------------------
 !  Iceshelf model parameters.
 !------------------------------------------------------------------------------
+!
+!  isf_drdz       C value (Drho/Dz) in Zhou and Hatterman (2020) [kg/m4].
 !
 !  gamU           Iceshelf Ustar scaling factor.
 !
