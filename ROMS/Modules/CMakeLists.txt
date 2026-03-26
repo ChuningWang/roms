@@ -26,6 +26,7 @@ list ( APPEND _files
        ROMS/Modules/mod_fourdvar.F
        ROMS/Modules/mod_grid.F
        ROMS/Modules/mod_ice.F
+       ROMS/Modules/mod_isf.F
        ROMS/Modules/mod_iounits.F
        ROMS/Modules/mod_kinds.F
        ROMS/Modules/mod_mixing.F
