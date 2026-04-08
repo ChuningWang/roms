@@ -67,11 +67,7 @@
 !  Allocate and initialize.
 !
 !$OMP MASTER
-#ifdef TILEMASK
-      Ntiles=tile_sum(ng)-1
-#else
       Ntiles=MAXVAL(NtileI)*MAXVAL(NtileJ)-1
-#endif
       IF (.not.allocated(Asize)) THEN
         allocate ( Asize(0:Ntiles,Ngrids) )
         Asize=spv

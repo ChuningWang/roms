@@ -121,6 +121,8 @@
         END DO
       END DO
       rank=0
+      MyRankI=-2
+      MyRankJ=-2
       DO j=0,NtileJ(ng)-1
         DO i=0,NtileI(ng)-1
 # ifdef TILEMASK
@@ -159,8 +161,7 @@
 !                      -2    -1     0    1     2      3
 !
       IF (EW_periodic) THEN
-        IF ((table(MyRankI-1,MyRankJ).eq.Null_Value).and.               &
-     &      (NtileI(ng).gt.1)) THEN
+        IF ((MyRankI.eq.0).and.(NtileI(ng).gt.1)) THEN
           Wtile=table(NtileI(ng)-1,MyRankJ)
           Etile=table(MyRankI+1,MyRankJ)
           GsendW=Nghost
@@ -171,8 +172,7 @@
             GrecvW=Nghost+1
           END IF
           GrecvE=Nghost
-        ELSE IF ((table(MyRankI+1,MyRankJ).eq.Null_Value).and.          &
-     &           (NtileI(ng).gt.1)) THEN
+        ELSE IF ((MyRankI.eq.NtileI(ng)-1).and.(NtileI(ng).gt.1)) THEN
           Wtile=table(MyRankI-1,MyRankJ)
           Etile=table(0,MyRankJ)
           GsendW=Nghost
@@ -234,8 +234,7 @@
 !                      -2    -1     0    1     2     3
 !
       IF (NS_periodic) THEN
-        IF ((table(MyRankI,MyRankJ-1).eq.Null_Value).and.               &
-     &      (NtileJ(ng).gt.1)) THEN
+        IF ((MyRankJ.eq.0).and.(NtileJ(ng).gt.1)) THEN
           Stile=table(MyRankI,NtileJ(ng)-1)
           Ntile=table(MyRankI,MyRankJ+1)
           GsendS=Nghost
@@ -246,8 +245,7 @@
             GrecvS=Nghost+1
           END IF
           GrecvN=Nghost
-        ELSE IF ((table(MyRankI,MyRankJ+1).eq.Null_Value).and.          &
-     &           (NtileJ(ng).gt.1)) then
+        ELSE IF ((MyRankJ.eq.NtileJ(ng)-1).and.(NtileJ(ng).gt.1)) THEN
           Stile=table(MyRankI,MyRankJ-1)
           Ntile=table(MyRankI,0)
           GsendS=Nghost
