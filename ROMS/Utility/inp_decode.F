@@ -265,6 +265,15 @@
           Lend=Linp
           Kextract=.TRUE.
         END IF
+#ifdef TILEMASK
+!
+! If KEYWORD is TileMask, load line-by-line instead of load multiple
+! lines altoghether into Cval.
+!
+        IF ((TRIM(KeyWord).eq.'TileMask').and.(status.gt.0)) THEN
+          Nval=0
+        END IF
+#endif
 !
 ! Extract parameter values string.  Remove continuation symbol
 ! [char(92)=\] or multi-line value [char(124)=|], if any.  Trim
@@ -1001,6 +1010,117 @@
 !
       RETURN
       END FUNCTION load_3d_l
+#ifdef TILEMASK
+!
+      FUNCTION load_tile_l (Ninp, Vinp, line, nline, Ncont, Nout, Vout) &
+     &                      RESULT (Nval)
+!
+!***********************************************************************
+!                                                                      !
+!  It loads input values into a requested model 1D logical array from  !
+!  multiple lines.                                                     !
+!                                                                      !
+!  On Input:                                                           !
+!                                                                      !
+!     Ninp       Number of input elements to process in Vinp (integer) !
+!     Vinp       Input values (character 1D array)                     !
+!     line       Current input line (string)                           !
+!     nline      Multi-line counter (integer)                          !
+!     Ncont      Continue index of the output array                    !
+!     Nout       Size of output logical variable dimension             !
+!                                                                      !
+!  On Output:                                                          !
+!                                                                      !
+!     nline      Updated multi-line counter (integer)                  !
+!     Vout       Output 1D logical variable                            !
+!     Nval       Number of output values processed                     !
+!                                                                      !
+!***********************************************************************
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: Ninp, Nout
+      integer, intent(inout) :: nline, Ncont
+
+      character (len=256), intent(in) :: line
+      character (len=*), intent(in) :: Vinp(:)
+!
+      logical, intent(inout) :: Vout(:)
+!
+!  Local variable declarations.
+!
+      logical :: LastValue
+
+      integer :: Icont, Nstr, i, ic
+      integer :: Nval
+!
+!-----------------------------------------------------------------------
+!  Load logical variable with input values.
+!-----------------------------------------------------------------------
+!
+!  Check current line for the continuation symbol [char(92)=\].
+!
+      Icont=INDEX(TRIM(line),CHAR(92) ,BACK=.FALSE.)
+!
+!  Advance or reset entry lines counter.
+!
+      IF (Icont.gt.0) THEN
+        nline=nline+1
+      ELSE
+        nline=0
+      END IF
+!
+      IF (Ncont.lt.Nout) THEN
+!
+!  If not all values are provided for variable, assume the last value
+!  or acquire it from the existing values.
+!
+        ic=Ncont
+        IF (Ncont.eq.0) THEN
+          LastValue=.FALSE.
+        ELSE
+          LastValue=Vout(Ncont)
+        END IF
+!
+        IF ((Ninp+Ncont).le.Nout) THEN
+          DO i=1,Ninp
+            ic=ic+1
+            IF ((Vinp(i)(1:1).eq.'T').or.(Vinp(i)(1:1).eq.'t')) THEN
+              Vout(ic)=.TRUE.
+            ELSE
+              Vout(ic)=.FALSE.
+            END IF
+            LastValue=Vout(ic)
+          END DO
+          IF (Icont.eq.0) THEN
+            IF (Nout.gt.(Ninp+Ncont)) THEN
+              Nstr=Ninp+Ncont+1
+              DO i=Nstr,Nout
+                ic=ic+1
+                Vout(ic)=LastValue
+              END DO
+            END IF
+          END IF
+        ELSE
+          DO i=1,Nout-Ncont
+            ic=ic+1
+            IF ((Vinp(i)(1:1).eq.'T').or.(Vinp(i)(1:1).eq.'t')) THEN
+              Vout(ic)=.TRUE.
+            ELSE
+              Vout(ic)=.FALSE.
+            END IF
+          END DO
+        END IF
+!
+        Nval=ic-Ncont
+        Ncont=ic
+      ELSE
+        Nval=0
+      END IF
+!
+      RETURN
+      END FUNCTION load_tile_l
+#endif
 
 #ifdef SINGLE_PRECISION
 !
