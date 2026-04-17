@@ -217,12 +217,12 @@
 !
 !  Determine extend switches.
 !
-      IF (Wexchange.or.(MyRankI.le.1)) THEN
+      IF (Wexchange.or.(MyRankI.le.0)) THEN
         Wextend=.FALSE.
       ELSE
         Wextend=.TRUE.
       END IF
-      IF (Eexchange.eq.(MyRankI.ge.NtileI(ng))) THEN
+      IF (Eexchange.or.(MyRankI.ge.NtileI(ng))) THEN
         Eextend=.FALSE.
       ELSE
         Eextend=.TRUE.
@@ -303,12 +303,12 @@
 !
 !  Determine extend switches.
 !
-      IF (Sexchange.or.(MyRankJ.le.1)) THEN
+      IF (Sexchange.or.(MyRankJ.le.0)) THEN
         Sextend=.FALSE.
       ELSE
         Sextend=.TRUE.
       END IF
-      IF (Nexchange.eq.(MyRankJ.ge.NtileJ(ng))) THEN
+      IF (Nexchange.or.(MyRankJ.ge.NtileJ(ng))) THEN
         Nextend=.FALSE.
       ELSE
         Nextend=.TRUE.
@@ -684,6 +684,76 @@
       END IF
 !
 !-----------------------------------------------------------------------
+!  Apply gradient boundary condition if the extend switch is on.
+!-----------------------------------------------------------------------
+!
+      IF (Wextend) THEN
+        DO m=1,Nghost
+          i=Istr-m
+          DO j=Jmin,Jmax
+            A(i,j)=A(Istr,j)
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,Nghost
+            i=Istr-m
+            DO j=Jmin,Jmax
+              B(i,j)=B(Istr,j)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,Nghost
+            i=Istr-m
+            DO j=Jmin,Jmax
+              C(i,j)=C(Istr,j)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,Nghost
+            i=Istr-m
+            DO j=Jmin,Jmax
+              D(i,j)=D(Istr,j)
+            END DO
+          END DO
+        END IF
+      END IF
+!
+      IF (Eextend) THEN
+        DO m=1,Nghost
+          i=Iend+m
+          DO j=Jmin,Jmax
+            A(i,j)=A(Iend,j)
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,Nghost
+            i=Iend+m
+            DO j=Jmin,Jmax
+              B(i,j)=B(Iend,j)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,Nghost
+            i=Iend+m
+            DO j=Jmin,Jmax
+              C(i,j)=C(Iend,j)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,Nghost
+            i=Iend+m
+            DO j=Jmin,Jmax
+              D(i,j)=D(Iend,j)
+            END DO
+          END DO
+        END IF
+      END IF
+!
+!-----------------------------------------------------------------------
 !  Pack Southern and Northern tile boundary data including ghost-points.
 !-----------------------------------------------------------------------
 !
@@ -926,71 +996,6 @@
 !  Apply gradient boundary condition if the extend switch is on.
 !-----------------------------------------------------------------------
 !
-      IF (Wextend) THEN
-        DO m=1,Nghost
-          i=Istr-m
-          DO j=Jmin,Jmax
-            A(i,j)=A(Istr,j)
-          END DO
-        END DO
-        IF (PRESENT(B)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO j=Jmin,Jmax
-              B(i,j)=B(Istr,j)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(C)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO j=Jmin,Jmax
-              C(i,j)=C(Istr,j)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(D)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO j=Jmin,Jmax
-              D(i,j)=D(Istr,j)
-            END DO
-          END DO
-        END IF
-      END IF
-!
-      IF (Eextend) THEN
-        DO m=1,Nghost
-          i=Iend+m
-          DO j=Jmin,Jmax
-            A(i,j)=A(Iend,j)
-          END DO
-        END DO
-        IF (PRESENT(B)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO j=Jmin,Jmax
-              B(i,j)=B(Iend,j)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(C)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO j=Jmin,Jmax
-              C(i,j)=C(Iend,j)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(D)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO j=Jmin,Jmax
-              D(i,j)=D(Iend,j)
-            END DO
-          END DO
-        END IF
-      END IF
 !
       IF (Sextend) THEN
         DO m=1,Nghost
@@ -1438,6 +1443,76 @@
       END IF
 !
 !-----------------------------------------------------------------------
+!  Apply gradient boundary condition if the extend switch is on.
+!-----------------------------------------------------------------------
+!
+      IF (Wextend) THEN
+        DO m=1,Nghost
+          i=Istr-m
+          DO j=Jmin,Jmax
+            A(i,j)=A(Istr,j)
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,Nghost
+            i=Istr-m
+            DO j=Jmin,Jmax
+              B(i,j)=B(Istr,j)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,Nghost
+            i=Istr-m
+            DO j=Jmin,Jmax
+              C(i,j)=C(Istr,j)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,Nghost
+            i=Istr-m
+            DO j=Jmin,Jmax
+              D(i,j)=D(Istr,j)
+            END DO
+          END DO
+        END IF
+      END IF
+!
+      IF (Eextend) THEN
+        DO m=1,Nghost
+          i=Iend+m
+          DO j=Jmin,Jmax
+            A(i,j)=A(Iend,j)
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,Nghost
+            i=Iend+m
+            DO j=Jmin,Jmax
+              B(i,j)=B(Iend,j)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,Nghost
+            i=Iend+m
+            DO j=Jmin,Jmax
+              C(i,j)=C(Iend,j)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,Nghost
+            i=Iend+m
+            DO j=Jmin,Jmax
+              D(i,j)=D(Iend,j)
+            END DO
+          END DO
+        END IF
+      END IF
+!
+!-----------------------------------------------------------------------
 !  Pack Southern and Northern tile boundary data including ghost-points.
 !-----------------------------------------------------------------------
 !
@@ -1679,72 +1754,6 @@
 !-----------------------------------------------------------------------
 !  Apply gradient boundary condition if the extend switch is on.
 !-----------------------------------------------------------------------
-!
-      IF (Wextend) THEN
-        DO m=1,Nghost
-          i=Istr-m
-          DO j=Jmin,Jmax
-            A(i,j)=A(Istr,j)
-          END DO
-        END DO
-        IF (PRESENT(B)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO j=Jmin,Jmax
-              B(i,j)=B(Istr,j)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(C)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO j=Jmin,Jmax
-              C(i,j)=C(Istr,j)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(D)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO j=Jmin,Jmax
-              D(i,j)=D(Istr,j)
-            END DO
-          END DO
-        END IF
-      END IF
-!
-      IF (Eextend) THEN
-        DO m=1,Nghost
-          i=Iend+m
-          DO j=Jmin,Jmax
-            A(i,j)=A(Iend,j)
-          END DO
-        END DO
-        IF (PRESENT(B)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO j=Jmin,Jmax
-              B(i,j)=B(Iend,j)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(C)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO j=Jmin,Jmax
-              C(i,j)=C(Iend,j)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(D)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO j=Jmin,Jmax
-              D(i,j)=D(Iend,j)
-            END DO
-          END DO
-        END IF
-      END IF
 !
       IF (Sextend) THEN
         DO m=1,Nghost
@@ -2141,6 +2150,60 @@
       END IF
 !
 !-----------------------------------------------------------------------
+!  Apply gradient boundary condition if the extend switch is on.
+!-----------------------------------------------------------------------
+!
+      IF (Wextend) THEN
+        DO m=1,Nghost
+          i=Istr-m
+          A(i)=A(Istr)
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,Nghost
+            i=Istr-m
+            B(i)=B(Istr)
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,Nghost
+            i=Istr-m
+            C(i)=C(Istr)
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,Nghost
+            i=Istr-m
+            D(i)=D(Istr)
+          END DO
+        END IF
+      END IF
+!
+      IF (Eextend) THEN
+        DO m=1,Nghost
+          i=Iend+m
+          A(i)=A(Iend)
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,Nghost
+            i=Iend+m
+            B(i)=B(Iend)
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,Nghost
+            i=Iend+m
+            C(i)=C(Iend)
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,Nghost
+            i=Iend+m
+            D(i)=D(Iend)
+          END DO
+        END IF
+      END IF
+!
+!-----------------------------------------------------------------------
 !  Pack Southern and Northern tile boundary data including ghost-points.
 !-----------------------------------------------------------------------
 !
@@ -2326,56 +2389,6 @@
 !-----------------------------------------------------------------------
 !  Apply gradient boundary condition if the extend switch is on.
 !-----------------------------------------------------------------------
-!
-      IF (Wextend) THEN
-        DO m=1,Nghost
-          i=Istr-m
-          A(i)=A(Istr)
-        END DO
-        IF (PRESENT(B)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            B(i)=B(Istr)
-          END DO
-        END IF
-        IF (PRESENT(C)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            C(i)=C(Istr)
-          END DO
-        END IF
-        IF (PRESENT(D)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            D(i)=D(Istr)
-          END DO
-        END IF
-      END IF
-!
-      IF (Eextend) THEN
-        DO m=1,Nghost
-          i=Iend+m
-          A(i)=A(Iend)
-        END DO
-        IF (PRESENT(B)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            B(i)=B(Iend)
-          END DO
-        END IF
-        IF (PRESENT(C)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            C(i)=C(Iend)
-          END DO
-        END IF
-        IF (PRESENT(D)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            D(i)=D(Iend)
-          END DO
-        END IF
-      END IF
 !
       IF (Sextend) THEN
         DO m=1,Nghost
@@ -2860,6 +2873,92 @@
       END IF
 !
 !-----------------------------------------------------------------------
+!  Apply gradient boundary condition if the extend switch is on.
+!-----------------------------------------------------------------------
+!
+      IF (Wextend) THEN
+        DO m=1,Nghost
+          i=Istr-m
+          DO k=LBk,UBk
+            DO j=Jmin,Jmax
+              A(i,j,k)=A(Istr,j,k)
+            END DO
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,Nghost
+            i=Istr-m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                B(i,j,k)=B(Istr,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,Nghost
+            i=Istr-m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                C(i,j,k)=C(Istr,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,Nghost
+            i=Istr-m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                D(i,j,k)=D(Istr,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+      END IF
+!
+      IF (Eextend) THEN
+        DO m=1,Nghost
+          i=Iend+m
+          DO k=LBk,UBk
+            DO j=Jmin,Jmax
+              A(i,j,k)=A(Iend,j,k)
+            END DO
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,Nghost
+            i=Iend+m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                B(i,j,k)=B(Iend,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,Nghost
+            i=Iend+m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                C(i,j,k)=C(Iend,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,Nghost
+            i=Iend+m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                D(i,j,k)=D(Iend,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+      END IF
+!
+!-----------------------------------------------------------------------
 !  Pack Southern and Northern tile boundary data including ghost-points.
 !-----------------------------------------------------------------------
 !
@@ -3149,88 +3248,6 @@
 !-----------------------------------------------------------------------
 !  Apply gradient boundary condition if the extend switch is on.
 !-----------------------------------------------------------------------
-!
-      IF (Wextend) THEN
-        DO m=1,Nghost
-          i=Istr-m
-          DO k=LBk,UBk
-            DO j=Jmin,Jmax
-              A(i,j,k)=A(Istr,j,k)
-            END DO
-          END DO
-        END DO
-        IF (PRESENT(B)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO k=LBk,UBk
-              DO j=Jmin,Jmax
-                B(i,j,k)=B(Istr,j,k)
-              END DO
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(C)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO k=LBk,UBk
-              DO j=Jmin,Jmax
-                C(i,j,k)=C(Istr,j,k)
-              END DO
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(D)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO k=LBk,UBk
-              DO j=Jmin,Jmax
-                D(i,j,k)=D(Istr,j,k)
-              END DO
-            END DO
-          END DO
-        END IF
-      END IF
-!
-      IF (Eextend) THEN
-        DO m=1,Nghost
-          i=Iend+m
-          DO k=LBk,UBk
-            DO j=Jmin,Jmax
-              A(i,j,k)=A(Iend,j,k)
-            END DO
-          END DO
-        END DO
-        IF (PRESENT(B)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO k=LBk,UBk
-              DO j=Jmin,Jmax
-                B(i,j,k)=B(Iend,j,k)
-              END DO
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(C)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO k=LBk,UBk
-              DO j=Jmin,Jmax
-                C(i,j,k)=C(Iend,j,k)
-              END DO
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(D)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO k=LBk,UBk
-              DO j=Jmin,Jmax
-                D(i,j,k)=D(Iend,j,k)
-              END DO
-            END DO
-          END DO
-        END IF
-      END IF
 !
       IF (Sextend) THEN
         DO m=1,Nghost
@@ -3749,6 +3766,92 @@
       END IF
 !
 !-----------------------------------------------------------------------
+!  Apply gradient boundary condition if the extend switch is on.
+!-----------------------------------------------------------------------
+!
+      IF (Wextend) THEN
+        DO m=1,Nghost
+          i=Istr-m
+          DO k=LBk,UBk
+            DO j=Jmin,Jmax
+              A(i,j,k)=A(Istr,j,k)
+            END DO
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,Nghost
+            i=Istr-m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                B(i,j,k)=B(Istr,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,Nghost
+            i=Istr-m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                C(i,j,k)=C(Istr,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,Nghost
+            i=Istr-m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                D(i,j,k)=D(Istr,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+      END IF
+!
+      IF (Eextend) THEN
+        DO m=1,Nghost
+          i=Iend+m
+          DO k=LBk,UBk
+            DO j=Jmin,Jmax
+              A(i,j,k)=A(Iend,j,k)
+            END DO
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,Nghost
+            i=Iend+m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                B(i,j,k)=B(Iend,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,Nghost
+            i=Iend+m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                C(i,j,k)=C(Iend,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,Nghost
+            i=Iend+m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                D(i,j,k)=D(Iend,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+      END IF
+!
+!-----------------------------------------------------------------------
 !  Pack Southern and Northern tile boundary data including ghost-points.
 !-----------------------------------------------------------------------
 !
@@ -4038,88 +4141,6 @@
 !-----------------------------------------------------------------------
 !  Apply gradient boundary condition if the extend switch is on.
 !-----------------------------------------------------------------------
-!
-      IF (Wextend) THEN
-        DO m=1,Nghost
-          i=Istr-m
-          DO k=LBk,UBk
-            DO j=Jmin,Jmax
-              A(i,j,k)=A(Istr,j,k)
-            END DO
-          END DO
-        END DO
-        IF (PRESENT(B)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO k=LBk,UBk
-              DO j=Jmin,Jmax
-                B(i,j,k)=B(Istr,j,k)
-              END DO
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(C)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO k=LBk,UBk
-              DO j=Jmin,Jmax
-                C(i,j,k)=C(Istr,j,k)
-              END DO
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(D)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO k=LBk,UBk
-              DO j=Jmin,Jmax
-                D(i,j,k)=D(Istr,j,k)
-              END DO
-            END DO
-          END DO
-        END IF
-      END IF
-!
-      IF (Eextend) THEN
-        DO m=1,Nghost
-          i=Iend+m
-          DO k=LBk,UBk
-            DO j=Jmin,Jmax
-              A(i,j,k)=A(Iend,j,k)
-            END DO
-          END DO
-        END DO
-        IF (PRESENT(B)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO k=LBk,UBk
-              DO j=Jmin,Jmax
-                B(i,j,k)=B(Iend,j,k)
-              END DO
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(C)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO k=LBk,UBk
-              DO j=Jmin,Jmax
-                C(i,j,k)=C(Iend,j,k)
-              END DO
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(D)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO k=LBk,UBk
-              DO j=Jmin,Jmax
-                D(i,j,k)=D(Iend,j,k)
-              END DO
-            END DO
-          END DO
-        END IF
-      END IF
 !
       IF (Sextend) THEN
         DO m=1,Nghost
@@ -4587,6 +4608,76 @@
       END IF
 !
 !-----------------------------------------------------------------------
+!  Apply gradient boundary condition if the extend switch is on.
+!-----------------------------------------------------------------------
+!
+      IF (Wextend) THEN
+        DO m=1,Nghost
+          i=Istr-m
+          DO k=LBk,UBk
+            A(i,k)=A(Istr,k)
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,Nghost
+            i=Istr-m
+            DO k=LBk,UBk
+              B(i,k)=B(Istr,k)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,Nghost
+            i=Istr-m
+            DO k=LBk,UBk
+              C(i,k)=C(Istr,k)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,Nghost
+            i=Istr-m
+            DO k=LBk,UBk
+              D(i,k)=D(Istr,k)
+            END DO
+          END DO
+        END IF
+      END IF
+!
+      IF (Eextend) THEN
+        DO m=1,Nghost
+          i=Iend+m
+          DO k=LBk,UBk
+            A(i,k)=A(Iend,k)
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,Nghost
+            i=Iend+m
+            DO k=LBk,UBk
+              B(i,k)=B(Iend,k)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,Nghost
+            i=Iend+m
+            DO k=LBk,UBk
+              C(i,k)=C(Iend,k)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,Nghost
+            i=Iend+m
+            DO k=LBk,UBk
+              D(i,k)=D(Iend,k)
+            END DO
+          END DO
+        END IF
+      END IF
+!
+!-----------------------------------------------------------------------
 !  Pack Southern and Northern tile boundary data including ghost-points.
 !-----------------------------------------------------------------------
 !
@@ -4828,72 +4919,6 @@
 !-----------------------------------------------------------------------
 !  Apply gradient boundary condition if the extend switch is on.
 !-----------------------------------------------------------------------
-!
-      IF (Wextend) THEN
-        DO m=1,Nghost
-          i=Istr-m
-          DO k=LBk,UBk
-            A(i,k)=A(Istr,k)
-          END DO
-        END DO
-        IF (PRESENT(B)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO k=LBk,UBk
-              B(i,k)=B(Istr,k)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(C)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO k=LBk,UBk
-              C(i,k)=C(Istr,k)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(D)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO k=LBk,UBk
-              D(i,k)=D(Istr,k)
-            END DO
-          END DO
-        END IF
-      END IF
-!
-      IF (Eextend) THEN
-        DO m=1,Nghost
-          i=Iend+m
-          DO k=LBk,UBk
-            A(i,k)=A(Iend,k)
-          END DO
-        END DO
-        IF (PRESENT(B)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO k=LBk,UBk
-              B(i,k)=B(Iend,k)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(C)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO k=LBk,UBk
-              C(i,k)=C(Iend,k)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(D)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO k=LBk,UBk
-              D(i,k)=D(Iend,k)
-            END DO
-          END DO
-        END IF
-      END IF
 !
       IF (Sextend) THEN
         DO m=1,Nghost
@@ -5378,6 +5403,84 @@
       END IF
 !
 !-----------------------------------------------------------------------
+!  Apply gradient boundary condition if the extend switch is on.
+!-----------------------------------------------------------------------
+!
+      IF (Wextend) THEN
+        DO m=1,Nghost
+          i=Istr-m
+          DO l=LBt,UBt
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                A(i,j,k,l)=A(Istr,j,k,l)
+              END DO
+            END DO
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,Nghost
+            i=Istr-m
+            DO l=LBt,UBt
+              DO k=LBk,UBk
+                DO j=Jmin,Jmax
+                  B(i,j,k,l)=B(Istr,j,k,l)
+                END DO
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,Nghost
+            i=Istr-m
+            DO l=LBt,UBt
+              DO k=LBk,UBk
+                DO j=Jmin,Jmax
+                  C(i,j,k,l)=C(Istr,j,k,l)
+                END DO
+              END DO
+            END DO
+          END DO
+        END IF
+      END IF
+!
+      IF (Eextend) THEN
+        DO m=1,Nghost
+          i=Iend+m
+          DO l=LBt,UBt
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                A(i,j,k,l)=A(Iend,j,k,l)
+              END DO
+            END DO
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,Nghost
+            i=Iend+m
+            DO l=LBt,UBt
+              DO k=LBk,UBk
+                DO j=Jmin,Jmax
+                  B(i,j,k,l)=B(Iend,j,k,l)
+                END DO
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,Nghost
+            i=Iend+m
+            DO l=LBt,UBt
+              DO k=LBk,UBk
+                DO j=Jmin,Jmax
+                  C(i,j,k,l)=C(Iend,j,k,l)
+                END DO
+              END DO
+            END DO
+          END DO
+        END IF
+      END IF
+!
+!-----------------------------------------------------------------------
 !  Pack Southern and Northern tile boundary data including ghost-points.
 !-----------------------------------------------------------------------
 !
@@ -5645,80 +5748,6 @@
 !-----------------------------------------------------------------------
 !  Apply gradient boundary condition if the extend switch is on.
 !-----------------------------------------------------------------------
-!
-      IF (Wextend) THEN
-        DO m=1,Nghost
-          i=Istr-m
-          DO l=LBt,UBt
-            DO k=LBk,UBk
-              DO j=Jmin,Jmax
-                A(i,j,k,l)=A(Istr,j,k,l)
-              END DO
-            END DO
-          END DO
-        END DO
-        IF (PRESENT(B)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO l=LBt,UBt
-              DO k=LBk,UBk
-                DO j=Jmin,Jmax
-                  B(i,j,k,l)=B(Istr,j,k,l)
-                END DO
-              END DO
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(C)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO l=LBt,UBt
-              DO k=LBk,UBk
-                DO j=Jmin,Jmax
-                  C(i,j,k,l)=C(Istr,j,k,l)
-                END DO
-              END DO
-            END DO
-          END DO
-        END IF
-      END IF
-!
-      IF (Eextend) THEN
-        DO m=1,Nghost
-          i=Iend+m
-          DO l=LBt,UBt
-            DO k=LBk,UBk
-              DO j=Jmin,Jmax
-                A(i,j,k,l)=A(Iend,j,k,l)
-              END DO
-            END DO
-          END DO
-        END DO
-        IF (PRESENT(B)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO l=LBt,UBt
-              DO k=LBk,UBk
-                DO j=Jmin,Jmax
-                  B(i,j,k,l)=B(Iend,j,k,l)
-                END DO
-              END DO
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(C)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO l=LBt,UBt
-              DO k=LBk,UBk
-                DO j=Jmin,Jmax
-                  C(i,j,k,l)=C(Iend,j,k,l)
-                END DO
-              END DO
-            END DO
-          END DO
-        END IF
-      END IF
 !
       IF (Sextend) THEN
         DO m=1,Nghost
@@ -6545,142 +6574,6 @@
           END DO
         END IF
       END IF
-!
-!-----------------------------------------------------------------------
-!  Apply gradient boundary condition if the extend switch is on.
-!-----------------------------------------------------------------------
-!
-      IF (Wextend) THEN
-        DO m=1,Nghost
-          i=Istr-m
-          DO j=Jmin,Jmax
-            ad_A(i,j)=ad_A(Istr,j)
-          END DO
-        END DO
-        IF (PRESENT(ad_B)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO j=Jmin,Jmax
-              ad_B(i,j)=ad_B(Istr,j)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_C)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO j=Jmin,Jmax
-              ad_C(i,j)=ad_C(Istr,j)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_D)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO j=Jmin,Jmax
-              ad_D(i,j)=ad_D(Istr,j)
-            END DO
-          END DO
-        END IF
-      END IF
-!
-      IF (Eextend) THEN
-        DO m=1,Nghost
-          i=Iend+m
-          DO j=Jmin,Jmax
-            ad_A(i,j)=ad_A(Iend,j)
-          END DO
-        END DO
-        IF (PRESENT(ad_B)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO j=Jmin,Jmax
-              ad_B(i,j)=ad_B(Iend,j)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_C)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO j=Jmin,Jmax
-              ad_C(i,j)=ad_C(Iend,j)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_D)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO j=Jmin,Jmax
-              ad_D(i,j)=ad_D(Iend,j)
-            END DO
-          END DO
-        END IF
-      END IF
-!
-      IF (Sextend) THEN
-        DO m=1,Nghost
-          j=Jstr-m
-          DO i=Imin,Imax
-            ad_A(i,j)=ad_A(i,Jstr)
-          END DO
-        END DO
-        IF (PRESENT(ad_B)) THEN
-          DO m=1,Nghost
-            j=Jstr-m
-            DO i=Imin,Imax
-              ad_B(i,j)=ad_B(i,Jstr)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_C)) THEN
-          DO m=1,Nghost
-            j=Jstr-m
-            DO i=Imin,Imax
-              ad_C(i,j)=ad_C(i,Jstr)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_D)) THEN
-          DO m=1,Nghost
-            j=Jstr-m
-            DO i=Imin,Imax
-              ad_D(i,j)=ad_D(i,Jstr)
-            END DO
-          END DO
-        END IF
-      END IF
-!
-      IF (Nextend) THEN
-        DO m=1,Nghost
-          j=Jend+m
-          DO i=Imin,Imax
-            ad_A(i,j)=ad_A(i,Jend)
-          END DO
-        END DO
-        IF (PRESENT(ad_B)) THEN
-          DO m=1,Nghost
-            j=Jend+m
-            DO i=Imin,Imax
-              ad_B(i,j)=ad_B(i,Jend)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_C)) THEN
-          DO m=1,Nghost
-            j=Jend+m
-            DO i=Imin,Imax
-              ad_C(i,j)=ad_C(i,Jend)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_D)) THEN
-          DO m=1,Nghost
-            j=Jend+m
-            DO i=Imin,Imax
-              ad_D(i,j)=ad_D(i,Jend)
-            END DO
-          END DO
-        END IF
-      END IF
 
 #  ifdef PROFILE
 !
@@ -7322,142 +7215,6 @@
 !^
             ad_D(i)=ad_D(i)+sendE(jcE)
             sendE(jcE)=0.0_r8
-          END DO
-        END IF
-      END IF
-!
-!-----------------------------------------------------------------------
-!  Apply gradient boundary condition if the extend switch is on.
-!-----------------------------------------------------------------------
-!
-      IF (Wextend) THEN
-        DO m=1,Nghost
-          i=Istr-m
-          DO j=Jmin,Jmax
-            ad_A(i,j)=ad_A(Istr,j)
-          END DO
-        END DO
-        IF (PRESENT(ad_B)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO j=Jmin,Jmax
-              ad_B(i,j)=ad_B(Istr,j)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_C)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO j=Jmin,Jmax
-              ad_C(i,j)=ad_C(Istr,j)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_D)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO j=Jmin,Jmax
-              ad_D(i,j)=ad_D(Istr,j)
-            END DO
-          END DO
-        END IF
-      END IF
-!
-      IF (Eextend) THEN
-        DO m=1,Nghost
-          i=Iend+m
-          DO j=Jmin,Jmax
-            ad_A(i,j)=ad_A(Iend,j)
-          END DO
-        END DO
-        IF (PRESENT(ad_B)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO j=Jmin,Jmax
-              ad_B(i,j)=ad_B(Iend,j)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_C)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO j=Jmin,Jmax
-              ad_C(i,j)=ad_C(Iend,j)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_D)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO j=Jmin,Jmax
-              ad_D(i,j)=ad_D(Iend,j)
-            END DO
-          END DO
-        END IF
-      END IF
-!
-      IF (Sextend) THEN
-        DO m=1,Nghost
-          j=Jstr-m
-          DO i=Imin,Imax
-            ad_A(i,j)=ad_A(i,Jstr)
-          END DO
-        END DO
-        IF (PRESENT(ad_B)) THEN
-          DO m=1,Nghost
-            j=Jstr-m
-            DO i=Imin,Imax
-              ad_B(i,j)=ad_B(i,Jstr)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_C)) THEN
-          DO m=1,Nghost
-            j=Jstr-m
-            DO i=Imin,Imax
-              ad_C(i,j)=ad_C(i,Jstr)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_D)) THEN
-          DO m=1,Nghost
-            j=Jstr-m
-            DO i=Imin,Imax
-              ad_D(i,j)=ad_D(i,Jstr)
-            END DO
-          END DO
-        END IF
-      END IF
-!
-      IF (Nextend) THEN
-        DO m=1,Nghost
-          j=Jend+m
-          DO i=Imin,Imax
-            ad_A(i,j)=ad_A(i,Jend)
-          END DO
-        END DO
-        IF (PRESENT(ad_B)) THEN
-          DO m=1,Nghost
-            j=Jend+m
-            DO i=Imin,Imax
-              ad_B(i,j)=ad_B(i,Jend)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_C)) THEN
-          DO m=1,Nghost
-            j=Jend+m
-            DO i=Imin,Imax
-              ad_C(i,j)=ad_C(i,Jend)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_D)) THEN
-          DO m=1,Nghost
-            j=Jend+m
-            DO i=Imin,Imax
-              ad_D(i,j)=ad_D(i,Jend)
-            END DO
           END DO
         END IF
       END IF
@@ -8315,174 +8072,6 @@
           END DO
         END IF
       END IF
-!
-!-----------------------------------------------------------------------
-!  Apply gradient boundary condition if the extend switch is on.
-!-----------------------------------------------------------------------
-!
-      IF (Wextend) THEN
-        DO m=1,Nghost
-          i=Istr-m
-          DO k=LBk,UBk
-            DO j=Jmin,Jmax
-              ad_A(i,j,k)=ad_A(Istr,j,k)
-            END DO
-          END DO
-        END DO
-        IF (PRESENT(ad_B)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO k=LBk,UBk
-              DO j=Jmin,Jmax
-                ad_B(i,j,k)=ad_B(Istr,j,k)
-              END DO
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_C)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO k=LBk,UBk
-              DO j=Jmin,Jmax
-                ad_C(i,j,k)=ad_C(Istr,j,k)
-              END DO
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_D)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO k=LBk,UBk
-              DO j=Jmin,Jmax
-                ad_D(i,j,k)=ad_D(Istr,j,k)
-              END DO
-            END DO
-          END DO
-        END IF
-      END IF
-!
-      IF (Eextend) THEN
-        DO m=1,Nghost
-          i=Iend+m
-          DO k=LBk,UBk
-            DO j=Jmin,Jmax
-              ad_A(i,j,k)=ad_A(Iend,j,k)
-            END DO
-          END DO
-        END DO
-        IF (PRESENT(ad_B)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO k=LBk,UBk
-              DO j=Jmin,Jmax
-                ad_B(i,j,k)=ad_B(Iend,j,k)
-              END DO
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_C)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO k=LBk,UBk
-              DO j=Jmin,Jmax
-                ad_C(i,j,k)=ad_C(Iend,j,k)
-              END DO
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_D)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO k=LBk,UBk
-              DO j=Jmin,Jmax
-                ad_D(i,j,k)=ad_D(Iend,j,k)
-              END DO
-            END DO
-          END DO
-        END IF
-      END IF
-!
-      IF (Sextend) THEN
-        DO m=1,Nghost
-          j=Jstr-m
-          DO k=LBk,UBk
-            DO i=Imin,Imax
-              ad_A(i,j,k)=ad_A(i,Jstr,k)
-            END DO
-          END DO
-        END DO
-        IF (PRESENT(ad_B)) THEN
-          DO m=1,Nghost
-            j=Jstr-m
-            DO k=LBk,UBk
-              DO i=Imin,Imax
-                ad_B(i,j,k)=ad_B(i,Jstr,k)
-              END DO
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_C)) THEN
-          DO m=1,Nghost
-            j=Jstr-m
-            DO k=LBk,UBk
-              DO i=Imin,Imax
-                ad_C(i,j,k)=ad_C(i,Jstr,k)
-              END DO
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_D)) THEN
-          DO m=1,Nghost
-            j=Jstr-m
-            DO k=LBk,UBk
-              DO i=Imin,Imax
-                ad_D(i,j,k)=ad_D(i,Jstr,k)
-              END DO
-            END DO
-          END DO
-        END IF
-      END IF
-!
-      IF (Nextend) THEN
-        DO m=1,Nghost
-          j=Jend+m
-          DO k=LBk,UBk
-            DO i=Imin,Imax
-              ad_A(i,j,k)=ad_A(i,Jend,k)
-            END DO
-          END DO
-        END DO
-        IF (PRESENT(ad_B)) THEN
-          DO m=1,Nghost
-            j=Jend+m
-            DO k=LBk,UBk
-              DO i=Imin,Imax
-                ad_B(i,j,k)=ad_B(i,Jend,k)
-              END DO
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_C)) THEN
-          DO m=1,Nghost
-            j=Jend+m
-            DO k=LBk,UBk
-              DO i=Imin,Imax
-                ad_C(i,j,k)=ad_C(i,Jend,k)
-              END DO
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_D)) THEN
-          DO m=1,Nghost
-            j=Jend+m
-            DO k=LBk,UBk
-              DO i=Imin,Imax
-                ad_D(i,j,k)=ad_D(i,Jend,k)
-              END DO
-            END DO
-          END DO
-        END IF
-      END IF
 
 #  ifdef PROFILE
 !
@@ -9234,142 +8823,6 @@
 !^
               ad_D(i,k)=ad_D(i,k)+sendE(jkE)
               sendE(jkE)=0.0_r8
-            END DO
-          END DO
-        END IF
-      END IF
-!
-!-----------------------------------------------------------------------
-!  Apply gradient boundary condition if the extend switch is on.
-!-----------------------------------------------------------------------
-!
-      IF (Wextend) THEN
-        DO m=1,Nghost
-          i=Istr-m
-          DO k=LBk,UBk
-            ad_A(i,k)=ad_A(Istr,k)
-          END DO
-        END DO
-        IF (PRESENT(ad_B)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO k=LBk,UBk
-              ad_B(i,k)=ad_B(Istr,k)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_C)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO k=LBk,UBk
-              ad_C(i,k)=ad_C(Istr,k)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_D)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO k=LBk,UBk
-              ad_D(i,k)=ad_D(Istr,k)
-            END DO
-          END DO
-        END IF
-      END IF
-!
-      IF (Eextend) THEN
-        DO m=1,Nghost
-          i=Iend+m
-          DO k=LBk,UBk
-            ad_A(i,k)=ad_A(Iend,k)
-          END DO
-        END DO
-        IF (PRESENT(ad_B)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO k=LBk,UBk
-              ad_B(i,k)=ad_B(Iend,k)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_C)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO k=LBk,UBk
-              ad_C(i,k)=ad_C(Iend,k)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_D)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO k=LBk,UBk
-              ad_D(i,k)=ad_D(Iend,k)
-            END DO
-          END DO
-        END IF
-      END IF
-!
-      IF (Sextend) THEN
-        DO m=1,Nghost
-          j=Jstr-m
-          DO k=LBk,UBk
-            ad_A(j,k)=ad_A(Jstr,k)
-          END DO
-        END DO
-        IF (PRESENT(ad_B)) THEN
-          DO m=1,Nghost
-            j=Jstr-m
-            DO k=LBk,UBk
-              ad_B(j,k)=ad_B(Jstr,k)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_C)) THEN
-          DO m=1,Nghost
-            j=Jstr-m
-            DO k=LBk,UBk
-              ad_C(j,k)=ad_C(Jstr,k)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_D)) THEN
-          DO m=1,Nghost
-            j=Jstr-m
-            DO k=LBk,UBk
-              ad_D(j,k)=ad_D(Jstr,k)
-            END DO
-          END DO
-        END IF
-      END IF
-!
-      IF (Nextend) THEN
-        DO m=1,Nghost
-          j=Jend+m
-          DO k=LBk,UBk
-            ad_A(j,k)=ad_A(Jend,k)
-          END DO
-        END DO
-        IF (PRESENT(ad_B)) THEN
-          DO m=1,Nghost
-            j=Jend+m
-            DO k=LBk,UBk
-              ad_B(j,k)=ad_B(Jend,k)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_C)) THEN
-          DO m=1,Nghost
-            j=Jend+m
-            DO k=LBk,UBk
-              ad_C(j,k)=ad_C(Jend,k)
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_D)) THEN
-          DO m=1,Nghost
-            j=Jend+m
-            DO k=LBk,UBk
-              ad_D(j,k)=ad_D(Jend,k)
             END DO
           END DO
         END IF
@@ -10158,158 +9611,6 @@
 !^
                   ad_C(i,j,k,l)=ad_C(i,j,k,l)+sendE(jkE)
                   sendE(jkE)=0.0_r8
-                END DO
-              END DO
-            END DO
-          END DO
-        END IF
-      END IF
-!
-!-----------------------------------------------------------------------
-!  Apply gradient boundary condition if the extend switch is on.
-!-----------------------------------------------------------------------
-!
-      IF (Wextend) THEN
-        DO m=1,Nghost
-          i=Istr-m
-          DO l=LBt,UBt
-            DO k=LBk,UBk
-              DO j=Jmin,Jmax
-                ad_A(i,j,k,l)=ad_A(Istr,j,k,l)
-              END DO
-            END DO
-          END DO
-        END DO
-        IF (PRESENT(ad_B)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO l=LBt,UBt
-              DO k=LBk,UBk
-                DO j=Jmin,Jmax
-                  ad_B(i,j,k,l)=ad_B(Istr,j,k,l)
-                END DO
-              END DO
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_C)) THEN
-          DO m=1,Nghost
-            i=Istr-m
-            DO l=LBt,UBt
-              DO k=LBk,UBk
-                DO j=Jmin,Jmax
-                  ad_C(i,j,k,l)=ad_C(Istr,j,k,l)
-                END DO
-              END DO
-            END DO
-          END DO
-        END IF
-      END IF
-!
-      IF (Eextend) THEN
-        DO m=1,Nghost
-          i=Iend+m
-          DO l=LBt,UBt
-            DO k=LBk,UBk
-              DO j=Jmin,Jmax
-                ad_A(i,j,k,l)=ad_A(Iend,j,k,l)
-              END DO
-            END DO
-          END DO
-        END DO
-        IF (PRESENT(ad_B)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO l=LBt,UBt
-              DO k=LBk,UBk
-                DO j=Jmin,Jmax
-                  ad_B(i,j,k,l)=ad_B(Iend,j,k,l)
-                END DO
-              END DO
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_C)) THEN
-          DO m=1,Nghost
-            i=Iend+m
-            DO l=LBt,UBt
-              DO k=LBk,UBk
-                DO j=Jmin,Jmax
-                  ad_C(i,j,k,l)=ad_C(Iend,j,k,l)
-                END DO
-              END DO
-            END DO
-          END DO
-        END IF
-      END IF
-!
-      IF (Sextend) THEN
-        DO m=1,Nghost
-          j=Jstr-m
-          DO l=LBt,UBt
-            DO k=LBk,UBk
-              DO i=Imin,Imax
-                ad_A(i,j,k,l)=ad_A(i,Jstr,k,l)
-              END DO
-            END DO
-          END DO
-        END DO
-        IF (PRESENT(ad_B)) THEN
-          DO m=1,Nghost
-            j=Jstr-m
-            DO l=LBt,UBt
-              DO k=LBk,UBk
-                DO i=Imin,Imax
-                  ad_B(i,j,k,l)=ad_B(i,Jstr,k,l)
-                END DO
-              END DO
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_C)) THEN
-          DO m=1,Nghost
-            j=Jstr-m
-            DO l=LBt,UBt
-              DO k=LBk,UBk
-                DO i=Imin,Imax
-                  ad_C(i,j,k,l)=ad_C(i,Jstr,k,l)
-                END DO
-              END DO
-            END DO
-          END DO
-        END IF
-      END IF
-!
-      IF (Nextend) THEN
-        DO m=1,Nghost
-          j=Jend+m
-          DO l=LBt,UBt
-            DO k=LBk,UBk
-              DO i=Imin,Imax
-                ad_A(i,j,k,l)=ad_A(i,Jend,k,l)
-              END DO
-            END DO
-          END DO
-        END DO
-        IF (PRESENT(ad_B)) THEN
-          DO m=1,Nghost
-            j=Jend+m
-            DO l=LBt,UBt
-              DO k=LBk,UBk
-                DO i=Imin,Imax
-                  ad_B(i,j,k,l)=ad_B(i,Jend,k,l)
-                END DO
-              END DO
-            END DO
-          END DO
-        END IF
-        IF (PRESENT(ad_C)) THEN
-          DO m=1,Nghost
-            j=Jend+m
-            DO l=LBt,UBt
-              DO k=LBk,UBk
-                DO i=Imin,Imax
-                  ad_C(i,j,k,l)=ad_C(i,Jend,k,l)
                 END DO
               END DO
             END DO
