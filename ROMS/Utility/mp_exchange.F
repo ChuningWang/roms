@@ -71,10 +71,17 @@
 !
 !***********************************************************************
       SUBROUTINE tile_neighbors (ng, Nghost, EW_periodic, NS_periodic,  &
+# ifdef TILEMASK
      &                      GrecvW, GsendW, Wtile, Wexchange, Wextend,  &
      &                      GrecvE, GsendE, Etile, Eexchange, Eextend,  &
      &                      GrecvS, GsendS, Stile, Sexchange, Sextend,  &
      &                      GrecvN, GsendN, Ntile, Nexchange, Nextend)
+# else
+     &                           GrecvW, GsendW, Wtile, Wexchange,      &
+     &                           GrecvE, GsendE, Etile, Eexchange,      &
+     &                           GrecvS, GsendS, Stile, Sexchange,      &
+     &                           GrecvN, GsendN, Ntile, Nexchange)
+# endif
 !***********************************************************************
 !
       USE mod_param
@@ -90,8 +97,10 @@
 
       logical, intent(out) :: Wexchange, Eexchange
       logical, intent(out) :: Sexchange, Nexchange
+# ifdef TILEMASK
       logical, intent(out) :: Wextend, Eextend
       logical, intent(out) :: Sextend, Nextend
+# endif
 
       integer, intent(out) :: GrecvW, GsendW, Wtile
       integer, intent(out) :: GrecvE, GsendE, Etile
@@ -214,6 +223,7 @@
       ELSE
         Eexchange=.TRUE.
       END IF
+# ifdef TILEMASK
 !
 !  Determine extend switches.
 !
@@ -227,6 +237,7 @@
       ELSE
         Eextend=.TRUE.
       END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Determine the rank of Southern and Northern tiles.  Then, determine
@@ -300,6 +311,7 @@
       ELSE
         Nexchange=.TRUE.
       END IF
+# ifdef TILEMASK
 !
 !  Determine extend switches.
 !
@@ -313,6 +325,7 @@
       ELSE
         Nextend=.TRUE.
       END IF
+# endif
 
       RETURN
       END SUBROUTINE tile_neighbors
@@ -357,7 +370,9 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
+# ifdef TILEMASK
       logical :: Wextend, Sextend, Eextend, Nextend
+# endif
 !
       integer :: i, icS, icN, ioff, Imin, Imax, Ilen
       integer :: j, jcW, jcE, joff, Jmin, Jmax, Jlen
@@ -406,10 +421,17 @@
      &                                   4*SIZE(SendS))*KIND(A),r8))
 !
       CALL tile_neighbors (ng, Nghost, EW_periodic, NS_periodic,        &
+# ifdef TILEMASK
      &                     GrecvW, GsendW, Wtile, Wexchange, Wextend,   &
      &                     GrecvE, GsendE, Etile, Eexchange, Eextend,   &
      &                     GrecvS, GsendS, Stile, Sexchange, Sextend,   &
      &                     GrecvN, GsendN, Ntile, Nexchange, Nextend)
+# else
+     &                     GrecvW, GsendW, Wtile, Wexchange,            &
+     &                     GrecvE, GsendE, Etile, Eexchange,            &
+     &                     GrecvS, GsendS, Stile, Sexchange,            &
+     &                     GrecvN, GsendN, Ntile, Nexchange)
+# endif
 !
 !  Set communication tags.
 !
@@ -682,6 +704,7 @@
           END DO
         END IF
       END IF
+# ifdef TILEMASK
 !
 !-----------------------------------------------------------------------
 !  Apply gradient boundary condition if the extend switch is on.
@@ -752,6 +775,7 @@
           END DO
         END IF
       END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Pack Southern and Northern tile boundary data including ghost-points.
@@ -991,6 +1015,7 @@
           END DO
         END IF
       END IF
+# ifdef TILEMASK
 !
 !-----------------------------------------------------------------------
 !  Apply gradient boundary condition if the extend switch is on.
@@ -1062,6 +1087,7 @@
           END DO
         END IF
       END IF
+# endif
 
 # ifdef PROFILE
 !
@@ -1116,7 +1142,9 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
+#  ifdef TILEMASK
       logical :: Wextend, Sextend, Eextend, Nextend
+#  endif
 !
       integer :: i, icS, icN, ioff, Imin, Imax, Ilen
       integer :: j, jcW, jcE, joff, Jmin, Jmax, Jlen
@@ -1165,10 +1193,17 @@
      &                                   4*SIZE(SendS))*KIND(A),r8))
 !
       CALL tile_neighbors (ng, Nghost, EW_periodic, NS_periodic,        &
+#  ifdef TILEMASK
      &                     GrecvW, GsendW, Wtile, Wexchange, Wextend,   &
      &                     GrecvE, GsendE, Etile, Eexchange, Eextend,   &
      &                     GrecvS, GsendS, Stile, Sexchange, Sextend,   &
      &                     GrecvN, GsendN, Ntile, Nexchange, Nextend)
+#  else
+     &                     GrecvW, GsendW, Wtile, Wexchange,            &
+     &                     GrecvE, GsendE, Etile, Eexchange,            &
+     &                     GrecvS, GsendS, Stile, Sexchange,            &
+     &                     GrecvN, GsendN, Ntile, Nexchange)
+#  endif
 !
 !  Set communication tags.
 !
@@ -1441,6 +1476,7 @@
           END DO
         END IF
       END IF
+#  ifdef TILEMASK
 !
 !-----------------------------------------------------------------------
 !  Apply gradient boundary condition if the extend switch is on.
@@ -1511,6 +1547,7 @@
           END DO
         END IF
       END IF
+#  endif
 !
 !-----------------------------------------------------------------------
 !  Pack Southern and Northern tile boundary data including ghost-points.
@@ -1750,6 +1787,7 @@
           END DO
         END IF
       END IF
+#  ifdef TILEMASK
 !
 !-----------------------------------------------------------------------
 !  Apply gradient boundary condition if the extend switch is on.
@@ -1820,6 +1858,7 @@
           END DO
         END IF
       END IF
+#  endif
 
 #  ifdef PROFILE
 !
@@ -1874,7 +1913,9 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
+# ifdef TILEMASK
       logical :: Wextend, Sextend, Eextend, Nextend
+# endif
 !
       integer :: i, icS, icN
       integer :: j, jcW, jcE
@@ -1923,10 +1964,17 @@
      &                                   4*SIZE(SendS))*KIND(A),r8))
 !
       CALL tile_neighbors (ng, Nghost, EW_periodic, NS_periodic,        &
+# ifdef TILEMASK
      &                     GrecvW, GsendW, Wtile, Wexchange, Wextend,   &
      &                     GrecvE, GsendE, Etile, Eexchange, Eextend,   &
      &                     GrecvS, GsendS, Stile, Sexchange, Sextend,   &
      &                     GrecvN, GsendN, Ntile, Nexchange, Nextend)
+# else
+     &                     GrecvW, GsendW, Wtile, Wexchange,            &
+     &                     GrecvE, GsendE, Etile, Eexchange,            &
+     &                     GrecvS, GsendS, Stile, Sexchange,            &
+     &                     GrecvN, GsendN, Ntile, Nexchange)
+# endif
 !
 !  Adjust exchange swiches according to boundary edge to process.
 !
@@ -2148,6 +2196,7 @@
           END DO
         END IF
       END IF
+# ifdef TILEMASK
 !
 !-----------------------------------------------------------------------
 !  Apply gradient boundary condition if the extend switch is on.
@@ -2202,6 +2251,7 @@
           END DO
         END IF
       END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Pack Southern and Northern tile boundary data including ghost-points.
@@ -2385,6 +2435,7 @@
           END DO
         END IF
       END IF
+# ifdef TILEMASK
 !
 !-----------------------------------------------------------------------
 !  Apply gradient boundary condition if the extend switch is on.
@@ -2439,6 +2490,7 @@
           END DO
         END IF
       END IF
+# endif
 
 # ifdef PROFILE
 !
@@ -2491,7 +2543,9 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
+# ifdef TILEMASK
       logical :: Wextend, Sextend, Eextend, Nextend
+# endif
 !
       integer :: i, ikS, ikN, ioff, Imin, Imax, Ilen, IKlen
       integer :: j, jkW, jkE, joff, Jmin, Jmax, Jlen, JKlen
@@ -2544,10 +2598,17 @@
      &                                   4*SIZE(SendS))*KIND(A),r8))
 !
       CALL tile_neighbors (ng, Nghost, EW_periodic, NS_periodic,        &
+# ifdef TILEMASK
      &                     GrecvW, GsendW, Wtile, Wexchange, Wextend,   &
      &                     GrecvE, GsendE, Etile, Eexchange, Eextend,   &
      &                     GrecvS, GsendS, Stile, Sexchange, Sextend,   &
      &                     GrecvN, GsendN, Ntile, Nexchange, Nextend)
+# else
+     &                     GrecvW, GsendW, Wtile, Wexchange,            &
+     &                     GrecvE, GsendE, Etile, Eexchange,            &
+     &                     GrecvS, GsendS, Stile, Sexchange,            &
+     &                     GrecvN, GsendN, Ntile, Nexchange)
+# endif
 !
 !  Set communication tags.
 !
@@ -2871,6 +2932,7 @@
           END DO
         END IF
       END IF
+# ifdef TILEMASK
 !
 !-----------------------------------------------------------------------
 !  Apply gradient boundary condition if the extend switch is on.
@@ -2957,6 +3019,7 @@
           END DO
         END IF
       END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Pack Southern and Northern tile boundary data including ghost-points.
@@ -3244,6 +3307,7 @@
           END DO
         END IF
       END IF
+# ifdef TILEMASK
 !
 !-----------------------------------------------------------------------
 !  Apply gradient boundary condition if the extend switch is on.
@@ -3330,6 +3394,7 @@
           END DO
         END IF
       END IF
+# endif
 
 # ifdef PROFILE
 !
@@ -3384,7 +3449,9 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
+#  ifdef TILEMASK
       logical :: Wextend, Sextend, Eextend, Nextend
+#  endif
 !
       integer :: i, ikS, ikN, ioff, Imin, Imax, Ilen, IKlen
       integer :: j, jkW, jkE, joff, Jmin, Jmax, Jlen, JKlen
@@ -3437,10 +3504,17 @@
      &                                   4*SIZE(SendS))*KIND(A),r8))
 !
       CALL tile_neighbors (ng, Nghost, EW_periodic, NS_periodic,        &
+#  ifdef TILEMASK
      &                     GrecvW, GsendW, Wtile, Wexchange, Wextend,   &
      &                     GrecvE, GsendE, Etile, Eexchange, Eextend,   &
      &                     GrecvS, GsendS, Stile, Sexchange, Sextend,   &
      &                     GrecvN, GsendN, Ntile, Nexchange, Nextend)
+#  else
+     &                     GrecvW, GsendW, Wtile, Wexchange,            &
+     &                     GrecvE, GsendE, Etile, Eexchange,            &
+     &                     GrecvS, GsendS, Stile, Sexchange,            &
+     &                     GrecvN, GsendN, Ntile, Nexchange)
+#  endif
 !
 !  Set communication tags.
 !
@@ -3764,6 +3838,7 @@
           END DO
         END IF
       END IF
+#  ifdef TILEMASK
 !
 !-----------------------------------------------------------------------
 !  Apply gradient boundary condition if the extend switch is on.
@@ -3850,6 +3925,7 @@
           END DO
         END IF
       END IF
+#  endif
 !
 !-----------------------------------------------------------------------
 !  Pack Southern and Northern tile boundary data including ghost-points.
@@ -4137,6 +4213,7 @@
           END DO
         END IF
       END IF
+#  ifdef TILEMASK
 !
 !-----------------------------------------------------------------------
 !  Apply gradient boundary condition if the extend switch is on.
@@ -4223,6 +4300,7 @@
           END DO
         END IF
       END IF
+#  endif
 
 #  ifdef PROFILE
 !
@@ -4276,7 +4354,9 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
+# ifdef TILEMASK
       logical :: Wextend, Sextend, Eextend, Nextend
+# endif
 !
       integer :: i, ikS, ikN, ioff
       integer :: j, jkW, jkE, joff
@@ -4324,10 +4404,17 @@
      &                                   4*SIZE(SendS))*KIND(A),r8))
 !
       CALL tile_neighbors (ng, Nghost, EW_periodic, NS_periodic,        &
+# ifdef TILEMASK
      &                     GrecvW, GsendW, Wtile, Wexchange, Wextend,   &
      &                     GrecvE, GsendE, Etile, Eexchange, Eextend,   &
      &                     GrecvS, GsendS, Stile, Sexchange, Sextend,   &
      &                     GrecvN, GsendN, Ntile, Nexchange, Nextend)
+# else
+     &                     GrecvW, GsendW, Wtile, Wexchange,            &
+     &                     GrecvE, GsendE, Etile, Eexchange,            &
+     &                     GrecvS, GsendS, Stile, Sexchange,            &
+     &                     GrecvN, GsendN, Ntile, Nexchange)
+# endif
 !
 !  Adjust exchange swiches according to boundary edge to process.
 !
@@ -4606,6 +4693,7 @@
           END DO
         END IF
       END IF
+# ifdef TILEMASK
 !
 !-----------------------------------------------------------------------
 !  Apply gradient boundary condition if the extend switch is on.
@@ -4676,6 +4764,7 @@
           END DO
         END IF
       END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Pack Southern and Northern tile boundary data including ghost-points.
@@ -4915,6 +5004,7 @@
           END DO
         END IF
       END IF
+# ifdef TILEMASK
 !
 !-----------------------------------------------------------------------
 !  Apply gradient boundary condition if the extend switch is on.
@@ -4985,6 +5075,7 @@
           END DO
         END IF
       END IF
+# endif
 
 # ifdef PROFILE
 !
@@ -5039,7 +5130,9 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
+# ifdef TILEMASK
       logical :: Wextend, Sextend, Eextend, Nextend
+# endif
 !
       integer :: i, ikS, ikN, ioff, Imin, Imax, Ilen, IKlen, IKTlen
       integer :: j, jkW, jkE, joff, Jmin, Jmax, Jlen, JKlen, JKTlen
@@ -5093,10 +5186,17 @@
      &                                   4*SIZE(SendS))*KIND(A),r8))
 !
       CALL tile_neighbors (ng, Nghost, EW_periodic, NS_periodic,        &
+# ifdef TILEMASK
      &                     GrecvW, GsendW, Wtile, Wexchange, Wextend,   &
      &                     GrecvE, GsendE, Etile, Eexchange, Eextend,   &
      &                     GrecvS, GsendS, Stile, Sexchange, Sextend,   &
      &                     GrecvN, GsendN, Ntile, Nexchange, Nextend)
+# else
+     &                     GrecvW, GsendW, Wtile, Wexchange,            &
+     &                     GrecvE, GsendE, Etile, Eexchange,            &
+     &                     GrecvS, GsendS, Stile, Sexchange,            &
+     &                     GrecvN, GsendN, Ntile, Nexchange)
+# endif
 !
 !  Set communication tags.
 !
@@ -5401,6 +5501,7 @@
           END DO
         END IF
       END IF
+# ifdef TILEMASK
 !
 !-----------------------------------------------------------------------
 !  Apply gradient boundary condition if the extend switch is on.
@@ -5479,6 +5580,7 @@
           END DO
         END IF
       END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Pack Southern and Northern tile boundary data including ghost-points.
@@ -5744,6 +5846,7 @@
           END DO
         END IF
       END IF
+# ifdef TILEMASK
 !
 !-----------------------------------------------------------------------
 !  Apply gradient boundary condition if the extend switch is on.
@@ -5822,6 +5925,7 @@
           END DO
         END IF
       END IF
+# endif
 
 # ifdef PROFILE
 !
@@ -5876,7 +5980,6 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
-      logical :: Wextend, Sextend, Eextend, Nextend
 !
       integer :: i, icS, icN, ioff, Imin, Imax, Ilen
       integer :: j, jcW, jcE, joff, Jmin, Jmax, Jlen
@@ -5925,10 +6028,10 @@
      &                                   4*SIZE(SendS))*KIND(ad_A),r8))
 !
       CALL tile_neighbors (ng, Nghost, EW_periodic, NS_periodic,        &
-     &                     GrecvW, GsendW, Wtile, Wexchange, Wextend,   &
-     &                     GrecvE, GsendE, Etile, Eexchange, Eextend,   &
-     &                     GrecvS, GsendS, Stile, Sexchange, Sextend,   &
-     &                     GrecvN, GsendN, Ntile, Nexchange, Nextend)
+     &                     GrecvW, GsendW, Wtile, Wexchange,            &
+     &                     GrecvE, GsendE, Etile, Eexchange,            &
+     &                     GrecvS, GsendS, Stile, Sexchange,            &
+     &                     GrecvN, GsendN, Ntile, Nexchange)
 !
 !  Set communication tags.
 !
@@ -6627,7 +6730,6 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
-      logical :: Wextend, Sextend, Eextend, Nextend
 !
       integer :: i, icS, icN
       integer :: j, jcW, jcE
@@ -6676,10 +6778,10 @@
      &                                   4*SIZE(SendS))*KIND(ad_A),r8))
 !
       CALL tile_neighbors (ng, Nghost, EW_periodic, NS_periodic,        &
-     &                     GrecvW, GsendW, Wtile, Wexchange, Wextend,   &
-     &                     GrecvE, GsendE, Etile, Eexchange, Eextend,   &
-     &                     GrecvS, GsendS, Stile, Sexchange, Sextend,   &
-     &                     GrecvN, GsendN, Ntile, Nexchange, Nextend)
+     &                     GrecvW, GsendW, Wtile, Wexchange,            &
+     &                     GrecvE, GsendE, Etile, Eexchange,            &
+     &                     GrecvS, GsendS, Stile, Sexchange,            &
+     &                     GrecvN, GsendN, Ntile, Nexchange)
 !
 !  Adjust exchange swiches according to boundary edge to process.
 !
@@ -7271,7 +7373,6 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
-      logical :: Wextend, Sextend, Eextend, Nextend
 !
       integer :: i, ikS, ikN, ioff, Imin, Imax, Ilen, IKlen
       integer :: j, jkW, jkE, joff, Jmin, Jmax, Jlen, JKlen
@@ -7324,10 +7425,10 @@
      &                                   4*SIZE(SendS))*KIND(ad_A),r8))
 !
       CALL tile_neighbors (ng, Nghost, EW_periodic, NS_periodic,        &
-     &                     GrecvW, GsendW, Wtile, Wexchange, Wextend,   &
-     &                     GrecvE, GsendE, Etile, Eexchange, Eextend,   &
-     &                     GrecvS, GsendS, Stile, Sexchange, Sextend,   &
-     &                     GrecvN, GsendN, Ntile, Nexchange, Nextend)
+     &                     GrecvW, GsendW, Wtile, Wexchange,            &
+     &                     GrecvE, GsendE, Etile, Eexchange,            &
+     &                     GrecvS, GsendS, Stile, Sexchange,            &
+     &                     GrecvN, GsendN, Ntile, Nexchange)
 !
 !  Set communication tags.
 !
@@ -8124,7 +8225,6 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
-      logical :: Wextend, Sextend, Eextend, Nextend
 !
       integer :: i, ikS, ikN, ioff
       integer :: j, jkW, jkE, joff
@@ -8172,10 +8272,10 @@
      &                                   4*SIZE(SendS))*KIND(ad_A),r8))
 !
       CALL tile_neighbors (ng, Nghost, EW_periodic, NS_periodic,        &
-     &                     GrecvW, GsendW, Wtile, Wexchange, Wextend,   &
-     &                     GrecvE, GsendE, Etile, Eexchange, Eextend,   &
-     &                     GrecvS, GsendS, Stile, Sexchange, Sextend,   &
-     &                     GrecvN, GsendN, Ntile, Nexchange, Nextend)
+     &                     GrecvW, GsendW, Wtile, Wexchange,            &
+     &                     GrecvE, GsendE, Etile, Eexchange,            &
+     &                     GrecvS, GsendS, Stile, Sexchange,            &
+     &                     GrecvN, GsendN, Ntile, Nexchange)
 !
 !  Adjust exchange swiches according to boundary edge to process.
 !
@@ -8880,7 +8980,6 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
-      logical :: Wextend, Sextend, Eextend, Nextend
 !
       integer :: i, ikS, ikN, ioff, Imin, Imax, Ilen, IKlen, IKTlen
       integer :: j, jkW, jkE, joff, Jmin, Jmax, Jlen, JKlen, JKTlen
@@ -8934,10 +9033,10 @@
      &                                   4*SIZE(SendS))*KIND(ad_A),r8))
 !
       CALL tile_neighbors (ng, Nghost, EW_periodic, NS_periodic,        &
-     &                     GrecvW, GsendW, Wtile, Wexchange, Wextend,   &
-     &                     GrecvE, GsendE, Etile, Eexchange, Eextend,   &
-     &                     GrecvS, GsendS, Stile, Sexchange, Sextend,   &
-     &                     GrecvN, GsendN, Ntile, Nexchange, Nextend)
+     &                     GrecvW, GsendW, Wtile, Wexchange,            &
+     &                     GrecvE, GsendE, Etile, Eexchange,            &
+     &                     GrecvS, GsendS, Stile, Sexchange,            &
+     &                     GrecvN, GsendN, Ntile, Nexchange)
 !
 !  Set communication tags.
 !
