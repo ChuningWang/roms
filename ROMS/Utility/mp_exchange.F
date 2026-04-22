@@ -232,7 +232,7 @@
       ELSE
         Wextend=.TRUE.
       END IF
-      IF (Eexchange.or.(MyRankI.ge.NtileI(ng))) THEN
+      IF (Eexchange.or.(MyRankI.ge.NtileI(ng)-1)) THEN
         Eextend=.FALSE.
       ELSE
         Eextend=.TRUE.
@@ -320,7 +320,7 @@
       ELSE
         Sextend=.TRUE.
       END IF
-      IF (Nexchange.or.(MyRankJ.ge.NtileJ(ng))) THEN
+      IF (Nexchange.or.(MyRankJ.ge.NtileJ(ng)-1)) THEN
         Nextend=.FALSE.
       ELSE
         Nextend=.TRUE.
