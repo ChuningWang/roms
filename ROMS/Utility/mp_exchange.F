@@ -711,14 +711,14 @@
 !-----------------------------------------------------------------------
 !
       IF (Wextend) THEN
-        DO m=1,Nghost
+        DO m=GrecvW,1,-1
           i=Istr-m
           DO j=Jmin,Jmax
             A(i,j)=A(Istr,j)
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=GrecvW,1,-1
             i=Istr-m
             DO j=Jmin,Jmax
               B(i,j)=B(Istr,j)
@@ -726,7 +726,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=GrecvW,1,-1
             i=Istr-m
             DO j=Jmin,Jmax
               C(i,j)=C(Istr,j)
@@ -734,7 +734,7 @@
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=GrecvW,1,-1
             i=Istr-m
             DO j=Jmin,Jmax
               D(i,j)=D(Istr,j)
@@ -744,14 +744,14 @@
       END IF
 !
       IF (Eextend) THEN
-        DO m=1,Nghost
+        DO m=1,GrecvE
           i=Iend+m
           DO j=Jmin,Jmax
             A(i,j)=A(Iend,j)
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvE
             i=Iend+m
             DO j=Jmin,Jmax
               B(i,j)=B(Iend,j)
@@ -759,7 +759,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvE
             i=Iend+m
             DO j=Jmin,Jmax
               C(i,j)=C(Iend,j)
@@ -767,7 +767,7 @@
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvE
             i=Iend+m
             DO j=Jmin,Jmax
               D(i,j)=D(Iend,j)
@@ -1023,14 +1023,14 @@
 !
 !
       IF (Sextend) THEN
-        DO m=1,Nghost
+        DO m=GrecvS,1,-1
           j=Jstr-m
           DO i=Imin,Imax
             A(i,j)=A(i,Jstr)
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=GrecvS,1,-1
             j=Jstr-m
             DO i=Imin,Imax
               B(i,j)=B(i,Jstr)
@@ -1038,7 +1038,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=GrecvS,1,-1
             j=Jstr-m
             DO i=Imin,Imax
               C(i,j)=C(i,Jstr)
@@ -1046,7 +1046,7 @@
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=GrecvS,1,-1
             j=Jstr-m
             DO i=Imin,Imax
               D(i,j)=D(i,Jstr)
@@ -1056,14 +1056,14 @@
       END IF
 !
       IF (Nextend) THEN
-        DO m=1,Nghost
+        DO m=1,GrecvN
           j=Jend+m
           DO i=Imin,Imax
             A(i,j)=A(i,Jend)
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvN
             j=Jend+m
             DO i=Imin,Imax
               B(i,j)=B(i,Jend)
@@ -1071,7 +1071,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvN
             j=Jend+m
             DO i=Imin,Imax
               C(i,j)=C(i,Jend)
@@ -1079,7 +1079,7 @@
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvN
             j=Jend+m
             DO i=Imin,Imax
               D(i,j)=D(i,Jend)
@@ -1483,14 +1483,14 @@
 !-----------------------------------------------------------------------
 !
       IF (Wextend) THEN
-        DO m=1,Nghost
+        DO m=GrecvW,1,-1
           i=Istr-m
           DO j=Jmin,Jmax
             A(i,j)=A(Istr,j)
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=GrecvW,1,-1
             i=Istr-m
             DO j=Jmin,Jmax
               B(i,j)=B(Istr,j)
@@ -1498,7 +1498,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=GrecvW,1,-1
             i=Istr-m
             DO j=Jmin,Jmax
               C(i,j)=C(Istr,j)
@@ -1506,7 +1506,7 @@
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=GrecvW,1,-1
             i=Istr-m
             DO j=Jmin,Jmax
               D(i,j)=D(Istr,j)
@@ -1516,14 +1516,14 @@
       END IF
 !
       IF (Eextend) THEN
-        DO m=1,Nghost
+        DO m=1,GrecvE
           i=Iend+m
           DO j=Jmin,Jmax
             A(i,j)=A(Iend,j)
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvE
             i=Iend+m
             DO j=Jmin,Jmax
               B(i,j)=B(Iend,j)
@@ -1531,7 +1531,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvE
             i=Iend+m
             DO j=Jmin,Jmax
               C(i,j)=C(Iend,j)
@@ -1539,7 +1539,7 @@
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvE
             i=Iend+m
             DO j=Jmin,Jmax
               D(i,j)=D(Iend,j)
@@ -1794,14 +1794,14 @@
 !-----------------------------------------------------------------------
 !
       IF (Sextend) THEN
-        DO m=1,Nghost
+        DO m=GrecvS,1,-1
           j=Jstr-m
           DO i=Imin,Imax
             A(i,j)=A(i,Jstr)
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=GrecvS,1,-1
             j=Jstr-m
             DO i=Imin,Imax
               B(i,j)=B(i,Jstr)
@@ -1809,7 +1809,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=GrecvS,1,-1
             j=Jstr-m
             DO i=Imin,Imax
               C(i,j)=C(i,Jstr)
@@ -1817,7 +1817,7 @@
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=GrecvS,1,-1
             j=Jstr-m
             DO i=Imin,Imax
               D(i,j)=D(i,Jstr)
@@ -1827,14 +1827,14 @@
       END IF
 !
       IF (Nextend) THEN
-        DO m=1,Nghost
+        DO m=1,GrecvN
           j=Jend+m
           DO i=Imin,Imax
             A(i,j)=A(i,Jend)
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvN
             j=Jend+m
             DO i=Imin,Imax
               B(i,j)=B(i,Jend)
@@ -1842,7 +1842,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvN
             j=Jend+m
             DO i=Imin,Imax
               C(i,j)=C(i,Jend)
@@ -1850,7 +1850,7 @@
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvN
             j=Jend+m
             DO i=Imin,Imax
               D(i,j)=D(i,Jend)
@@ -2203,24 +2203,24 @@
 !-----------------------------------------------------------------------
 !
       IF (Wextend) THEN
-        DO m=1,Nghost
+        DO m=GrecvW,1,-1
           i=Istr-m
           A(i)=A(Istr)
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=GrecvW,1,-1
             i=Istr-m
             B(i)=B(Istr)
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=GrecvW,1,-1
             i=Istr-m
             C(i)=C(Istr)
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=GrecvW,1,-1
             i=Istr-m
             D(i)=D(Istr)
           END DO
@@ -2228,24 +2228,24 @@
       END IF
 !
       IF (Eextend) THEN
-        DO m=1,Nghost
+        DO m=1,GrecvE
           i=Iend+m
           A(i)=A(Iend)
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvE
             i=Iend+m
             B(i)=B(Iend)
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvE
             i=Iend+m
             C(i)=C(Iend)
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvE
             i=Iend+m
             D(i)=D(Iend)
           END DO
@@ -2442,24 +2442,24 @@
 !-----------------------------------------------------------------------
 !
       IF (Sextend) THEN
-        DO m=1,Nghost
+        DO m=GrecvS,1,-1
           j=Jstr-m
           A(j)=A(Jstr)
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=GrecvS,1,-1
             j=Jstr-m
             B(j)=B(Jstr)
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=GrecvS,1,-1
             j=Jstr-m
             C(j)=C(Jstr)
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=GrecvS,1,-1
             j=Jstr-m
             D(j)=D(Jstr)
           END DO
@@ -2467,24 +2467,24 @@
       END IF
 !
       IF (Nextend) THEN
-        DO m=1,Nghost
+        DO m=1,GrecvN
           j=Jend+m
           A(j)=A(Jend)
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvN
             j=Jend+m
             B(j)=B(Jend)
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvN
             j=Jend+m
             C(j)=C(Jend)
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvN
             j=Jend+m
             D(j)=D(Jend)
           END DO
@@ -2939,7 +2939,7 @@
 !-----------------------------------------------------------------------
 !
       IF (Wextend) THEN
-        DO m=1,Nghost
+        DO m=GrecvW,1,-1
           i=Istr-m
           DO k=LBk,UBk
             DO j=Jmin,Jmax
@@ -2948,7 +2948,7 @@
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=GrecvW,1,-1
             i=Istr-m
             DO k=LBk,UBk
               DO j=Jmin,Jmax
@@ -2958,7 +2958,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=GrecvW,1,-1
             i=Istr-m
             DO k=LBk,UBk
               DO j=Jmin,Jmax
@@ -2968,7 +2968,7 @@
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=GrecvW,1,-1
             i=Istr-m
             DO k=LBk,UBk
               DO j=Jmin,Jmax
@@ -2980,7 +2980,7 @@
       END IF
 !
       IF (Eextend) THEN
-        DO m=1,Nghost
+        DO m=1,GrecvE
           i=Iend+m
           DO k=LBk,UBk
             DO j=Jmin,Jmax
@@ -2989,7 +2989,7 @@
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvE
             i=Iend+m
             DO k=LBk,UBk
               DO j=Jmin,Jmax
@@ -2999,7 +2999,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvE
             i=Iend+m
             DO k=LBk,UBk
               DO j=Jmin,Jmax
@@ -3009,7 +3009,7 @@
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvE
             i=Iend+m
             DO k=LBk,UBk
               DO j=Jmin,Jmax
@@ -3314,7 +3314,7 @@
 !-----------------------------------------------------------------------
 !
       IF (Sextend) THEN
-        DO m=1,Nghost
+        DO m=GrecvS,1,-1
           j=Jstr-m
           DO k=LBk,UBk
             DO i=Imin,Imax
@@ -3323,7 +3323,7 @@
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=GrecvS,1,-1
             j=Jstr-m
             DO k=LBk,UBk
               DO i=Imin,Imax
@@ -3333,7 +3333,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=GrecvS,1,-1
             j=Jstr-m
             DO k=LBk,UBk
               DO i=Imin,Imax
@@ -3343,7 +3343,7 @@
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=GrecvS,1,-1
             j=Jstr-m
             DO k=LBk,UBk
               DO i=Imin,Imax
@@ -3355,7 +3355,7 @@
       END IF
 !
       IF (Nextend) THEN
-        DO m=1,Nghost
+        DO m=1,GrecvN
           j=Jend+m
           DO k=LBk,UBk
             DO i=Imin,Imax
@@ -3364,7 +3364,7 @@
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvN
             j=Jend+m
             DO k=LBk,UBk
               DO i=Imin,Imax
@@ -3374,7 +3374,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvN
             j=Jend+m
             DO k=LBk,UBk
               DO i=Imin,Imax
@@ -3384,7 +3384,7 @@
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvN
             j=Jend+m
             DO k=LBk,UBk
               DO i=Imin,Imax
@@ -3845,7 +3845,7 @@
 !-----------------------------------------------------------------------
 !
       IF (Wextend) THEN
-        DO m=1,Nghost
+        DO m=GrecvW,1,-1
           i=Istr-m
           DO k=LBk,UBk
             DO j=Jmin,Jmax
@@ -3854,7 +3854,7 @@
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=GrecvW,1,-1
             i=Istr-m
             DO k=LBk,UBk
               DO j=Jmin,Jmax
@@ -3864,7 +3864,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=GrecvW,1,-1
             i=Istr-m
             DO k=LBk,UBk
               DO j=Jmin,Jmax
@@ -3874,7 +3874,7 @@
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=GrecvW,1,-1
             i=Istr-m
             DO k=LBk,UBk
               DO j=Jmin,Jmax
@@ -3886,7 +3886,7 @@
       END IF
 !
       IF (Eextend) THEN
-        DO m=1,Nghost
+        DO m=1,GrecvE
           i=Iend+m
           DO k=LBk,UBk
             DO j=Jmin,Jmax
@@ -3895,7 +3895,7 @@
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvE
             i=Iend+m
             DO k=LBk,UBk
               DO j=Jmin,Jmax
@@ -3905,7 +3905,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvE
             i=Iend+m
             DO k=LBk,UBk
               DO j=Jmin,Jmax
@@ -3915,7 +3915,7 @@
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvE
             i=Iend+m
             DO k=LBk,UBk
               DO j=Jmin,Jmax
@@ -4220,7 +4220,7 @@
 !-----------------------------------------------------------------------
 !
       IF (Sextend) THEN
-        DO m=1,Nghost
+        DO m=GrecvS,1,-1
           j=Jstr-m
           DO k=LBk,UBk
             DO i=Imin,Imax
@@ -4229,7 +4229,7 @@
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=GrecvS,1,-1
             j=Jstr-m
             DO k=LBk,UBk
               DO i=Imin,Imax
@@ -4239,7 +4239,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=GrecvS,1,-1
             j=Jstr-m
             DO k=LBk,UBk
               DO i=Imin,Imax
@@ -4249,7 +4249,7 @@
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=GrecvS,1,-1
             j=Jstr-m
             DO k=LBk,UBk
               DO i=Imin,Imax
@@ -4261,7 +4261,7 @@
       END IF
 !
       IF (Nextend) THEN
-        DO m=1,Nghost
+        DO m=1,GrecvN
           j=Jend+m
           DO k=LBk,UBk
             DO i=Imin,Imax
@@ -4270,7 +4270,7 @@
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvN
             j=Jend+m
             DO k=LBk,UBk
               DO i=Imin,Imax
@@ -4280,7 +4280,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvN
             j=Jend+m
             DO k=LBk,UBk
               DO i=Imin,Imax
@@ -4290,7 +4290,7 @@
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvN
             j=Jend+m
             DO k=LBk,UBk
               DO i=Imin,Imax
@@ -4700,14 +4700,14 @@
 !-----------------------------------------------------------------------
 !
       IF (Wextend) THEN
-        DO m=1,Nghost
+        DO m=GrecvW,1,-1
           i=Istr-m
           DO k=LBk,UBk
             A(i,k)=A(Istr,k)
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=GrecvW,1,-1
             i=Istr-m
             DO k=LBk,UBk
               B(i,k)=B(Istr,k)
@@ -4715,7 +4715,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=GrecvW,1,-1
             i=Istr-m
             DO k=LBk,UBk
               C(i,k)=C(Istr,k)
@@ -4723,7 +4723,7 @@
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=GrecvW,1,-1
             i=Istr-m
             DO k=LBk,UBk
               D(i,k)=D(Istr,k)
@@ -4733,14 +4733,14 @@
       END IF
 !
       IF (Eextend) THEN
-        DO m=1,Nghost
+        DO m=1,GrecvE
           i=Iend+m
           DO k=LBk,UBk
             A(i,k)=A(Iend,k)
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvE
             i=Iend+m
             DO k=LBk,UBk
               B(i,k)=B(Iend,k)
@@ -4748,7 +4748,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvE
             i=Iend+m
             DO k=LBk,UBk
               C(i,k)=C(Iend,k)
@@ -4756,7 +4756,7 @@
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvE
             i=Iend+m
             DO k=LBk,UBk
               D(i,k)=D(Iend,k)
@@ -5011,14 +5011,14 @@
 !-----------------------------------------------------------------------
 !
       IF (Sextend) THEN
-        DO m=1,Nghost
+        DO m=GrecvS,1,-1
           j=Jstr-m
           DO k=LBk,UBk
             A(j,k)=A(Jstr,k)
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=GrecvS,1,-1
             j=Jstr-m
             DO k=LBk,UBk
               B(j,k)=B(Jstr,k)
@@ -5026,7 +5026,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=GrecvS,1,-1
             j=Jstr-m
             DO k=LBk,UBk
               C(j,k)=C(Jstr,k)
@@ -5034,7 +5034,7 @@
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=GrecvS,1,-1
             j=Jstr-m
             DO k=LBk,UBk
               D(j,k)=D(Jstr,k)
@@ -5044,14 +5044,14 @@
       END IF
 !
       IF (Nextend) THEN
-        DO m=1,Nghost
+        DO m=1,GrecvN
           j=Jend+m
           DO k=LBk,UBk
             A(j,k)=A(Jend,k)
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvN
             j=Jend+m
             DO k=LBk,UBk
               B(j,k)=B(Jend,k)
@@ -5059,7 +5059,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvN
             j=Jend+m
             DO k=LBk,UBk
               C(j,k)=C(Jend,k)
@@ -5067,7 +5067,7 @@
           END DO
         END IF
         IF (PRESENT(D)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvN
             j=Jend+m
             DO k=LBk,UBk
               D(j,k)=D(Jend,k)
@@ -5508,7 +5508,7 @@
 !-----------------------------------------------------------------------
 !
       IF (Wextend) THEN
-        DO m=1,Nghost
+        DO m=GrecvW,1,-1
           i=Istr-m
           DO l=LBt,UBt
             DO k=LBk,UBk
@@ -5519,7 +5519,7 @@
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=GrecvW,1,-1
             i=Istr-m
             DO l=LBt,UBt
               DO k=LBk,UBk
@@ -5531,7 +5531,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=GrecvW,1,-1
             i=Istr-m
             DO l=LBt,UBt
               DO k=LBk,UBk
@@ -5545,7 +5545,7 @@
       END IF
 !
       IF (Eextend) THEN
-        DO m=1,Nghost
+        DO m=1,GrecvE
           i=Iend+m
           DO l=LBt,UBt
             DO k=LBk,UBk
@@ -5556,7 +5556,7 @@
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvE
             i=Iend+m
             DO l=LBt,UBt
               DO k=LBk,UBk
@@ -5568,7 +5568,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvE
             i=Iend+m
             DO l=LBt,UBt
               DO k=LBk,UBk
@@ -5853,7 +5853,7 @@
 !-----------------------------------------------------------------------
 !
       IF (Sextend) THEN
-        DO m=1,Nghost
+        DO m=GrecvS,1,-1
           j=Jstr-m
           DO l=LBt,UBt
             DO k=LBk,UBk
@@ -5864,7 +5864,7 @@
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=GrecvS,1,-1
             j=Jstr-m
             DO l=LBt,UBt
               DO k=LBk,UBk
@@ -5876,7 +5876,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=GrecvS,1,-1
             j=Jstr-m
             DO l=LBt,UBt
               DO k=LBk,UBk
@@ -5890,7 +5890,7 @@
       END IF
 !
       IF (Nextend) THEN
-        DO m=1,Nghost
+        DO m=1,GrecvN
           j=Jend+m
           DO l=LBt,UBt
             DO k=LBk,UBk
@@ -5901,7 +5901,7 @@
           END DO
         END DO
         IF (PRESENT(B)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvN
             j=Jend+m
             DO l=LBt,UBt
               DO k=LBk,UBk
@@ -5913,7 +5913,7 @@
           END DO
         END IF
         IF (PRESENT(C)) THEN
-          DO m=1,Nghost
+          DO m=1,GrecvN
             j=Jend+m
             DO l=LBt,UBt
               DO k=LBk,UBk
