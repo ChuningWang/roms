@@ -132,8 +132,6 @@
         END DO
       END DO
       rank=0
-      MyRankI=-2
-      MyRankJ=-2
       DO j=0,NtileJ(ng)-1
         DO i=0,NtileI(ng)-1
 # ifdef TILEMASK
