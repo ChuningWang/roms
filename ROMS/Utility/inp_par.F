@@ -340,6 +340,12 @@
 !
       IF (Master.and.Lwrite) THEN
         DO ng=1,Ngrids
+#ifdef TILEMASK
+          WRITE (stdout,55) ng, NtileI(ng), NtileJ(ng)
+          DO j=0,NtileJ(ng)-1
+            WRITE (stdout,75) TILE_MASKS(ng) % tile_mask(:,j)
+          END DO
+#endif
 #ifdef SOLVE3D
           WRITE (stdout,50) ng, Lm(ng), Mm(ng), N(ng),                  &
      &                      NtileI(ng), NtileJ(ng)
@@ -421,6 +427,11 @@
      &          /,11x,'is incompatible with grid size, ',a,i0,          &
      &          /,11x,'because it yields too small tile, ',a,i0,a,i0,   &
      &          /,11x,'Decrease partition parameter: ',a)
+#ifdef TILEMASK
+ 55     FORMAT (/,' Tile partition masking for Grid ',i2.2,':',2x,      &
+     &          'tiling: ',i0,'x',i0,/)
+ 75     FORMAT (1x,*(l2))
+#endif
       END IF
 #ifdef DISTRIBUTE
       CALL mp_bcasti (1, model, exit_flag)

@@ -174,6 +174,7 @@ add_subdirectory( "ROMS/Nonlinear" )
 add_subdirectory( "ROMS/Nonlinear/BBL" )
 add_subdirectory( "ROMS/Nonlinear/Biology" )
 add_subdirectory( "ROMS/Nonlinear/SeaIce" )
+add_subdirectory( "ROMS/Nonlinear/IceShelf" )
 add_subdirectory( "ROMS/Nonlinear/Sediment" )
 add_subdirectory( "ROMS/Nonlinear/Vegetation" )
 add_subdirectory( "ROMS/Nonlinear/WEC" )
@@ -192,6 +193,7 @@ include_directories(
   "ROMS/Nonlinear/BBL"
   "ROMS/Nonlinear/Biology"
   "ROMS/Nonlinear/SeaIce"
+  "ROMS/Nonlinear/IceShelf"
   "ROMS/Nonlinear/Sediment"
   "ROMS/Nonlinear/Vegetation"
   "ROMS/Nonlinear/WEC"
@@ -213,6 +215,7 @@ list(APPEND srcs
      ${ROMS_Nonlinear_BBL_files}
      ${ROMS_Nonlinear_Biology_files}
      ${ROMS_Nonlinear_SeaIce_files}
+     ${ROMS_Nonlinear_IceShelf_files}
      ${ROMS_Nonlinear_Sediment_files}
      ${ROMS_Nonlinear_Vegetation_files}
      ${ROMS_Nonlinear_WEC_files}

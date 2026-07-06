@@ -71,10 +71,17 @@
 !
 !***********************************************************************
       SUBROUTINE tile_neighbors (ng, Nghost, EW_periodic, NS_periodic,  &
+# ifdef TILEMASK
+     &                      GrecvW, GsendW, Wtile, Wexchange, Wextend,  &
+     &                      GrecvE, GsendE, Etile, Eexchange, Eextend,  &
+     &                      GrecvS, GsendS, Stile, Sexchange, Sextend,  &
+     &                      GrecvN, GsendN, Ntile, Nexchange, Nextend)
+# else
      &                           GrecvW, GsendW, Wtile, Wexchange,      &
      &                           GrecvE, GsendE, Etile, Eexchange,      &
      &                           GrecvS, GsendS, Stile, Sexchange,      &
      &                           GrecvN, GsendN, Ntile, Nexchange)
+# endif
 !***********************************************************************
 !
       USE mod_param
@@ -90,6 +97,10 @@
 
       logical, intent(out) :: Wexchange, Eexchange
       logical, intent(out) :: Sexchange, Nexchange
+# ifdef TILEMASK
+      logical, intent(out) :: Wextend, Eextend
+      logical, intent(out) :: Sextend, Nextend
+# endif
 
       integer, intent(out) :: GrecvW, GsendW, Wtile
       integer, intent(out) :: GrecvE, GsendE, Etile
@@ -159,8 +170,7 @@
 !                      -2    -1     0    1     2      3
 !
       IF (EW_periodic) THEN
-        IF ((table(MyRankI-1,MyRankJ).eq.Null_Value).and.               &
-     &      (NtileI(ng).gt.1)) THEN
+        IF ((MyRankI.eq.0).and.(NtileI(ng).gt.1)) THEN
           Wtile=table(NtileI(ng)-1,MyRankJ)
           Etile=table(MyRankI+1,MyRankJ)
           GsendW=Nghost
@@ -171,8 +181,7 @@
             GrecvW=Nghost+1
           END IF
           GrecvE=Nghost
-        ELSE IF ((table(MyRankI+1,MyRankJ).eq.Null_Value).and.          &
-     &           (NtileI(ng).gt.1)) THEN
+        ELSE IF ((MyRankI.eq.NtileI(ng)-1).and.(NtileI(ng).gt.1)) THEN
           Wtile=table(MyRankI-1,MyRankJ)
           Etile=table(0,MyRankJ)
           GsendW=Nghost
@@ -212,6 +221,21 @@
       ELSE
         Eexchange=.TRUE.
       END IF
+# ifdef TILEMASK
+!
+!  Determine extend switches.
+!
+      IF (Wexchange.or.(MyRankI.le.0)) THEN
+        Wextend=.FALSE.
+      ELSE
+        Wextend=.TRUE.
+      END IF
+      IF (Eexchange.or.(MyRankI.ge.NtileI(ng)-1)) THEN
+        Eextend=.FALSE.
+      ELSE
+        Eextend=.TRUE.
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Determine the rank of Southern and Northern tiles.  Then, determine
@@ -234,8 +258,7 @@
 !                      -2    -1     0    1     2     3
 !
       IF (NS_periodic) THEN
-        IF ((table(MyRankI,MyRankJ-1).eq.Null_Value).and.               &
-     &      (NtileJ(ng).gt.1)) THEN
+        IF ((MyRankJ.eq.0).and.(NtileJ(ng).gt.1)) THEN
           Stile=table(MyRankI,NtileJ(ng)-1)
           Ntile=table(MyRankI,MyRankJ+1)
           GsendS=Nghost
@@ -246,8 +269,7 @@
             GrecvS=Nghost+1
           END IF
           GrecvN=Nghost
-        ELSE IF ((table(MyRankI,MyRankJ+1).eq.Null_Value).and.          &
-     &           (NtileJ(ng).gt.1)) then
+        ELSE IF ((MyRankJ.eq.NtileJ(ng)-1).and.(NtileJ(ng).gt.1)) THEN
           Stile=table(MyRankI,MyRankJ-1)
           Ntile=table(MyRankI,0)
           GsendS=Nghost
@@ -287,6 +309,21 @@
       ELSE
         Nexchange=.TRUE.
       END IF
+# ifdef TILEMASK
+!
+!  Determine extend switches.
+!
+      IF (Sexchange.or.(MyRankJ.le.0)) THEN
+        Sextend=.FALSE.
+      ELSE
+        Sextend=.TRUE.
+      END IF
+      IF (Nexchange.or.(MyRankJ.ge.NtileJ(ng)-1)) THEN
+        Nextend=.FALSE.
+      ELSE
+        Nextend=.TRUE.
+      END IF
+# endif
 
       RETURN
       END SUBROUTINE tile_neighbors
@@ -331,6 +368,9 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
+# ifdef TILEMASK
+      logical :: Wextend, Sextend, Eextend, Nextend
+# endif
 !
       integer :: i, icS, icN, ioff, Imin, Imax, Ilen
       integer :: j, jcW, jcE, joff, Jmin, Jmax, Jlen
@@ -379,10 +419,17 @@
      &                                   4*SIZE(SendS))*KIND(A),r8))
 !
       CALL tile_neighbors (ng, Nghost, EW_periodic, NS_periodic,        &
+# ifdef TILEMASK
+     &                     GrecvW, GsendW, Wtile, Wexchange, Wextend,   &
+     &                     GrecvE, GsendE, Etile, Eexchange, Eextend,   &
+     &                     GrecvS, GsendS, Stile, Sexchange, Sextend,   &
+     &                     GrecvN, GsendN, Ntile, Nexchange, Nextend)
+# else
      &                     GrecvW, GsendW, Wtile, Wexchange,            &
      &                     GrecvE, GsendE, Etile, Eexchange,            &
      &                     GrecvS, GsendS, Stile, Sexchange,            &
      &                     GrecvN, GsendN, Ntile, Nexchange)
+# endif
 !
 !  Set communication tags.
 !
@@ -655,6 +702,78 @@
           END DO
         END IF
       END IF
+# ifdef TILEMASK
+!
+!-----------------------------------------------------------------------
+!  Apply gradient boundary condition if the extend switch is on.
+!-----------------------------------------------------------------------
+!
+      IF (Wextend) THEN
+        DO m=GrecvW,1,-1
+          i=Istr-m
+          DO j=Jmin,Jmax
+            A(i,j)=A(Istr,j)
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=GrecvW,1,-1
+            i=Istr-m
+            DO j=Jmin,Jmax
+              B(i,j)=B(Istr,j)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=GrecvW,1,-1
+            i=Istr-m
+            DO j=Jmin,Jmax
+              C(i,j)=C(Istr,j)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=GrecvW,1,-1
+            i=Istr-m
+            DO j=Jmin,Jmax
+              D(i,j)=D(Istr,j)
+            END DO
+          END DO
+        END IF
+      END IF
+!
+      IF (Eextend) THEN
+        DO m=1,GrecvE
+          i=Iend+m
+          DO j=Jmin,Jmax
+            A(i,j)=A(Iend,j)
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,GrecvE
+            i=Iend+m
+            DO j=Jmin,Jmax
+              B(i,j)=B(Iend,j)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,GrecvE
+            i=Iend+m
+            DO j=Jmin,Jmax
+              C(i,j)=C(Iend,j)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,GrecvE
+            i=Iend+m
+            DO j=Jmin,Jmax
+              D(i,j)=D(Iend,j)
+            END DO
+          END DO
+        END IF
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Pack Southern and Northern tile boundary data including ghost-points.
@@ -894,6 +1013,79 @@
           END DO
         END IF
       END IF
+# ifdef TILEMASK
+!
+!-----------------------------------------------------------------------
+!  Apply gradient boundary condition if the extend switch is on.
+!-----------------------------------------------------------------------
+!
+!
+      IF (Sextend) THEN
+        DO m=GrecvS,1,-1
+          j=Jstr-m
+          DO i=Imin,Imax
+            A(i,j)=A(i,Jstr)
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=GrecvS,1,-1
+            j=Jstr-m
+            DO i=Imin,Imax
+              B(i,j)=B(i,Jstr)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=GrecvS,1,-1
+            j=Jstr-m
+            DO i=Imin,Imax
+              C(i,j)=C(i,Jstr)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=GrecvS,1,-1
+            j=Jstr-m
+            DO i=Imin,Imax
+              D(i,j)=D(i,Jstr)
+            END DO
+          END DO
+        END IF
+      END IF
+!
+      IF (Nextend) THEN
+        DO m=1,GrecvN
+          j=Jend+m
+          DO i=Imin,Imax
+            A(i,j)=A(i,Jend)
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,GrecvN
+            j=Jend+m
+            DO i=Imin,Imax
+              B(i,j)=B(i,Jend)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,GrecvN
+            j=Jend+m
+            DO i=Imin,Imax
+              C(i,j)=C(i,Jend)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,GrecvN
+            j=Jend+m
+            DO i=Imin,Imax
+              D(i,j)=D(i,Jend)
+            END DO
+          END DO
+        END IF
+      END IF
+# endif
 
 # ifdef PROFILE
 !
@@ -948,6 +1140,9 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
+#  ifdef TILEMASK
+      logical :: Wextend, Sextend, Eextend, Nextend
+#  endif
 !
       integer :: i, icS, icN, ioff, Imin, Imax, Ilen
       integer :: j, jcW, jcE, joff, Jmin, Jmax, Jlen
@@ -996,10 +1191,17 @@
      &                                   4*SIZE(SendS))*KIND(A),r8))
 !
       CALL tile_neighbors (ng, Nghost, EW_periodic, NS_periodic,        &
+#  ifdef TILEMASK
+     &                     GrecvW, GsendW, Wtile, Wexchange, Wextend,   &
+     &                     GrecvE, GsendE, Etile, Eexchange, Eextend,   &
+     &                     GrecvS, GsendS, Stile, Sexchange, Sextend,   &
+     &                     GrecvN, GsendN, Ntile, Nexchange, Nextend)
+#  else
      &                     GrecvW, GsendW, Wtile, Wexchange,            &
      &                     GrecvE, GsendE, Etile, Eexchange,            &
      &                     GrecvS, GsendS, Stile, Sexchange,            &
      &                     GrecvN, GsendN, Ntile, Nexchange)
+#  endif
 !
 !  Set communication tags.
 !
@@ -1272,6 +1474,78 @@
           END DO
         END IF
       END IF
+#  ifdef TILEMASK
+!
+!-----------------------------------------------------------------------
+!  Apply gradient boundary condition if the extend switch is on.
+!-----------------------------------------------------------------------
+!
+      IF (Wextend) THEN
+        DO m=GrecvW,1,-1
+          i=Istr-m
+          DO j=Jmin,Jmax
+            A(i,j)=A(Istr,j)
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=GrecvW,1,-1
+            i=Istr-m
+            DO j=Jmin,Jmax
+              B(i,j)=B(Istr,j)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=GrecvW,1,-1
+            i=Istr-m
+            DO j=Jmin,Jmax
+              C(i,j)=C(Istr,j)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=GrecvW,1,-1
+            i=Istr-m
+            DO j=Jmin,Jmax
+              D(i,j)=D(Istr,j)
+            END DO
+          END DO
+        END IF
+      END IF
+!
+      IF (Eextend) THEN
+        DO m=1,GrecvE
+          i=Iend+m
+          DO j=Jmin,Jmax
+            A(i,j)=A(Iend,j)
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,GrecvE
+            i=Iend+m
+            DO j=Jmin,Jmax
+              B(i,j)=B(Iend,j)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,GrecvE
+            i=Iend+m
+            DO j=Jmin,Jmax
+              C(i,j)=C(Iend,j)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,GrecvE
+            i=Iend+m
+            DO j=Jmin,Jmax
+              D(i,j)=D(Iend,j)
+            END DO
+          END DO
+        END IF
+      END IF
+#  endif
 !
 !-----------------------------------------------------------------------
 !  Pack Southern and Northern tile boundary data including ghost-points.
@@ -1511,6 +1785,78 @@
           END DO
         END IF
       END IF
+#  ifdef TILEMASK
+!
+!-----------------------------------------------------------------------
+!  Apply gradient boundary condition if the extend switch is on.
+!-----------------------------------------------------------------------
+!
+      IF (Sextend) THEN
+        DO m=GrecvS,1,-1
+          j=Jstr-m
+          DO i=Imin,Imax
+            A(i,j)=A(i,Jstr)
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=GrecvS,1,-1
+            j=Jstr-m
+            DO i=Imin,Imax
+              B(i,j)=B(i,Jstr)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=GrecvS,1,-1
+            j=Jstr-m
+            DO i=Imin,Imax
+              C(i,j)=C(i,Jstr)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=GrecvS,1,-1
+            j=Jstr-m
+            DO i=Imin,Imax
+              D(i,j)=D(i,Jstr)
+            END DO
+          END DO
+        END IF
+      END IF
+!
+      IF (Nextend) THEN
+        DO m=1,GrecvN
+          j=Jend+m
+          DO i=Imin,Imax
+            A(i,j)=A(i,Jend)
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,GrecvN
+            j=Jend+m
+            DO i=Imin,Imax
+              B(i,j)=B(i,Jend)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,GrecvN
+            j=Jend+m
+            DO i=Imin,Imax
+              C(i,j)=C(i,Jend)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,GrecvN
+            j=Jend+m
+            DO i=Imin,Imax
+              D(i,j)=D(i,Jend)
+            END DO
+          END DO
+        END IF
+      END IF
+#  endif
 
 #  ifdef PROFILE
 !
@@ -1565,6 +1911,9 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
+# ifdef TILEMASK
+      logical :: Wextend, Sextend, Eextend, Nextend
+# endif
 !
       integer :: i, icS, icN
       integer :: j, jcW, jcE
@@ -1613,10 +1962,17 @@
      &                                   4*SIZE(SendS))*KIND(A),r8))
 !
       CALL tile_neighbors (ng, Nghost, EW_periodic, NS_periodic,        &
+# ifdef TILEMASK
+     &                     GrecvW, GsendW, Wtile, Wexchange, Wextend,   &
+     &                     GrecvE, GsendE, Etile, Eexchange, Eextend,   &
+     &                     GrecvS, GsendS, Stile, Sexchange, Sextend,   &
+     &                     GrecvN, GsendN, Ntile, Nexchange, Nextend)
+# else
      &                     GrecvW, GsendW, Wtile, Wexchange,            &
      &                     GrecvE, GsendE, Etile, Eexchange,            &
      &                     GrecvS, GsendS, Stile, Sexchange,            &
      &                     GrecvN, GsendN, Ntile, Nexchange)
+# endif
 !
 !  Adjust exchange swiches according to boundary edge to process.
 !
@@ -1838,6 +2194,62 @@
           END DO
         END IF
       END IF
+# ifdef TILEMASK
+!
+!-----------------------------------------------------------------------
+!  Apply gradient boundary condition if the extend switch is on.
+!-----------------------------------------------------------------------
+!
+      IF (Wextend) THEN
+        DO m=GrecvW,1,-1
+          i=Istr-m
+          A(i)=A(Istr)
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=GrecvW,1,-1
+            i=Istr-m
+            B(i)=B(Istr)
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=GrecvW,1,-1
+            i=Istr-m
+            C(i)=C(Istr)
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=GrecvW,1,-1
+            i=Istr-m
+            D(i)=D(Istr)
+          END DO
+        END IF
+      END IF
+!
+      IF (Eextend) THEN
+        DO m=1,GrecvE
+          i=Iend+m
+          A(i)=A(Iend)
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,GrecvE
+            i=Iend+m
+            B(i)=B(Iend)
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,GrecvE
+            i=Iend+m
+            C(i)=C(Iend)
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,GrecvE
+            i=Iend+m
+            D(i)=D(Iend)
+          END DO
+        END IF
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Pack Southern and Northern tile boundary data including ghost-points.
@@ -2021,6 +2433,62 @@
           END DO
         END IF
       END IF
+# ifdef TILEMASK
+!
+!-----------------------------------------------------------------------
+!  Apply gradient boundary condition if the extend switch is on.
+!-----------------------------------------------------------------------
+!
+      IF (Sextend) THEN
+        DO m=GrecvS,1,-1
+          j=Jstr-m
+          A(j)=A(Jstr)
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=GrecvS,1,-1
+            j=Jstr-m
+            B(j)=B(Jstr)
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=GrecvS,1,-1
+            j=Jstr-m
+            C(j)=C(Jstr)
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=GrecvS,1,-1
+            j=Jstr-m
+            D(j)=D(Jstr)
+          END DO
+        END IF
+      END IF
+!
+      IF (Nextend) THEN
+        DO m=1,GrecvN
+          j=Jend+m
+          A(j)=A(Jend)
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,GrecvN
+            j=Jend+m
+            B(j)=B(Jend)
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,GrecvN
+            j=Jend+m
+            C(j)=C(Jend)
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,GrecvN
+            j=Jend+m
+            D(j)=D(Jend)
+          END DO
+        END IF
+      END IF
+# endif
 
 # ifdef PROFILE
 !
@@ -2073,6 +2541,9 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
+# ifdef TILEMASK
+      logical :: Wextend, Sextend, Eextend, Nextend
+# endif
 !
       integer :: i, ikS, ikN, ioff, Imin, Imax, Ilen, IKlen
       integer :: j, jkW, jkE, joff, Jmin, Jmax, Jlen, JKlen
@@ -2125,10 +2596,17 @@
      &                                   4*SIZE(SendS))*KIND(A),r8))
 !
       CALL tile_neighbors (ng, Nghost, EW_periodic, NS_periodic,        &
+# ifdef TILEMASK
+     &                     GrecvW, GsendW, Wtile, Wexchange, Wextend,   &
+     &                     GrecvE, GsendE, Etile, Eexchange, Eextend,   &
+     &                     GrecvS, GsendS, Stile, Sexchange, Sextend,   &
+     &                     GrecvN, GsendN, Ntile, Nexchange, Nextend)
+# else
      &                     GrecvW, GsendW, Wtile, Wexchange,            &
      &                     GrecvE, GsendE, Etile, Eexchange,            &
      &                     GrecvS, GsendS, Stile, Sexchange,            &
      &                     GrecvN, GsendN, Ntile, Nexchange)
+# endif
 !
 !  Set communication tags.
 !
@@ -2452,6 +2930,94 @@
           END DO
         END IF
       END IF
+# ifdef TILEMASK
+!
+!-----------------------------------------------------------------------
+!  Apply gradient boundary condition if the extend switch is on.
+!-----------------------------------------------------------------------
+!
+      IF (Wextend) THEN
+        DO m=GrecvW,1,-1
+          i=Istr-m
+          DO k=LBk,UBk
+            DO j=Jmin,Jmax
+              A(i,j,k)=A(Istr,j,k)
+            END DO
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=GrecvW,1,-1
+            i=Istr-m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                B(i,j,k)=B(Istr,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=GrecvW,1,-1
+            i=Istr-m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                C(i,j,k)=C(Istr,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=GrecvW,1,-1
+            i=Istr-m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                D(i,j,k)=D(Istr,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+      END IF
+!
+      IF (Eextend) THEN
+        DO m=1,GrecvE
+          i=Iend+m
+          DO k=LBk,UBk
+            DO j=Jmin,Jmax
+              A(i,j,k)=A(Iend,j,k)
+            END DO
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,GrecvE
+            i=Iend+m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                B(i,j,k)=B(Iend,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,GrecvE
+            i=Iend+m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                C(i,j,k)=C(Iend,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,GrecvE
+            i=Iend+m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                D(i,j,k)=D(Iend,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Pack Southern and Northern tile boundary data including ghost-points.
@@ -2739,6 +3305,94 @@
           END DO
         END IF
       END IF
+# ifdef TILEMASK
+!
+!-----------------------------------------------------------------------
+!  Apply gradient boundary condition if the extend switch is on.
+!-----------------------------------------------------------------------
+!
+      IF (Sextend) THEN
+        DO m=GrecvS,1,-1
+          j=Jstr-m
+          DO k=LBk,UBk
+            DO i=Imin,Imax
+              A(i,j,k)=A(i,Jstr,k)
+            END DO
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=GrecvS,1,-1
+            j=Jstr-m
+            DO k=LBk,UBk
+              DO i=Imin,Imax
+                B(i,j,k)=B(i,Jstr,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=GrecvS,1,-1
+            j=Jstr-m
+            DO k=LBk,UBk
+              DO i=Imin,Imax
+                C(i,j,k)=C(i,Jstr,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=GrecvS,1,-1
+            j=Jstr-m
+            DO k=LBk,UBk
+              DO i=Imin,Imax
+                D(i,j,k)=D(i,Jstr,k)
+              END DO
+            END DO
+          END DO
+        END IF
+      END IF
+!
+      IF (Nextend) THEN
+        DO m=1,GrecvN
+          j=Jend+m
+          DO k=LBk,UBk
+            DO i=Imin,Imax
+              A(i,j,k)=A(i,Jend,k)
+            END DO
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,GrecvN
+            j=Jend+m
+            DO k=LBk,UBk
+              DO i=Imin,Imax
+                B(i,j,k)=B(i,Jend,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,GrecvN
+            j=Jend+m
+            DO k=LBk,UBk
+              DO i=Imin,Imax
+                C(i,j,k)=C(i,Jend,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,GrecvN
+            j=Jend+m
+            DO k=LBk,UBk
+              DO i=Imin,Imax
+                D(i,j,k)=D(i,Jend,k)
+              END DO
+            END DO
+          END DO
+        END IF
+      END IF
+# endif
 
 # ifdef PROFILE
 !
@@ -2793,6 +3447,9 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
+#  ifdef TILEMASK
+      logical :: Wextend, Sextend, Eextend, Nextend
+#  endif
 !
       integer :: i, ikS, ikN, ioff, Imin, Imax, Ilen, IKlen
       integer :: j, jkW, jkE, joff, Jmin, Jmax, Jlen, JKlen
@@ -2845,10 +3502,17 @@
      &                                   4*SIZE(SendS))*KIND(A),r8))
 !
       CALL tile_neighbors (ng, Nghost, EW_periodic, NS_periodic,        &
+#  ifdef TILEMASK
+     &                     GrecvW, GsendW, Wtile, Wexchange, Wextend,   &
+     &                     GrecvE, GsendE, Etile, Eexchange, Eextend,   &
+     &                     GrecvS, GsendS, Stile, Sexchange, Sextend,   &
+     &                     GrecvN, GsendN, Ntile, Nexchange, Nextend)
+#  else
      &                     GrecvW, GsendW, Wtile, Wexchange,            &
      &                     GrecvE, GsendE, Etile, Eexchange,            &
      &                     GrecvS, GsendS, Stile, Sexchange,            &
      &                     GrecvN, GsendN, Ntile, Nexchange)
+#  endif
 !
 !  Set communication tags.
 !
@@ -3172,6 +3836,94 @@
           END DO
         END IF
       END IF
+#  ifdef TILEMASK
+!
+!-----------------------------------------------------------------------
+!  Apply gradient boundary condition if the extend switch is on.
+!-----------------------------------------------------------------------
+!
+      IF (Wextend) THEN
+        DO m=GrecvW,1,-1
+          i=Istr-m
+          DO k=LBk,UBk
+            DO j=Jmin,Jmax
+              A(i,j,k)=A(Istr,j,k)
+            END DO
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=GrecvW,1,-1
+            i=Istr-m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                B(i,j,k)=B(Istr,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=GrecvW,1,-1
+            i=Istr-m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                C(i,j,k)=C(Istr,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=GrecvW,1,-1
+            i=Istr-m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                D(i,j,k)=D(Istr,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+      END IF
+!
+      IF (Eextend) THEN
+        DO m=1,GrecvE
+          i=Iend+m
+          DO k=LBk,UBk
+            DO j=Jmin,Jmax
+              A(i,j,k)=A(Iend,j,k)
+            END DO
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,GrecvE
+            i=Iend+m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                B(i,j,k)=B(Iend,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,GrecvE
+            i=Iend+m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                C(i,j,k)=C(Iend,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,GrecvE
+            i=Iend+m
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                D(i,j,k)=D(Iend,j,k)
+              END DO
+            END DO
+          END DO
+        END IF
+      END IF
+#  endif
 !
 !-----------------------------------------------------------------------
 !  Pack Southern and Northern tile boundary data including ghost-points.
@@ -3459,6 +4211,94 @@
           END DO
         END IF
       END IF
+#  ifdef TILEMASK
+!
+!-----------------------------------------------------------------------
+!  Apply gradient boundary condition if the extend switch is on.
+!-----------------------------------------------------------------------
+!
+      IF (Sextend) THEN
+        DO m=GrecvS,1,-1
+          j=Jstr-m
+          DO k=LBk,UBk
+            DO i=Imin,Imax
+              A(i,j,k)=A(i,Jstr,k)
+            END DO
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=GrecvS,1,-1
+            j=Jstr-m
+            DO k=LBk,UBk
+              DO i=Imin,Imax
+                B(i,j,k)=B(i,Jstr,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=GrecvS,1,-1
+            j=Jstr-m
+            DO k=LBk,UBk
+              DO i=Imin,Imax
+                C(i,j,k)=C(i,Jstr,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=GrecvS,1,-1
+            j=Jstr-m
+            DO k=LBk,UBk
+              DO i=Imin,Imax
+                D(i,j,k)=D(i,Jstr,k)
+              END DO
+            END DO
+          END DO
+        END IF
+      END IF
+!
+      IF (Nextend) THEN
+        DO m=1,GrecvN
+          j=Jend+m
+          DO k=LBk,UBk
+            DO i=Imin,Imax
+              A(i,j,k)=A(i,Jend,k)
+            END DO
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,GrecvN
+            j=Jend+m
+            DO k=LBk,UBk
+              DO i=Imin,Imax
+                B(i,j,k)=B(i,Jend,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,GrecvN
+            j=Jend+m
+            DO k=LBk,UBk
+              DO i=Imin,Imax
+                C(i,j,k)=C(i,Jend,k)
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,GrecvN
+            j=Jend+m
+            DO k=LBk,UBk
+              DO i=Imin,Imax
+                D(i,j,k)=D(i,Jend,k)
+              END DO
+            END DO
+          END DO
+        END IF
+      END IF
+#  endif
 
 #  ifdef PROFILE
 !
@@ -3512,6 +4352,9 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
+# ifdef TILEMASK
+      logical :: Wextend, Sextend, Eextend, Nextend
+# endif
 !
       integer :: i, ikS, ikN, ioff
       integer :: j, jkW, jkE, joff
@@ -3559,10 +4402,17 @@
      &                                   4*SIZE(SendS))*KIND(A),r8))
 !
       CALL tile_neighbors (ng, Nghost, EW_periodic, NS_periodic,        &
+# ifdef TILEMASK
+     &                     GrecvW, GsendW, Wtile, Wexchange, Wextend,   &
+     &                     GrecvE, GsendE, Etile, Eexchange, Eextend,   &
+     &                     GrecvS, GsendS, Stile, Sexchange, Sextend,   &
+     &                     GrecvN, GsendN, Ntile, Nexchange, Nextend)
+# else
      &                     GrecvW, GsendW, Wtile, Wexchange,            &
      &                     GrecvE, GsendE, Etile, Eexchange,            &
      &                     GrecvS, GsendS, Stile, Sexchange,            &
      &                     GrecvN, GsendN, Ntile, Nexchange)
+# endif
 !
 !  Adjust exchange swiches according to boundary edge to process.
 !
@@ -3841,6 +4691,78 @@
           END DO
         END IF
       END IF
+# ifdef TILEMASK
+!
+!-----------------------------------------------------------------------
+!  Apply gradient boundary condition if the extend switch is on.
+!-----------------------------------------------------------------------
+!
+      IF (Wextend) THEN
+        DO m=GrecvW,1,-1
+          i=Istr-m
+          DO k=LBk,UBk
+            A(i,k)=A(Istr,k)
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=GrecvW,1,-1
+            i=Istr-m
+            DO k=LBk,UBk
+              B(i,k)=B(Istr,k)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=GrecvW,1,-1
+            i=Istr-m
+            DO k=LBk,UBk
+              C(i,k)=C(Istr,k)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=GrecvW,1,-1
+            i=Istr-m
+            DO k=LBk,UBk
+              D(i,k)=D(Istr,k)
+            END DO
+          END DO
+        END IF
+      END IF
+!
+      IF (Eextend) THEN
+        DO m=1,GrecvE
+          i=Iend+m
+          DO k=LBk,UBk
+            A(i,k)=A(Iend,k)
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,GrecvE
+            i=Iend+m
+            DO k=LBk,UBk
+              B(i,k)=B(Iend,k)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,GrecvE
+            i=Iend+m
+            DO k=LBk,UBk
+              C(i,k)=C(Iend,k)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,GrecvE
+            i=Iend+m
+            DO k=LBk,UBk
+              D(i,k)=D(Iend,k)
+            END DO
+          END DO
+        END IF
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Pack Southern and Northern tile boundary data including ghost-points.
@@ -4080,6 +5002,78 @@
           END DO
         END IF
       END IF
+# ifdef TILEMASK
+!
+!-----------------------------------------------------------------------
+!  Apply gradient boundary condition if the extend switch is on.
+!-----------------------------------------------------------------------
+!
+      IF (Sextend) THEN
+        DO m=GrecvS,1,-1
+          j=Jstr-m
+          DO k=LBk,UBk
+            A(j,k)=A(Jstr,k)
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=GrecvS,1,-1
+            j=Jstr-m
+            DO k=LBk,UBk
+              B(j,k)=B(Jstr,k)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=GrecvS,1,-1
+            j=Jstr-m
+            DO k=LBk,UBk
+              C(j,k)=C(Jstr,k)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=GrecvS,1,-1
+            j=Jstr-m
+            DO k=LBk,UBk
+              D(j,k)=D(Jstr,k)
+            END DO
+          END DO
+        END IF
+      END IF
+!
+      IF (Nextend) THEN
+        DO m=1,GrecvN
+          j=Jend+m
+          DO k=LBk,UBk
+            A(j,k)=A(Jend,k)
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,GrecvN
+            j=Jend+m
+            DO k=LBk,UBk
+              B(j,k)=B(Jend,k)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,GrecvN
+            j=Jend+m
+            DO k=LBk,UBk
+              C(j,k)=C(Jend,k)
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(D)) THEN
+          DO m=1,GrecvN
+            j=Jend+m
+            DO k=LBk,UBk
+              D(j,k)=D(Jend,k)
+            END DO
+          END DO
+        END IF
+      END IF
+# endif
 
 # ifdef PROFILE
 !
@@ -4134,6 +5128,9 @@
 !  Local variable declarations.
 !
       logical :: Wexchange, Sexchange, Eexchange, Nexchange
+# ifdef TILEMASK
+      logical :: Wextend, Sextend, Eextend, Nextend
+# endif
 !
       integer :: i, ikS, ikN, ioff, Imin, Imax, Ilen, IKlen, IKTlen
       integer :: j, jkW, jkE, joff, Jmin, Jmax, Jlen, JKlen, JKTlen
@@ -4187,10 +5184,17 @@
      &                                   4*SIZE(SendS))*KIND(A),r8))
 !
       CALL tile_neighbors (ng, Nghost, EW_periodic, NS_periodic,        &
+# ifdef TILEMASK
+     &                     GrecvW, GsendW, Wtile, Wexchange, Wextend,   &
+     &                     GrecvE, GsendE, Etile, Eexchange, Eextend,   &
+     &                     GrecvS, GsendS, Stile, Sexchange, Sextend,   &
+     &                     GrecvN, GsendN, Ntile, Nexchange, Nextend)
+# else
      &                     GrecvW, GsendW, Wtile, Wexchange,            &
      &                     GrecvE, GsendE, Etile, Eexchange,            &
      &                     GrecvS, GsendS, Stile, Sexchange,            &
      &                     GrecvN, GsendN, Ntile, Nexchange)
+# endif
 !
 !  Set communication tags.
 !
@@ -4495,6 +5499,86 @@
           END DO
         END IF
       END IF
+# ifdef TILEMASK
+!
+!-----------------------------------------------------------------------
+!  Apply gradient boundary condition if the extend switch is on.
+!-----------------------------------------------------------------------
+!
+      IF (Wextend) THEN
+        DO m=GrecvW,1,-1
+          i=Istr-m
+          DO l=LBt,UBt
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                A(i,j,k,l)=A(Istr,j,k,l)
+              END DO
+            END DO
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=GrecvW,1,-1
+            i=Istr-m
+            DO l=LBt,UBt
+              DO k=LBk,UBk
+                DO j=Jmin,Jmax
+                  B(i,j,k,l)=B(Istr,j,k,l)
+                END DO
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=GrecvW,1,-1
+            i=Istr-m
+            DO l=LBt,UBt
+              DO k=LBk,UBk
+                DO j=Jmin,Jmax
+                  C(i,j,k,l)=C(Istr,j,k,l)
+                END DO
+              END DO
+            END DO
+          END DO
+        END IF
+      END IF
+!
+      IF (Eextend) THEN
+        DO m=1,GrecvE
+          i=Iend+m
+          DO l=LBt,UBt
+            DO k=LBk,UBk
+              DO j=Jmin,Jmax
+                A(i,j,k,l)=A(Iend,j,k,l)
+              END DO
+            END DO
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,GrecvE
+            i=Iend+m
+            DO l=LBt,UBt
+              DO k=LBk,UBk
+                DO j=Jmin,Jmax
+                  B(i,j,k,l)=B(Iend,j,k,l)
+                END DO
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,GrecvE
+            i=Iend+m
+            DO l=LBt,UBt
+              DO k=LBk,UBk
+                DO j=Jmin,Jmax
+                  C(i,j,k,l)=C(Iend,j,k,l)
+                END DO
+              END DO
+            END DO
+          END DO
+        END IF
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Pack Southern and Northern tile boundary data including ghost-points.
@@ -4760,6 +5844,86 @@
           END DO
         END IF
       END IF
+# ifdef TILEMASK
+!
+!-----------------------------------------------------------------------
+!  Apply gradient boundary condition if the extend switch is on.
+!-----------------------------------------------------------------------
+!
+      IF (Sextend) THEN
+        DO m=GrecvS,1,-1
+          j=Jstr-m
+          DO l=LBt,UBt
+            DO k=LBk,UBk
+              DO i=Imin,Imax
+                A(i,j,k,l)=A(i,Jstr,k,l)
+              END DO
+            END DO
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=GrecvS,1,-1
+            j=Jstr-m
+            DO l=LBt,UBt
+              DO k=LBk,UBk
+                DO i=Imin,Imax
+                  B(i,j,k,l)=B(i,Jstr,k,l)
+                END DO
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=GrecvS,1,-1
+            j=Jstr-m
+            DO l=LBt,UBt
+              DO k=LBk,UBk
+                DO i=Imin,Imax
+                  C(i,j,k,l)=C(i,Jstr,k,l)
+                END DO
+              END DO
+            END DO
+          END DO
+        END IF
+      END IF
+!
+      IF (Nextend) THEN
+        DO m=1,GrecvN
+          j=Jend+m
+          DO l=LBt,UBt
+            DO k=LBk,UBk
+              DO i=Imin,Imax
+                A(i,j,k,l)=A(i,Jend,k,l)
+              END DO
+            END DO
+          END DO
+        END DO
+        IF (PRESENT(B)) THEN
+          DO m=1,GrecvN
+            j=Jend+m
+            DO l=LBt,UBt
+              DO k=LBk,UBk
+                DO i=Imin,Imax
+                  B(i,j,k,l)=B(i,Jend,k,l)
+                END DO
+              END DO
+            END DO
+          END DO
+        END IF
+        IF (PRESENT(C)) THEN
+          DO m=1,GrecvN
+            j=Jend+m
+            DO l=LBt,UBt
+              DO k=LBk,UBk
+                DO i=Imin,Imax
+                  C(i,j,k,l)=C(i,Jend,k,l)
+                END DO
+              END DO
+            END DO
+          END DO
+        END IF
+      END IF
+# endif
 
 # ifdef PROFILE
 !
@@ -8550,6 +9714,7 @@
           END DO
         END IF
       END IF
+
 #  ifdef PROFILE
 !
 !-----------------------------------------------------------------------

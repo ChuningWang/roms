@@ -75,6 +75,7 @@ list( APPEND _files
       ROMS/Utility/get_ngfldr.F
       ROMS/Utility/get_nudgcoef.F
       ROMS/Utility/get_state.F
+      ROMS/Utility/get_tidename.F
       ROMS/Utility/get_varcoords.F
       ROMS/Utility/get_wetdry.F
       ROMS/Utility/grid_coords.F
@@ -129,6 +130,7 @@ list( APPEND _files
       ROMS/Utility/read_fltbiopar.F
       ROMS/Utility/read_fltpar.F
       ROMS/Utility/read_icepar.F
+      ROMS/Utility/read_isfpar.F
       ROMS/Utility/read_phypar.F
       ROMS/Utility/read_sedpar.F
       ROMS/Utility/read_stapar.F
