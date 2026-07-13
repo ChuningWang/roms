@@ -524,7 +524,7 @@
 #   ifdef SHORTWAVE
       DO j=JstrR,JendR
         DO i=IstrR,IendR
-          srflx(i,j,itrc)=srflx(i,j,itrc)*(1.0_r8-rmask_isf(i,j))
+          srflx(i,j)=srflx(i,j)*(1.0_r8-rmask_isf(i,j))
         END DO
       END DO
 #   endif
