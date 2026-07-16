@@ -95,6 +95,15 @@
           CASE ('idIsbo')
             idIsbo=varid
             iFisf(icIsbo)=idIsbo
+          CASE ('idItba')
+            idItba=varid
+            iFisf(icItba)=idItba
+          CASE ('idIsba')
+            idIsba=varid
+            iFisf(icIsba)=idIsba
+          CASE ('idIsbl')
+            idIsbl=varid
+            iOisf(ioHsbl)=idIsbl
           CASE ('idIvol')
             idIvol=varid
           CASE ('idItrc(inert(i))')

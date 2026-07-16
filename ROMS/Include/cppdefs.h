@@ -672,6 +672,7 @@
 ** ICESHELF_2EQN_VBC    use to activate 2-equation ice/ocean thermodynamics  **
 ** ICESHELF_3EQN_VBC    use to activate 3-equation ice/ocean thermodynamics  **
 ** ICESHELF_TEOS10      use to activate TEOS10 in-situ T calculation         **
+** ICESHELF_NO_SBL      use to disable sub-boundary layer flux distribution **
 **                                                                           **
 ** OPTION to avoid writing current date and CPP options to NetCDF file       **
 ** headers. This is used to compare serial and parallel solutions where      **

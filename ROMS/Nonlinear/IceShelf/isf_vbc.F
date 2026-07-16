@@ -91,6 +91,8 @@
      &                   ISF(ng) % Vi,                                  &
      &                   ISF(ng) % Ti,                                  &
      &                   ISF(ng) % Fi,                                  &
+     &                   ISF(ng) % Oi,                                  &
+     &                   ISF(ng) % Tamb,                                &
      &                   FORCES(ng) % stflx)
 # ifdef PROFILE
       CALL wclock_off (ng, model, 42, __LINE__, MyFile)
@@ -111,6 +113,7 @@
 # endif
      &                         Vi, Ti,                                  &
      &                         Fi,                                      &
+     &                         Oi, Tamb,                                &
      &                         stflx)
 !***********************************************************************
 !
@@ -142,6 +145,8 @@
       real(r8), intent(inout) :: Vi(LBi:,LBj:,:)
       real(r8), intent(inout) :: Ti(LBi:,LBj:,:,:)
       real(r8), intent(out) :: Fi(LBi:,LBj:,:)
+      real(r8), intent(in) :: Oi(LBi:,LBj:,:,:)
+      real(r8), intent(out) :: Tamb(LBi:,LBj:,:)
       real(r8), intent(out) :: stflx(LBi:,LBj:,:)
 # else
       real(r8), intent(in) :: Hz(LBi:UBi,LBj:UBj,N(ng))
@@ -156,6 +161,8 @@
       real(r8), intent(inout) :: Vi(LBi:UBi,LBj:UBj,2)
       real(r8), intent(inout) :: Ti(LBi:UBi,LBj:UBj,2,NTISF(ng))
       real(r8), intent(out) :: Fi(LBi:UBi,LBj:UBj,nIsfF)
+      real(r8), intent(in) :: Oi(LBi:UBi,LBj:UBj,N(ng),nIsfO)
+      real(r8), intent(out) :: Tamb(LBi:UBi,LBj:UBj,NT(ng))
       real(r8), intent(out) :: stflx(LBi:UBi,LBj:UBj,NT(ng))
 # endif
 !
@@ -164,6 +171,7 @@
       integer :: i, j, k, ic, itrc
       real(r8) :: Pradj, Scadj, cp_i
       real(r8) :: Sm, Tm, TFb, turb, rhoi_on_rho0, ct
+      real(r8) :: Tm_theta, tracer_amb
       real(r8) :: cff, cff1, cff2, cff3
 # include "set_bounds.h"
 !
@@ -186,19 +194,79 @@
         DO i=Istr,Iend
           IF (rmask_isf(i,j).eq.1.0_r8) THEN
 !
-!  Get the insitu salinity and temperature
+!  Get the ambient salinity and temperature at the ice-ocean interface.
 !
-# ifdef SALINITY
-            Sm = MAX(0.0_r8,t(i,j,N(ng),nrhs,isalt))
+!  In SBL mode (ICESHELF_NO_SBL not defined), ambient T/S are computed
+!  as Oi-weighted vertical averages over the sub-boundary layer rather
+!  than using only the topmost cell.  The in-situ temperature conversion
+!  (potit/t_from_ct) uses the boundary layer center depth
+!  (-zice + 0.5*Hsbl) instead of the ice base depth (-zice).
+!  If isf_Hsbl <= 0, the code falls back to the original topmost-cell
+!  behavior.
+!
+!  Results are stored in:
+!    Tamb(i,j,itemp/isalt) - ambient potential T / salinity (for flux)
+!    Fi(i,j,icItba/icIsba) - ambient in-situ T / salinity (for output)
+!
+# ifndef ICESHELF_NO_SBL
+!
+            IF (isf_Hsbl(ng).gt.0.0_r8) THEN
+              Sm = 0.0_r8
+              Tm_theta = 0.0_r8
+              DO k=1,N(ng)
+#  ifdef SALINITY
+                Sm = Sm + Oi(i,j,k,ioHsbl)*                             &
+     &               MAX(0.0_r8,t(i,j,k,nrhs,isalt))
+#  endif
+                Tm_theta = Tm_theta + Oi(i,j,k,ioHsbl)*                 &
+     &               t(i,j,k,nrhs,itemp)
+              END DO
+#  ifdef ICESHELF_TEOS10
+              ct = ct_from_theta(Sm,Tm_theta)
+              Tm = t_from_ct(Sm,ct,-zice(i,j)+0.5_r8*isf_Hsbl(ng))
+#  else
+              CALL potit(Sm,Tm_theta,                                   &
+     &                   -zice(i,j)+0.5_r8*isf_Hsbl(ng),                &
+     &                   0.0_r8,Tm,i,j)
+#  endif
+            ELSE
+#  ifdef SALINITY
+              Sm = MAX(0.0_r8,t(i,j,N(ng),nrhs,isalt))
+#  else
+              Sm = 0.0_r8
+#  endif
+#  ifdef ICESHELF_TEOS10
+              ct = ct_from_theta(Sm,t(i,j,N(ng),nrhs,itemp))
+              Tm = t_from_ct(Sm,ct,-zice(i,j))
+#  else
+              CALL potit(Sm,t(i,j,N(ng),nrhs,itemp),-zice(i,j),0.0_r8,  &
+     &                   Tm,i,j)
+#  endif
+            END IF
+            Tamb(i,j,itemp) = Tm_theta
+            Tamb(i,j,isalt) = Sm
+            Fi(i,j,icItba) = Tm
+            Fi(i,j,icIsba) = Sm
 # else
+!
+!  Original: use topmost cell values
+!
+#  ifdef SALINITY
+            Sm = MAX(0.0_r8,t(i,j,N(ng),nrhs,isalt))
+#  else
             Sm = 0.0_r8
-# endif
-# ifdef ICESHELF_TEOS10
+#  endif
+#  ifdef ICESHELF_TEOS10
             ct = ct_from_theta(Sm,t(i,j,N(ng),nrhs,itemp))
             Tm = t_from_ct(Sm,ct,-zice(i,j))
-# else
+#  else
             CALL potit(Sm,t(i,j,N(ng),nrhs,itemp),-zice(i,j),0.0_r8,Tm, &
      &                 i,j)
+#  endif
+            Tamb(i,j,itemp) = t(i,j,N(ng),nrhs,itemp)
+            Tamb(i,j,isalt) = Sm
+            Fi(i,j,icItba) = Tm
+            Fi(i,j,icIsba) = Sm
 # endif
 # if defined ICESHELF_2EQN_VBC
 !
@@ -311,6 +379,23 @@
               DO itrc=NAT+1,NT(ng)
                 IF (LtracerIsf(itrc,ng)) THEN
                   ic=ic+1
+!
+!  Compute ambient passive tracer concentration (SBL-weighted average
+!  or topmost cell if Hsbl <= 0 or ICESHELF_NO_SBL is defined).
+!
+# ifndef ICESHELF_NO_SBL
+                  IF (isf_Hsbl(ng).gt.0.0_r8) THEN
+                    Tamb(i,j,itrc) = 0.0_r8
+                    DO k=1,N(ng)
+                      Tamb(i,j,itrc) = Tamb(i,j,itrc) +                 &
+     &                   Oi(i,j,k,ioHsbl)*t(i,j,k,nrhs,itrc)
+                    END DO
+                  ELSE
+                    Tamb(i,j,itrc) = t(i,j,N(ng),nrhs,itrc)
+                  END IF
+# else
+                  Tamb(i,j,itrc) = t(i,j,N(ng),nrhs,itrc)
+# endif
                   IF (Fi(i,j,icImel).gt.0.0_r8 .and.                    &
      &                Vi(i,j,lsnew(ng)).gt.0.0_r8) THEN
                     cff1=Ti(i,j,lsnew(ng),ic)/Vi(i,j,lsnew(ng))
@@ -321,12 +406,12 @@
                     cff1=0.0_r8
                     cff2=0.0_r8
                   ELSE
-                    cff1=t(i,j,N(ng),nrhs,itrc)
+                    cff1=Tamb(i,j,itrc)
                     cff2=cff1
                   END IF
                   stflx(i,j,itrc)=stflx(i,j,itrc)+                      &
      &                            Fi(i,j,icImel)*                       &
-     &                            (cff2-t(i,j,N(ng),nrhs,itrc))
+     &                            (cff2-Tamb(i,j,itrc))
                   Ti(i,j,lsnew(ng),ic)=Ti(i,j,lsnew(ng),ic)-cff1*cff
                   Ti(i,j,lsnew(ng),ic)=MAX(Ti(i,j,lsnew(ng),ic), 0.0_r8)
                 END IF

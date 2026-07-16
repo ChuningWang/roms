@@ -51,6 +51,9 @@
 # if defined PIO_LIB && defined DISTRIBUTE
       USE isf_output_mod, ONLY : isf_def_pio
 # endif
+# if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
+      USE mod_isf, ONLY : iOisf, ioHsbl, nIsfO
+# endif
 #endif
       USE strings_mod,           ONLY : FoundError
 #if defined VEGETATION && defined SOLVE3D
@@ -126,6 +129,7 @@
 
       integer :: i, j, nvd3, nvd4, nvd5
       integer :: recdim, status, varid
+      integer :: ifield
 
       integer :: DimIDs(nDimID)
       integer :: r2dgrd(4), ru2dgrd(4), rv2dgrd(4)
@@ -1647,9 +1651,42 @@
 !-----------------------------------------------------------------------
 !
         CALL isf_def_nf90 (ng, model, Ldefine, Hout, RST,               &
-                           i2dgrd, u2dgrd, v2dgrd,                      &
+     &                     i2dgrd, u2dgrd, v2dgrd,                      &
      &                     sr2dgrd, ru2dgrd, rv2dgrd)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#  if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
+#   ifdef PERFECT_RESTART
+!
+!  Define SBL weights (Oi) for restart.
+!
+        IF (iOisf(ioHsbl).gt.0) THEN
+          ifield=iOisf(ioHsbl)
+          DO i=1,Natt
+            DO j=1,LEN(Vinfo(1))
+              Vinfo(i)(j:j)=' '
+            END DO
+          END DO
+          DO i=1,6
+            Aval(i)=0.0_r8
+          END DO
+          Vinfo( 1)=Vname(1,ifield)
+          Vinfo( 2)=Vname(2,ifield)
+          Vinfo( 3)=Vname(3,ifield)
+          Vinfo(14)=Vname(4,ifield)
+          Vinfo(16)=Vname(1,idtime)
+#    if defined WRITE_WATER && defined MASKING
+          Vinfo(20)='mask_rho'
+#    endif
+          Vinfo(21)=Vname(6,ifield)
+          Vinfo(22)='coordinates'
+          Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
+          status=def_var(ng, model, RST(ng)%ncid,                        &
+     &                   RST(ng)%Vid(ifield),                            &
+     &                   NF_FRST, nvd4, r3dgrd, Aval, Vinfo, ncname)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        END IF
+#   endif
+#  endif
 #endif
 
 #if defined VEGETATION && defined SOLVE3D
@@ -2211,6 +2248,7 @@
 
       integer :: i, j, nvd3, nvd4, nvd5
       integer :: recdim, status
+      integer :: ifield
 
       integer :: DimIDs(nDimID)
       integer :: r2dgrd(4), ru2dgrd(4), rv2dgrd(4)
@@ -3872,6 +3910,41 @@
                           i2dgrd, u2dgrd, v2dgrd,                       &
      &                    sr2dgrd, ru2dgrd, rv2dgrd)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#  if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
+#   ifdef PERFECT_RESTART
+!
+!  Define SBL weights (Oi) for restart.
+!
+        IF (iOisf(ioHsbl).gt.0) THEN
+          ifield=iOisf(ioHsbl)
+          DO i=1,Natt
+            DO j=1,LEN(Vinfo(1))
+              Vinfo(i)(j:j)=' '
+            END DO
+          END DO
+          DO i=1,6
+            Aval(i)=0.0_r8
+          END DO
+          Vinfo( 1)=Vname(1,ifield)
+          Vinfo( 2)=Vname(2,ifield)
+          Vinfo( 3)=Vname(3,ifield)
+          Vinfo(14)=Vname(4,ifield)
+          Vinfo(16)=Vname(1,idtime)
+#    if defined WRITE_WATER && defined MASKING
+          Vinfo(20)='mask_rho'
+#    endif
+          Vinfo(21)=Vname(6,ifield)
+          Vinfo(22)='coordinates'
+          Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
+          RST(ng)%pioVar(ifield)%dkind=PIO_FRST
+          RST(ng)%pioVar(ifield)%gtype=r3dvar
+          status=def_var(ng, model, RST(ng)%pioFile,                      &
+     &                   RST(ng)%pioVar(ifield)%vd,                       &
+     &                   PIO_FRST, nvd4, r3dgrd, Aval, Vinfo, ncname)
+          IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+        END IF
+#   endif
+#  endif
 # endif
 
 # if defined VEGETATION && defined SOLVE3D

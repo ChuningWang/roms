@@ -80,6 +80,9 @@
       integer :: idIust       ! U*
       integer :: idItbo       ! Boundary layer temperature
       integer :: idIsbo       ! Boundary layer salinity
+      integer :: idItba       ! Ambient boundary layer temperature
+      integer :: idIsba       ! Ambient boundary layer salinity
+      integer :: idIsbl       ! SBL vertical weight (for restart)
 !
       integer              :: idIvol     ! Volume of refreezed water
       integer, allocatable :: idItrc(:)  ! Tracer variables
@@ -109,9 +112,9 @@
 #endif
 !
 #if defined ICESHELF_3EQN_VBC
-      integer, parameter :: nIsfF = 7    ! number of ice field variables
+      integer, parameter :: nIsfF = 9    ! number of ice field variables
 #elif defined ICESHELF_2EQN_VBC
-      integer, parameter :: nIsfF = 1    ! number of ice field variables
+      integer, parameter :: nIsfF = 3    ! number of ice field variables
 #else
       integer, parameter :: nIsfF = 0    ! number of ice field variables
 #endif
@@ -125,8 +128,18 @@
       integer, parameter :: icIust =  5  ! U*
       integer, parameter :: icItbo =  6  ! Boundary layer temperature
       integer, parameter :: icIsbo =  7  ! Boundary layer salinity
+      integer, parameter :: icItba =  8  ! Ambient T in sub-boundary layer
+      integer, parameter :: icIsba =  9  ! Ambient S in sub-boundary layer
 !
       integer :: isf_ic_brylast  ! Boundary layer salinity
+!
+!  Iceshelf model ocean variable indices (SBL vertical weights).
+!  Oi(i,j,k,ioHsbl) stores the fraction of ice shelf basal flux
+!  assigned to vertical layer k within the sub-boundary layer.
+!
+      integer, parameter :: nIsfO = 1    ! number of ocean variables
+      integer, parameter :: ioHsbl = 1   ! SBL vertical weight
+      integer :: iOisf(nIsfO)            ! ocean variables I/O indices
 !
 !-----------------------------------------------------------------------
 !  Iceshelf model parameters.
@@ -166,6 +179,7 @@
       real(r8), allocatable :: isf_drdz(:)      ! Drho/Dz value
       real(r8), allocatable :: gamU(:)          ! gamma scaling factor
       real(r8), allocatable :: min_ustar(:)     ! minimum ustar value
+      real(r8), allocatable :: isf_Hsbl(:)      ! SBL thickness [m]
 !
 !  Logical switches
 !
@@ -213,6 +227,8 @@
         real(r8), pointer :: Si(:,:,:,:)             ! [i,j,1:2,1:nIsfS]
         real(r8), pointer :: Vi(:,:,:)               ! [i,j,1:2]
         real(r8), pointer :: Ti(:,:,:,:)             ! [i,j,1:2,1:NTISF]
+        real(r8), pointer :: Oi(:,:,:,:)             ! [i,j,k,1:nIsfO] SBL vertical weights
+        real(r8), pointer :: Tamb(:,:,:)             ! [i,j,1:NT] ambient tracer (SBL avg)
 
       END TYPE T_ISF
 !
@@ -272,7 +288,7 @@
 !                                                                      !
 !=======================================================================
 !
-      USE mod_param,   ONLY : BOUNDS, Dmem, LBC, Ngrids, NT, MT, NAT
+      USE mod_param,   ONLY : BOUNDS, Dmem, LBC, Ngrids, NT, MT, NAT, N
       USE mod_scalars, ONLY : iwest, ieast, isouth, inorth
 !
 !  Imported variable declarations.
@@ -364,6 +380,12 @@
           min_ustar(1:Ngrids)=IniVal
         END IF
 
+        IF (.not.allocated(isf_Hsbl)) THEN
+          allocate ( isf_Hsbl(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          isf_Hsbl(1:Ngrids)=IniVal
+        END IF
+
         IF (.not.allocated(NTISF)) THEN
           allocate ( NTISF(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
@@ -416,6 +438,12 @@
 !
         allocate ( ISF(ng) % Fi(LBi:UBi,LBj:UBj,nIsfF) )
         Dmem(ng)=Dmem(ng)+REAL(nIsfF,r8)*size2d
+!
+        allocate ( ISF(ng) % Oi(LBi:UBi,LBj:UBj,N(ng),nIsfO) )
+        Dmem(ng)=Dmem(ng)+REAL(N(ng)*nIsfO,r8)*size2d
+!
+        allocate ( ISF(ng) % Tamb(LBi:UBi,LBj:UBj,NT(ng)) )
+        Dmem(ng)=Dmem(ng)+REAL(NT(ng),r8)*size2d
 !
         IF (Lisftrc(ng)) THEN
           allocate ( ISF(ng) % Vi(LBi:UBi,LBj:UBj,2) )
@@ -582,6 +610,12 @@
       IF (.not.destroy(ng, ISF(ng)%Fi, MyFile,                          &
      &                 __LINE__, 'ISF(ng)%Fi')) RETURN
 !
+      IF (.not.destroy(ng, ISF(ng)%Oi, MyFile,                          &
+     &                 __LINE__, 'ISF(ng)%Oi')) RETURN
+!
+      IF (.not.destroy(ng, ISF(ng)%Tamb, MyFile,                        &
+     &                 __LINE__, 'ISF(ng)%Tamb')) RETURN
+!
       IF (Lisftrc(ng)) THEN
         IF (.not.destroy(ng, ISF(ng)%Vi, MyFile,                        &
      &                   __LINE__, 'ISF(ng)%Vi')) RETURN
@@ -687,6 +721,8 @@
       IF (allocated(LisfTavg)) deallocate ( LisfTavg )
 #endif
 !
+      IF (allocated(isf_Hsbl))  deallocate ( isf_Hsbl )
+!
       RETURN
       END SUBROUTINE deallocate_isf
 !
@@ -702,7 +738,7 @@
 !                                                                      !
 !=======================================================================
 !
-      USE mod_param,   ONLY : BOUNDS, DOMAIN, LBC, iNLM, NT, MT
+      USE mod_param,   ONLY : BOUNDS, DOMAIN, LBC, iNLM, NT, MT, N
       USE mod_scalars, ONLY : iwest, ieast, isouth, inorth
 !
 !  Imported variable declarations.
@@ -711,7 +747,7 @@
 !
 !  Local variable declarations.
 !
-      integer :: i, j, nf, ns, ic, itrc
+      integer :: i, j, nf, ns, ic, itrc, k, no
       integer :: Imin, Imax, Jmin, Jmax
 
       real(r8), parameter :: IniVal = 0.0_r8
@@ -761,6 +797,16 @@
 !
           DO nf=1,nIsfF
             ISF(ng) % Fi(i,j,nf) = IniVal
+          END DO
+!
+          DO no=1,nIsfO
+            DO k=1,N(ng)
+              ISF(ng) % Oi(i,j,k,no) = IniVal
+            END DO
+          END DO
+!
+          DO itrc=1,NT(ng)
+            ISF(ng) % Tamb(i,j,itrc) = IniVal
           END DO
         END DO
       END DO

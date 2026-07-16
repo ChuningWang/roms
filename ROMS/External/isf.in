@@ -85,6 +85,11 @@
 
    min_ustar == 8.0d-6
 
+! Iceshelf sub-boundary layer thickness [m]. Set to 0 or negative to
+! disable SBL and use original top-cell flux injection.
+
+    isf_Hsbl == 30.0d0
+
 ! Logical switches for iceshelf-ocean tracer exchange.
 
   LtracerIsf == T     ! dye_01, ...        inert passive tracers
@@ -115,6 +120,8 @@ Hout(idItst) == T     ! Fi(...,icItst)     iceshelf Tstar
 Hout(idIust) == T     ! Fi(...,icIust)     iceshelf Ustar
 Hout(idItbo) == T     ! Fi(...,icItbo)     iceshelf boundary layer temperature
 Hout(idIsbo) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
+Hout(idItba) == T     ! Fi(...,icItba)     iceshelf ambient boundary layer temperature
+Hout(idIsba) == T     ! Fi(...,icIsba)     iceshelf ambient boundary layer salinity
 
 Hout(idIvol) == T     ! Vi                 iceshelf refreezed volume
 Hout(idItrc) == T     ! Ti(...,itrc)       iceshelf refreezed tracer
@@ -137,6 +144,8 @@ Qout(idItst) == T     ! Fi(...,icItst)     iceshelf Tstar
 Qout(idIust) == T     ! Fi(...,icIust)     iceshelf Ustar
 Qout(idItbo) == T     ! Fi(...,icItbo)     iceshelf boundary layer temperature
 Qout(idIsbo) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
+Qout(idItba) == T     ! Fi(...,icItba)     iceshelf ambient boundary layer temperature
+Qout(idIsba) == T     ! Fi(...,icIsba)     iceshelf ambient boundary layer salinity
 
 Qout(idIvol) == T     ! Vi                 iceshelf refreezed volume
 Qout(idItrc) == T     ! Ti(...,itrc)       iceshelf refreezed tracer
@@ -159,6 +168,8 @@ Aout(idItst) == T     ! Fi_avg(...,icItst) iceshelf Tstar
 Aout(idIust) == T     ! Fi_avg(...,icIust) iceshelf Ustar
 Aout(idItbo) == T     ! Fi_avg(...,icItbo) iceshelf boundary layer temperature
 Aout(idIsbo) == T     ! Fi_avg(...,icIsbo) iceshelf boundary layer salinity
+Aout(idItba) == T     ! Fi_avg(...,icItba) iceshelf ambient boundary layer temperature
+Aout(idIsba) == T     ! Fi_avg(...,icIsba) iceshelf ambient boundary layer salinity
 
 Aout(idIvol) == T     ! Vi_avg             iceshelf refreezed volume
 Aout(idItrc) == T     ! Ti_avg(...,itrc)   iceshelf refreezed tracer
@@ -181,6 +192,8 @@ Sout(idItst) == T     ! Fi(...,icItst)     iceshelf Tstar
 Sout(idIust) == T     ! Fi(...,icIust)     iceshelf Ustar
 Sout(idItbo) == T     ! Fi(...,icItbo)     iceshelf boundary layer temperature
 Sout(idIsbo) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
+Sout(idItba) == T     ! Fi(...,icItba)     iceshelf ambient boundary layer temperature
+Sout(idIsba) == T     ! Fi(...,icIsba)     iceshelf ambient boundary layer salinity
 
 Sout(idIvol) == T     ! Vi                 iceshelf refreezed volume
 Sout(idItrc) == T     ! Ti(...,itrc)       iceshelf refreezed tracer

@@ -7873,6 +7873,28 @@ metadata:
     add_offset:     0.0d0
     scale:          1.0d0
 
+  - variable:       is_Tba
+    standard_name:  iceshelf_ambient_boundary_layer_temperature
+    long_name:      ambient temperature in sub-boundary layer
+    units:          Celcius
+    field:          ice shelf ambient boundary layer temperature
+    time:           ocean_time
+    index_code:     idItba
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_Sba
+    standard_name:  iceshelf_ambient_boundary_layer_practical_salinity
+    long_name:      ambient salinity in sub-boundary layer
+    units:          nondimensional
+    field:          ice shelf ambient boundary layer salinity
+    time:           ocean_time
+    index_code:     idIsba
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
   - variable:       is_vol
     standard_name:  iceshelf_refreezed_draft
     long_name:      thickness of refreezed volume at ice shelf base
@@ -7892,6 +7914,17 @@ metadata:
     time:           ocean_time
     index_code:     idItrc(inert(i))
     type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_sbl_wt
+    standard_name:  iceshelf_sub_boundary_layer_weight
+    long_name:      sub-boundary layer vertical weight
+    units:          nondimensional
+    field:          ice shelf SBL vertical weight
+    time:           ocean_time
+    index_code:     idIsbl
+    type:           r3dvar
     add_offset:     0.0d0
     scale:          1.0d0
 

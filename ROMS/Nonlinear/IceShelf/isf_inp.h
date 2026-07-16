@@ -107,6 +107,8 @@
               Npts=load_r(Nval, Rval, Ngrids, gamU)
             CASE ('min_ustar')
               Npts=load_r(Nval, Rval, Ngrids, min_ustar)
+            CASE ('isf_Hsbl')
+              Npts=load_r(Nval, Rval, Ngrids, isf_Hsbl)
 # ifdef T_PASSIVE
             CASE ('LtracerIsf')
               Npts=load_l(Nval, Cval, NPT, Ngrids, Linert)
@@ -266,6 +268,22 @@
               END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Hout(idIsbo,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Hout(idItba)')
+              IF (idItba.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idItba'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(idItba,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Hout(idIsba)')
+              IF (idIsba.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIsba'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(idIsba,1:Ngrids)=Lswitch(1:Ngrids)
 # ifdef T_PASSIVE
             CASE ('Hout(idIvol)')
               IF (idIvol.eq.0) THEN
@@ -341,6 +359,12 @@
             CASE ('Qout(idIsbo)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idIsbo,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Qout(idItba)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Qout(idItba,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Qout(idIsba)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Qout(idIsba,1:Ngrids)=Lswitch(1:Ngrids)
 # ifdef T_PASSIVE
             CASE ('Qout(idIvol)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
@@ -407,6 +431,12 @@
             CASE ('Aout(idIsbo)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idIsbo,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Aout(idItba)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Aout(idItba,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Aout(idIsba)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Aout(idIsba,1:Ngrids)=Lswitch(1:Ngrids)
 #  ifdef T_PASSIVE
             CASE ('Aout(idIvol)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
@@ -474,6 +504,12 @@
             CASE ('Sout(idIsbo)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idIsbo,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idItba)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idItba,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idIsba)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idIsba,1:Ngrids)=Lswitch(1:Ngrids)
 #  ifdef T_PASSIVE
             CASE ('Sout(idIvol)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
@@ -521,6 +557,8 @@
      &          'Iceshelf Ustar scaling factor (nondimensional).'
           WRITE (out,60) min_ustar(ng), 'min_ustar',                    &
      &          'Iceshelf minimum Ustar value.'
+          WRITE (out,60) isf_Hsbl(ng), 'isf_Hsbl',                      &
+     &          'Iceshelf sub-boundary layer thickness [m].'
 # ifdef T_PASSIVE
           DO i=1,NPT
             itrc=inert(i)

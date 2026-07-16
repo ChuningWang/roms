@@ -9,8 +9,10 @@
 
 list( APPEND _files
       ROMS/Nonlinear/IceShelf/iceshelf.F
+      ROMS/Nonlinear/IceShelf/isf_masks.F
       ROMS/Nonlinear/IceShelf/isf_mom.F
       ROMS/Nonlinear/IceShelf/isf_output.F
+      ROMS/Nonlinear/IceShelf/isf_sbl.F
       ROMS/Nonlinear/IceShelf/isf_set_avg.F
       ROMS/Nonlinear/IceShelf/isf_tibc.F
       ROMS/Nonlinear/IceShelf/isf_uibc.F

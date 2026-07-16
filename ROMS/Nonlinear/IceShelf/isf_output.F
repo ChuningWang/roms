@@ -595,7 +595,7 @@
       logical :: LwrtVar
 !
       integer :: gfactor, gtype, status
-      integer :: ifield, ifld, ic, itrc
+      integer :: ifield, ifld, ic, itrc, no
 !
       real(dp) :: scale
 !
@@ -862,6 +862,39 @@
           END IF
         END IF
       END DO
+#  if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
+#   ifdef PERFECT_RESTART
+!
+!  Write out SBL weights (Oi) to restart file.
+!
+      IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+        DO no=1,nIsfO
+          IF (iOisf(no).gt.0) THEN
+            ifield=iOisf(no)
+            isfField3d => ISF(ng) % Oi(LBi:UBi,LBj:UBj,:,no)
+            scale=1.0_dp
+            gtype=gfactor*r3dvar
+            status=nf_fwrite3d(ng, model, S(ng)%ncid, ifield,           &
+     &                         S(ng)%Vid(ifield),                       &
+     &                         S(ng)%Rindex, gtype,                     &
+     &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
+#   ifdef MASKING
+     &                         GRID(ng) % rmask_full,                   &
+#   endif
+     &                         isfField3d)
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+              IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),      &
+     &                                      S(ng)%Rindex,               &
+     &                                      TRIM(S(ng)%name)
+              exit_flag=3
+              ioerror=status
+              RETURN
+            END IF
+          END IF
+        END DO
+      END IF
+#   endif
+#  endif
 !
 !-----------------------------------------------------------------------
 !  write out isf tracer amount at RHO-points.
@@ -2157,7 +2190,7 @@
       logical :: LwrtVar
 !
       integer :: gfactor, gtype, status
-      integer :: FileH, ifield, ifld, ic, itrc
+      integer :: FileH, ifield, ifld, ic, itrc, no
 !
       real(dp) :: scale
 !
@@ -2478,6 +2511,43 @@
           END IF
         END IF
       END DO
+#  if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
+#   ifdef PERFECT_RESTART
+!
+!  Write out SBL weights (Oi) to restart file.
+!
+      IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
+        DO no=1,nIsfO
+          IF (iOisf(no).gt.0) THEN
+            ifield=iOisf(no)
+            isfField3d => ISF(ng) % Oi(LBi:UBi,LBj:UBj,:,no)
+            scale=1.0_dp
+            IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
+              ioDesc => ioDesc_dp_r3dvar(ng)
+            ELSE
+              ioDesc => ioDesc_sp_r3dvar(ng)
+            END IF
+            status=nf_fwrite3d(ng, model, S(ng)%pioFile, ifield,        &
+     &                         S(ng)%pioVar(ifield), S(ng)%Rindex,      &
+     &                         ioDesc,                                  &
+     &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
+#   ifdef MASKING
+     &                         GRID(ng) % rmask_full,                   &
+#   endif
+     &                         isfField3d)
+            IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+              IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),      &
+     &                                      S(ng)%Rindex,               &
+     &                                      TRIM(S(ng)%name)
+              exit_flag=3
+              ioerror=status
+              RETURN
+            END IF
+          END IF
+        END DO
+      END IF
+#   endif
+#  endif
 !
 !-----------------------------------------------------------------------
 !  write out isf tracer amount at RHO-points.

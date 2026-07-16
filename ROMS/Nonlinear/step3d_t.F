@@ -51,6 +51,10 @@
       USE mod_sedbed
 # endif
       USE mod_stepping
+# if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
+      USE mod_forces
+      USE mod_isf, ONLY : ISF, ioHsbl, isf_Hsbl
+# endif
 !
 !  Imported variable declarations.
 !
@@ -108,6 +112,11 @@
 # ifdef DIAGNOSTICS_TS
      &                    DIAGS(ng) % DiaTwrk,                          &
 # endif
+# if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
+     &                    GRID(ng) % rmask_isf,                         &
+     &                    FORCES(ng) % stflx,                           &
+     &                    ISF(ng) % Oi,                                 &
+# endif
      &                    OCEAN(ng) % t)
 # ifdef PROFILE
       CALL wclock_off (ng, iNLM, 35, __LINE__, MyFile)
@@ -148,6 +157,9 @@
 # ifdef DIAGNOSTICS_TS
      &                          DiaTwrk,                                &
 # endif
+# if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
+     &                          rmask_isf, stflx, Oi,                   &
+# endif
      &                          t)
 !***********************************************************************
 !
@@ -159,6 +171,9 @@
 # endif
       USE mod_scalars
       USE mod_sources
+# if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
+      USE mod_isf, ONLY : ioHsbl, isf_Hsbl, nIsfO
+# endif
 !
       USE exchange_3d_mod, ONLY : exchange_r3d_tile
 # ifdef DISTRIBUTE
@@ -218,6 +233,11 @@
 #  ifdef DIAGNOSTICS_TS
       real(r8), intent(inout) :: DiaTwrk(LBi:,LBj:,:,:,:)
 #  endif
+#  if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
+      real(r8), intent(in) :: rmask_isf(LBi:,LBj:)
+      real(r8), intent(in) :: stflx(LBi:,LBj:,:)
+      real(r8), intent(in) :: Oi(LBi:,LBj:,:,:)
+#  endif
 #  ifdef SUN
       real(r8), intent(inout) :: t(LBi:UBi,LBj:UBj,N(ng),3,NT(ng))
 #  else
@@ -264,6 +284,11 @@
 #  ifdef DIAGNOSTICS_TS
       real(r8), intent(inout) :: DiaTwrk(LBi:UBi,LBj:UBj,N(ng),NT(ng),  &
      &                                   NDT)
+#  endif
+#  if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
+      real(r8), intent(in) :: rmask_isf(LBi:UBi,LBj:UBj)
+      real(r8), intent(in) :: stflx(LBi:UBi,LBj:UBj,NT(ng))
+      real(r8), intent(in) :: Oi(LBi:UBi,LBj:UBj,N(ng),nIsfO)
 #  endif
       real(r8), intent(inout) :: t(LBi:UBi,LBj:UBj,N(ng),3,NT(ng))
 
@@ -1218,6 +1243,28 @@
             END IF
           END IF
 
+# if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
+!
+!  If MPDATA, augment the intermediate tracer, Ta, with ice shelf SBL
+!  virtual source.  The total ice shelf flux (stored in stflx by isf_vbc)
+!  is redistributed over the boundary layer using Oi weights.  For other
+!  advection schemes the SBL source is applied after the vertical
+!  advection is completed (below).  This mirrors the LwSrc pattern.
+!
+          IF (isf_Hsbl(ng).gt.0.0_r8 .and.                              &
+     &        Vadvection(itrc,ng)%MPDATA) THEN
+            DO i=Istr,Iend
+              IF (rmask_isf(i,j).eq.1.0_r8) THEN
+                cff=dt(ng)*stflx(i,j,itrc)
+                DO k=1,N(ng)
+                  Ta(i,j,k,itrc)=Ta(i,j,k,itrc)+                        &
+     &                           cff*Oi(i,j,k,ioHsbl)*oHz(i,j,k)
+                END DO
+              END IF
+            END DO
+          END IF
+# endif
+
 # ifdef SED_MORPH
 !
 !  If MPDATA, augment the intermediate tracer, Ta, with the tracer
@@ -1522,6 +1569,42 @@
           END IF
         END DO
       END IF
+
+# if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
+!
+!-----------------------------------------------------------------------
+!  Add ice shelf sub-boundary layer virtual tracer source (non-MPDATA).
+!
+!  The total ice shelf flux (stored in stflx by isf_vbc) is
+!  redistributed over the boundary layer using Oi weights.  For MPDATA
+!  advection this is applied above (to Ta); for other schemes it is
+!  applied here to t(nnew).
+!-----------------------------------------------------------------------
+!
+      IF (isf_Hsbl(ng).gt.0.0_r8) THEN
+        DO itrc=1,NT(ng)
+          IF (.not.((Hadvection(itrc,ng)%MPDATA).and.                   &
+     &              (Vadvection(itrc,ng)%MPDATA))) THEN
+            DO j=Jstr,Jend
+              DO i=Istr,Iend
+                IF (rmask_isf(i,j).eq.1.0_r8) THEN
+                  cff=dt(ng)*stflx(i,j,itrc)
+                  DO k=1,N(ng)
+#  ifdef SPLINES_VDIFF
+                    t(i,j,k,nnew,itrc)=t(i,j,k,nnew,itrc)+              &
+     &                                 cff*Oi(i,j,k,ioHsbl)*oHz(i,j,k)
+#  else
+                    t(i,j,k,nnew,itrc)=t(i,j,k,nnew,itrc)+              &
+     &                                 cff*Oi(i,j,k,ioHsbl)
+#  endif
+                  END DO
+                END IF
+              END DO
+            END DO
+          END IF
+        END DO
+      END IF
+# endif
 
 # if defined SEDIMENT && defined SED_MORPH
 !

@@ -26,6 +26,9 @@
 # ifdef ICESHELF_THERMO
       USE isf_vbc_mod,      ONLY : isf_vbc
 # endif
+# if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
+      USE isf_sbl_mod,      ONLY : isf_sbl
+# endif
 # ifdef ICESHELF_MOM
       USE isf_mom_mod,      ONLY : isf_mom
 # endif
@@ -78,6 +81,23 @@
 !-----------------------------------------------------------------------
 !  Compute the ice-ocean thermodynamics.
 !-----------------------------------------------------------------------
+!
+#  if !defined ICESHELF_NO_SBL
+!
+!  Compute sub-boundary layer weights on the first time step only.
+!  Oi depends only on static geometry (h, zice, Hz), so the result
+!  is the same whether computed from cold start or restart.
+!
+        DO ig=1,GridsInLayer(nl)
+          ng=GridNumber(ig,nl)
+          IF (iic(ng).eq.ntstart(ng)) THEN
+            DO tile=first_tile(ng),last_tile(ng),+1
+              CALL isf_sbl (ng, tile)
+            END DO
+!$OMP BARRIER
+          END IF
+        END DO
+#  endif
 !
         DO ig=1,GridsInLayer(nl)
           ng=GridNumber(ig,nl)

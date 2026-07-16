@@ -75,6 +75,9 @@
      &                      GRID(ng) % rmask_wet,                       &
 #  endif
 # endif
+# if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
+     &                      GRID(ng) % rmask_isf,                       &
+# endif
 
      &                      GRID(ng) % pm,                              &
      &                      GRID(ng) % pn,                              &
@@ -133,6 +136,9 @@
      &                            rmask_wet,                            &
 #  endif
 # endif
+# if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
+     &                            rmask_isf,                            &
+# endif
      &                            pm, pn,                               &
      &                            Hz, Huon, Hvom,                       &
      &                            z_r, z_w,                             &
@@ -185,6 +191,9 @@
 #   if defined SOLAR_SOURCE && defined WET_DRY
       real(r8), intent(in) :: rmask_wet(LBi:,LBj:)
 #   endif
+#  endif
+#  if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
+      real(r8), intent(in) :: rmask_isf(LBi:,LBj:)
 #  endif
       real(r8), intent(in) :: pm(LBi:,LBj:)
       real(r8), intent(in) :: pn(LBi:,LBj:)
@@ -243,6 +252,9 @@
 #   if defined SOLAR_SOURCE && defined WET_DRY
       real(r8), intent(in) :: rmask_wet(LBi:UBi,LBj:UBj)
 #   endif
+#  endif
+#  if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
+      real(r8), intent(in) :: rmask_isf(LBi:UBi,LBj:UBj)
 #  endif
       real(r8), intent(in) :: pm(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: pn(LBi:UBi,LBj:UBj)
@@ -910,9 +922,26 @@
 !
 !  Apply bottom and surface tracer flux conditions.
 !
+!  In SBL mode (isf_Hsbl > 0), ice shelf fluxes are redistributed over
+!  the boundary layer as virtual sources in step3d_t (not via the surface
+!  flux).  Therefore, the surface flux FC(i,N) is zeroed for ice shelf
+!  cavity cells to prevent double-counting.  The stflx array retains the
+!  flux values for use by step3d_t.
+!  When isf_Hsbl <= 0, the original top-cell injection is used, so the
+!  surface flux is retained.
+!
           DO i=Istr,Iend
             FC(i,0)=dt(ng)*btflx(i,j,itrc)
+#  if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
+            IF (isf_Hsbl(ng).gt.0.0_r8 .and.                            &
+     &          rmask_isf(i,j).eq.1.0_r8) THEN
+              FC(i,N(ng))=0.0_r8
+            ELSE
+              FC(i,N(ng))=dt(ng)*stflx(i,j,itrc)
+            END IF
+#  else
             FC(i,N(ng))=dt(ng)*stflx(i,j,itrc)
+#  endif
           END DO
 !
 !  Compute new tracer field (m Tunits).
