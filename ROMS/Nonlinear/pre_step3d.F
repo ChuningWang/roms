@@ -170,6 +170,9 @@
       USE mod_scalars
       USE mod_sources
 !
+# if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
+      USE mod_isf, ONLY : isf_Hsbl
+# endif
       USE exchange_3d_mod, ONLY : exchange_r3d_tile
 # ifdef DISTRIBUTE
       USE mp_exchange_mod, ONLY : mp_exchange4d

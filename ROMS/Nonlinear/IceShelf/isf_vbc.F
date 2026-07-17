@@ -162,7 +162,7 @@
       real(r8), intent(inout) :: Ti(LBi:UBi,LBj:UBj,2,NTISF(ng))
       real(r8), intent(out) :: Fi(LBi:UBi,LBj:UBj,nIsfF)
       real(r8), intent(in) :: Oi(LBi:UBi,LBj:UBj,N(ng),nIsfO)
-      real(r8), intent(out) :: Tamb(LBi:UBi,LBj:UBj,NT(ng))
+      real(r8), intent(out) :: Tamb(LBi:UBi,LBj:UBj,NTISF(ng))
       real(r8), intent(out) :: stflx(LBi:UBi,LBj:UBj,NT(ng))
 # endif
 !
@@ -205,8 +205,7 @@
 !  behavior.
 !
 !  Results are stored in:
-!    Tamb(i,j,itemp/isalt) - ambient potential T / salinity (for flux)
-!    Fi(i,j,icItba/icIsba) - ambient in-situ T / salinity (for output)
+!    Fi(i,j,icItba/icIsba) - ambient in-situ T/S
 !
 # ifndef ICESHELF_NO_SBL
 !
@@ -243,8 +242,6 @@
      &                   Tm,i,j)
 #  endif
             END IF
-            Tamb(i,j,itemp) = Tm_theta
-            Tamb(i,j,isalt) = Sm
             Fi(i,j,icItba) = Tm
             Fi(i,j,icIsba) = Sm
 # else
@@ -263,8 +260,6 @@
             CALL potit(Sm,t(i,j,N(ng),nrhs,itemp),-zice(i,j),0.0_r8,Tm, &
      &                 i,j)
 #  endif
-            Tamb(i,j,itemp) = t(i,j,N(ng),nrhs,itemp)
-            Tamb(i,j,isalt) = Sm
             Fi(i,j,icItba) = Tm
             Fi(i,j,icIsba) = Sm
 # endif
@@ -385,16 +380,16 @@
 !
 # ifndef ICESHELF_NO_SBL
                   IF (isf_Hsbl(ng).gt.0.0_r8) THEN
-                    Tamb(i,j,itrc) = 0.0_r8
+                    Tamb(i,j,ic)=0.0_r8
                     DO k=1,N(ng)
-                      Tamb(i,j,itrc) = Tamb(i,j,itrc) +                 &
-     &                   Oi(i,j,k,ioHsbl)*t(i,j,k,nrhs,itrc)
+                      Tamb(i,j,ic)=Tamb(i,j,ic) +                       &
+     &                             Oi(i,j,k,ioHsbl)*t(i,j,k,nrhs,itrc)
                     END DO
                   ELSE
-                    Tamb(i,j,itrc) = t(i,j,N(ng),nrhs,itrc)
+                    Tamb(i,j,ic)=t(i,j,N(ng),nrhs,itrc)
                   END IF
 # else
-                  Tamb(i,j,itrc) = t(i,j,N(ng),nrhs,itrc)
+                  Tamb(i,j,ic)=t(i,j,N(ng),nrhs,itrc)
 # endif
                   IF (Fi(i,j,icImel).gt.0.0_r8 .and.                    &
      &                Vi(i,j,lsnew(ng)).gt.0.0_r8) THEN
@@ -406,12 +401,12 @@
                     cff1=0.0_r8
                     cff2=0.0_r8
                   ELSE
-                    cff1=Tamb(i,j,itrc)
+                    cff1=Tamb(i,j,ic)
                     cff2=cff1
                   END IF
                   stflx(i,j,itrc)=stflx(i,j,itrc)+                      &
      &                            Fi(i,j,icImel)*                       &
-     &                            (cff2-Tamb(i,j,itrc))
+     &                            (cff2-Tamb(i,j,ic))
                   Ti(i,j,lsnew(ng),ic)=Ti(i,j,lsnew(ng),ic)-cff1*cff
                   Ti(i,j,lsnew(ng),ic)=MAX(Ti(i,j,lsnew(ng),ic), 0.0_r8)
                 END IF

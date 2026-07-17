@@ -312,6 +312,21 @@
                   END IF
                 END DO
               END DO
+            CASE ('Hout(idIamb)')
+              IF (MAXVAL(idIamb).eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIamb'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, NPT, Ngrids, Linert)
+              DO ng=1,Ngrids
+                DO i=1,NPT
+                  itrc=inert(i)
+                  IF (LtracerIsf(itrc,ng)) THEN
+                    Hout(idIamb(itrc),ng)=Linert(i,ng)
+                  END IF
+                END DO
+              END DO
 # endif
 #endif
 #ifdef ICESHELF_MOM
@@ -380,6 +395,16 @@
                   itrc=inert(i)
                   IF (LtracerIsf(itrc,ng)) THEN
                     Qout(idItrc(itrc),ng)=Linert(i,ng)
+                  END IF
+                END DO
+              END DO
+            CASE ('Qout(idIamb)')
+              Npts=load_l(Nval, Cval, NPT, Ngrids, Linert)
+              DO ng=1,Ngrids
+                DO i=1,NPT
+                  itrc=inert(i)
+                  IF (LtracerIsf(itrc,ng)) THEN
+                    Qout(idIamb(itrc),ng)=Linert(i,ng)
                   END IF
                 END DO
               END DO
@@ -455,6 +480,16 @@
                   END IF
                 END DO
               END DO
+            CASE ('Aout(idIamb)')
+              Npts=load_l(Nval, Cval, NPT, Ngrids, Linert)
+              DO ng=1,Ngrids
+                DO i=1,NPT
+                  itrc=inert(i)
+                  IF (LtracerIsf(itrc,ng)) THEN
+                    Aout(idIamb(itrc),ng)=Linert(i,ng)
+                  END IF
+                END DO
+              END DO
 #  endif
 # endif
 #endif
@@ -525,6 +560,16 @@
                   itrc=inert(i)
                   IF (LtracerIsf(itrc,ng)) THEN
                     Sout(idItrc(itrc),ng)=Linert(i,ng)
+                  END IF
+                END DO
+              END DO
+            CASE ('Sout(idIamb)')
+              Npts=load_l(Nval, Cval, NPT, Ngrids, Linert)
+              DO ng=1,Ngrids
+                DO i=1,NPT
+                  itrc=inert(i)
+                  IF (LtracerIsf(itrc,ng)) THEN
+                    Sout(idIamb(itrc),ng)=Linert(i,ng)
                   END IF
                 END DO
               END DO
@@ -633,6 +678,13 @@
      &            'Write out iceshelf refreezed passive tracer ', i,    &
      &            TRIM(Vname(1,idItrc(itrc)))
             END DO
+            DO i=1,NPT
+              itrc=inert(i)
+              IF (Hout(idIamb(itrc),ng)) WRITE (out,180)                &
+     &            Hout(idIamb(itrc),ng), 'Hout(idIamb)',                &
+     &            'Write out iceshelf ambient passive tracer ', i,      &
+     &            TRIM(Vname(1,idIamb(itrc)))
+            END DO
 # endif
 #endif
           END IF
@@ -694,6 +746,13 @@
      &            Qout(idItrc(itrc),ng), 'Qout(idItrc)',                &
      &            'Write out iceshelf refreezed passive tracer ', i,    &
      &            TRIM(Vname(1,idItrc(itrc)))
+            END DO
+            DO i=1,NPT
+              itrc=inert(i)
+              IF (Qout(idIamb(itrc),ng)) WRITE (out,180)                &
+     &            Qout(idIamb(itrc),ng), 'Qout(idIamb)',                &
+     &            'Write out iceshelf ambient passive tracer ', i,      &
+     &            TRIM(Vname(1,idIamb(itrc)))
             END DO
 # endif
 #endif
@@ -758,6 +817,13 @@
      &            'Write out iceshelf refreezed passive tracer ', i,    &
      &            TRIM(Vname(1,idItrc(itrc)))
             END DO
+            DO i=1,NPT
+              itrc=inert(i)
+              IF (Aout(idIamb(itrc),ng)) WRITE (out,180)                &
+     &            Aout(idIamb(itrc),ng), 'Aout(idIamb)',                &
+     &            'Write out iceshelf ambient passive tracer ', i,      &
+     &            TRIM(Vname(1,idIamb(itrc)))
+            END DO
 #  endif
 # endif
           END IF
@@ -821,6 +887,13 @@
      &            'Write out iceshelf refreezed passive tracer ', i,    &
      &            TRIM(Vname(1,idItrc(itrc)))
             END DO
+            DO i=1,NPT
+              itrc=inert(i)
+              IF (Sout(idIamb(itrc),ng)) WRITE (out,180)                &
+     &            Sout(idIamb(itrc),ng), 'Sout(idIamb)',                &
+     &            'Write out iceshelf ambient passive tracer ', i,      &
+     &            TRIM(Vname(1,idIamb(itrc)))
+            END DO
 #  endif
 # endif
           END IF
@@ -864,6 +937,9 @@
           itrc=inert(i)
           IF (Aout(idItrc(itrc),ng)) THEN
             LisfTavg(itrc,ng)=.TRUE.
+          END IF
+          IF (Aout(idIamb(itrc),ng)) THEN
+            LisfTambavg(itrc,ng)=.TRUE.
           END IF
         END DO
       END DO

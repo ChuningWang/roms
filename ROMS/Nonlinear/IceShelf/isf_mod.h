@@ -86,6 +86,7 @@
 !
       integer              :: idIvol     ! Volume of refreezed water
       integer, allocatable :: idItrc(:)  ! Tracer variables
+      integer, allocatable :: idIamb(:)  ! Ambient tracer variables
 !
 !  Ice model state prognostic variables indices.
 !
@@ -128,8 +129,8 @@
       integer, parameter :: icIust =  5  ! U*
       integer, parameter :: icItbo =  6  ! Boundary layer temperature
       integer, parameter :: icIsbo =  7  ! Boundary layer salinity
-      integer, parameter :: icItba =  8  ! Ambient T in sub-boundary layer
-      integer, parameter :: icIsba =  9  ! Ambient S in sub-boundary layer
+      integer, parameter :: icItba =  8  ! Ambient T in boundary layer
+      integer, parameter :: icIsba =  9  ! Ambient S in boundary layer
 !
       integer :: isf_ic_brylast  ! Boundary layer salinity
 !
@@ -172,6 +173,7 @@
       logical, allocatable :: LisfSavg(:,:)     ! state variables
       logical, allocatable :: LisfVavg(:)       ! refreezed volume
       logical, allocatable :: LisfTavg(:,:)     ! refreezed tracer
+      logical, allocatable :: LisfTambavg(:,:)  ! ambient tracer
 #endif
 !
 !  Gamma constraining factors
@@ -227,8 +229,8 @@
         real(r8), pointer :: Si(:,:,:,:)             ! [i,j,1:2,1:nIsfS]
         real(r8), pointer :: Vi(:,:,:)               ! [i,j,1:2]
         real(r8), pointer :: Ti(:,:,:,:)             ! [i,j,1:2,1:NTISF]
-        real(r8), pointer :: Oi(:,:,:,:)             ! [i,j,k,1:nIsfO] SBL vertical weights
-        real(r8), pointer :: Tamb(:,:,:)             ! [i,j,1:NT] ambient tracer (SBL avg)
+        real(r8), pointer :: Oi(:,:,:,:)             ! [i,j,k,1:nIsfO]
+        real(r8), pointer :: Tamb(:,:,:)             ! [i,j,1:NTISF]
 
       END TYPE T_ISF
 !
@@ -275,6 +277,7 @@
       TYPE (T_ISF_AVG), allocatable :: ISF_SAVG(:,:) ! [nIsfS,Ngrids]
       TYPE (T_ISF_AVG), allocatable :: ISF_VAVG(:)   ! [Ngrids]
       TYPE (T_ISF_AVG), allocatable :: ISF_TAVG(:,:) ! [MT,Ngrids]
+      TYPE (T_ISF_AVG), allocatable :: ISF_TambAVG(:,:) ! [MT,Ngrids]
 #endif
 !
       CONTAINS
@@ -323,6 +326,12 @@
           idItrc(1:MT)=0
         END IF
 
+        IF (.not.allocated(idIamb)) THEN
+          allocate ( idIamb(MT) )
+          Dmem(1)=Dmem(1)+REAL(MT,r8)
+          idIamb(1:MT)=0
+        END IF
+
         IF (.not.allocated(lsnew)) THEN
           allocate ( lsnew(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
@@ -359,6 +368,12 @@
           allocate ( LisfTavg(MT,Ngrids) )
           Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
           LisfTavg(1:MT,1:Ngrids)=.FALSE.
+        END IF
+
+        IF (.not.allocated(LisfTambavg)) THEN
+          allocate ( LisfTambavg(MT,Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
+          LisfTambavg(1:MT,1:Ngrids)=.FALSE.
         END IF
 #endif
 
@@ -442,15 +457,15 @@
         allocate ( ISF(ng) % Oi(LBi:UBi,LBj:UBj,N(ng),nIsfO) )
         Dmem(ng)=Dmem(ng)+REAL(N(ng)*nIsfO,r8)*size2d
 !
-        allocate ( ISF(ng) % Tamb(LBi:UBi,LBj:UBj,NT(ng)) )
-        Dmem(ng)=Dmem(ng)+REAL(NT(ng),r8)*size2d
-!
         IF (Lisftrc(ng)) THEN
           allocate ( ISF(ng) % Vi(LBi:UBi,LBj:UBj,2) )
           Dmem(ng)=Dmem(ng)+2.0_r8*size2d
 !
           allocate ( ISF(ng) % Ti(LBi:UBi,LBj:UBj,2,NTISF(ng)) )
           Dmem(ng)=Dmem(ng)+2.0_r8*REAL(NTISF(ng))*size2d
+!
+          allocate ( ISF(ng) % Tamb(LBi:UBi,LBj:UBj,NTISF(ng)) )
+          Dmem(ng)=Dmem(ng)+REAL(NTISF(ng),r8)*size2d
         END IF
 #ifdef ICESHELF_MOM
 !
@@ -544,6 +559,7 @@
         IF (ng.eq.1) THEN
           allocate ( ISF_VAVG(Ngrids) )
           allocate ( ISF_TAVG(MT,Ngrids) )
+          allocate ( ISF_TambAVG(MT,Ngrids) )
         END IF
 !
         IF (LisfVavg(ng)) THEN
@@ -555,6 +571,10 @@
           DO itrc=NAT+1,NT(ng)
             IF (LisfTavg(itrc,ng)) THEN
               allocate ( ISF_TAVG(itrc,ng) % var(LBi:UBi,LBj:UBj) )
+              Dmem(ng)=Dmem(ng)+size2d
+            END IF
+            IF (LisfTambavg(itrc,ng)) THEN
+              allocate ( ISF_TambAVG(itrc,ng) % var(LBi:UBi,LBj:UBj) )
               Dmem(ng)=Dmem(ng)+size2d
             END IF
           END DO
@@ -613,15 +633,15 @@
       IF (.not.destroy(ng, ISF(ng)%Oi, MyFile,                          &
      &                 __LINE__, 'ISF(ng)%Oi')) RETURN
 !
-      IF (.not.destroy(ng, ISF(ng)%Tamb, MyFile,                        &
-     &                 __LINE__, 'ISF(ng)%Tamb')) RETURN
-!
       IF (Lisftrc(ng)) THEN
         IF (.not.destroy(ng, ISF(ng)%Vi, MyFile,                        &
      &                   __LINE__, 'ISF(ng)%Vi')) RETURN
 !
         IF (.not.destroy(ng, ISF(ng)%Ti, MyFile,                        &
      &                   __LINE__, 'ISF(ng)%Ti')) RETURN
+!
+        IF (.not.destroy(ng, ISF(ng)%Tamb, MyFile,                      &
+     &                   __LINE__, 'ISF(ng)%Tamb')) RETURN
       END IF
 # ifdef ICESHELF_MOM
 !
@@ -686,14 +706,19 @@
       IF (Lisftrc(ng)) THEN
         DO itrc=1,NT(ng)
           IF (LisfTavg(itrc,ng)) THEN
-            IF (.not.destroy(ng, ISF_TAVG(itrc,ng)%var, MyFile,         &
+            IF (.not.destroy(ng, ISF_TAVG(itrc,ng)%var, MyFile,             &
      &                       __LINE__,'ISF_TAVG(itrc,ng)%var')) RETURN
+          END IF
+          IF (LisfTambavg(itrc,ng)) THEN
+            IF (.not.destroy(ng, ISF_TambAVG(itrc,ng)%var, MyFile,          &
+     &                       __LINE__,'ISF_TambAVG(itrc,ng)%var')) RETURN
           END IF
         END DO
       END IF
 # endif
 #endif
       IF (allocated(idItrc))   deallocate ( idItrc )
+      IF (allocated(idIamb))   deallocate ( idIamb )
 !
 !-----------------------------------------------------------------------
 !  Deallocate derived-type ISF and ISF_LOBC structures.
@@ -708,6 +733,7 @@
       IF (allocated(ISF_SAVG)) deallocate ( ISF_SAVG )
       IF (allocated(ISF_VAVG)) deallocate ( ISF_VAVG )
       IF (allocated(ISF_TAVG)) deallocate ( ISF_TAVG )
+      IF (allocated(ISF_TambAVG)) deallocate ( ISF_TambAVG )
 #endif
 !
 !-----------------------------------------------------------------------
@@ -719,6 +745,7 @@
       IF (allocated(LisfSavg)) deallocate ( LisfSavg )
       IF (allocated(LisfVavg)) deallocate ( LisfVavg )
       IF (allocated(LisfTavg)) deallocate ( LisfTavg )
+      IF (allocated(LisfTambavg)) deallocate ( LisfTambavg )
 #endif
 !
       IF (allocated(isf_Hsbl))  deallocate ( isf_Hsbl )
@@ -804,13 +831,9 @@
               ISF(ng) % Oi(i,j,k,no) = IniVal
             END DO
           END DO
-!
-          DO itrc=1,NT(ng)
-            ISF(ng) % Tamb(i,j,itrc) = IniVal
-          END DO
         END DO
       END DO
-!
+	!
       IF (Lisftrc(ng)) THEN
         DO j=Jmin,Jmax
           DO i=Imin,Imax
@@ -826,6 +849,7 @@
               DO i=Imin,Imax
                 ISF(ng) % Ti(i,j,1,ic) = IniVal
                 ISF(ng) % Ti(i,j,2,ic) = IniVal
+                ISF(ng) % Tamb(i,j,ic) = IniVal
               END DO
             END DO
           END IF
@@ -922,6 +946,13 @@
             DO j=Jmin,Jmax
               DO i=Imin,Imax
                 ISF_TAVG(itrc,ng) % var(i,j) = IniVal
+              END DO
+            END DO
+          END IF
+          IF (LisfTambavg(itrc,ng)) THEN
+            DO j=Jmin,Jmax
+              DO i=Imin,Imax
+                ISF_TambAVG(itrc,ng) % var(i,j) = IniVal
               END DO
             END DO
           END IF

@@ -108,4 +108,6 @@
             idIvol=varid
           CASE ('idItrc(inert(i))')
             load=.TRUE.
+          CASE ('idIamb(inert(i))')
+            load=.TRUE.
 #endif

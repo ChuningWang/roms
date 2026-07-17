@@ -7873,7 +7873,7 @@ metadata:
     add_offset:     0.0d0
     scale:          1.0d0
 
-  - variable:       is_Tba
+  - variable:       is_Ta
     standard_name:  iceshelf_ambient_boundary_layer_temperature
     long_name:      ambient temperature in sub-boundary layer
     units:          Celcius
@@ -7884,7 +7884,7 @@ metadata:
     add_offset:     0.0d0
     scale:          1.0d0
 
-  - variable:       is_Sba
+  - variable:       is_Sa
     standard_name:  iceshelf_ambient_boundary_layer_practical_salinity
     long_name:      ambient salinity in sub-boundary layer
     units:          nondimensional
@@ -7913,6 +7913,17 @@ metadata:
     field:          iceshelf dye_
     time:           ocean_time
     index_code:     idItrc(inert(i))
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_dye_amb_
+    standard_name:  mass_concentration_of_dye_in_sub_boundary_layer
+    long_name:      iceshelf ambient dye concentration in sub-boundary layer
+    units:          kilogram meter-2
+    field:          iceshelf ambient dye_
+    time:           ocean_time
+    index_code:     idIamb(inert(i))
     type:           r2dvar
     add_offset:     0.0d0
     scale:          1.0d0

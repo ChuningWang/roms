@@ -421,6 +421,37 @@
               END IF
             END IF
           END DO
+!
+!  Define ambient passive tracer concentration at RHO-points.
+!
+          DO itrc=NAT+1,NT(ng)
+            IF (LtracerIsf(itrc,ng)) THEN
+              ifield=idIamb(itrc)
+              IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+                LdefVar=.FALSE.
+              ELSE
+                LdefVar=VarOut(ifield,ng)
+              END IF
+              IF (LdefVar) THEN
+                Vinfo( 1)=Vname(1,ifield)
+                Vinfo( 2)=Vname(2,ifield)
+                Vinfo( 3)=Vname(3,ifield)
+                Vinfo(14)=Vname(4,ifield)
+                Vinfo(16)=Vname(1,idtime)
+#  if defined WRITE_WATER && defined MASKING
+                Vinfo(20)='mask_rho'
+#  endif
+                Vinfo(21)=Vname(6,ifield)
+                Vinfo(22)='coordinates'
+                Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
+                status=def_var(ng, model, S(ng)%ncid,                     &
+     &                         S(ng)%Vid(ifield),                         &
+     &                         vtype, nvd, isfgrd, Aval, Vinfo, ncname)
+                IF (FoundError(exit_flag, NoError, __LINE__, MyFile))     &
+     &            RETURN
+              END IF
+            END IF
+          END DO
         END IF
 # endif
       END IF DEFINE
@@ -1053,6 +1084,52 @@
             END IF
           END IF
         END DO
+!
+!  Write out ambient passive tracer concentration at RHO-points.
+!
+        ic=0
+        DO itrc=NAT+1,NT(ng)
+          IF (LtracerIsf(itrc, ng)) THEN
+            ic=ic+1
+            ifield=idIamb(itrc)
+            IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+              LwrtVar=.FALSE.
+            ELSE
+              LwrtVar=VarOut(ifield,ng)
+            END IF
+!
+            IF (LwrtVar) THEN
+              IF ((model.eq.iNLM).and.                                  &
+                  ((S(ng)%ncid.eq.HIS(ng)%ncid).or.                     &
+     &             (S(ng)%ncid.eq.QCK(ng)%ncid))) THEN
+                isfField2d => ISF(ng) % Tamb(LBi:UBi,LBj:UBj,ic)
+#  ifdef AVERAGES
+              ELSE IF (S(ng)%ncid.eq.AVG(ng)%ncid) THEN
+                isfField2d => ISF_TambAVG(itrc,ng) % var(LBi:UBi,LBj:UBj)
+#  endif
+              END IF
+!
+              scale=1.0_dp
+              gtype=gfactor*r2dvar
+              status=nf_fwrite2d(ng, model, S(ng)%ncid, ifield,         &
+     &                           S(ng)%Vid(ifield),                     &
+     &                           S(ng)%Rindex, gtype,                   &
+     &                           LBi, UBi, LBj, UBj, scale,             &
+#   ifdef MASKING
+     &                           GRID(ng) % rmask_full,                 &
+#   endif
+     &                           isfField2d)
+              IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+                IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),    &
+     &                                        S(ng)%Rindex,             &
+     &                                        TRIM(S(ng)%name)
+                exit_flag=3
+                ioerror=status
+                RETURN
+              END IF
+            END IF
+          END IF
+        END DO
       END IF
 # endif
 !
@@ -1225,6 +1302,29 @@
           DO itrc=NAT+1,NT(ng)
             IF (LtracerIsf(itrc, ng)) THEN
               ifield=idItrc(itrc)
+              IF (VarOut(ifield,ng)) THEN
+                Vinfo( 1)=Vname(1,ifield)
+                Vinfo( 2)=Vname(2,ifield)
+                Vinfo( 3)=Vname(3,ifield)
+                Vinfo(14)=Vname(4,ifield)
+                Vinfo(16)=Vname(1,idtime)
+!
+                status=def_var(ng, model, S(ng)%ncid,                   &
+     &                         S(ng)%Vid(ifield),                       &
+     &                         NF_FOUT, 2, pgrd, Aval, Vinfo, ncname,   &
+     &                         SetFillVal = .TRUE.,                     &
+     &                         SetParAccess = .TRUE.)
+                IF (FoundError(exit_flag, NoError,                      &
+     &                         __LINE__, MyFile)) RETURN
+              END IF
+            END IF
+          END DO
+!
+!  Define ambient passive tracer concentration.
+!
+          DO itrc=NAT+1,NT(ng)
+            IF (LtracerIsf(itrc, ng)) THEN
+              ifield=idIamb(itrc)
               IF (VarOut(ifield,ng)) THEN
                 Vinfo( 1)=Vname(1,ifield)
                 Vinfo( 2)=Vname(2,ifield)
@@ -1581,6 +1681,32 @@
               CALL extract_sta2d (ng, model, Cgrid, ifield, r2dvar,     &
      &                            LBi, UBi, LBj, UBj,                   &
      &                            scale, ISF(ng)%Ti(:,:,lsnew(ng),ic),  &
+     &                            Nstation(ng), Xpos, Ypos, psta)
+!
+              CALL netcdf_put_fvar (ng, model, S(ng)%name,              &
+     &                              TRIM(Vname(1,ifield)), psta,        &
+     &                              (/1,S(ng)%Rindex/),                 &
+     &                              (/Nstation(ng),1/),                 &
+     &                              ncid = S(ng)%ncid,                  &
+     &                              varid = S(ng)%Vid(ifield))
+              IF (FoundError(exit_flag, NoError, __LINE__, MyFile))     &
+     &          RETURN
+            END IF
+          END IF
+        END DO
+!
+!  Write out ambient passive tracer concentration.
+!
+        ic=0
+        DO itrc=NAT+1,NT(ng)
+          IF (LtracerIsf(itrc, ng)) THEN
+            ic=ic+1
+            ifield=idIamb(itrc)
+            IF (VarOut(ifield,ng)) THEN
+              scale=1.0_dp
+              CALL extract_sta2d (ng, model, Cgrid, ifield, r2dvar,     &
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            scale, ISF(ng)%Tamb(:,:,ic),          &
      &                            Nstation(ng), Xpos, Ypos, psta)
 !
               CALL netcdf_put_fvar (ng, model, S(ng)%name,              &
@@ -1973,6 +2099,40 @@
 #    else
                 Vinfo(20)='mask_rho'
 #    endif
+#   endif
+                Vinfo(21)=Vname(6,ifield)
+                Vinfo(22)='coordinates'
+                Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
+                S(ng)%pioVar(ifield)%dkind=vtype
+                S(ng)%pioVar(ifield)%gtype=r2dvar
+!
+                status=def_var(ng, model, S(ng)%pioFile,                &
+     &                         S(ng)%pioVar(ifield)%vd,                 &
+     &                         vtype, nvd, isfgrd, Aval, Vinfo, ncname)
+                IF (FoundError(exit_flag, NoError,                      &
+     &                         __LINE__, MyFile)) RETURN
+              END IF
+            END IF
+          END DO
+!
+!  Define ambient passive tracer concentration at RHO-points.
+!
+          DO itrc=NAT+1,NT(ng)
+            IF (LtracerIsf(itrc, ng)) THEN
+              ifield=idIamb(itrc)
+              IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
+                LdefVar=.FALSE.
+              ELSE
+                LdefVar=VarOut(ifield,ng)
+              END IF
+              IF (LdefVar) THEN
+                Vinfo( 1)=Vname(1,ifield)
+                Vinfo( 2)=Vname(2,ifield)
+                Vinfo( 3)=Vname(3,ifield)
+                Vinfo(14)=Vname(4,ifield)
+                Vinfo(16)=Vname(1,idtime)
+#   if defined WRITE_WATER && defined MASKING
+                Vinfo(20)='mask_rho'
 #   endif
                 Vinfo(21)=Vname(6,ifield)
                 Vinfo(22)='coordinates'
@@ -2732,6 +2892,56 @@
             END IF
           END IF
         END DO
+!
+!  Write out ambient passive tracer concentration at RHO-points.
+!
+        ic=0
+        DO itrc=NAT+1,NT(ng)
+          IF (LtracerIsf(itrc, ng)) THEN
+            ic=ic+1
+            ifield=idIamb(itrc)
+            IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
+              LwrtVar=.FALSE.
+            ELSE
+              LwrtVar=VarOut(ifield,ng)
+            END IF
+!
+            IF (LwrtVar) THEN
+              IF ((model.eq.iNLM).and.                                  &
+     &            ((FileH.eq.ABS(HIS(ng)%pioFile%fh)).or.               &
+     &             (FileH.eq.ABS(QCK(ng)%pioFile%fh)))) THEN
+                isfField2d => ISF(ng) % Tamb(LBi:UBi,LBj:UBj,ic)
+#   ifdef AVERAGES
+              ELSE IF (FileH.eq.ABS(AVG(ng)%pioFile%fh)) THEN
+                isfField2d => ISF_TambAVG(itrc,ng) % var(LBi:UBi,LBj:UBj)
+#   endif
+              END IF
+!
+              scale=1.0_dp
+              IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
+                ioDesc => ioDesc_dp_r2dvar(ng)
+              ELSE
+                ioDesc => ioDesc_sp_r2dvar(ng)
+              END IF
+              status=nf_fwrite2d(ng, model, S(ng)%pioFile, ifield,      &
+     &                           S(ng)%pioVar(ifield), S(ng)%Rindex,    &
+     &                           ioDesc,                                &
+     &                           LBi, UBi, LBj, UBj, scale,             &
+#    ifdef MASKING
+     &                           GRID(ng) % rmask_full,                 &
+#    endif
+     &                           isfField2d)
+              IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+                IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),    &
+     &                                        S(ng)%Rindex,             &
+     &                                        TRIM(S(ng)%name)
+                exit_flag=3
+                ioerror=status
+                RETURN
+              END IF
+            END IF
+          END IF
+        END DO
       END IF
 #  endif
 !
@@ -2928,7 +3138,32 @@
      &                         SetFillVal = .TRUE.,                     &
      &                         SetParAccess = .TRUE.)
                 IF (FoundError(exit_flag, NoError,                      &
-     &                         __LINE__, MyFile)) RETURN
+     &                     __LINE__, MyFile)) RETURN
+              END IF
+            END IF
+          END DO
+!
+!  Define ambient passive tracer concentration.
+!
+          DO itrc=NAT+1,NT(ng)
+            IF (LtracerIsf(itrc, ng)) THEN
+              ifield=idIamb(itrc)
+              IF (VarOut(ifield,ng)) THEN
+                Vinfo( 1)=Vname(1,ifield)
+                Vinfo( 2)=Vname(2,ifield)
+                Vinfo( 3)=Vname(3,ifield)
+                Vinfo(14)=Vname(4,ifield)
+                Vinfo(16)=Vname(1,idtime)
+                S(ng)%pioVar(ifield)%dkind=PIO_FOUT
+                S(ng)%pioVar(ifield)%gtype=0
+!
+                status=def_var(ng, model, S(ng)%pioFile,                &
+     &                         S(ng)%pioVar(ifield)%vd,                 &
+     &                         PIO_FOUT, 2, pgrd, Aval, Vinfo, ncname,  &
+     &                         SetFillVal = .TRUE.,                     &
+     &                         SetParAccess = .TRUE.)
+                IF (FoundError(exit_flag, NoError,                      &
+     &                     __LINE__, MyFile)) RETURN
               END IF
             END IF
           END DO
@@ -3283,6 +3518,32 @@
               CALL extract_sta2d (ng, model, Cgrid, ifield, r2dvar,     &
      &                            LBi, UBi, LBj, UBj,                   &
      &                            scale, ISF(ng)%Ti(:,:,lsnew(ng),ic),  &
+     &                            Nstation(ng), Xpos, Ypos, psta)
+!
+              CALL pio_netcdf_put_fvar (ng, model, S(ng)%name,          &
+     &                                  TRIM(Vname(1,ifield)), psta,    &
+     &                                  (/1,S(ng)%Rindex/),             &
+     &                                  (/Nstation(ng),1/),             &
+     &                                  pioFile=S(ng)%pioFile,          &
+     &                                  pioVar=S(ng)%pioVar(ifield)%vd)
+              IF (FoundError(exit_flag, NoError, __LINE__, MyFile))     &
+     &          RETURN
+            END IF
+          END IF
+        END DO
+!
+!  Write out ambient passive tracer concentration.
+!
+        ic=0
+        DO itrc=NAT+1,NT(ng)
+          IF (LtracerIsf(itrc, ng)) THEN
+            ic=ic+1
+            ifield=idIamb(itrc)
+            IF (VarOut(ifield,ng)) THEN
+              scale=1.0_dp
+              CALL extract_sta2d (ng, model, Cgrid, ifield, r2dvar,     &
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            scale, ISF(ng)%Tamb(:,:,ic),          &
      &                            Nstation(ng), Xpos, Ypos, psta)
 !
               CALL pio_netcdf_put_fvar (ng, model, S(ng)%name,          &

@@ -125,6 +125,7 @@ Hout(idIsba) == T     ! Fi(...,icIsba)     iceshelf ambient boundary layer salin
 
 Hout(idIvol) == T     ! Vi                 iceshelf refreezed volume
 Hout(idItrc) == T     ! Ti(...,itrc)       iceshelf refreezed tracer
+Hout(idIamb) == T     ! Tamb(...,itrc)     iceshelf ambient dye concentration
 
 ! Logical switches (TRUE/FALSE) to activate writing of iceshelf
 ! variables into QUICKSAVE output file.
@@ -149,6 +150,7 @@ Qout(idIsba) == T     ! Fi(...,icIsba)     iceshelf ambient boundary layer salin
 
 Qout(idIvol) == T     ! Vi                 iceshelf refreezed volume
 Qout(idItrc) == T     ! Ti(...,itrc)       iceshelf refreezed tracer
+Qout(idIamb) == T     ! Tamb(...,itrc)     iceshelf ambient dye concentration
 
 ! Logical switches (TRUE/FALSE) to activate writing of iceshelf
 ! variables into AVERAGES output file.
@@ -173,6 +175,7 @@ Aout(idIsba) == T     ! Fi_avg(...,icIsba) iceshelf ambient boundary layer salin
 
 Aout(idIvol) == T     ! Vi_avg             iceshelf refreezed volume
 Aout(idItrc) == T     ! Ti_avg(...,itrc)   iceshelf refreezed tracer
+Aout(idIamb) == T     ! Tamb_avg(...,itrc) iceshelf ambient dye concentration
 
 ! Logical switches (TRUE/FALSE) to activate writing of iceshelf
 ! variables into STATION output file.
@@ -197,6 +200,7 @@ Sout(idIsba) == T     ! Fi(...,icIsba)     iceshelf ambient boundary layer salin
 
 Sout(idIvol) == T     ! Vi                 iceshelf refreezed volume
 Sout(idItrc) == T     ! Ti(...,itrc)       iceshelf refreezed tracer
+Sout(idIamb) == T     ! Tamb(...,itrc)     iceshelf ambient dye concentration
 
 
 !
