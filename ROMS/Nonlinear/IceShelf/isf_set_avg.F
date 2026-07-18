@@ -2,7 +2,7 @@
 
       MODULE isf_set_avg_mod
 
-#if defined ICESHELF_THERMO && defined AVERAGES
+#if defined ICESHELF_DYNAM && defined AVERAGES
 !
 !git $Id$
 !================================================== Hernan G. Arango ===

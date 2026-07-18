@@ -153,6 +153,47 @@
               END DO
 # endif
 #endif
+#ifdef ICESHEET_SSA
+!
+!  SSA physical parameters
+!
+            CASE ('n_glen')
+              Npts=load_r(Nval, Rval, Ngrids, n_glen)
+            CASE ('B_glen')
+              Npts=load_r(Nval, Rval, Ngrids, B_glen)
+            CASE ('eps_glen_min')
+              Npts=load_r(Nval, Rval, Ngrids, eps_glen_min)
+            CASE ('C_basal')
+              Npts=load_r(Nval, Rval, Ngrids, C_basal)
+            CASE ('n_basal')
+              Npts=load_r(Nval, Rval, Ngrids, n_basal)
+            CASE ('eps_u_min')
+              Npts=load_r(Nval, Rval, Ngrids, eps_u_min)
+!
+!  SSA solver parameters
+!
+            CASE ('nl_max_iter')
+              Npts=load_i(Nval, Rval, Ngrids, nl_max_iter)
+            CASE ('nl_tol')
+              Npts=load_r(Nval, Rval, Ngrids, nl_tol)
+            CASE ('nl_tol_fp')
+              Npts=load_r(Nval, Rval, Ngrids, nl_tol_fp)
+            CASE ('cg_max_iter')
+              Npts=load_i(Nval, Rval, Ngrids, cg_max_iter)
+            CASE ('cg_tol')
+              Npts=load_r(Nval, Rval, Ngrids, cg_tol)
+            CASE ('nuH_reg')
+              Npts=load_r(Nval, Rval, Ngrids, nuH_reg)
+            CASE ('min_thickness')
+              Npts=load_r(Nval, Rval, Ngrids, min_thickness)
+            CASE ('ssa_max_speed')
+              Npts=load_r(Nval, Rval, Ngrids, ssa_max_speed)
+!
+!  Grounding line parameters
+!
+            CASE ('gl_smooth_width')
+              Npts=load_r(Nval, Rval, Ngrids, gl_smooth_width)
+#endif
 #ifdef ICESHELF_MOM
             CASE ('Hout(idIhis)')
               IF (idIhis.eq.0) THEN
@@ -329,6 +370,56 @@
               END DO
 # endif
 #endif
+#ifdef ICESHEET_SSA
+            CASE ('Hout(idIzsf)')
+              IF (idIzsf.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIzsf'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(idIzsf,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Hout(idIzbd)')
+              IF (idIzbd.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIzbd'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(idIzbd,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Hout(idInuh)')
+              IF (idInuh.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idInuh'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(idInuh,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Hout(idItdx)')
+              IF (idItdx.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idItdx'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(idItdx,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Hout(idItdy)')
+              IF (idItdy.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idItdy'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(idItdy,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Hout(idIbta)')
+              IF (idIbta.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIbta'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(idIbta,1:Ngrids)=Lswitch(1:Ngrids)
+#endif
 #ifdef ICESHELF_MOM
             CASE ('Qout(idIhis)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
@@ -409,6 +500,26 @@
                 END DO
               END DO
 # endif
+#endif
+#ifdef ICESHEET_SSA
+            CASE ('Qout(idIzsf)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Qout(idIzsf,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Qout(idIzbd)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Qout(idIzbd,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Qout(idInuh)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Qout(idInuh,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Qout(idItdx)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Qout(idItdx,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Qout(idItdy)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Qout(idItdy,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Qout(idIbta)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Qout(idIbta,1:Ngrids)=Lswitch(1:Ngrids)
 #endif
 #ifdef AVERAGES
 # ifdef ICESHELF_MOM
@@ -493,6 +604,26 @@
 #  endif
 # endif
 #endif
+#ifdef ICESHEET_SSA
+            CASE ('Aout(idIzsf)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Aout(idIzsf,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Aout(idIzbd)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Aout(idIzbd,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Aout(idInuh)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Aout(idInuh,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Aout(idItdx)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Aout(idItdx,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Aout(idItdy)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Aout(idItdy,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Aout(idIbta)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Aout(idIbta,1:Ngrids)=Lswitch(1:Ngrids)
+#endif
 #ifdef STATIONS
 # ifdef ICESHELF_MOM
             CASE ('Sout(idIhis)')
@@ -576,6 +707,26 @@
 #  endif
 # endif
 #endif
+#ifdef ICESHEET_SSA
+            CASE ('Sout(idIzsf)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idIzsf,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idIzbd)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idIzbd,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idInuh)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idInuh,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idItdx)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idItdx,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idItdy)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idItdy,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idIbta)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idIbta,1:Ngrids)=Lswitch(1:Ngrids)
+#endif
           END SELECT
         END IF
       END DO
@@ -618,6 +769,38 @@
             END IF
           END DO
 # endif
+#endif
+#ifdef ICESHEET_SSA
+          WRITE (out,60) n_glen(ng), 'n_glen',                            &
+     &          'SSA Glen flow law exponent.'
+          WRITE (out,60) B_glen(ng), 'B_glen',                            &
+     &          'SSA Glen hardness coefficient [Pa s^(1/n)].'
+          WRITE (out,60) eps_glen_min(ng), 'eps_glen_min',                &
+     &          'SSA minimum strain rate regularization [1/s].'
+          WRITE (out,60) C_basal(ng), 'C_basal',                          &
+     &          'SSA basal drag coefficient [Pa (s/m)^(1/m)].'
+          WRITE (out,60) n_basal(ng), 'n_basal',                          &
+     &          'SSA basal sliding exponent.'
+          WRITE (out,60) eps_u_min(ng), 'eps_u_min',                      &
+     &          'SSA minimum sliding velocity [m/s].'
+          WRITE (out,50) nl_max_iter(ng), 'nl_max_iter',                  &
+     &          'SSA max Picard iterations.'
+          WRITE (out,60) nl_tol(ng), 'nl_tol',                            &
+     &          'SSA Picard relative tolerance.'
+          WRITE (out,60) nl_tol_fp(ng), 'nl_tol_fp',                      &
+     &          'SSA Picard absolute velocity tolerance [m/s].'
+          WRITE (out,50) cg_max_iter(ng), 'cg_max_iter',                  &
+     &          'SSA max CG iterations.'
+          WRITE (out,60) cg_tol(ng), 'cg_tol',                            &
+     &          'SSA CG relative tolerance.'
+          WRITE (out,60) nuH_reg(ng), 'nuH_reg',                          &
+     &          'SSA nuH regularization [Pa s m].'
+          WRITE (out,60) min_thickness(ng), 'min_thickness',              &
+     &          'SSA minimum ice thickness [m].'
+          WRITE (out,60) ssa_max_speed(ng), 'ssa_max_speed',              &
+     &          'SSA velocity cap [m/s].'
+          WRITE (out,60) gl_smooth_width(ng), 'gl_smooth_width',          &
+     &          'Grounding line smoothing width [m].'
 #endif
 !
           IF (nHIS(ng).gt.0) THEN

@@ -102,14 +102,65 @@
 
       trcIsf == 1.0d0 ! dye_01, ...        inert passive tracers
 
+!-----------------------------------------------------------------------
+! SSA ice sheet dynamics parameters
+!-----------------------------------------------------------------------
+
+! Glen flow law exponent [-].
+
+           n_glen == 3.0d0
+
+! Glen hardness coefficient (sqrt of B) [Pa s^(1/n)].
+
+           B_glen == 1.0d8
+
+! Minimum strain rate regularization for Glen viscosity [1/s].
+
+     eps_glen_min == 1.0d-12
+
+! Basal drag coefficient (sqrt of C) [Pa (s/m)^(1/m)].
+
+          C_basal == 1.0d4
+
+! Basal sliding exponent [-]. 1.0 = linear sliding.
+
+          n_basal == 1.0d0
+
+! Minimum sliding velocity regularization [m/s].
+
+        eps_u_min == 1.0d-9
+
+! SSA solver: max Picard iterations, relative tolerance,
+! absolute velocity tolerance [m/s].
+
+      nl_max_iter == 50
+           nl_tol == 1.0d-6
+        nl_tol_fp == 1.0d-6
+
+! SSA solver: max CG iterations, relative tolerance.
+
+      cg_max_iter == 500
+           cg_tol == 1.0d-8
+
+! SSA solver: nuH regularization [Pa s m], minimum ice thickness [m],
+! velocity cap [m/s].
+
+          nuH_reg == 1.0d13
+    min_thickness == 10.0d0
+    ssa_max_speed == 1.0d5
+
+! Grounding line smoothing width [m].
+
+  gl_smooth_width == 6000.0d0
+
 ! Logical switches (TRUE/FALSE) to activate writing of iceshelf
 ! variables into HISTORY output file.
 
 Hout(idIhis) == T     ! Si(...,isIhis)     iceshelf thickness
 Hout(idIuis) == T     ! Si(...,isIuis)     iceshelf U-velocity
 Hout(idIvis) == T     ! Si(...,isIvis)     iceshelf V-velocity
-Hout(idIuer) == T     !                    iceshelf eastward velocity
-Hout(idIvnr) == T     !                    iceshelf northward velocity
+Hout(idIuer) == F     !                    iceshelf eastward velocity
+Hout(idIvnr) == F     !                    iceshelf northward velocity
 Hout(idItis) == T     ! Si(...,isItis)     iceshelf temperature
 Hout(idIeis) == T     ! Si(...,isIeis)     iceshelf enthalpy
 
@@ -123,6 +174,13 @@ Hout(idIsbo) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
 Hout(idItba) == T     ! Fi(...,icItba)     iceshelf ambient boundary layer temperature
 Hout(idIsba) == T     ! Fi(...,icIsba)     iceshelf ambient boundary layer salinity
 
+Hout(idIzsf) == T     ! Fi(...,icIzsf)     ice sheet surface elevation
+Hout(idIzbd) == T     ! Fi(...,icIzbd)     ice sheet bed elevation
+Hout(idInuh) == T     ! Fi(...,icInuh)     ice effective viscosity
+Hout(idItdx) == T     ! Fi(...,icItdx)     ice driving stress x
+Hout(idItdy) == T     ! Fi(...,icItdy)     ice driving stress y
+Hout(idIbta) == T     ! Fi(...,icIbta)     ice basal drag coefficient
+
 Hout(idIvol) == T     ! Vi                 iceshelf refreezed volume
 Hout(idItrc) == T     ! Ti(...,itrc)       iceshelf refreezed tracer
 Hout(idIamb) == T     ! Tamb(...,itrc)     iceshelf ambient dye concentration
@@ -133,8 +191,8 @@ Hout(idIamb) == T     ! Tamb(...,itrc)     iceshelf ambient dye concentration
 Qout(idIhis) == T     ! Si(...,isIhis)     iceshelf thickness
 Qout(idIuis) == T     ! Si(...,isIuis)     iceshelf U-velocity
 Qout(idIvis) == T     ! Si(...,isIvis)     iceshelf V-velocity
-Qout(idIuer) == T     !                    iceshelf eastward velocity
-Qout(idIvnr) == T     !                    iceshelf northward velocity
+Qout(idIuer) == F     !                    iceshelf eastward velocity
+Qout(idIvnr) == F     !                    iceshelf northward velocity
 Qout(idItis) == T     ! Si(...,isItis)     iceshelf temperature
 Qout(idIeis) == T     ! Si(...,isIeis)     iceshelf enthalpy
 
@@ -148,6 +206,13 @@ Qout(idIsbo) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
 Qout(idItba) == T     ! Fi(...,icItba)     iceshelf ambient boundary layer temperature
 Qout(idIsba) == T     ! Fi(...,icIsba)     iceshelf ambient boundary layer salinity
 
+Qout(idIzsf) == T     ! Fi(...,icIzsf)     ice sheet surface elevation
+Qout(idIzbd) == T     ! Fi(...,icIzbd)     ice sheet bed elevation
+Qout(idInuh) == T     ! Fi(...,icInuh)     ice effective viscosity
+Qout(idItdx) == T     ! Fi(...,icItdx)     ice driving stress x
+Qout(idItdy) == T     ! Fi(...,icItdy)     ice driving stress y
+Qout(idIbta) == T     ! Fi(...,icIbta)     ice basal drag coefficient
+
 Qout(idIvol) == T     ! Vi                 iceshelf refreezed volume
 Qout(idItrc) == T     ! Ti(...,itrc)       iceshelf refreezed tracer
 Qout(idIamb) == T     ! Tamb(...,itrc)     iceshelf ambient dye concentration
@@ -158,8 +223,8 @@ Qout(idIamb) == T     ! Tamb(...,itrc)     iceshelf ambient dye concentration
 Aout(idIhis) == T     ! Si_avg(...,isIhis) iceshelf thickness
 Aout(idIuis) == T     ! Si_avg(...,isIuis) iceshelf U-velocity
 Aout(idIvis) == T     ! Si_avg(...,isIvis) iceshelf V-velocity
-Aout(idIuer) == T     !                    iceshelf eastward velocity
-Aout(idIvnr) == T     !                    iceshelf northward velocity
+Aout(idIuer) == F     !                    iceshelf eastward velocity
+Aout(idIvnr) == F     !                    iceshelf northward velocity
 Aout(idItis) == T     ! Si_avg(...,isItis) iceshelf temperature
 Aout(idIeis) == T     ! Si_avg(...,isIeis) iceshelf enthalpy
 
@@ -173,6 +238,13 @@ Aout(idIsbo) == T     ! Fi_avg(...,icIsbo) iceshelf boundary layer salinity
 Aout(idItba) == T     ! Fi_avg(...,icItba) iceshelf ambient boundary layer temperature
 Aout(idIsba) == T     ! Fi_avg(...,icIsba) iceshelf ambient boundary layer salinity
 
+Aout(idIzsf) == T     ! Fi_avg(...,icIzsf) ice sheet surface elevation
+Aout(idIzbd) == T     ! Fi_avg(...,icIzbd) ice sheet bed elevation
+Aout(idInuh) == T     ! Fi_avg(...,icInuh) ice effective viscosity
+Aout(idItdx) == T     ! Fi_avg(...,icItdx) ice driving stress x
+Aout(idItdy) == T     ! Fi_avg(...,icItdy) ice driving stress y
+Aout(idIbta) == T     ! Fi_avg(...,icIbta) ice basal drag coefficient
+
 Aout(idIvol) == T     ! Vi_avg             iceshelf refreezed volume
 Aout(idItrc) == T     ! Ti_avg(...,itrc)   iceshelf refreezed tracer
 Aout(idIamb) == T     ! Tamb_avg(...,itrc) iceshelf ambient dye concentration
@@ -183,8 +255,8 @@ Aout(idIamb) == T     ! Tamb_avg(...,itrc) iceshelf ambient dye concentration
 Sout(idIhis) == T     ! Si(...,isIhis)     iceshelf thickness
 Sout(idIuis) == T     ! Si(...,isIuis)     iceshelf U-velocity
 Sout(idIvis) == T     ! Si(...,isIvis)     iceshelf V-velocity
-Sout(idIuer) == T     !                    iceshelf eastward velocity
-Sout(idIvnr) == T     !                    iceshelf northward velocity
+Sout(idIuer) == F     !                    iceshelf eastward velocity
+Sout(idIvnr) == F     !                    iceshelf northward velocity
 Sout(idItis) == T     ! Si(...,isItis)     iceshelf temperature
 Sout(idIeis) == T     ! Si(...,isIeis)     iceshelf enthalpy
 
@@ -197,6 +269,13 @@ Sout(idItbo) == T     ! Fi(...,icItbo)     iceshelf boundary layer temperature
 Sout(idIsbo) == T     ! Fi(...,icIsbo)     iceshelf boundary layer salinity
 Sout(idItba) == T     ! Fi(...,icItba)     iceshelf ambient boundary layer temperature
 Sout(idIsba) == T     ! Fi(...,icIsba)     iceshelf ambient boundary layer salinity
+
+Sout(idIzsf) == T     ! Fi(...,icIzsf)     ice sheet surface elevation
+Sout(idIzbd) == T     ! Fi(...,icIzbd)     ice sheet bed elevation
+Sout(idInuh) == T     ! Fi(...,icInuh)     ice effective viscosity
+Sout(idItdx) == T     ! Fi(...,icItdx)     ice driving stress x
+Sout(idItdy) == T     ! Fi(...,icItdy)     ice driving stress y
+Sout(idIbta) == T     ! Fi(...,icIbta)     ice basal drag coefficient
 
 Sout(idIvol) == T     ! Vi                 iceshelf refreezed volume
 Sout(idItrc) == T     ! Ti(...,itrc)       iceshelf refreezed tracer

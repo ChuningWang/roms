@@ -7737,7 +7737,7 @@ metadata:
     field:          ice shelf U-velocity
     time:           ocean_time
     index_code:     idIuis
-    type:           u2dvar
+    type:           p2dvar
     add_offset:     0.0d0
     scale:          1.0d0
 
@@ -7748,7 +7748,7 @@ metadata:
     field:          ice shelf V-velocity
     time:           ocean_time
     index_code:     idIvis
-    type:           v2dvar
+    type:           p2dvar
     add_offset:     0.0d0
     scale:          1.0d0
 
@@ -7891,6 +7891,72 @@ metadata:
     field:          ice shelf ambient boundary layer salinity
     time:           ocean_time
     index_code:     idIsba
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_zs
+    standard_name:  ice_sheet_surface_elevation
+    long_name:      ice sheet surface elevation
+    units:          meter
+    field:          ice sheet surface elevation
+    time:           ocean_time
+    index_code:     idIzsf
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_zb
+    standard_name:  ice_sheet_bed_elevation
+    long_name:      ice sheet bed elevation
+    units:          meter
+    field:          ice sheet bed elevation
+    time:           ocean_time
+    index_code:     idIzbd
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_nuH
+    standard_name:  ice_depth_integrated_viscosity
+    long_name:      depth-integrated effective viscosity
+    units:          pascal second meter
+    field:          ice effective viscosity
+    time:           ocean_time
+    index_code:     idInuh
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_taudx
+    standard_name:  ice_driving_stress_x
+    long_name:      ice driving stress x-component
+    units:          pascal
+    field:          ice driving stress x
+    time:           ocean_time
+    index_code:     idItdx
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_taudy
+    standard_name:  ice_driving_stress_y
+    long_name:      ice driving stress y-component
+    units:          pascal
+    field:          ice driving stress y
+    time:           ocean_time
+    index_code:     idItdy
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_beta
+    standard_name:  ice_basal_drag_coefficient
+    long_name:      ice basal drag coefficient
+    units:          pascal second meter-1
+    field:          ice basal drag coefficient
+    time:           ocean_time
+    index_code:     idIbta
     type:           r2dvar
     add_offset:     0.0d0
     scale:          1.0d0

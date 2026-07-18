@@ -12,23 +12,23 @@
                 SELECT CASE (i)
                   CASE (isIuis)
                     IF (Perfect2D) THEN
-                      my_pioVar%gtype=u3dvar
+                      my_pioVar%gtype=p3dvar
                     ELSE
-                      my_pioVar%gtype=u2dvar
+                      my_pioVar%gtype=p2dvar
                     END IF
                     IF (KIND(ISF(ng)%Si).eq.8) THEN
                       my_pioVar%dkind=PIO_double
                       IF (Perfect2D) THEN
-                        ioDesc => ioDesc_dp_u3dvar(ng)
+                        ioDesc => ioDesc_dp_p3dvar(ng)
                       ELSE
-                        ioDesc => ioDesc_dp_u2dvar(ng)
+                        ioDesc => ioDesc_dp_p2dvar(ng)
                       END IF
                     ELSE
                       my_pioVar%dkind=PIO_real
                       IF (Perfect2D) THEN
-                        ioDesc => ioDesc_sp_u3dvar(ng)
+                        ioDesc => ioDesc_sp_p3dvar(ng)
                       ELSE
-                        ioDesc => ioDesc_sp_u2dvar(ng)
+                        ioDesc => ioDesc_sp_p2dvar(ng)
                       END IF
                     END IF
 !
@@ -39,7 +39,7 @@
      &                                  LBi, UBi, LBj, UBj, 1, 2,       &
      &                                  Fscl, Fmin, Fmax,               &
 #    ifdef MASKING
-     &                                  GRID(ng) % umask,               &
+     &                                  GRID(ng) % pmask,               &
 #    endif
 #    ifdef CHECKSUM
      &                                  ISF(ng) % Si(:,:,:,i),          &
@@ -54,7 +54,7 @@
      &                                  LBi, UBi, LBj, UBj,             &
      &                                  Fscl, Fmin, Fmax,               &
 #    ifdef MASKING
-     &                                  GRID(ng) % umask,               &
+     &                                  GRID(ng) % pmask,               &
 #    endif
 #    ifdef CHECKSUM
      &                                  ISF(ng) % Si(:,:,Tindex,i),     &
@@ -65,23 +65,23 @@
                     END IF
                   CASE (isIvis)
                     IF (Perfect2D) THEN
-                      my_pioVar%gtype=v3dvar
+                      my_pioVar%gtype=p3dvar
                     ELSE
-                      my_pioVar%gtype=v2dvar
+                      my_pioVar%gtype=p2dvar
                     END IF
                     IF (KIND(ISF(ng)%Si).eq.8) THEN
                       my_pioVar%dkind=PIO_double
                       IF (Perfect2D) THEN
-                        ioDesc => ioDesc_dp_v3dvar(ng)
+                        ioDesc => ioDesc_dp_p3dvar(ng)
                       ELSE
-                        ioDesc => ioDesc_dp_v2dvar(ng)
+                        ioDesc => ioDesc_dp_p2dvar(ng)
                       END IF
                     ELSE
                       my_pioVar%dkind=PIO_real
                       IF (Perfect2D) THEN
-                        ioDesc => ioDesc_sp_v3dvar(ng)
+                        ioDesc => ioDesc_sp_p3dvar(ng)
                       ELSE
-                        ioDesc => ioDesc_sp_v2dvar(ng)
+                        ioDesc => ioDesc_sp_p2dvar(ng)
                       END IF
                     END IF
 !
@@ -92,7 +92,7 @@
      &                                  LBi, UBi, LBj, UBj, 1, 2,       &
      &                                  Fscl, Fmin, Fmax,               &
 #    ifdef MASKING
-     &                                  GRID(ng) % vmask,               &
+     &                                  GRID(ng) % pmask,               &
 #    endif
 #    ifdef CHECKSUM
      &                                  ISF(ng) % Si(:,:,:,i),          &
@@ -107,7 +107,7 @@
      &                                  LBi, UBi, LBj, UBj,             &
      &                                  Fscl, Fmin, Fmax,               &
 #    ifdef MASKING
-     &                                  GRID(ng) % vmask,               &
+     &                                  GRID(ng) % pmask,               &
 #    endif
 #    ifdef CHECKSUM
      &                                  ISF(ng) % Si(:,:,Tindex,i),     &

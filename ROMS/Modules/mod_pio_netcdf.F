@@ -373,6 +373,7 @@
 !
       TYPE (IO_desc_t), pointer :: ioDesc_sp_rubar(:)  ! (i,j,2)
       TYPE (IO_desc_t), pointer :: ioDesc_sp_rvbar(:)  ! (i,j,2)
+      TYPE (IO_desc_t), pointer :: ioDesc_sp_rpbar(:)  ! (i,j,2)
       TYPE (IO_desc_t), pointer :: ioDesc_sp_rzeta(:)  ! (i,j,2)
       TYPE (IO_desc_t), pointer :: ioDesc_sp_ubar(:)   ! (i,j,3)
       TYPE (IO_desc_t), pointer :: ioDesc_sp_vbar(:)   ! (i,j,3)
@@ -390,6 +391,7 @@
 !
       TYPE (IO_desc_t), pointer :: ioDesc_dp_rubar(:)  ! (i,j,2)
       TYPE (IO_desc_t), pointer :: ioDesc_dp_rvbar(:)  ! (i,j,2)
+      TYPE (IO_desc_t), pointer :: ioDesc_dp_rpbar(:)  ! (i,j,2)
       TYPE (IO_desc_t), pointer :: ioDesc_dp_rzeta(:)  ! (i,j,2)
       TYPE (IO_desc_t), pointer :: ioDesc_dp_ubar(:)   ! (i,j,3)
       TYPE (IO_desc_t), pointer :: ioDesc_dp_vbar(:)   ! (i,j,3)

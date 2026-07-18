@@ -669,10 +669,16 @@
 ** Ice shelf model OPTIONS:                                                  **
 **                                                                           **
 ** ICESHELF_MOM         use to activate iceshelf dynamics calculation        **
-** ICESHELF_2EQN_VBC    use to activate 2-equation ice/ocean thermodynamics  **
-** ICESHELF_3EQN_VBC    use to activate 3-equation ice/ocean thermodynamics  **
+** ICESHELF_THERMO      use to activate 3-equation ice/ocean thermodynamics  **
 ** ICESHELF_TEOS10      use to activate TEOS10 in-situ T calculation         **
-** ICESHELF_NO_SBL      use to disable sub-boundary layer flux distribution **
+** ICESHELF_NO_SBL      use to disable sub-boundary layer flux distribution  **
+**                                                                           **
+** Ice sheet model OPTIONS:                                                  **
+**                                                                           **
+** ICESHEET_SSA         use to activate SSA ice sheet momentum equation      **
+** ICESHEET_GL          use to activate grounding line dynamics              **
+** ICESHEET_CALVING     use to activate calving parameterization             **
+** ICESHEET_SMB         use to activate surface mass balance                 **
 **                                                                           **
 ** OPTION to avoid writing current date and CPP options to NetCDF file       **
 ** headers. This is used to compare serial and parallel solutions where      **

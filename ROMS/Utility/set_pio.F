@@ -409,6 +409,7 @@
           DO i=1,NpioComps
             CALL PIO_freedecomp (pioSystem(i,ng), ioDesc_sp_rubar(ng))
             CALL PIO_freedecomp (pioSystem(i,ng), ioDesc_sp_rvbar(ng))
+            CALL PIO_freedecomp (pioSystem(i,ng), ioDesc_sp_rpbar(ng))
             CALL PIO_freedecomp (pioSystem(i,ng), ioDesc_sp_rzeta(ng))
             CALL PIO_freedecomp (pioSystem(i,ng), ioDesc_sp_ubar (ng))
             CALL PIO_freedecomp (pioSystem(i,ng), ioDesc_sp_vbar (ng))
@@ -444,6 +445,7 @@
           DO i=1,NpioComps
             CALL PIO_freedecomp (pioSystem(i,ng), ioDesc_dp_rubar(ng))
             CALL PIO_freedecomp (pioSystem(i,ng), ioDesc_dp_rvbar(ng))
+            CALL PIO_freedecomp (pioSystem(i,ng), ioDesc_dp_rpbar(ng))
             CALL PIO_freedecomp (pioSystem(i,ng), ioDesc_dp_rzeta(ng))
             CALL PIO_freedecomp (pioSystem(i,ng), ioDesc_dp_ubar (ng))
             CALL PIO_freedecomp (pioSystem(i,ng), ioDesc_dp_vbar (ng))
@@ -871,6 +873,7 @@
 !
       allocate ( ioDesc_sp_rubar(Ngrids) )
       allocate ( ioDesc_sp_rvbar(Ngrids) )
+      allocate ( ioDesc_sp_rpbar(Ngrids) )
       allocate ( ioDesc_sp_rzeta(Ngrids) )
       allocate ( ioDesc_sp_ubar (Ngrids) )
       allocate ( ioDesc_sp_vbar (Ngrids) )
@@ -903,6 +906,7 @@
 !
       allocate ( ioDesc_dp_rubar(Ngrids) )
       allocate ( ioDesc_dp_rvbar(Ngrids) )
+      allocate ( ioDesc_dp_rpbar(Ngrids) )
       allocate ( ioDesc_dp_rzeta(Ngrids) )
       allocate ( ioDesc_dp_ubar (Ngrids) )
       allocate ( ioDesc_dp_vbar (Ngrids) )
@@ -1174,6 +1178,9 @@
      &                       ioDesc_sp_rvbar(ng),                       &
      &                       v2dvar, 3, 1, 2)
         CALL field_iodecomp (ng, pioSystem(IpioROMS,ng), PIO_real,      &
+     &                       ioDesc_sp_rpbar(ng),                       &
+     &                       p2dvar, 3, 1, 2)
+        CALL field_iodecomp (ng, pioSystem(IpioROMS,ng), PIO_real,      &
      &                       ioDesc_sp_rzeta(ng),                       &
      &                       r2dvar, 3, 1, 2)
         CALL field_iodecomp (ng, pioSystem(IpioROMS,ng), PIO_real,      &
@@ -1243,6 +1250,9 @@
         CALL field_iodecomp (ng, pioSystem(IpioROMS,ng), PIO_double,    &
      &                       ioDesc_dp_rvbar(ng),                       &
      &                       v2dvar, 3, 1, 2)
+        CALL field_iodecomp (ng, pioSystem(IpioROMS,ng), PIO_double,    &
+     &                       ioDesc_dp_rpbar(ng),                       &
+     &                       p2dvar, 3, 1, 2)
         CALL field_iodecomp (ng, pioSystem(IpioROMS,ng), PIO_double,    &
      &                       ioDesc_dp_rzeta(ng),                       &
      &                       r2dvar, 3, 1, 2)

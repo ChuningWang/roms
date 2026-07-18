@@ -3,8 +3,6 @@
       MODULE isf_vbc_mod
 
 #ifdef ICESHELF_THERMO
-# define GAMMAS_MC1987
-# undef GAMMAS_KY1972
 !
 !================================================== Hernan G. Arango ===
 !  Copyright (c) 2002-2024 The ROMS/TOMS Group          Chuning Wang   !
@@ -84,7 +82,7 @@
      &                   GRID(ng) % f,                                  &
      &                   GRID(ng) % rmask_isf,                          &
      &                   OCEAN(ng) % t,                                 &
-# ifdef ICESHELF_3EQN_VBC
+# ifdef ICESHELF_THERMO
      &                   FORCES(ng) % sustr,                            &
      &                   FORCES(ng) % svstr,                            &
 # endif
@@ -108,7 +106,7 @@
      &                         Hz, zice, f,                             &
      &                         rmask_isf,                               &
      &                         t,                                       &
-# ifdef ICESHELF_3EQN_VBC
+# ifdef ICESHELF_THERMO
      &                         sustr, svstr,                            &
 # endif
      &                         Vi, Ti,                                  &
@@ -138,7 +136,7 @@
       real(r8), intent(in) :: f(LBi:,LBj:)
       real(r8), intent(in) :: rmask_isf(LBi:,LBj:)
       real(r8), intent(in) :: t(LBi:,LBj:,:,:,:)
-#  ifdef ICESHELF_3EQN_VBC
+#  ifdef ICESHELF_THERMO
       real(r8), intent(in) :: sustr(LBi:,LBj:)
       real(r8), intent(in) :: svstr(LBi:,LBj:)
 #  endif
@@ -154,7 +152,7 @@
       real(r8), intent(in) :: f(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: rmask_isf(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: t(LBi:UBi,LBj:UBj,N(ng),3,NT(ng))
-#  ifdef ICESHELF_3EQN_VBC
+#  ifdef ICESHELF_THERMO
       real(r8), intent(in) :: sustr(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: svstr(LBi:UBi,LBj:UBj)
 #  endif
@@ -180,7 +178,7 @@
 !  fluxes over the ice base.
 !-----------------------------------------------------------------------
 !
-# ifdef ICESHELF_3EQN_VBC
+# ifdef ICESHELF_THERMO
 !
 !  Define constants for the 3-Equation formula
 !
@@ -263,16 +261,6 @@
             Fi(i,j,icItba) = Tm
             Fi(i,j,icIsba) = Sm
 # endif
-# if defined ICESHELF_2EQN_VBC
-!
-!  Use 2-Equation formula
-!
-            TFb = a*Sm + b - c*zice(i,j)
-!
-            stflx(i,j,itemp) = gammaTS*(TFb-Tm)
-            stflx(i,j,isalt) = Cp*stflx(i,j,itemp)*refSalt/L
-            Fi(i,j,icImel)   = stflx(i,j,isalt)/Sm
-# elif defined ICESHELF_3EQN_VBC
 !
 !  Calculate exchange coefficients. Note that this assumes log profile.
 !
@@ -280,14 +268,14 @@
      &            (0.5_r8*(sustr(i,j)+sustr(i+1,j)))**2+                &
      &            (0.5_r8*(svstr(i,j)+svstr(i,j+1)))**2))
             Fi(i,j,icIust) = MAX(min_ustar(ng), cff)
-#  ifdef GAMMAS_KY1972
+#  ifdef ICESHELF_GAMMAS_KY1972
 !
 !  Use KY 1972 algorithm
 !
             turb = 2.12_r8*LOG((Fi(i,j,icIust)*Hz(i,j,N(ng)))/visc)
             Fi(i,j,icIgat) = Fi(i,j,icIust)/(turb + Pradj - 9.0_r8)
             Fi(i,j,icIgas) = Fi(i,j,icIust)/(turb + Scadj - 9.0_r8)
-#  elif defined GAMMAS_MC1987
+#  elif defined ICESHELF_GAMMAS_MC1987
 !
 !  Use simplified version of McPhee 1987 algorithm
 !
@@ -348,7 +336,6 @@
      &                         (Fi(i,j,icItbo)-Tm)
             stflx(i,j,isalt) = (Fi(i,j,icIgas)+Fi(i,j,icImel)) *        &
      &                         (Fi(i,j,icIsbo)-Sm)
-# endif
           ELSE
             Fi(i,j,icImel) = 0.0_r8
           END IF

@@ -1458,19 +1458,6 @@
      &   'Include Ice Shelf Thermodynamics'
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+17)=' ICESHELF_THERMO,'
-#   if defined ICESHELF_2EQN_VBC
-!
-      IF (Master) WRITE (stdout,20) 'ICESHELF_2EQN_VBC',                &
-     &   '2-Equation Ice/Ocean Thermodynamics'
-      is=LEN_TRIM(Coptions)+1
-      Coptions(is:is+19)=' ICESHELF_2EQN_VBC,'
-#   elif defined ICESHELF_3EQN_VBC
-!
-      IF (Master) WRITE (stdout,20) 'ICESHELF_3EQN_VBC',                &
-     &   '3-Equation Ice/Ocean Thermodynamics'
-      is=LEN_TRIM(Coptions)+1
-      Coptions(is:is+19)=' ICESHELF_3EQN_VBC,'
-#   endif
 #  endif
 #  ifdef ICESHELF_MOM
 !

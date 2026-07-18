@@ -111,3 +111,23 @@
           CASE ('idIamb(inert(i))')
             load=.TRUE.
 #endif
+#ifdef ICESHEET_SSA
+          CASE ('idIzsf')
+            idIzsf=varid
+            iFisf(icIzsf)=idIzsf
+          CASE ('idIzbd')
+            idIzbd=varid
+            iFisf(icIzbd)=idIzbd
+          CASE ('idInuh')
+            idInuh=varid
+            iFisf(icInuh)=idInuh
+          CASE ('idItdx')
+            idItdx=varid
+            iFisf(icItdx)=idItdx
+          CASE ('idItdy')
+            idItdy=varid
+            iFisf(icItdy)=idItdy
+          CASE ('idIbta')
+            idIbta=varid
+            iFisf(icIbta)=idIbta
+#endif

@@ -809,13 +809,31 @@
 
 /*
 ** Check if dynamic/thermodynamic ice shelf model is activated.
+** ICESHELF_THERMO is user-settable and enables 3-equation ice/ocean
+** thermodynamics. ICESHELF_MOM enables ice sheet/shelf momentum.
+** Either activates the umbrella macros ICESHELF and ICESHELF_DYNAM.
 */
-#if defined ICESHELF_3EQN_VBC || defined ICESHELF_2EQN_VBC
-# define ICESHELF_THERMO
-#endif
 #if defined ICESHELF_THERMO || defined ICESHELF_MOM
 # define ICESHELF
 # define ICESHELF_DYNAM
+#endif
+#if defined ICESHELF_THERMO && \
+    !defined ICESHELF_GAMMAS_MC1987 && !defined ICESHELF_GAMMAS_KY1972
+# define ICESHELF_GAMMAS_MC1987
+#endif
+
+/*
+** Check if ice sheet dynamics is activated. ICESHEET_SSA implies
+** ICESHELF_MOM (SSA is the ice sheet momentum equation). The umbrella
+** macro ICESHEET gates all ice-sheet-specific code (grounding line,
+** calving, SMB).
+*/
+#if defined ICESHEET_SSA
+# define ICESHELF_MOM
+#endif
+#if defined ICESHEET_SSA || defined ICESHEET_GL || \
+    defined ICESHEET_CALVING || defined ICESHEET_SMB
+# define ICESHEET
 #endif
 
 /*

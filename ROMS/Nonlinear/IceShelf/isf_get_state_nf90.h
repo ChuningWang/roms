@@ -11,9 +11,9 @@
                 SELECT CASE (i)
                   CASE (isIuis)
                     IF (Perfect2D) THEN
-                      gtype=var_flag(varid)*u3dvar
+                      gtype=var_flag(varid)*p3dvar
                     ELSE
-                      gtype=var_flag(varid)*u2dvar
+                      gtype=var_flag(varid)*p2dvar
                     END IF
                     IF (Perfect2D) THEN
                       status=nf_fread3d(ng, IDmod, ncname, ncINPid,     &
@@ -22,7 +22,7 @@
      &                                  LBi, UBi, LBj, UBj, 1, 2,       &
      &                                  Fscl, Fmin, Fmax,               &
 #   ifdef MASKING
-     &                                  GRID(ng) % umask,               &
+     &                                  GRID(ng) % pmask,               &
 #   endif
 #   ifdef CHECKSUM
      &                                  ISF(ng) % Si(:,:,:,i),          &
@@ -37,7 +37,7 @@
      &                                  LBi, UBi, LBj, UBj,             &
      &                                  Fscl, Fmin, Fmax,               &
 #   ifdef MASKING
-     &                                  GRID(ng) % umask,               &
+     &                                  GRID(ng) % pmask,               &
 #   endif
 #   ifdef CHECKSUM
      &                                  ISF(ng) % Si(:,:,Tindex,i),     &
@@ -48,9 +48,9 @@
                     END IF
                   CASE (isIvis)
                     IF (Perfect2D) THEN
-                      gtype=var_flag(varid)*v3dvar
+                      gtype=var_flag(varid)*p3dvar
                     ELSE
-                      gtype=var_flag(varid)*v2dvar
+                      gtype=var_flag(varid)*p2dvar
                     END IF
                     IF (Perfect2D) THEN
                       status=nf_fread3d(ng, IDmod, ncname, ncINPid,     &
@@ -59,7 +59,7 @@
      &                                  LBi, UBi, LBj, UBj, 1, 2,       &
      &                                  Fscl, Fmin, Fmax,               &
 #   ifdef MASKING
-     &                                  GRID(ng) % vmask,               &
+     &                                  GRID(ng) % pmask,               &
 #   endif
 #   ifdef CHECKSUM
      &                                  ISF(ng) % Si(:,:,:,i),          &
@@ -74,7 +74,7 @@
      &                                  LBi, UBi, LBj, UBj,             &
      &                                  Fscl, Fmin, Fmax,               &
 #   ifdef MASKING
-     &                                  GRID(ng) % vmask,               &
+     &                                  GRID(ng) % pmask,               &
 #   endif
 #   ifdef CHECKSUM
      &                                  ISF(ng) % Si(:,:,Tindex,i),     &

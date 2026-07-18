@@ -132,7 +132,7 @@
       integer :: ifield
 
       integer :: DimIDs(nDimID)
-      integer :: r2dgrd(4), ru2dgrd(4), rv2dgrd(4)
+      integer :: r2dgrd(4), ru2dgrd(4), rv2dgrd(4), rp2dgrd(4)
       integer :: sp2dgrd(3), sr2dgrd(3), su2dgrd(3), sv2dgrd(3)
       integer :: sr3dgrd(4), su3dgrd(4), sv3dgrd(4)
       integer :: t2dgrd(4), u2dgrd(4), v2dgrd(4)
@@ -554,6 +554,13 @@
         rv3dgrd(5)=DimIDs(12)
 #  endif
 # endif
+!
+!  Define dimension vectors for RHS psi-point type variables.
+!
+        rp2dgrd(1)=DimIDs( 4)
+        rp2dgrd(2)=DimIDs( 8)
+        rp2dgrd(3)=DimIDs(30)
+        rp2dgrd(4)=DimIDs(12)
 #endif
 #ifdef SOLVE3D
 !
@@ -1651,8 +1658,8 @@
 !-----------------------------------------------------------------------
 !
         CALL isf_def_nf90 (ng, model, Ldefine, Hout, RST,               &
-     &                     i2dgrd, u2dgrd, v2dgrd,                      &
-     &                     sr2dgrd, ru2dgrd, rv2dgrd)
+     &                     i2dgrd, u2dgrd, v2dgrd, sp2dgrd,             &
+     &                     sr2dgrd, ru2dgrd, rv2dgrd, rp2dgrd)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
 #   ifdef PERFECT_RESTART
@@ -2251,7 +2258,7 @@
       integer :: ifield
 
       integer :: DimIDs(nDimID)
-      integer :: r2dgrd(4), ru2dgrd(4), rv2dgrd(4)
+      integer :: r2dgrd(4), ru2dgrd(4), rv2dgrd(4), rp2dgrd(4)
       integer :: sp2dgrd(3), sr2dgrd(3), su2dgrd(3), sv2dgrd(3)
       integer :: sr3dgrd(4), su3dgrd(4), sv3dgrd(4)
       integer :: t2dgrd(4), u2dgrd(4), v2dgrd(4)
@@ -2675,6 +2682,13 @@
         rv3dgrd(5)=DimIDs(12)
 #   endif
 #  endif
+!
+!  Define dimension vectors for RHS psi-point type variables.
+!
+        rp2dgrd(1)=DimIDs( 4)
+        rp2dgrd(2)=DimIDs( 8)
+        rp2dgrd(3)=DimIDs(30)
+        rp2dgrd(4)=DimIDs(12)
 # endif
 # ifdef SOLVE3D
 !
@@ -3907,8 +3921,8 @@
 !-----------------------------------------------------------------------
 !
         CALL isf_def_pio (ng, model, Ldefine, Hout, RST,                &
-                          i2dgrd, u2dgrd, v2dgrd,                       &
-     &                    sr2dgrd, ru2dgrd, rv2dgrd)
+                          i2dgrd, u2dgrd, v2dgrd, sp2dgrd,              &
+     &                    sr2dgrd, ru2dgrd, rv2dgrd, rp2dgrd)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
 #   ifdef PERFECT_RESTART

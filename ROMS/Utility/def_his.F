@@ -2249,7 +2249,7 @@
 !-----------------------------------------------------------------------
 !
         CALL isf_def_nf90 (ng, model, ldef, Hout, HIS,                  &
-     &                     t2dgrd, u2dgrd, v2dgrd)
+     &                     t2dgrd, u2dgrd, v2dgrd, p2dgrd)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #endif
 
@@ -5739,7 +5739,7 @@
 !-----------------------------------------------------------------------
 !
         CALL isf_def_pio (ng, model, ldef, Hout, HIS,                   &
-     &                    t2dgrd, u2dgrd, v2dgrd)
+     &                    t2dgrd, u2dgrd, v2dgrd, p2dgrd)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # endif
 

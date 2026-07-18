@@ -61,8 +61,8 @@
 !
 !***********************************************************************
       SUBROUTINE isf_def_nf90 (ng, model, ldef, VarOut, S,              &
-     &                         t2dgrd, u2dgrd, v2dgrd,                  &
-     &                         sr2dgrd, ru2dgrd, rv2dgrd)
+     &                         t2dgrd, u2dgrd, v2dgrd, p2dgrd,          &
+     &                         sr2dgrd, ru2dgrd, rv2dgrd, rp2dgrd)
 !***********************************************************************
 !
       USE mod_netcdf
@@ -73,8 +73,8 @@
       logical, intent(in) :: ldef, VarOut(NV,Ngrids)
       TYPE(T_IO), intent(inout) :: S(Ngrids)
       integer, intent(in), optional, target ::                          &
-     &  t2dgrd(:), u2dgrd(:), v2dgrd(:),                                &
-     &  sr2dgrd(:), ru2dgrd(:), rv2dgrd(:)
+     &  t2dgrd(:), u2dgrd(:), v2dgrd(:), p2dgrd(:),                    &
+     &  sr2dgrd(:), ru2dgrd(:), rv2dgrd(:), rp2dgrd(:)
 !
 !  Local variable declarations.
 !
@@ -176,12 +176,12 @@
                 CASE (isIuis)
 #  ifdef PERFECT_RESTART
                   IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
-                    isfgrd => ru2dgrd
+                    isfgrd => rp2dgrd
                   ELSE
-                    isfgrd => u2dgrd
+                    isfgrd => p2dgrd
                   END IF
 #  else
-                  isfgrd => u2dgrd
+                  isfgrd => p2dgrd
 #  endif
 #  if defined WRITE_WATER && defined MASKING
 #   if !defined WET_DRY && defined PERFECT_RESTART
@@ -190,18 +190,18 @@
                     Aval(6)=spval
                   END IF
 #   else
-                  Vinfo(20)='mask_u'
+                  Vinfo(20)='mask_psi'
 #   endif
 #  endif
                 CASE (isIvis)
 #  ifdef PERFECT_RESTART
                   IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
-                    isfgrd => rv2dgrd
+                    isfgrd => rp2dgrd
                   ELSE
-                    isfgrd => v2dgrd
+                    isfgrd => p2dgrd
                   END IF
 #  else
-                  isfgrd => v2dgrd
+                  isfgrd => p2dgrd
 #  endif
 #  if defined WRITE_WATER && defined MASKING
 #   if !defined WET_DRY && defined PERFECT_RESTART
@@ -210,7 +210,7 @@
                     Aval(6)=spval
                   END IF
 #   else
-                  Vinfo(20)='mask_v'
+                  Vinfo(20)='mask_psi'
 #   endif
 #  endif
                 CASE DEFAULT
@@ -700,28 +700,28 @@
               CASE (isIuis)
                 IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
 #  ifdef PERFECT_RESTART
-                  gtype=gfactor*u3dvar
+                  gtype=gfactor*p3dvar
 #  else
-                  gtype=gfactor*u2dvar
+                  gtype=gfactor*p2dvar
 #  endif
                 ELSE
-                  gtype=gfactor*u2dvar
+                  gtype=gfactor*p2dvar
                 END IF
 #  ifdef MASKING
-                isfMask => GRID(ng) % umask_full
+                isfMask => GRID(ng) % pmask_full
 #  endif
               CASE (isIvis)
                 IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
 #  ifdef PERFECT_RESTART
-                  gtype=gfactor*v3dvar
+                  gtype=gfactor*p3dvar
 #  else
-                  gtype=gfactor*v2dvar
+                  gtype=gfactor*p2dvar
 #  endif
                 ELSE
-                  gtype=gfactor*v2dvar
+                  gtype=gfactor*p2dvar
                 END IF
 #  ifdef MASKING
-                isfMask => GRID(ng) % vmask_full
+                isfMask => GRID(ng) % pmask_full
 #  endif
               CASE DEFAULT
                 IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
@@ -1735,8 +1735,8 @@
 !
 !***********************************************************************
       SUBROUTINE isf_def_pio (ng, model, ldef, VarOut, S,               &
-     &                        t2dgrd, u2dgrd, v2dgrd,                   &
-     &                        sr2dgrd, ru2dgrd, rv2dgrd)
+     &                        t2dgrd, u2dgrd, v2dgrd, p2dgrd,           &
+     &                        sr2dgrd, ru2dgrd, rv2dgrd, rp2dgrd)
 !***********************************************************************
 !
       USE mod_pio_netcdf
@@ -1747,8 +1747,8 @@
       logical, intent(in) :: ldef, VarOut(NV,Ngrids)
       TYPE(T_IO), intent(inout) :: S(Ngrids)
       integer, intent(in), optional, target ::                          &
-     &  t2dgrd(:), u2dgrd(:), v2dgrd(:),                                &
-     &  sr2dgrd(:), ru2dgrd(:), rv2dgrd(:)
+     &  t2dgrd(:), u2dgrd(:), v2dgrd(:), p2dgrd(:),                    &
+     &  sr2dgrd(:), ru2dgrd(:), rv2dgrd(:), rp2dgrd(:)
 !
 !  Local variable declarations.
 !
@@ -1852,12 +1852,12 @@
                 CASE (isIuis)
 #   ifdef PERFECT_RESTART
                   IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
-                    isfgrd => ru2dgrd
+                    isfgrd => rp2dgrd
                   ELSE
-                    isfgrd => u2dgrd
+                    isfgrd => p2dgrd
                   END IF
 #   else
-                  isfgrd => u2dgrd
+                  isfgrd => p2dgrd
 #   endif
 #   if defined WRITE_WATER && defined MASKING
 #    if !defined WET_DRY && defined PERFECT_RESTART
@@ -1866,19 +1866,19 @@
                     Aval(6)=spval
                   END IF
 #    else
-                  Vinfo(20)='mask_u'
+                  Vinfo(20)='mask_psi'
 #    endif
 #   endif
-                  S(ng)%pioVar(ifield)%gtype=u2dvar
+                  S(ng)%pioVar(ifield)%gtype=p2dvar
                 CASE (isIvis)
 #   ifdef PERFECT_RESTART
                   IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
-                    isfgrd => rv2dgrd
+                    isfgrd => rp2dgrd
                   ELSE
-                    isfgrd => v2dgrd
+                    isfgrd => p2dgrd
                   END IF
 #   else
-                  isfgrd => v2dgrd
+                  isfgrd => p2dgrd
 #   endif
 #   if defined WRITE_WATER && defined MASKING
 #    if !defined WET_DRY && defined PERFECT_RESTART
@@ -1887,10 +1887,10 @@
                     Aval(6)=spval
                   END IF
 #    else
-                  Vinfo(20)='mask_v'
+                  Vinfo(20)='mask_psi'
 #    endif
 #   endif
-                  S(ng)%pioVar(ifield)%gtype=v2dvar
+                  S(ng)%pioVar(ifield)%gtype=p2dvar
                 CASE DEFAULT
                   isfgrd => t2dgrd
 #   if defined WRITE_WATER && defined MASKING
@@ -2186,9 +2186,9 @@
 !
                 SELECT CASE (nf)
                   CASE (isIuis)
-                    S(ng)%pioVar(ifield)%gtype=u2dvar
+                    S(ng)%pioVar(ifield)%gtype=p2dvar
                   CASE (isIvis)
-                    S(ng)%pioVar(ifield)%gtype=v2dvar
+                    S(ng)%pioVar(ifield)%gtype=p2dvar
                   CASE DEFAULT
                     S(ng)%pioVar(ifield)%gtype=r2dvar
                 END SELECT
@@ -2430,51 +2430,51 @@
 #   ifdef PERFECT_RESTART
                 IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
                   IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
-                    ioDesc => ioDesc_dp_rubar(ng)
+                    ioDesc => ioDesc_dp_rpbar(ng)
                   ELSE
-                    ioDesc => ioDesc_sp_rubar(ng)
+                    ioDesc => ioDesc_sp_rpbar(ng)
                   END IF
                 ELSE
                   IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
-                    ioDesc => ioDesc_dp_u2dvar(ng)
+                    ioDesc => ioDesc_dp_p2dvar(ng)
                   ELSE
-                    ioDesc => ioDesc_sp_u2dvar(ng)
+                    ioDesc => ioDesc_sp_p2dvar(ng)
                   END IF
                 END IF
 #   else
                 IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
-                  ioDesc => ioDesc_dp_u2dvar(ng)
+                  ioDesc => ioDesc_dp_p2dvar(ng)
                 ELSE
-                  ioDesc => ioDesc_sp_u2dvar(ng)
+                  ioDesc => ioDesc_sp_p2dvar(ng)
                 END IF
 #   endif
 #   ifdef MASKING
-                isfMask => GRID(ng) % umask_full
+                isfMask => GRID(ng) % pmask_full
 #   endif
               CASE (isIvis)
 #   ifdef PERFECT_RESTART
                 IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
                   IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
-                    ioDesc => ioDesc_dp_rvbar(ng)
+                    ioDesc => ioDesc_dp_rpbar(ng)
                   ELSE
-                    ioDesc => ioDesc_sp_rvbar(ng)
+                    ioDesc => ioDesc_sp_rpbar(ng)
                   END IF
                 ELSE
                   IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
-                    ioDesc => ioDesc_dp_v2dvar(ng)
+                    ioDesc => ioDesc_dp_p2dvar(ng)
                   ELSE
-                    ioDesc => ioDesc_sp_v2dvar(ng)
+                    ioDesc => ioDesc_sp_p2dvar(ng)
                   END IF
                 END IF
 #   else
                 IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
-                  ioDesc => ioDesc_dp_v2dvar(ng)
+                  ioDesc => ioDesc_dp_p2dvar(ng)
                 ELSE
-                  ioDesc => ioDesc_sp_v2dvar(ng)
+                  ioDesc => ioDesc_sp_p2dvar(ng)
                 END IF
 #   endif
 #   ifdef MASKING
-                isfMask => GRID(ng) % vmask_full
+                isfMask => GRID(ng) % pmask_full
 #   endif
               CASE DEFAULT
 #   ifdef PERFECT_RESTART
