@@ -112,7 +112,7 @@
 
 ! Glen hardness coefficient (sqrt of B) [Pa s^(1/n)].
 
-           B_glen == 1.0d8
+           B_glen == 3.076d-9
 
 ! Minimum strain rate regularization for Glen viscosity [1/s].
 
@@ -140,7 +140,7 @@
 ! SSA solver: max CG iterations, relative tolerance.
 
       cg_max_iter == 500
-           cg_tol == 1.0d-8
+           cg_tol == 1.0d-6
 
 ! SSA solver: nuH regularization [Pa s m], minimum ice thickness [m],
 ! velocity cap [m/s].
