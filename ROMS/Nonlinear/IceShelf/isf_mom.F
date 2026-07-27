@@ -179,6 +179,7 @@
       real(r8) :: resid, resid_0, alpha, beta_cg
       real(r8) :: dot_zr, dot_zr_old, dot_dad
       real(r8) :: cgtol, nl_resid, nl_resid_0
+      real(r8) :: vel_change, vel_norm
       integer :: cg_iter, nl_iter
       logical :: converged
 !
@@ -231,7 +232,7 @@
         DO i=IstrT,IendT
           H_rho=Si(i,j,ksa_old,isIhis)
           IF ((H_rho.gt.0.0_r8).and.                                  &
-     &        (rho_i*H_rho.gt.rho_w_local*(-h(i,j)))) THEN
+     &        (rho_i*H_rho.gt.rho_w_local*h(i,j))) THEN
             rmask_ist_scr(i,j)=1.0_r8         ! grounded
           ELSE
             rmask_ist_scr(i,j)=0.0_r8         ! floating or ice-free

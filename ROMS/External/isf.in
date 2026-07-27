@@ -110,7 +110,9 @@
 
            n_glen == 3.0d0
 
-! Glen hardness coefficient (sqrt of B) [Pa s^(1/n)].
+! Glen rate factor (sqrt of A) [Pa^(-n/2) s^(-1/2)].
+! For A = 9.461e-18 Pa^-3 s^-1 (STREAMICE default), n=3:
+! B_glen = sqrt(A) = 3.076e-9
 
            B_glen == 3.076d-9
 

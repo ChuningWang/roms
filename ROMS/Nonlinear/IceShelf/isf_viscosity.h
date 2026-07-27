@@ -34,14 +34,14 @@
 !
 !  Get 4 corner velocities (PSI points).
 !
-            u1=Si(i,j,ksa_old,isIuis)
-            u2=Si(i+1,j,ksa_old,isIuis)
-            u3=Si(i,j+1,ksa_old,isIuis)
-            u4=Si(i+1,j+1,ksa_old,isIuis)
-            v1=Si(i,j,ksa_old,isIvis)
-            v2=Si(i+1,j,ksa_old,isIvis)
-            v3=Si(i,j+1,ksa_old,isIvis)
-            v4=Si(i+1,j+1,ksa_old,isIvis)
+            u1=Si(i,j,ksa_new,isIuis)
+            u2=Si(i+1,j,ksa_new,isIuis)
+            u3=Si(i,j+1,ksa_new,isIuis)
+            u4=Si(i+1,j+1,ksa_new,isIuis)
+            v1=Si(i,j,ksa_new,isIvis)
+            v2=Si(i+1,j,ksa_new,isIvis)
+            v3=Si(i,j+1,ksa_new,isIvis)
+            v4=Si(i+1,j+1,ksa_new,isIvis)
 !
 !  Velocity at cell center (4-corner average).
 !
@@ -69,7 +69,7 @@
 !  PISM strength extension: constant nuH for thin ice to maintain
 !  ellipticity at the margin.
 !
-              nuH_rho(i,j)=B_glen_sq*min_thickness(ng)*                 &
+              nuH_rho(i,j)=0.5_r8*B_glen_sq*min_thickness(ng)*          &
      &            eps_e**((1.0_r8-n_glen(ng))/n_glen(ng))
             ELSE
               nuH_rho(i,j)=0.5_r8*B_glen_sq*                            &

@@ -108,7 +108,7 @@
             IF (Si(i,j,ksa_old,isIhis).gt.0.0_r8) THEN
               dx_rho=1.0_r8/pm(i,j)
               dy_rho=1.0_r8/pn(i,j)
-              jac=0.25_r8/(pm(i,j)*pn(i,j))
+              jac=1.0_r8/(pm(i,j)*pn(i,j))
 !
               DO nq=1,4
 !
@@ -272,7 +272,9 @@
      &                     Au,Av)
 # endif
 !
-!  Initial residual: r = taud - A*u
+!  Initial residual: r = RHS - A*u
+!  RHS: use taudx_psi directly as nodal force (consistent with
+!  STREAMICE where taud is already a force integral at velocity nodes).
 !
         dot_zr=0.0_r8
         DO j=JstrP,JendP
@@ -525,19 +527,43 @@
           END DO
         END DO
 !
-!  Recompute viscosity with new velocity for convergence check.
+!  Recompute viscosity with new velocity for next Picard iteration.
 !
 #   include <isf_viscosity.h>
 !
-!  Convergence check: relative residual criterion.
-!  resid = ||b - A*u|| from CG solver.
-!  Converged when resid <= nl_tol * nl_resid_0 (initial nonlinear residual).
+!  Picard convergence check: relative velocity change.
+!  ||u_new - u_old|| / ||u_new|| < nl_tol
 !
-        IF (nl_iter.eq.1) THEN
-          nl_resid_0=resid_0
+        vel_change=0.0_r8
+        vel_norm=0.0_r8
+        DO j=JstrP,JendP
+          DO i=IstrP,IendP
+            IF (pmask_ssa(i,j).eq.1.0_r8) THEN
+              vel_change=vel_change+                                    &
+     &          (Si(i,j,ksa_new,isIuis)-Si(i,j,ksa_old,isIuis))**2+    &
+     &          (Si(i,j,ksa_new,isIvis)-Si(i,j,ksa_old,isIvis))**2
+              vel_norm=vel_norm+                                        &
+     &          Si(i,j,ksa_new,isIuis)**2+                             &
+     &          Si(i,j,ksa_new,isIvis)**2
+            END IF
+          END DO
+        END DO
+# ifdef DISTRIBUTE
+        isf_dot_prod=vel_change
+        op_handle='SUM'
+        CALL mp_reduce(ng,iNLM,1,isf_dot_prod,op_handle)
+        vel_change=isf_dot_prod
+        isf_dot_prod=vel_norm
+        CALL mp_reduce(ng,iNLM,1,isf_dot_prod,op_handle)
+        vel_norm=isf_dot_prod
+# endif
+        IF (vel_norm.gt.eps) THEN
+          nl_resid=SQRT(vel_change/vel_norm)
+        ELSE
+          nl_resid=0.0_r8
         END IF
 !
-        IF (resid.le.nl_tol(ng)*nl_resid_0) THEN
+        IF (nl_resid.le.nl_tol(ng)) THEN
           converged=.TRUE.
         END IF
 !

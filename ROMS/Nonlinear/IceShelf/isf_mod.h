@@ -217,7 +217,7 @@
 !  SSA physical parameters
 !
       real(r8), allocatable :: n_glen(:)          ! Glen flow law exponent
-      real(r8), allocatable :: B_glen(:)          ! Glen hardness (sqrt of B)
+      real(r8), allocatable :: B_glen(:)          ! Glen rate factor (sqrt of A)
       real(r8), allocatable :: eps_glen_min(:)    ! minimum strain rate regularization
       real(r8), allocatable :: C_basal(:)         ! basal drag coefficient (sqrt of C)
       real(r8), allocatable :: n_basal(:)         ! basal sliding exponent
@@ -246,6 +246,7 @@
       real(r8), parameter :: b       = 0.0939_r8
       real(r8), parameter :: c       = -7.61e-4_r8
       real(r8), parameter :: L       = 3.33e5_r8
+      real(r8), parameter :: rho_i   = 916.7_r8
 #if defined ICESHELF_THERMO
       real(r8), parameter :: Pr      = 13.8_r8
       real(r8), parameter :: Sc      = 2432.2_r8
@@ -253,7 +254,6 @@
       real(r8), parameter :: visc    = 1.95e-6_r8
 !     real(r8), parameter :: small   = 1.0e-3_r8 ! Diffusion + tidal
       real(r8), parameter :: small   = 8.0e-6_r8 ! Diffusion only
-      real(r8), parameter :: rho_i   = 916.7_r8
       real(r8), parameter :: Tis     = -20.0_r8
       real(r8), parameter :: Sis     = 0.0_r8
 #endif
@@ -490,7 +490,7 @@
         IF (.not.allocated(B_glen)) THEN
           allocate ( B_glen(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          B_glen(1:Ngrids)=1.0e8_r8
+          B_glen(1:Ngrids)=3.076e-9_r8
         END IF
         IF (.not.allocated(eps_glen_min)) THEN
           allocate ( eps_glen_min(Ngrids) )
