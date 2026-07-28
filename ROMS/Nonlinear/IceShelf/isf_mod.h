@@ -217,7 +217,7 @@
 !  SSA physical parameters
 !
       real(r8), allocatable :: n_glen(:)          ! Glen flow law exponent
-      real(r8), allocatable :: B_glen(:)          ! Glen rate factor (sqrt of A)
+      real(r8), allocatable :: B_glen(:)          ! Glen stiffness (>0: const B^2 = A^(-1/n), <=0: Paterson)
       real(r8), allocatable :: eps_glen_min(:)    ! minimum strain rate regularization
       real(r8), allocatable :: C_basal(:)         ! basal drag coefficient (sqrt of C)
       real(r8), allocatable :: n_basal(:)         ! basal sliding exponent
@@ -237,6 +237,20 @@
 !  Grounding line parameters
 !
       real(r8), allocatable :: gl_smooth_width(:) ! grounding line smoothing width [m]
+!
+!  Thickness advection parameters
+!
+      real(r8), allocatable :: cfl_factor(:)      ! CFL safety factor for sub-stepping
+!
+!  Calving parameters
+!
+      real(r8), allocatable :: H_calve(:)         ! Thickness threshold for calving (m)
+!
+!  Multi-timescale parameters
+!
+      integer, allocatable :: N_ssa(:)            ! SSA solve frequency (ocean steps)
+      integer, allocatable :: N_thick(:)          ! Thickness update frequency (SSA steps)
+      integer, allocatable :: N_gl(:)             ! Grounding line update frequency
 #endif
 !
 !  Other constant parameters
@@ -490,7 +504,7 @@
         IF (.not.allocated(B_glen)) THEN
           allocate ( B_glen(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          B_glen(1:Ngrids)=3.076e-9_r8
+          B_glen(1:Ngrids)=-1.0_r8
         END IF
         IF (.not.allocated(eps_glen_min)) THEN
           allocate ( eps_glen_min(Ngrids) )
@@ -556,6 +570,31 @@
           allocate ( gl_smooth_width(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
           gl_smooth_width(1:Ngrids)=6000.0_r8
+        END IF
+        IF (.not.allocated(cfl_factor)) THEN
+          allocate ( cfl_factor(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          cfl_factor(1:Ngrids)=0.5_r8
+        END IF
+        IF (.not.allocated(H_calve)) THEN
+          allocate ( H_calve(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          H_calve(1:Ngrids)=100.0_r8
+        END IF
+        IF (.not.allocated(N_ssa)) THEN
+          allocate ( N_ssa(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          N_ssa(1:Ngrids)=1
+        END IF
+        IF (.not.allocated(N_thick)) THEN
+          allocate ( N_thick(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          N_thick(1:Ngrids)=1
+        END IF
+        IF (.not.allocated(N_gl)) THEN
+          allocate ( N_gl(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          N_gl(1:Ngrids)=1
         END IF
 #endif
 
@@ -888,6 +927,11 @@
       IF (allocated(min_thickness))  deallocate ( min_thickness )
       IF (allocated(ssa_max_speed))   deallocate ( ssa_max_speed )
       IF (allocated(gl_smooth_width)) deallocate ( gl_smooth_width )
+      IF (allocated(cfl_factor))       deallocate ( cfl_factor )
+      IF (allocated(H_calve))          deallocate ( H_calve )
+      IF (allocated(N_ssa))            deallocate ( N_ssa )
+      IF (allocated(N_thick))          deallocate ( N_thick )
+      IF (allocated(N_gl))             deallocate ( N_gl )
 #endif
 !
       RETURN

@@ -32,6 +32,12 @@
 # ifdef ICESHELF_MOM
       USE isf_mom_mod,      ONLY : isf_mom
 # endif
+# ifdef ICESHEET_SSA
+      USE isf_thickness_adv_mod, ONLY : isf_thickness_adv
+# endif
+# ifdef ICESHEET_CALVING
+      USE isf_calving_mod,  ONLY : isf_calving
+# endif
       USE strings_mod,      ONLY : FoundError, uppercase
 # ifdef WET_DRY
       USE isf_masks_mod,    ONLY : isf_masks
@@ -111,31 +117,83 @@
 # ifdef ICESHELF_MOM
 !
 !-----------------------------------------------------------------------
-!  Compute the iceshelf momemtum.
+!  Compute the iceshelf momentum (SSA).  With ICESHEET_SSA, solved
+!  every N_ssa ocean timesteps for multi-timescale coupling.
 !-----------------------------------------------------------------------
 !
         DO ig=1,GridsInLayer(nl)
           ng=GridNumber(ig,nl)
-          lsold(ng)=lsnew(ng)
-          lsnew(ng)=3-lsold(ng)
-          DO tile=first_tile(ng),last_tile(ng),+1
-            CALL isf_mom (ng, tile, model)
-          END DO
+#  ifdef ICESHEET_SSA
+          IF (MOD(iic(ng)-1,N_ssa(ng)).eq.0) THEN
+#  endif
+            lsold(ng)=lsnew(ng)
+            lsnew(ng)=3-lsold(ng)
+            DO tile=first_tile(ng),last_tile(ng),+1
+              CALL isf_mom (ng, tile, model)
+            END DO
 !$OMP BARRIER
+#  ifdef ICESHEET_SSA
+          END IF
+#  endif
+        END DO
+# endif
+
+# ifdef ICESHEET_SSA
+!
+!-----------------------------------------------------------------------
+!  Compute ice thickness advection (mass conservation).
+!  Executed every N_ssa*N_thick ocean timesteps.
+!-----------------------------------------------------------------------
+!
+        DO ig=1,GridsInLayer(nl)
+          ng=GridNumber(ig,nl)
+          IF (MOD(iic(ng)-1,N_ssa(ng)*N_thick(ng)).eq.0) THEN
+            DO tile=first_tile(ng),last_tile(ng),+1
+              CALL isf_thickness_adv (ng, tile, model)
+            END DO
+!$OMP BARRIER
+          END IF
+        END DO
+# endif
+
+# ifdef ICESHEET_CALVING
+!
+!-----------------------------------------------------------------------
+!  Apply calving (thickness threshold).
+!  Executed together with thickness advection.
+!-----------------------------------------------------------------------
+!
+        DO ig=1,GridsInLayer(nl)
+          ng=GridNumber(ig,nl)
+          IF (MOD(iic(ng)-1,N_ssa(ng)*N_thick(ng)).eq.0) THEN
+            DO tile=first_tile(ng),last_tile(ng),+1
+              CALL isf_calving (ng, tile, model)
+            END DO
+!$OMP BARRIER
+          END IF
         END DO
 # endif
 
 #ifdef WET_DRY
 !
 !-----------------------------------------------------------------------
-!  Process ice shelf masks.
+!  Update grounding line position and ice shelf masks.
+!  With ICESHEET_SSA: executed every N_ssa*N_gl ocean timesteps.
+!  Without ICESHEET_SSA: executed every ocean timestep.
 !-----------------------------------------------------------------------
 !
-        DO ng=1,Ngrids
-          DO tile=first_tile(ng),last_tile(ng),+1
-            CALL isf_masks (ng, tile, iNLM)
-          END DO
+        DO ig=1,GridsInLayer(nl)
+          ng=GridNumber(ig,nl)
+# ifdef ICESHEET_SSA
+          IF (MOD(iic(ng)-1,N_ssa(ng)*N_gl(ng)).eq.0) THEN
+# endif
+            DO tile=first_tile(ng),last_tile(ng),+1
+              CALL isf_masks (ng, tile, iNLM)
+            END DO
 !$OMP BARRIER
+# ifdef ICESHEET_SSA
+          END IF
+# endif
         END DO
 #endif
 

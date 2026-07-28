@@ -16,6 +16,11 @@
 !  at every time-step.                                                 !
 # endif
 !                                                                      !
+!  Under ICESHEET_SSA, the grounding line is computed dynamically      !
+!  from the flotation criterion:                                       !
+!    grounded:  rho_i * H > rho_w * h                                  !
+!    floating:  rho_i * H <= rho_w * h  (and H > 0)                    !
+!                                                                      !
 !=======================================================================
 !
 # ifdef WET_DRY
@@ -35,6 +40,9 @@
 !
       USE mod_param
       USE mod_grid
+# ifdef ICESHEET_SSA
+      USE mod_isf, ONLY : ISF, lsnew
+# endif
 !
 !  Imported variable declarations.
 !
@@ -53,7 +61,11 @@
       CALL isf_masks_tile (ng, tile, model,                             &
      &                     LBi, UBi, LBj, UBj,                          &
      &                     IminS, ImaxS, JminS, JmaxS,                  &
+     &                     GRID(ng) % h,                                &
      &                     GRID(ng) % zice,                             &
+# ifdef ICESHEET_SSA
+     &                     ISF(ng) % Si(:,:,lsnew(ng),1),               &
+# endif
 # ifdef WET_DRY
      &                     GRID(ng) % pmask_wet,                        &
      &                     GRID(ng) % rmask_wet,                        &
@@ -83,7 +95,10 @@
       SUBROUTINE isf_masks_tile (ng, tile, model,                       &
      &                           LBi, UBi, LBj, UBj,                    &
      &                           IminS, ImaxS, JminS, JmaxS,            &
-     &                           zice,                                  &
+     &                           h, zice,                               &
+# ifdef ICESHEET_SSA
+     &                           H_ice,                                 &
+# endif
 # if defined WET_DRY || defined MASKING
      &                           pmask, rmask,                          &
      &                           umask, vmask,                          &
@@ -98,6 +113,9 @@
       USE mod_param
       USE mod_scalars
       USE mod_sources
+# ifdef ICESHEET_SSA
+      USE mod_isf, ONLY : rho_i
+# endif
 !
       USE exchange_2d_mod
 # ifdef DISTRIBUTE
@@ -111,7 +129,11 @@
       integer, intent(in) :: IminS, ImaxS, JminS, JmaxS
 !
 # ifdef ASSUMED_SHAPE
-      real(r8), intent(in) :: zice(LBi:,LBj:)
+      real(r8), intent(in) :: h(LBi:,LBj:)
+      real(r8), intent(inout) :: zice(LBi:,LBj:)
+#  ifdef ICESHEET_SSA
+      real(r8), intent(in) :: H_ice(LBi:,LBj:)
+#  endif
 #  if defined WET_DRY || defined MASKING
       real(r8), intent(in) :: pmask(LBi:,LBj:)
       real(r8), intent(in) :: rmask(LBi:,LBj:)
@@ -126,7 +148,11 @@
 #  endif
       real(r8), intent(out) :: rmask_isf(LBi:,LBj:)
 # else
-      real(r8), intent(in) :: zice(LBi:UBi,LBj:UBj)
+      real(r8), intent(in) :: h(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: zice(LBi:UBi,LBj:UBj)
+#  ifdef ICESHEET_SSA
+      real(r8), intent(in) :: H_ice(LBi:UBi,LBj:UBj)
+#  endif
 #  if defined WET_DRY || defined MASKING
       real(r8), intent(in) :: pmask(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: rmask(LBi:UBi,LBj:UBj)
@@ -145,7 +171,10 @@
 !  Local variable declarations.
 !
       integer :: i, j
-
+!
+# ifdef ICESHEET_SSA
+      real(r8) :: H_rho, rho_w_local
+# endif
 # ifdef WET_DRY
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: wetdry
 # endif
@@ -156,7 +185,45 @@
 !  Set internal full ice shelf/sheet masks.
 !-----------------------------------------------------------------------
 !
-!  Mask at RHO-points.
+# ifdef ICESHEET_SSA
+!  Dynamic grounding line: compute masks from flotation criterion.
+!    grounded:  rho_i * H > rho_w * h  (ice fills ocean column)
+!    floating:  rho_i * H <= rho_w * h  (ice shelf cavity exists)
+!    ice-free:  H <= 0
+!
+!  rmask_isf = 1 where floating ice (cavity exists)
+!  rmask_ist = 1 where grounded ice (under WET_DRY)
+!
+      rho_w_local=REAL(rho0,r8)
+!
+      DO j=JstrT,JendT
+        DO i=IstrT,IendT
+          H_rho=H_ice(i,j)
+          IF (H_rho.gt.0.0_r8) THEN
+            IF (rho_i*H_rho.gt.rho_w_local*h(i,j)) THEN
+!  Grounded ice: no cavity, zice=0.
+              rmask_isf(i,j)=0.0_r8
+              zice(i,j)=0.0_r8
+            ELSE
+!  Floating ice: cavity exists, zice from hydrostatic equilibrium.
+              rmask_isf(i,j)=1.0_r8
+              zice(i,j)=-(rho_i/rho_w_local)*H_rho
+            END IF
+          ELSE
+!  Ice-free: use original zice criterion (static ice shelf).
+            IF (zice(i,j).ne.0.0_r8) THEN
+              rmask_isf(i,j)=1.0_r8
+            ELSE
+              rmask_isf(i,j)=0.0_r8
+            END IF
+          END IF
+#  if defined WET_DRY || defined MASKING
+          rmask_isf(i,j)=rmask_isf(i,j)*rmask(i,j)
+#  endif
+        END DO
+      END DO
+# else
+!  Static ice shelf: use zice from grid file.
 !
       DO j=JstrT,JendT
         DO i=IstrT,IendT
@@ -165,19 +232,49 @@
           ELSE
             rmask_isf(i,j)=0.0_r8
           END IF
-# if defined WET_DRY || defined MASKING
+#  if defined WET_DRY || defined MASKING
           rmask_isf(i,j)=rmask_isf(i,j)*rmask(i,j)
-# endif
+#  endif
         END DO
       END DO
+# endif
+!
+!  Exchange halo for rmask_isf and zice BEFORE wet/dry computation.
+!  This ensures rmask_isf and zice are defined on the extended range
+!  (Jstr-1:JendR, Istr-1:IendR) needed by wetdry_mask_tile.
+!
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          rmask_isf)
+# ifdef ICESHEET_SSA
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          zice)
+# endif
+      END IF
+# ifdef DISTRIBUTE
+      CALL mp_exchange2d (ng, tile, model, 1,                           &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+     &                    rmask_isf)
+#  ifdef ICESHEET_SSA
+      CALL mp_exchange2d (ng, tile, model, 1,                           &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+     &                    zice)
+#  endif
+# endif
 # ifdef WET_DRY
+!
+!  Use rmask_isf (computed above) for wet/dry mask.
+!  wetdry=1 where ice shelf cavity exists (floating ice).
+!
       DO j=Jstr-1,JendR
         DO i=Istr-1,IendR
-          IF (zice(i,j).ne.0.0_r8) THEN
-            wetdry(i,j)=1.0_r8
-          ELSE
-            wetdry(i,j)=0.0_r8
-          END IF
+          wetdry(i,j)=rmask_isf(i,j)
         END DO
       END DO
 !
@@ -191,40 +288,34 @@
      &                       umask_ist, vmask_ist)
 # endif
 !
-!      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-!# ifdef WET_DRY
-!        CALL exchange_p2d_tile (ng, tile,                               &
-!     &                          LBi, UBi, LBj, UBj,                     &
-!     &                          pmask_ist)
-!        CALL exchange_r2d_tile (ng, tile,                               &
-!     &                          LBi, UBi, LBj, UBj,                     &
-!     &                          rmask_ist)
-!        CALL exchange_u2d_tile (ng, tile,                               &
-!     &                          LBi, UBi, LBj, UBj,                     &
-!     &                          umask_ist)
-!        CALL exchange_v2d_tile (ng, tile,                               &
-!     &                          LBi, UBi, LBj, UBj,                     &
-!     &                          vmask_ist)
-!# endif
-!        CALL exchange_r2d_tile (ng, tile,                               &
-!     &                          LBi, UBi, LBj, UBj,                     &
-!     &                          rmask_isf)
-!      END IF
+!  Exchange halo for wet/dry mask arrays.
 !
-!# ifdef DISTRIBUTE
-!#  ifdef WET_DRY
-!      CALL mp_exchange2d (ng, tile, model, 4,                           &
-!     &                    LBi, UBi, LBj, UBj,                           &
-!     &                    NghostPoints,                                 &
-!     &                    EWperiodic(ng), NSperiodic(ng),               &
-!     &                    pmask_ist, rmask_ist, umask_ist, vmask_ist)
-!#  endif
-!      CALL mp_exchange2d (ng, tile, model, 1,                           &
-!     &                    LBi, UBi, LBj, UBj,                           &
-!     &                    NghostPoints,                                 &
-!     &                    EWperiodic(ng), NSperiodic(ng),               &
-!     &                    rmask_isf)
-!# endif
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+# ifdef WET_DRY
+        CALL exchange_p2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          pmask_ist)
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          rmask_ist)
+        CALL exchange_u2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          umask_ist)
+        CALL exchange_v2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          vmask_ist)
+# endif
+      END IF
+!
+# ifdef DISTRIBUTE
+#  ifdef WET_DRY
+      CALL mp_exchange2d (ng, tile, model, 4,                           &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+     &                    pmask_ist, rmask_ist, umask_ist, vmask_ist)
+#  endif
+# endif
 
       RETURN
       END SUBROUTINE isf_masks_tile

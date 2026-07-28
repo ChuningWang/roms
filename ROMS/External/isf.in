@@ -110,11 +110,14 @@
 
            n_glen == 3.0d0
 
-! Glen rate factor (sqrt of A) [Pa^(-n/2) s^(-1/2)].
-! For A = 9.461e-18 Pa^-3 s^-1 (STREAMICE default), n=3:
-! B_glen = sqrt(A) = 3.076e-9
+! Glen stiffness parameter B_glen [Pa s^(1/n)].
+! If B_glen > 0: use constant B_glen^2 = A^(-1/n) (isothermal override).
+!   For ISOMIP (Asay-Davis 2016 T1): A = 6.338e-25 Pa^-3 s^-1, n=3,
+!   B_glen = A^(-1/n) = A^(-1/3) = 10790.
+! If B_glen <= 0: compute A dynamically from Paterson (1994) formula
+!   using ice temperature and thickness (default, recommended).
 
-           B_glen == 3.076d-9
+           B_glen == -1.0d0
 
 ! Minimum strain rate regularization for Glen viscosity [1/s].
 
@@ -154,6 +157,28 @@
 ! Grounding line smoothing width [m].
 
   gl_smooth_width == 6000.0d0
+
+! Thickness advection CFL safety factor [-].
+! Controls sub-stepping: dt_sub = cfl_factor / max(|u|/dx + |v|/dy).
+! Recommended range: 0.25 - 0.9. Lower = more stable, higher = faster.
+
+       cfl_factor == 0.5d0
+
+! Calving thickness threshold [m].
+! Ice at the calving front thinner than H_calve is removed.
+! MISOMIP1 protocol: H_calve = 100 m (Asay-Davis et al., 2016).
+
+H_calve == 100.0d0
+
+! Multi-timescale coupling parameters.
+! N_ssa:   SSA momentum is solved every N_ssa ocean timesteps.
+! N_thick: Ice thickness is advected every N_thick SSA solves.
+! N_gl:    Grounding line position is updated every N_gl SSA solves.
+! Default = 1 (every step) for tight coupling; increase for efficiency.
+
+          N_ssa == 1
+        N_thick == 1
+           N_gl == 1
 
 ! Logical switches (TRUE/FALSE) to activate writing of iceshelf
 ! variables into HISTORY output file.

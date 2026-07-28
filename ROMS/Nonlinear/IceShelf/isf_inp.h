@@ -193,6 +193,25 @@
 !
             CASE ('gl_smooth_width')
               Npts=load_r(Nval, Rval, Ngrids, gl_smooth_width)
+!
+!  Thickness advection parameters
+!
+            CASE ('cfl_factor')
+              Npts=load_r(Nval, Rval, Ngrids, cfl_factor)
+!
+!  Calving parameters
+!
+            CASE ('H_calve')
+              Npts=load_r(Nval, Rval, Ngrids, H_calve)
+!
+!  Multi-timescale parameters
+!
+            CASE ('N_ssa')
+              Npts=load_i(Nval, Rval, Ngrids, N_ssa)
+            CASE ('N_thick')
+              Npts=load_i(Nval, Rval, Ngrids, N_thick)
+            CASE ('N_gl')
+              Npts=load_i(Nval, Rval, Ngrids, N_gl)
 #endif
 #ifdef ICESHELF_MOM
             CASE ('Hout(idIhis)')
@@ -774,7 +793,7 @@
           WRITE (out,60) n_glen(ng), 'n_glen',                            &
      &          'SSA Glen flow law exponent.'
           WRITE (out,60) B_glen(ng), 'B_glen',                            &
-     &          'SSA Glen hardness coefficient [Pa s^(1/n)].'
+     &          'SSA Glen stiffness (>0: const, <=0: Paterson) [Pa^(1/2) s^(1/6)].'
           WRITE (out,60) eps_glen_min(ng), 'eps_glen_min',                &
      &          'SSA minimum strain rate regularization [1/s].'
           WRITE (out,60) C_basal(ng), 'C_basal',                          &
@@ -801,6 +820,16 @@
      &          'SSA velocity cap [m/s].'
           WRITE (out,60) gl_smooth_width(ng), 'gl_smooth_width',          &
      &          'Grounding line smoothing width [m].'
+          WRITE (out,60) cfl_factor(ng), 'cfl_factor',                    &
+     &          'Thickness advection CFL safety factor [-].'
+          WRITE (out,60) H_calve(ng), 'H_calve',                          &
+     &          'Calving thickness threshold [m].'
+          WRITE (out,50) N_ssa(ng), 'N_ssa',                              &
+     &          'SSA solve frequency [ocean steps].'
+          WRITE (out,50) N_thick(ng), 'N_thick',                          &
+     &          'Thickness update frequency [SSA steps].'
+          WRITE (out,50) N_gl(ng), 'N_gl',                                &
+     &          'Grounding line update frequency [SSA steps].'
 #endif
 !
           IF (nHIS(ng).gt.0) THEN
