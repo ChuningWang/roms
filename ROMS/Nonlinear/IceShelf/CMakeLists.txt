@@ -14,6 +14,8 @@ list( APPEND _files
       ROMS/Nonlinear/IceShelf/isf_output.F
       ROMS/Nonlinear/IceShelf/isf_sbl.F
       ROMS/Nonlinear/IceShelf/isf_set_avg.F
+      ROMS/Nonlinear/IceShelf/isf_thickness_adv.F
+      ROMS/Nonlinear/IceShelf/isf_calving.F
       ROMS/Nonlinear/IceShelf/isf_tibc.F
       ROMS/Nonlinear/IceShelf/isf_uibc.F
       ROMS/Nonlinear/IceShelf/isf_vbc.F
