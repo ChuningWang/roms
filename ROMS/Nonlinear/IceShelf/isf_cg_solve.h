@@ -44,44 +44,8 @@
         END DO
       END DO
 !
-!  Precompute Q1 bilinear shape function derivatives at 2x2 Gauss points.
-!  Node numbering: 1=(i,j), 2=(i+1,j), 3=(i,j+1), 4=(i+1,j+1)
-!  Reference element: xi in [-1,1], eta in [-1,1]
-!
-      Xquad(1)=0.5_r8*(1.0_r8-sqrt3_inv)
-      Xquad(2)=0.5_r8*(1.0_r8+sqrt3_inv)
-!
-      DO jq=1,2
-        DO iq=1,2
-          nq=2*(jq-1)+iq
-          jacq(nq)=0.25_r8
-!
-!  Node 1: (xi=-1, eta=-1) -> dphi/dxi=-0.25*(1-eta), dphi/deta=-0.25*(1-xi)
-!  In physical coords with Xquad in [0,1]: xi=2*Xquad-1
-!
-          DPhi(1,nq,1)=-0.25_r8*(1.0_r8-Xquad(jq))*2.0_r8
-          DPhi(1,nq,2)=-0.25_r8*(1.0_r8-Xquad(iq))*2.0_r8
-          phi_val(1,nq)=(1.0_r8-Xquad(iq))*(1.0_r8-Xquad(jq))
-!
-!  Node 2: (xi=+1, eta=-1)
-!
-          DPhi(2,nq,1)= 0.25_r8*(1.0_r8-Xquad(jq))*2.0_r8
-          DPhi(2,nq,2)=-0.25_r8*Xquad(iq)*2.0_r8
-          phi_val(2,nq)=Xquad(iq)*(1.0_r8-Xquad(jq))
-!
-!  Node 3: (xi=-1, eta=+1)
-!
-          DPhi(3,nq,1)=-0.25_r8*Xquad(jq)*2.0_r8
-          DPhi(3,nq,2)= 0.25_r8*(1.0_r8-Xquad(iq))*2.0_r8
-          phi_val(3,nq)=(1.0_r8-Xquad(iq))*Xquad(jq)
-!
-!  Node 4: (xi=+1, eta=+1)
-!
-          DPhi(4,nq,1)= 0.25_r8*Xquad(jq)*2.0_r8
-          DPhi(4,nq,2)= 0.25_r8*Xquad(iq)*2.0_r8
-          phi_val(4,nq)=Xquad(iq)*Xquad(jq)
-        END DO
-      END DO
+!  NOTE: Q1 shape functions (DPhi, phi_val, Xquad, jacq) are precomputed
+!  in isf_mom.F before this include file.
 !
 !=======================================================================
 !  Picard iteration loop.
@@ -272,9 +236,9 @@
      &                     Au,Av)
 # endif
 !
-!  Initial residual: r = RHS - A*u
-!  RHS: use taudx_psi directly as nodal force (consistent with
-!  STREAMICE where taud is already a force integral at velocity nodes).
+!  Initial residual: r = b - A*u
+!  b = taudx_psi/taudy_psi is the FE-assembled driving stress nodal
+!  force vector (computed in isf_driving_stress.h).
 !
         dot_zr=0.0_r8
         DO j=JstrP,JendP

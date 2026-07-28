@@ -138,13 +138,12 @@
 !
       integer :: i, j, iter
       integer :: ksa_old, ksa_new
-      integer :: has_ice_w, has_ice_e, has_ice_s, has_ice_n
 !
       real(r8) :: cff, eps_e, H_rho, u_mid, v_mid
       real(r8) :: rho_w_local
-      real(r8) :: H_sum, S_grad_x, S_grad_y
-      real(r8) :: rhoi_g, rhow_g, D_rho, front_press
+      real(r8) :: rhoi_g
       real(r8) :: B_glen_sq, C_basal_sq, u_slide
+      real(r8) :: T_star, RT_star, A_glen
       real(r8) :: eps_xx, eps_yy, eps_xy, eps_e2
       real(r8) :: u1, u2, u3, u4, v1, v2, v3, v4
       real(r8) :: jac
@@ -190,8 +189,13 @@
       real(r8), dimension(4) :: Xquad, jacq
       real(r8) :: dx_rho, dy_rho, uq, vq, exx, eyy, exy
       real(r8) :: dphi_x, dphi_y, phiv
-      integer :: nq, k_node, iq, jq
+      real(r8) :: dSdx_q, dSdy_q, H_q
+      real(r8) :: zs_corner(4), H_corner(4), zs_sum, zs_mean
+      integer :: nq, k_node, iq, jq, n_ice
       integer :: i1, i2, j1, j2
+!  Smoothing scratch for driving stress regularization.
+      real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: zs_smooth
+      integer :: n_smooth, is_iter
       real(r8), parameter :: sqrt3_inv = 1.0_r8/SQRT(3.0_r8)
 # ifdef DISTRIBUTE
       character(len=3) :: op_handle
@@ -313,7 +317,48 @@
       END DO
 !
 !-----------------------------------------------------------------------
-!  Compute driving stress at PSI points (taudx_psi, taudy_psi).
+!  Precompute Q1 bilinear shape function derivatives at 2x2 Gauss pts.
+!  Node numbering: 1=(i,j), 2=(i+1,j), 3=(i,j+1), 4=(i+1,j+1)
+!  Reference element: xi in [-1,1], eta in [-1,1]
+!  Used by both driving stress FE assembly and CG stiffness assembly.
+!-----------------------------------------------------------------------
+!
+      Xquad(1)=0.5_r8*(1.0_r8-sqrt3_inv)
+      Xquad(2)=0.5_r8*(1.0_r8+sqrt3_inv)
+!
+      DO jq=1,2
+        DO iq=1,2
+          nq=2*(jq-1)+iq
+          jacq(nq)=0.25_r8
+!
+!  Node 1: (xi=-1, eta=-1)
+!
+          DPhi(1,nq,1)=-0.25_r8*(1.0_r8-Xquad(jq))*2.0_r8
+          DPhi(1,nq,2)=-0.25_r8*(1.0_r8-Xquad(iq))*2.0_r8
+          phi_val(1,nq)=(1.0_r8-Xquad(iq))*(1.0_r8-Xquad(jq))
+!
+!  Node 2: (xi=+1, eta=-1)
+!
+          DPhi(2,nq,1)= 0.25_r8*(1.0_r8-Xquad(jq))*2.0_r8
+          DPhi(2,nq,2)=-0.25_r8*Xquad(iq)*2.0_r8
+          phi_val(2,nq)=Xquad(iq)*(1.0_r8-Xquad(jq))
+!
+!  Node 3: (xi=-1, eta=+1)
+!
+          DPhi(3,nq,1)=-0.25_r8*Xquad(jq)*2.0_r8
+          DPhi(3,nq,2)= 0.25_r8*(1.0_r8-Xquad(iq))*2.0_r8
+          phi_val(3,nq)=(1.0_r8-Xquad(iq))*Xquad(jq)
+!
+!  Node 4: (xi=+1, eta=+1)
+!
+          DPhi(4,nq,1)= 0.25_r8*Xquad(jq)*2.0_r8
+          DPhi(4,nq,2)= 0.25_r8*Xquad(iq)*2.0_r8
+          phi_val(4,nq)=Xquad(iq)*Xquad(jq)
+        END DO
+      END DO
+!
+!-----------------------------------------------------------------------
+!  Compute driving stress RHS via FE assembly (taudx_psi, taudy_psi).
 !-----------------------------------------------------------------------
 !
 # ifdef ICESHEET_SSA

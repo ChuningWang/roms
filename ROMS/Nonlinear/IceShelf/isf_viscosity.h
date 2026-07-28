@@ -5,11 +5,24 @@
 !    nuH_rho = depth-integrated effective viscosity (Glen law)
 !    beta_rho = basal drag coefficient (Weertman sliding law)
 !
+!  Glen rate factor A is computed from the Paterson (1994) temperature-
+!  dependent formula (Bueler & Brown 2009, between Eq 4 and 5):
+!
+!    A = 3.61e-13 * exp(-60000/(R*T*)),  T* <= 263.15 K  [Pa^-3 s^-1]
+!    A = 1.73e3   * exp(-139000/(R*T*)), T* >  263.15 K  [Pa^-3 s^-1]
+!
+!  where T* = T + 273.15 + beta_p*0.5*H is the pressure-adjusted
+!  temperature (K), beta_p = 8.66e-4 K/m, R = 8.314 J/(mol K).
+!
+!  If B_glen > 0 in isf.in, use constant B_glen^2 = A^(-1/3) instead
+!  (isothermal override for simplified tests like ISOMIP).
+!
 !  Includes PISM robustness measures:
 !    - Additive nuH regularization (nuH += nuH_reg)
 !    - Strength extension for thin ice (H < min_thickness)
 !
-!  Reference: STREAMICE streamice_visc_beta.F, PISM compute_nuH_everywhere
+!  Reference: Paterson (1994) Table 5.2, Bueler & Brown (2009),
+!             STREAMICE streamice_visc_beta.F, PISM compute_nuH_everywhere
 !
 !  Initialize.
 !
@@ -20,7 +33,6 @@
         END DO
       END DO
 !
-      B_glen_sq=B_glen(ng)*B_glen(ng)
       C_basal_sq=C_basal(ng)*C_basal(ng)
 !
 !  Compute viscosity and basal drag at RHO points where ice is present.
@@ -31,6 +43,24 @@
         DO i=Istr,Iend
           H_rho=Si(i,j,ksa_old,isIhis)
           IF (H_rho.gt.0.0_r8) THEN
+!
+!  Compute Glen rate factor.  If B_glen > 0, use constant (isothermal
+!  override).  Otherwise, compute A from Paterson (1994) formula using
+!  ice temperature and thickness (pressure-adjusted T*).
+!
+            IF (B_glen(ng).gt.0.0_r8) THEN
+              B_glen_sq=B_glen(ng)*B_glen(ng)
+            ELSE
+              T_star=Si(i,j,ksa_old,isItis)+273.15_r8+                  &
+     &               8.66E-4_r8*0.5_r8*H_rho
+              RT_star=8.314_r8*T_star
+              IF (Si(i,j,ksa_old,isItis).le.-10.0_r8) THEN
+                A_glen=3.61E-13_r8*EXP(-6.0E4_r8/RT_star)
+              ELSE
+                A_glen=1.73E3_r8*EXP(-13.9E4_r8/RT_star)
+              END IF
+              B_glen_sq=A_glen**(-1.0_r8/n_glen(ng))
+            END IF
 !
 !  Get 4 corner velocities (PSI points).
 !

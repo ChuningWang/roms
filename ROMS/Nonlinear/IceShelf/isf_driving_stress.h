@@ -1,16 +1,25 @@
+!  isf_driving_stress.h - SSA driving stress RHS via FE assembly.
 !
-!  isf_driving_stress.h - Compute SSA driving stress at PSI points.
+!  Computes the consistent (FE-integrated) nodal force vector for the
+!  SSA driving stress using 2x2 Gauss quadrature on each RHO cell:
 !
-!  Computes taudx_psi = -rho_i * g * H_psi * dS/dx
-!           taudy_psi = -rho_i * g * H_psi * dS/dy
+!    b_k = ∫∫ τ_d · φ_k dA
 !
-!  For each active PSI node (i,j), the driving stress is computed from
-!  the surface elevation gradient of the 4 surrounding RHO cells.
-!  Ice-front boundary pressure is added where one side has no ice.
+!  where τ_d = -ρ_i g H ∇S is the driving stress vector, H and S are
+!  interpolated from the 4 RHO corner nodes using Q1 shape functions,
+!  and φ_k are the bilinear basis functions at PSI velocity nodes.
 !
-!  Reference: STREAMICE streamice_driving_stress.F
+!  The surface elevation S is smoothed before gradient computation to
+!  regularize the grounding line "kink" (discontinuity in dS/dn between
+!  grounded S=-h+H and floating S=(1-ρ_i/ρ_w)H surfaces). Without
+!  smoothing, the FE gradient produces spurious driving stress at the
+!  grounding line that is O(100x) too large.
 !
-!  Initialize driving stress to zero.
+!  Smoothing: N iterations of 5-point Laplacian filter on zs_smooth.
+!  Reference: PISM compute_nuH_everywhere (slope regularization),
+!             STREAMICE streamice_driving_stress.F
+!
+!  Initialize FE-integrated nodal forces to zero.
 !
       DO j=JstrP,JendP
         DO i=IstrP,IendP
@@ -20,140 +29,194 @@
       END DO
 !
       rhoi_g=rho_i*gravity
-      rhow_g=rho_w_local*gravity
 !
-!  Compute driving stress at active PSI nodes.
-!  PSI node (i,j) is surrounded by RHO cells (i-1,j-1), (i,j-1),
-!  (i-1,j), (i,j).  Surface gradient is computed by averaging
-!  the differences across the two pairs of cells in each direction.
+!-----------------------------------------------------------------------
+!  Smooth surface elevation for driving stress gradient computation.
+!  This regularizes the grounding line kink where zs transitions from
+!  grounded (S = -h + H) to floating (S = (1-rho_i/rho_w)*H).
+!-----------------------------------------------------------------------
 !
-      DO j=JstrP,JendP
-        DO i=IstrP,IendP
-          IF (pmask_ssa(i,j).eq.1.0_r8) THEN
+!  Initialize smoothed field.
 !
-!  Check ice presence in 4 surrounding RHO cells.
-!  Cell layout:  (i-1,j  ) | (i,j  )
-!                -------------------
-!                (i-1,j-1) | (i,j-1)
-!
-            has_ice_w=0
-            has_ice_e=0
-            has_ice_s=0
-            has_ice_n=0
-!
-!  West cells: (i-1,j) and (i-1,j-1)
-!  East cells: (i,j) and (i,j-1)
-!  South cells: (i-1,j-1) and (i,j-1)
-!  North cells: (i-1,j) and (i,j)
-!
-            IF (Si(i-1,j  ,ksa_old,isIhis).gt.0.0_r8) has_ice_w=1
-            IF (Si(i-1,j-1,ksa_old,isIhis).gt.0.0_r8) has_ice_w=1
-            IF (Si(i  ,j  ,ksa_old,isIhis).gt.0.0_r8) has_ice_e=1
-            IF (Si(i  ,j-1,ksa_old,isIhis).gt.0.0_r8) has_ice_e=1
-            IF (Si(i-1,j-1,ksa_old,isIhis).gt.0.0_r8) has_ice_s=1
-            IF (Si(i  ,j-1,ksa_old,isIhis).gt.0.0_r8) has_ice_s=1
-            IF (Si(i-1,j  ,ksa_old,isIhis).gt.0.0_r8) has_ice_n=1
-            IF (Si(i  ,j  ,ksa_old,isIhis).gt.0.0_r8) has_ice_n=1
-!
-!  X-direction driving stress.
-!  Use cells (i-1,j  ) and (i,j  ) for the upper row,
-!  and cells (i-1,j-1) and (i,j-1) for the lower row.
-!
-            IF ((has_ice_w.eq.1).and.(has_ice_e.eq.1)) THEN
-!
-!  Both cells have ice: standard surface gradient.
-!
-              S_grad_x=0.5_r8*                                            &
-     &          ((Fi(i,j,icIzsf)-Fi(i-1,j,icIzsf))+                      &
-     &           (Fi(i,j-1,icIzsf)-Fi(i-1,j-1,icIzsf)))*pm(i,j)
-              H_sum=0.25_r8*                                              &
-     &          (Si(i,j,ksa_old,isIhis)+Si(i-1,j,ksa_old,isIhis)+         &
-     &           Si(i,j-1,ksa_old,isIhis)+Si(i-1,j-1,ksa_old,isIhis))
-              taudx_psi(i,j)=-rhoi_g*H_sum*S_grad_x
-!
-            ELSE IF (has_ice_w.eq.1.and..false.) THEN
-!
-!  Ice only on west side: ice-front boundary pressure.
-!
-              H_rho=Si(i-1,j,ksa_old,isIhis)
-              D_rho=MIN(h(i-1,j),rho_i/rho_w_local*H_rho)
-              IF (rmask_ist_scr(i-1,j).eq.1.0_r8) THEN
-                front_press=rhoi_g*                                       &
-     &            (1.0_r8-rho_i/rho_w_local)*H_rho*H_rho
-              ELSE
-                front_press=rhoi_g*H_rho*H_rho -                         &
-     &            rhow_g*MAX(D_rho,0.0_r8)*MAX(D_rho,0.0_r8)
-              END IF
-              taudx_psi(i,j)=0.25_r8*front_press
-!
-            ELSE IF (has_ice_e.eq.1.and..false.) THEN
-!
-!  Ice only on east side: ice-front boundary pressure (reversed sign).
-!
-              H_rho=Si(i,j,ksa_old,isIhis)
-              D_rho=MIN(h(i,j),rho_i/rho_w_local*H_rho)
-              IF (rmask_ist_scr(i,j).eq.1.0_r8) THEN
-                front_press=rhoi_g*                                       &
-     &            (1.0_r8-rho_i/rho_w_local)*H_rho*H_rho
-              ELSE
-                front_press=rhoi_g*H_rho*H_rho -                         &
-     &            rhow_g*MAX(D_rho,0.0_r8)*MAX(D_rho,0.0_r8)
-              END IF
-              taudx_psi(i,j)=-0.25_r8*front_press
-            END IF
-!
-!  Y-direction driving stress.
-!  Use cells (i  ,j-1) and (i  ,j  ) for the right column,
-!  and cells (i-1,j-1) and (i-1,j  ) for the left column.
-!
-            IF ((has_ice_s.eq.1).and.(has_ice_n.eq.1)) THEN
-!
-!  Both cells have ice: standard surface gradient.
-!
-              S_grad_y=0.5_r8*                                            &
-     &          ((Fi(i,j,icIzsf)-Fi(i,j-1,icIzsf))+                      &
-     &           (Fi(i-1,j,icIzsf)-Fi(i-1,j-1,icIzsf)))*pn(i,j)
-              H_sum=0.25_r8*                                              &
-     &          (Si(i,j,ksa_old,isIhis)+Si(i-1,j,ksa_old,isIhis)+         &
-     &           Si(i,j-1,ksa_old,isIhis)+Si(i-1,j-1,ksa_old,isIhis))
-              taudy_psi(i,j)=-rhoi_g*H_sum*S_grad_y
-!
-            ELSE IF (has_ice_s.eq.1.and..false.) THEN
-!
-!  Ice only on south side: ice-front boundary pressure.
-!
-              H_rho=Si(i,j-1,ksa_old,isIhis)
-              D_rho=MIN(h(i,j-1),rho_i/rho_w_local*H_rho)
-              IF (rmask_ist_scr(i,j-1).eq.1.0_r8) THEN
-                front_press=rhoi_g*                                       &
-     &            (1.0_r8-rho_i/rho_w_local)*H_rho*H_rho
-              ELSE
-                front_press=rhoi_g*H_rho*H_rho -                         &
-     &            rhow_g*MAX(D_rho,0.0_r8)*MAX(D_rho,0.0_r8)
-              END IF
-              taudy_psi(i,j)=0.25_r8*front_press
-!
-            ELSE IF (has_ice_n.eq.1.and..false.) THEN
-!
-!  Ice only on north side: ice-front boundary pressure (reversed sign).
-!
-              H_rho=Si(i,j,ksa_old,isIhis)
-              D_rho=MIN(h(i,j),rho_i/rho_w_local*H_rho)
-              IF (rmask_ist_scr(i,j).eq.1.0_r8) THEN
-                front_press=rhoi_g*                                       &
-     &            (1.0_r8-rho_i/rho_w_local)*H_rho*H_rho
-              ELSE
-                front_press=rhoi_g*H_rho*H_rho -                         &
-     &            rhow_g*MAX(D_rho,0.0_r8)*MAX(D_rho,0.0_r8)
-              END IF
-              taudy_psi(i,j)=-0.25_r8*front_press
-            END IF
-!
-          END IF  ! pmask_ssa
+      DO j=JstrT,JendT
+        DO i=IstrT,IendT
+          IF (Si(i,j,ksa_old,isIhis).gt.0.0_r8) THEN
+            zs_smooth(i,j)=Fi(i,j,icIzsf)
+          ELSE
+            zs_smooth(i,j)=0.0_r8
+          END IF
         END DO
       END DO
 !
-!  Store driving stress to diagnostic output fields.
+!  Apply 5-point Laplacian smoothing (N iterations).
+!  Only smooth ice-covered nodes; ice-free neighbors use center value.
+!
+      n_smooth=5
+      DO is_iter=1,n_smooth
+        DO j=Jstr,Jend
+          DO i=Istr,Iend
+            IF (Si(i,j,ksa_old,isIhis).gt.0.0_r8) THEN
+              zs_sum=zs_smooth(i,j)
+              n_ice=1
+              IF (Si(i+1,j,ksa_old,isIhis).gt.0.0_r8) THEN
+                zs_sum=zs_sum+zs_smooth(i+1,j)
+                n_ice=n_ice+1
+              ELSE
+                zs_sum=zs_sum+zs_smooth(i,j)
+                n_ice=n_ice+1
+              END IF
+              IF (Si(i-1,j,ksa_old,isIhis).gt.0.0_r8) THEN
+                zs_sum=zs_sum+zs_smooth(i-1,j)
+                n_ice=n_ice+1
+              ELSE
+                zs_sum=zs_sum+zs_smooth(i,j)
+                n_ice=n_ice+1
+              END IF
+              IF (Si(i,j+1,ksa_old,isIhis).gt.0.0_r8) THEN
+                zs_sum=zs_sum+zs_smooth(i,j+1)
+                n_ice=n_ice+1
+              ELSE
+                zs_sum=zs_sum+zs_smooth(i,j)
+                n_ice=n_ice+1
+              END IF
+              IF (Si(i,j-1,ksa_old,isIhis).gt.0.0_r8) THEN
+                zs_sum=zs_sum+zs_smooth(i,j-1)
+                n_ice=n_ice+1
+              ELSE
+                zs_sum=zs_sum+zs_smooth(i,j)
+                n_ice=n_ice+1
+              END IF
+              zs_smooth(i,j)=zs_sum/REAL(n_ice,r8)
+            END IF
+          END DO
+        END DO
+      END DO
+!
+!  Exchange halo for smoothed field (needed for tile-boundary elements).
+!
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+        CALL exchange_p2d_tile(ng,tile,LBi,UBi,LBj,UBj,zs_smooth)
+      END IF
+# ifdef DISTRIBUTE
+      CALL mp_exchange2d(ng,tile,iNLM,1,LBi,UBi,LBj,UBj,              &
+     &                   NghostPoints,EWperiodic(ng),NSperiodic(ng),    &
+     &                   zs_smooth)
+# endif
+!
+!-----------------------------------------------------------------------
+!  Element loop: assemble driving stress RHS for each active RHO cell.
+!  RHO cell (i,j) has 4 PSI corner nodes where velocity is defined.
+!-----------------------------------------------------------------------
+!
+      DO j=Jstr,Jend
+        DO i=Istr,Iend
+          IF (Si(i,j,ksa_old,isIhis).gt.0.0_r8) THEN
+            dx_rho=1.0_r8/pm(i,j)
+            dy_rho=1.0_r8/pn(i,j)
+            jac=1.0_r8/(pm(i,j)*pn(i,j))
+!
+!  Get smoothed surface elevation for the 4 corner nodes.
+!  Ice-free nodes are assigned the mean of ice-covered corners.
+!
+            zs_sum=0.0_r8
+            n_ice=0
+            DO k_node=1,4
+              IF (k_node.eq.1) THEN
+                i1=i;   j1=j
+              ELSE IF (k_node.eq.2) THEN
+                i1=i+1; j1=j
+              ELSE IF (k_node.eq.3) THEN
+                i1=i;   j1=j+1
+              ELSE
+                i1=i+1; j1=j+1
+              END IF
+              H_corner(k_node)=Si(i1,j1,ksa_old,isIhis)
+              IF (H_corner(k_node).gt.0.0_r8) THEN
+                zs_corner(k_node)=zs_smooth(i1,j1)
+                zs_sum=zs_sum+zs_corner(k_node)
+                n_ice=n_ice+1
+              ELSE
+                zs_corner(k_node)=0.0_r8
+              END IF
+            END DO
+            IF (n_ice.gt.0) THEN
+              zs_mean=zs_sum/REAL(n_ice,r8)
+            ELSE
+              zs_mean=0.0_r8
+            END IF
+            DO k_node=1,4
+              IF (H_corner(k_node).le.0.0_r8) THEN
+                zs_corner(k_node)=zs_mean
+              END IF
+            END DO
+!
+            DO nq=1,4
+!
+!  Interpolate H and compute ∇S at quadrature point from 4 RHO
+!  corner values using Q1 shape function derivatives.
+!
+              H_q=0.0_r8
+              dSdx_q=0.0_r8
+              dSdy_q=0.0_r8
+!
+              DO k_node=1,4
+                IF (k_node.eq.1) THEN
+                  i1=i;   j1=j
+                ELSE IF (k_node.eq.2) THEN
+                  i1=i+1; j1=j
+                ELSE IF (k_node.eq.3) THEN
+                  i1=i;   j1=j+1
+                ELSE
+                  i1=i+1; j1=j+1
+                END IF
+                H_q=H_q+Si(i1,j1,ksa_old,isIhis)*phi_val(k_node,nq)
+                dSdx_q=dSdx_q+zs_corner(k_node)*                      &
+     &              DPhi(k_node,nq,1)*2.0_r8/dx_rho
+                dSdy_q=dSdy_q+zs_corner(k_node)*                      &
+     &              DPhi(k_node,nq,2)*2.0_r8/dy_rho
+              END DO
+!
+!  Scatter driving force to 4 corner PSI nodes.
+!  b_k += w_q * |J| * (-ρ_i g H ∇S) · φ_k
+!
+              DO k_node=1,4
+                IF (k_node.eq.1) THEN
+                  i1=i;   j1=j
+                ELSE IF (k_node.eq.2) THEN
+                  i1=i+1; j1=j
+                ELSE IF (k_node.eq.3) THEN
+                  i1=i;   j1=j+1
+                ELSE
+                  i1=i+1; j1=j+1
+                END IF
+!
+                IF (pmask_ssa(i1,j1).eq.1.0_r8) THEN
+                  phiv=phi_val(k_node,nq)
+                  taudx_psi(i1,j1)=taudx_psi(i1,j1)-                  &
+     &              jacq(nq)*jac*rhoi_g*H_q*dSdx_q*phiv
+                  taudy_psi(i1,j1)=taudy_psi(i1,j1)-                  &
+     &              jacq(nq)*jac*rhoi_g*H_q*dSdy_q*phiv
+                END IF
+              END DO  ! k_node
+            END DO  ! nq
+          END IF  ! H > 0
+        END DO  ! i
+      END DO  ! j
+!
+!  Exchange halo for assembled RHS (needed for shared PSI nodes
+!  at tile boundaries).
+!
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+        CALL exchange_p2d_tile(ng,tile,LBi,UBi,LBj,UBj,taudx_psi)
+        CALL exchange_p2d_tile(ng,tile,LBi,UBi,LBj,UBj,taudy_psi)
+      END IF
+# ifdef DISTRIBUTE
+      CALL mp_exchange2d(ng,tile,iNLM,2,LBi,UBi,LBj,UBj,              &
+     &                   NghostPoints,EWperiodic(ng),NSperiodic(ng),    &
+     &                   taudx_psi,taudy_psi)
+# endif
+!
+!  Store FE-integrated driving force to diagnostic output fields.
 !
       DO j=JstrT,JendT
         DO i=IstrT,IendT
