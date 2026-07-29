@@ -206,8 +206,14 @@
               zice(i,j)=0.0_r8
             ELSE
 !  Floating ice: cavity exists, zice from hydrostatic equilibrium.
+!  Enforce minimum cavity thickness to avoid numerical instability
+!  in very thin water columns near the grounding line.
               rmask_isf(i,j)=1.0_r8
               zice(i,j)=-(rho_i/rho_w_local)*H_rho
+              IF (h(i,j)+zice(i,j).lt.200.0_r8) THEN
+                rmask_isf(i,j)=0.0_r8
+                zice(i,j)=0.0_r8
+              END IF
             END IF
           ELSE
 !  Ice-free: use original zice criterion (static ice shelf).

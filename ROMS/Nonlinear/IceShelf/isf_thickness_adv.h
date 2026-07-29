@@ -75,7 +75,7 @@
 !
 !  CFL sub-stepping loop.
 !
-      dt_full=dt(ng)
+      dt_full=dt(ng)*REAL(N_ssa(ng)*N_thick(ng),r8)
       dt_rem=dt_full
 !
       DO WHILE (dt_rem.gt.1.0E-10_r8)

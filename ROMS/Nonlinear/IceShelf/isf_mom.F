@@ -143,7 +143,7 @@
       real(r8) :: rho_w_local
       real(r8) :: rhoi_g
       real(r8) :: B_glen_sq, C_basal_sq, u_slide
-      real(r8) :: T_star, RT_star, A_glen
+      real(r8) :: T_star, RT_star, A_pat
       real(r8) :: eps_xx, eps_yy, eps_xy, eps_e2
       real(r8) :: u1, u2, u3, u4, v1, v2, v3, v4
       real(r8) :: jac
@@ -196,6 +196,10 @@
 !  Smoothing scratch for driving stress regularization.
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: zs_smooth
       integer :: n_smooth, is_iter
+      integer :: n_taper, dist_margin, di, dj
+      real(r8) :: taper_w
+      real(r8) :: H11, H21, H12, H22, H_psi
+      real(r8) :: dSdx, dSdy, jac_avg
       real(r8), parameter :: sqrt3_inv = 1.0_r8/SQRT(3.0_r8)
 # ifdef DISTRIBUTE
       character(len=3) :: op_handle
@@ -381,8 +385,21 @@
 #   include <isf_cg_solve.h>
 #  endif
 !
-!  Copy solution from ksa_new to output (lsnew was set by driver).
-!  The CG solver writes directly into Si(:,:,ksa_new,isIuis/isIvis).
+!  Exchange halo of updated velocity so that downstream routines
+!  (thickness advection, output) see consistent tile-boundary data.
+!
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+        CALL exchange_p2d_tile(ng,tile,LBi,UBi,LBj,UBj,              &
+     &                         Si(:,:,ksa_new,isIuis))
+        CALL exchange_p2d_tile(ng,tile,LBi,UBi,LBj,UBj,              &
+     &                         Si(:,:,ksa_new,isIvis))
+      END IF
+# ifdef DISTRIBUTE
+      CALL mp_exchange2d(ng,tile,iNLM,2,LBi,UBi,LBj,UBj,             &
+     &                   NghostPoints,EWperiodic(ng),NSperiodic(ng),   &
+     &                   Si(:,:,ksa_new,isIuis),                       &
+     &                   Si(:,:,ksa_new,isIvis))
+# endif
 !
       RETURN
       END SUBROUTINE isf_mom_tile

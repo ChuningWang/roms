@@ -159,8 +159,8 @@
 !
             CASE ('n_glen')
               Npts=load_r(Nval, Rval, Ngrids, n_glen)
-            CASE ('B_glen')
-              Npts=load_r(Nval, Rval, Ngrids, B_glen)
+            CASE ('A_glen')
+              Npts=load_r(Nval, Rval, Ngrids, A_glen)
             CASE ('eps_glen_min')
               Npts=load_r(Nval, Rval, Ngrids, eps_glen_min)
             CASE ('C_basal')
@@ -792,8 +792,8 @@
 #ifdef ICESHEET_SSA
           WRITE (out,60) n_glen(ng), 'n_glen',                            &
      &          'SSA Glen flow law exponent.'
-          WRITE (out,60) B_glen(ng), 'B_glen',                            &
-     &          'SSA Glen stiffness (>0: const, <=0: Paterson) [Pa^(1/2) s^(1/6)].'
+          WRITE (out,60) A_glen(ng), 'A_glen',                            &
+     &          'SSA Glen rate factor (>0: const, <=0: Paterson) [Pa^-3 s^-1].'
           WRITE (out,60) eps_glen_min(ng), 'eps_glen_min',                &
      &          'SSA minimum strain rate regularization [1/s].'
           WRITE (out,60) C_basal(ng), 'C_basal',                          &

@@ -217,7 +217,7 @@
 !  SSA physical parameters
 !
       real(r8), allocatable :: n_glen(:)          ! Glen flow law exponent
-      real(r8), allocatable :: B_glen(:)          ! Glen stiffness (>0: const B^2 = A^(-1/n), <=0: Paterson)
+      real(r8), allocatable :: A_glen(:)          ! Glen rate factor (>0: const A [Pa^-n s^-1], <=0: Paterson)
       real(r8), allocatable :: eps_glen_min(:)    ! minimum strain rate regularization
       real(r8), allocatable :: C_basal(:)         ! basal drag coefficient (sqrt of C)
       real(r8), allocatable :: n_basal(:)         ! basal sliding exponent
@@ -501,10 +501,10 @@
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
           n_glen(1:Ngrids)=3.0_r8
         END IF
-        IF (.not.allocated(B_glen)) THEN
-          allocate ( B_glen(Ngrids) )
+        IF (.not.allocated(A_glen)) THEN
+          allocate ( A_glen(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          B_glen(1:Ngrids)=-1.0_r8
+          A_glen(1:Ngrids)=-1.0_r8
         END IF
         IF (.not.allocated(eps_glen_min)) THEN
           allocate ( eps_glen_min(Ngrids) )
@@ -913,7 +913,7 @@
 !
 #ifdef ICESHEET_SSA
       IF (allocated(n_glen))         deallocate ( n_glen )
-      IF (allocated(B_glen))         deallocate ( B_glen )
+      IF (allocated(A_glen))         deallocate ( A_glen )
       IF (allocated(eps_glen_min))   deallocate ( eps_glen_min )
       IF (allocated(C_basal))        deallocate ( C_basal )
       IF (allocated(n_basal))        deallocate ( n_basal )

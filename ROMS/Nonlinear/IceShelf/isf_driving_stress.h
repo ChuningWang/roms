@@ -1,21 +1,27 @@
-!  isf_driving_stress.h - SSA driving stress RHS via FE assembly.
+!  isf_driving_stress.h - SSA driving stress RHS computation.
 !
-!  Computes the consistent (FE-integrated) nodal force vector for the
-!  SSA driving stress using 2x2 Gauss quadrature on each RHO cell:
+!  Computes the nodal force vector for the SSA driving stress using
+!  finite differences on a smoothed surface elevation field:
 !
-!    b_k = ∫∫ τ_d · φ_k dA
+!    b_k = -rho_i * g * H * dS/dx * (nodal area)
 !
-!  where τ_d = -ρ_i g H ∇S is the driving stress vector, H and S are
-!  interpolated from the 4 RHO corner nodes using Q1 shape functions,
-!  and φ_k are the bilinear basis functions at PSI velocity nodes.
+!  where S is the smoothed surface elevation, H is ice thickness
+!  interpolated to PSI nodes, and nodal area = jac/4 (mass-lumped Q1).
 !
-!  The surface elevation S is smoothed before gradient computation to
-!  regularize the grounding line "kink" (discontinuity in dS/dn between
-!  grounded S=-h+H and floating S=(1-ρ_i/ρ_w)H surfaces). Without
-!  smoothing, the FE gradient produces spurious driving stress at the
-!  grounding line that is O(100x) too large.
+!  The surface elevation S is smoothed (20 iterations of 5-point
+!  Laplacian) before gradient computation to regularize the grounding
+!  line "kink" (discontinuity in dS/dn between grounded S=-h+H and
+!  floating S=(1-rho_i/rho_w)*H surfaces).
 !
-!  Smoothing: N iterations of 5-point Laplacian filter on zs_smooth.
+!  Ice margin taper: driving stress is linearly tapered to zero within
+!  n_taper cells of the ice margin (where any neighbor has H=0).
+!  The missing resistance should be provided by an ice front pressure
+!  boundary condition (future work).
+!
+!  Known limitation: the smoothing creates small artifacts at MPI tile
+!  boundaries due to the local nature of the Laplacian filter. This
+!  affects the diagnostic output but has minimal impact on the solution.
+!
 !  Reference: PISM compute_nuH_everywhere (slope regularization),
 !             STREAMICE streamice_driving_stress.F
 !
@@ -36,10 +42,10 @@
 !  grounded (S = -h + H) to floating (S = (1-rho_i/rho_w)*H).
 !-----------------------------------------------------------------------
 !
-!  Initialize smoothed field.
+!  Initialize smoothed field (including halo for tile-boundary elements).
 !
-      DO j=JstrT,JendT
-        DO i=IstrT,IendT
+      DO j=LBj,UBj
+        DO i=LBi,UBi
           IF (Si(i,j,ksa_old,isIhis).gt.0.0_r8) THEN
             zs_smooth(i,j)=Fi(i,j,icIzsf)
           ELSE
@@ -51,10 +57,15 @@
 !  Apply 5-point Laplacian smoothing (N iterations).
 !  Only smooth ice-covered nodes; ice-free neighbors use center value.
 !
-      n_smooth=5
+      n_smooth=20
       DO is_iter=1,n_smooth
-        DO j=Jstr,Jend
-          DO i=Istr,Iend
+# ifdef DISTRIBUTE
+        CALL mp_exchange2d(ng,tile,iNLM,1,LBi,UBi,LBj,UBj,            &
+     &                     NghostPoints,EWperiodic(ng),NSperiodic(ng),  &
+     &                     zs_smooth)
+# endif
+        DO j=Jstr-1,Jend+1
+          DO i=Istr-1,Iend+1
             IF (Si(i,j,ksa_old,isIhis).gt.0.0_r8) THEN
               zs_sum=zs_smooth(i,j)
               n_ice=1
@@ -104,104 +115,84 @@
 # endif
 !
 !-----------------------------------------------------------------------
-!  Element loop: assemble driving stress RHS for each active RHO cell.
-!  RHO cell (i,j) has 4 PSI corner nodes where velocity is defined.
+!  Compute driving stress RHS at PSI points using finite differences
+!  on the smoothed surface elevation. This avoids FE assembly artifacts
+!  at tile boundaries and ice margins.
+!
+!  At PSI point (i,j), the 4 surrounding RHO points are:
+!    (i-1,j-1), (i,j-1), (i-1,j), (i,j)
+!
+!  dS/dx = [(zs(i,j-1)+zs(i,j)) - (zs(i-1,j-1)+zs(i-1,j))] / (2*dx)
+!  dS/dy = [(zs(i-1,j)+zs(i,j)) - (zs(i-1,j-1)+zs(i,j-1))] / (2*dy)
+!
+!  Nodal area = jac/4 (mass-lumped Q1, 4 elements share each node).
 !-----------------------------------------------------------------------
 !
-      DO j=Jstr,Jend
-        DO i=Istr,Iend
-          IF (Si(i,j,ksa_old,isIhis).gt.0.0_r8) THEN
-            dx_rho=1.0_r8/pm(i,j)
-            dy_rho=1.0_r8/pn(i,j)
-            jac=1.0_r8/(pm(i,j)*pn(i,j))
+      n_taper=3
+      DO j=JstrP,JendP
+        DO i=IstrP,IendP
+          IF (pmask_ssa(i,j).eq.1.0_r8) THEN
 !
-!  Get smoothed surface elevation for the 4 corner nodes.
-!  Ice-free nodes are assigned the mean of ice-covered corners.
+!  Get H and zs from 4 surrounding RHO points.
 !
-            zs_sum=0.0_r8
-            n_ice=0
-            DO k_node=1,4
-              IF (k_node.eq.1) THEN
-                i1=i;   j1=j
-              ELSE IF (k_node.eq.2) THEN
-                i1=i+1; j1=j
-              ELSE IF (k_node.eq.3) THEN
-                i1=i;   j1=j+1
-              ELSE
-                i1=i+1; j1=j+1
-              END IF
-              H_corner(k_node)=Si(i1,j1,ksa_old,isIhis)
-              IF (H_corner(k_node).gt.0.0_r8) THEN
-                zs_corner(k_node)=zs_smooth(i1,j1)
-                zs_sum=zs_sum+zs_corner(k_node)
-                n_ice=n_ice+1
-              ELSE
-                zs_corner(k_node)=0.0_r8
-              END IF
-            END DO
-            IF (n_ice.gt.0) THEN
-              zs_mean=zs_sum/REAL(n_ice,r8)
-            ELSE
-              zs_mean=0.0_r8
-            END IF
-            DO k_node=1,4
-              IF (H_corner(k_node).le.0.0_r8) THEN
-                zs_corner(k_node)=zs_mean
-              END IF
-            END DO
+            H11=Si(i-1,j-1,ksa_old,isIhis)
+            H21=Si(i,  j-1,ksa_old,isIhis)
+            H12=Si(i-1,j,  ksa_old,isIhis)
+            H22=Si(i,  j,  ksa_old,isIhis)
 !
-            DO nq=1,4
+!  Skip if any surrounding RHO point is ice-free (margin handling).
 !
-!  Interpolate H and compute ∇S at quadrature point from 4 RHO
-!  corner values using Q1 shape function derivatives.
+            IF (H11.gt.0.0_r8.and.H21.gt.0.0_r8.and.                  &
+     &          H12.gt.0.0_r8.and.H22.gt.0.0_r8) THEN
 !
-              H_q=0.0_r8
-              dSdx_q=0.0_r8
-              dSdy_q=0.0_r8
+!  Ice margin taper: check 8 neighbors for ice-free cells.
 !
-              DO k_node=1,4
-                IF (k_node.eq.1) THEN
-                  i1=i;   j1=j
-                ELSE IF (k_node.eq.2) THEN
-                  i1=i+1; j1=j
-                ELSE IF (k_node.eq.3) THEN
-                  i1=i;   j1=j+1
-                ELSE
-                  i1=i+1; j1=j+1
-                END IF
-                H_q=H_q+Si(i1,j1,ksa_old,isIhis)*phi_val(k_node,nq)
-                dSdx_q=dSdx_q+zs_corner(k_node)*                      &
-     &              DPhi(k_node,nq,1)*2.0_r8/dx_rho
-                dSdy_q=dSdy_q+zs_corner(k_node)*                      &
-     &              DPhi(k_node,nq,2)*2.0_r8/dy_rho
+              dist_margin=n_taper
+              DO dj=-1,1
+                DO di=-1,1
+                  IF (di.ne.0.or.dj.ne.0) THEN
+                    IF (Si(i+di,j+dj,ksa_old,isIhis).le.0.0_r8) THEN
+                      dist_margin=MIN(dist_margin,                    &
+     &                    MAX(ABS(di),ABS(dj)))
+                    END IF
+                  END IF
+                END DO
               END DO
+              taper_w=MIN(REAL(dist_margin,r8)/                       &
+     &                    REAL(n_taper,r8),1.0_r8)
 !
-!  Scatter driving force to 4 corner PSI nodes.
-!  b_k += w_q * |J| * (-ρ_i g H ∇S) · φ_k
+!  FD gradient of smoothed surface at PSI point.
 !
-              DO k_node=1,4
-                IF (k_node.eq.1) THEN
-                  i1=i;   j1=j
-                ELSE IF (k_node.eq.2) THEN
-                  i1=i+1; j1=j
-                ELSE IF (k_node.eq.3) THEN
-                  i1=i;   j1=j+1
-                ELSE
-                  i1=i+1; j1=j+1
-                END IF
+              dx_rho=0.5_r8*(1.0_r8/pm(i-1,j)+1.0_r8/pm(i,j))
+              dy_rho=0.5_r8*(1.0_r8/pn(i,j-1)+1.0_r8/pn(i,j))
+              jac_avg=0.25_r8*(1.0_r8/(pm(i-1,j-1)*pn(i-1,j-1))+      &
+     &                         1.0_r8/(pm(i,  j-1)*pn(i,  j-1))+      &
+     &                         1.0_r8/(pm(i-1,j  )*pn(i-1,j  ))+      &
+     &                         1.0_r8/(pm(i,  j  )*pn(i,  j  )))
 !
-                IF (pmask_ssa(i1,j1).eq.1.0_r8) THEN
-                  phiv=phi_val(k_node,nq)
-                  taudx_psi(i1,j1)=taudx_psi(i1,j1)-                  &
-     &              jacq(nq)*jac*rhoi_g*H_q*dSdx_q*phiv
-                  taudy_psi(i1,j1)=taudy_psi(i1,j1)-                  &
-     &              jacq(nq)*jac*rhoi_g*H_q*dSdy_q*phiv
-                END IF
-              END DO  ! k_node
-            END DO  ! nq
-          END IF  ! H > 0
-        END DO  ! i
-      END DO  ! j
+              dSdx=((zs_smooth(i,j-1)+zs_smooth(i,j))-                 &
+     &              (zs_smooth(i-1,j-1)+zs_smooth(i-1,j)))/            &
+     &             (2.0_r8*dx_rho)
+              dSdy=((zs_smooth(i-1,j)+zs_smooth(i,j))-                 &
+     &              (zs_smooth(i-1,j-1)+zs_smooth(i,j-1)))/            &
+     &             (2.0_r8*dy_rho)
+!
+!  Average H to PSI point.
+!
+              H_psi=0.25_r8*(H11+H21+H12+H22)
+!
+!  Driving stress RHS (FE-consistent nodal force).
+!  b_k = -rho_i * g * H * dS/dx * (nodal area)
+!  nodal area = jac/4 for mass-lumped Q1.
+!
+              taudx_psi(i,j)=-taper_w*rhoi_g*H_psi*dSdx*               &
+     &                       jac_avg*0.25_r8
+              taudy_psi(i,j)=-taper_w*rhoi_g*H_psi*dSdy*               &
+     &                       jac_avg*0.25_r8
+            END IF
+          END IF
+        END DO
+      END DO
 !
 !  Exchange halo for assembled RHS (needed for shared PSI nodes
 !  at tile boundaries).
