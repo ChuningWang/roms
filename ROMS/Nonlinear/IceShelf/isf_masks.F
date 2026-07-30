@@ -114,7 +114,7 @@
       USE mod_scalars
       USE mod_sources
 # ifdef ICESHEET_SSA
-      USE mod_isf, ONLY : rho_i
+      USE mod_isf, ONLY : rho_i, min_cavity_thickness
 # endif
 !
       USE exchange_2d_mod
@@ -210,7 +210,7 @@
 !  in very thin water columns near the grounding line.
               rmask_isf(i,j)=1.0_r8
               zice(i,j)=-(rho_i/rho_w_local)*H_rho
-              IF (h(i,j)+zice(i,j).lt.200.0_r8) THEN
+              IF (h(i,j)+zice(i,j).lt.min_cavity_thickness(ng)) THEN
                 rmask_isf(i,j)=0.0_r8
                 zice(i,j)=0.0_r8
               END IF

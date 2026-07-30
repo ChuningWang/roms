@@ -144,9 +144,10 @@
      &                  +(Fy_top-Fy_bottom)*pn(i,j))                  &
      &          -dt_sub*Fi(i,j,icImel)
 !
-!  Positivity preservation.
+!  Positivity preservation and safety cap.
 !
               IF (H_new(i,j).lt.0.0_r8) H_new(i,j)=0.0_r8
+              IF (H_new(i,j).gt.2000.0_r8) H_new(i,j)=2000.0_r8
 !
             ELSE
               H_new(i,j)=0.0_r8

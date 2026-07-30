@@ -237,6 +237,16 @@
 !  Grounding line parameters
 !
       real(r8), allocatable :: gl_smooth_width(:) ! grounding line smoothing width [m]
+      real(r8), allocatable :: min_cavity_thickness(:) ! minimum cavity thickness [m]
+!
+!  Driving stress regularization parameters
+!
+      integer, allocatable :: n_smooth(:)         ! surface elevation smoothing iterations
+      integer, allocatable :: n_taper(:)          ! ice margin taper width [cells]
+!
+!  Picard iteration parameters
+!
+      real(r8), allocatable :: picard_alpha(:)    ! Picard relaxation factor (0 < alpha <= 1)
 !
 !  Thickness advection parameters
 !
@@ -570,6 +580,26 @@
           allocate ( gl_smooth_width(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
           gl_smooth_width(1:Ngrids)=6000.0_r8
+        END IF
+        IF (.not.allocated(min_cavity_thickness)) THEN
+          allocate ( min_cavity_thickness(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          min_cavity_thickness(1:Ngrids)=20.0_r8
+        END IF
+        IF (.not.allocated(n_smooth)) THEN
+          allocate ( n_smooth(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          n_smooth(1:Ngrids)=20
+        END IF
+        IF (.not.allocated(n_taper)) THEN
+          allocate ( n_taper(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          n_taper(1:Ngrids)=3
+        END IF
+        IF (.not.allocated(picard_alpha)) THEN
+          allocate ( picard_alpha(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          picard_alpha(1:Ngrids)=0.7_r8
         END IF
         IF (.not.allocated(cfl_factor)) THEN
           allocate ( cfl_factor(Ngrids) )
@@ -927,6 +957,10 @@
       IF (allocated(min_thickness))  deallocate ( min_thickness )
       IF (allocated(ssa_max_speed))   deallocate ( ssa_max_speed )
       IF (allocated(gl_smooth_width)) deallocate ( gl_smooth_width )
+      IF (allocated(min_cavity_thickness)) deallocate ( min_cavity_thickness )
+      IF (allocated(n_smooth))         deallocate ( n_smooth )
+      IF (allocated(n_taper))          deallocate ( n_taper )
+      IF (allocated(picard_alpha))     deallocate ( picard_alpha )
       IF (allocated(cfl_factor))       deallocate ( cfl_factor )
       IF (allocated(H_calve))          deallocate ( H_calve )
       IF (allocated(N_ssa))            deallocate ( N_ssa )

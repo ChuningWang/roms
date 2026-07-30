@@ -136,10 +136,11 @@
 !
 !  Local variable declarations.
 !
-      integer :: i, j, iter
+      integer :: i, j, iter, ii, jj
       integer :: ksa_old, ksa_new
 !
-      real(r8) :: cff, eps_e, H_rho, u_mid, v_mid
+      real(r8) :: cff, eps_e, H_rho, u_mid, v_mid, avg_ff
+      real(r8) :: u_cg_max
       real(r8) :: rho_w_local
       real(r8) :: rhoi_g
       real(r8) :: B_glen_sq, C_basal_sq, u_slide
@@ -195,8 +196,8 @@
       integer :: i1, i2, j1, j2
 !  Smoothing scratch for driving stress regularization.
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: zs_smooth
-      integer :: n_smooth, is_iter
-      integer :: n_taper, dist_margin, di, dj
+      integer :: is_iter
+      integer :: dist_margin, di, dj
       real(r8) :: taper_w
       real(r8) :: H11, H21, H12, H22, H_psi
       real(r8) :: dSdx, dSdy, jac_avg
@@ -204,10 +205,6 @@
 # ifdef DISTRIBUTE
       character(len=3) :: op_handle
 # endif
-!
-!  Pointer aliases for velocity arrays (for halo exchange calls).
-!
-      real(r8) :: dummy_r8
 !
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__//", isf_mom_tile"
@@ -260,15 +257,27 @@
         END DO
       END DO
 !
+!  Safety cap on ice thickness (prevent garbage values from
+!  initialization or numerical artifacts from affecting the solve).
+!  MISOMIP max initial thickness ~1626 m; allow some physical growth.
+!
+      DO j=JstrT,JendT
+        DO i=IstrT,IendT
+          IF (Si(i,j,ksa_old,isIhis).gt.2000.0_r8) THEN
+            Si(i,j,ksa_old,isIhis)=2000.0_r8
+          END IF
+        END DO
+      END DO
+!
 !  SSA active mask (pmask_ssa): a PSI node is active if any of its 4
 !  surrounding RHO cells has ice (H > 0).  Inactive nodes are Dirichlet
 !  (u = v = 0).
 !
       DO j=JstrP,JendP
         DO i=IstrP,IendP
-          IF (Si(i,j,ksa_old,isIhis).gt.0.0_r8 .or.                       &
-     &        Si(i-1,j,ksa_old,isIhis).gt.0.0_r8 .or.                     &
-     &        Si(i,j-1,ksa_old,isIhis).gt.0.0_r8 .or.                     &
+          IF (Si(i,j,ksa_old,isIhis).gt.0.0_r8 .or.                    &
+     &        Si(i-1,j,ksa_old,isIhis).gt.0.0_r8 .or.                  &
+     &        Si(i,j-1,ksa_old,isIhis).gt.0.0_r8 .or.                  &
      &        Si(i-1,j-1,ksa_old,isIhis).gt.0.0_r8) THEN
             pmask_ssa(i,j)=1.0_r8
           ELSE
@@ -367,14 +376,6 @@
 !
 # ifdef ICESHEET_SSA
 #   include <isf_driving_stress.h>
-#  endif
-!
-!-----------------------------------------------------------------------
-!  Compute effective viscosity (nuH) and basal drag (beta) at RHO pts.
-!-----------------------------------------------------------------------
-!
-#  ifdef ICESHEET_SSA
-#   include <isf_viscosity.h>
 #  endif
 !
 !-----------------------------------------------------------------------

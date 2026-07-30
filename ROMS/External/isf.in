@@ -124,7 +124,7 @@
 
 ! Basal drag coefficient (sqrt of C) [Pa (s/m)^(1/m)].
 
-          C_basal == 1.0d5
+          C_basal == 2.0d4
 
 ! Basal sliding exponent [-]. 1.0 = linear sliding.
 
@@ -149,13 +149,34 @@
 ! SSA solver: nuH regularization [Pa s m], minimum ice thickness [m],
 ! velocity cap [m/s].
 
-          nuH_reg == 1.0d13
+          nuH_reg == 1.0d15
     min_thickness == 10.0d0
     ssa_max_speed == 1.0d5
 
 ! Grounding line smoothing width [m].
 
   gl_smooth_width == 6000.0d0
+
+! Minimum ice shelf cavity thickness [m].
+! Floating ice with cavity thinner than this is treated as grounded
+! (numerical stability near the grounding line).
+
+min_cavity_thickness == 20.0d0
+
+! Driving stress regularization.
+! n_smooth: number of 5-point Laplacian smoothing iterations applied
+!   to the surface elevation before gradient computation.
+! n_taper: ice margin taper width [cells]. Driving stress is linearly
+!   tapered to zero within n_taper cells of the ice margin.
+
+        n_smooth == 20
+         n_taper == 3
+
+! Picard iteration relaxation factor (0 < alpha <= 1).
+! New velocity = alpha * u_computed + (1-alpha) * u_previous.
+! Lower values improve stability at the cost of slower convergence.
+
+    picard_alpha == 0.7d0
 
 ! Thickness advection CFL safety factor [-].
 ! Controls sub-stepping: dt_sub = cfl_factor / max(|u|/dx + |v|/dy).
@@ -167,7 +188,7 @@
 ! Ice at the calving front thinner than H_calve is removed.
 ! MISOMIP1 protocol: H_calve = 100 m (Asay-Davis et al., 2016).
 
-H_calve == 100.0d0
+         H_calve == 100.0d0
 
 ! Multi-timescale coupling parameters.
 ! N_ssa:   SSA momentum is solved every N_ssa ocean timesteps.

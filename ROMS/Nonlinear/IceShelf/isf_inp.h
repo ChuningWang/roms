@@ -193,6 +193,20 @@
 !
             CASE ('gl_smooth_width')
               Npts=load_r(Nval, Rval, Ngrids, gl_smooth_width)
+            CASE ('min_cavity_thickness')
+              Npts=load_r(Nval, Rval, Ngrids, min_cavity_thickness)
+!
+!  Driving stress regularization parameters
+!
+            CASE ('n_smooth')
+              Npts=load_i(Nval, Rval, Ngrids, n_smooth)
+            CASE ('n_taper')
+              Npts=load_i(Nval, Rval, Ngrids, n_taper)
+!
+!  Picard iteration parameters
+!
+            CASE ('picard_alpha')
+              Npts=load_r(Nval, Rval, Ngrids, picard_alpha)
 !
 !  Thickness advection parameters
 !
@@ -820,6 +834,14 @@
      &          'SSA velocity cap [m/s].'
           WRITE (out,60) gl_smooth_width(ng), 'gl_smooth_width',          &
      &          'Grounding line smoothing width [m].'
+          WRITE (out,60) min_cavity_thickness(ng), 'min_cavity_thickness', &
+     &          'Minimum ice shelf cavity thickness [m].'
+          WRITE (out,50) n_smooth(ng), 'n_smooth',                        &
+     &          'Surface elevation smoothing iterations.'
+          WRITE (out,50) n_taper(ng), 'n_taper',                          &
+     &          'Ice margin taper width [cells].'
+          WRITE (out,60) picard_alpha(ng), 'picard_alpha',                &
+     &          'Picard relaxation factor (0 < alpha <= 1).'
           WRITE (out,60) cfl_factor(ng), 'cfl_factor',                    &
      &          'Thickness advection CFL safety factor [-].'
           WRITE (out,60) H_calve(ng), 'H_calve',                          &

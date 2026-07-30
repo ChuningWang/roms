@@ -57,8 +57,7 @@
 !  Apply 5-point Laplacian smoothing (N iterations).
 !  Only smooth ice-covered nodes; ice-free neighbors use center value.
 !
-      n_smooth=20
-      DO is_iter=1,n_smooth
+      DO is_iter=1,n_smooth(ng)
 # ifdef DISTRIBUTE
         CALL mp_exchange2d(ng,tile,iNLM,1,LBi,UBi,LBj,UBj,            &
      &                     NghostPoints,EWperiodic(ng),NSperiodic(ng),  &
@@ -128,7 +127,6 @@
 !  Nodal area = jac/4 (mass-lumped Q1, 4 elements share each node).
 !-----------------------------------------------------------------------
 !
-      n_taper=3
       DO j=JstrP,JendP
         DO i=IstrP,IendP
           IF (pmask_ssa(i,j).eq.1.0_r8) THEN
@@ -147,7 +145,7 @@
 !
 !  Ice margin taper: check 8 neighbors for ice-free cells.
 !
-              dist_margin=n_taper
+              dist_margin=n_taper(ng)
               DO dj=-1,1
                 DO di=-1,1
                   IF (di.ne.0.or.dj.ne.0) THEN
@@ -159,7 +157,7 @@
                 END DO
               END DO
               taper_w=MIN(REAL(dist_margin,r8)/                       &
-     &                    REAL(n_taper,r8),1.0_r8)
+     &                    REAL(n_taper(ng),r8),1.0_r8)
 !
 !  FD gradient of smoothed surface at PSI point.
 !

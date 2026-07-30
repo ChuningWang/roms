@@ -54,7 +54,7 @@
               T_star=Si(i,j,ksa_old,isItis)+273.15_r8+                  &
      &               8.66E-4_r8*0.5_r8*H_rho
               RT_star=8.314_r8*T_star
-              IF (Si(i,j,ksa_old,isItis).le.-10.0_r8) THEN
+              IF (T_star.le.263.15_r8) THEN
                 A_pat=3.61E-13_r8*EXP(-6.0E4_r8/RT_star)
               ELSE
                 A_pat=1.73E3_r8*EXP(-13.9E4_r8/RT_star)

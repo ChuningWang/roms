@@ -21,6 +21,75 @@
         END DO
       END DO
 !
+!  Enforce lateral boundary conditions (free-slip / ice divide):
+!    - v = 0 at southern/northern domain boundaries (no cross-flow)
+!    - u = 0 at western domain boundary (ice divide / symmetry)
+!    - Eastern boundary (calving front) is left free.
+!
+      IF (Jstr.eq.1) THEN
+        DO i=IstrP,IendP
+          Si(i,JstrP,ksa_new,isIvis)=0.0_r8
+        END DO
+      END IF
+      IF (Jend.eq.Mm(ng)) THEN
+        DO i=IstrP,IendP
+          Si(i,JendP,ksa_new,isIvis)=0.0_r8
+        END DO
+      END IF
+      IF (Istr.eq.1) THEN
+        DO j=JstrP,JendP
+          Si(IstrP,j,ksa_new,isIuis)=0.0_r8
+        END DO
+      END IF
+!
+!  Warm-start: if initial velocity is near zero, use a simple
+!  basal drag balance (tau_d = C^2 * u) to provide a physically
+!  reasonable initial guess.  This avoids the Picard "high-viscosity
+!  trap" where zero velocity -> eps_e = eps_glen_min -> huge nuH
+!  -> tiny velocity -> convergence to the wrong fixed point.
+!
+      C_basal_sq=C_basal(ng)*C_basal(ng)
+      DO j=JstrP,JendP
+        DO i=IstrP,IendP
+          IF (pmask_ssa(i,j).eq.1.0_r8) THEN
+            u_slide=SQRT(Si(i,j,ksa_new,isIuis)**2+                    &
+     &                   Si(i,j,ksa_new,isIvis)**2)
+            IF (u_slide.lt.1.0E-5_r8) THEN
+              avg_ff=0.25_r8*(float_frac(i,j)+                        &
+     &                        float_frac(i-1,j)+                       &
+     &                        float_frac(i,j-1)+                       &
+     &                        float_frac(i-1,j-1))
+              jac_avg=0.25_r8*(                                        &
+     &          1.0_r8/(pm(i-1,j-1)*pn(i-1,j-1))+                     &
+     &          1.0_r8/(pm(i,  j-1)*pn(i,  j-1))+                     &
+     &          1.0_r8/(pm(i-1,j  )*pn(i-1,j  ))+                     &
+     &          1.0_r8/(pm(i,  j  )*pn(i,  j  )))
+              cff=(1.0_r8-avg_ff)/(C_basal_sq*jac_avg*0.25_r8)
+              Si(i,j,ksa_new,isIuis)=taudx_psi(i,j)*cff
+              Si(i,j,ksa_new,isIvis)=taudy_psi(i,j)*cff
+            END IF
+          END IF
+        END DO
+      END DO
+!
+!  Re-enforce lateral BCs after warm-start.
+!
+      IF (Jstr.eq.1) THEN
+        DO i=IstrP,IendP
+          Si(i,JstrP,ksa_new,isIvis)=0.0_r8
+        END DO
+      END IF
+      IF (Jend.eq.Mm(ng)) THEN
+        DO i=IstrP,IendP
+          Si(i,JendP,ksa_new,isIvis)=0.0_r8
+        END DO
+      END IF
+      IF (Istr.eq.1) THEN
+        DO j=JstrP,JendP
+          Si(IstrP,j,ksa_new,isIuis)=0.0_r8
+        END DO
+      END IF
+!
 !  Initialize CG work arrays to zero over full scratch range.
 !
       DO j=JminS,JmaxS
@@ -55,6 +124,13 @@
       converged=.FALSE.
 !
       DO nl_iter=1,nl_max_iter(ng)
+!
+!  Compute effective viscosity and basal drag from current velocity
+!  estimate (ksa_new).  Moved inside the Picard loop so that the
+!  viscosity is always consistent with the current velocity, avoiding
+!  the use of uninitialized or stale values from a pre-loop call.
+!
+#   include <isf_viscosity.h>
 !
 !  Compute Jacobi diagonal (diag_u, diag_v) from nuH and beta.
 !  Element loop: for each RHO cell, accumulate diagonal contribution
@@ -246,6 +322,14 @@
             IF (pmask_ssa(i,j).eq.1.0_r8) THEN
               Ru(i,j)=taudx_psi(i,j)-Au(i,j)
               Rv(i,j)=taudy_psi(i,j)-Av(i,j)
+!  Enforce BCs: zero residual for constrained velocity components.
+              IF ((Jstr.eq.1.and.j.eq.JstrP).or.                        &
+     &            (Jend.eq.Mm(ng).and.j.eq.JendP)) THEN
+                Rv(i,j)=0.0_r8
+              END IF
+              IF (Istr.eq.1.and.i.eq.IstrP) THEN
+                Ru(i,j)=0.0_r8
+              END IF
               IF (diag_u(i,j).gt.eps) THEN
                 Zu(i,j)=Ru(i,j)/diag_u(i,j)
               ELSE
@@ -288,6 +372,33 @@
           IF (resid.le.cgtol*resid_0) EXIT
 !
 !  Compute A*d.
+!  First exchange Si halo so that A*D uses current solution at
+!  tile-boundary nodes (critical for MPI correctness).
+!
+          DO j=JstrP,JendP
+            DO i=IstrP,IendP
+              u_scr(i,j)=Si(i,j,ksa_new,isIuis)
+              v_scr(i,j)=Si(i,j,ksa_new,isIvis)
+            END DO
+          END DO
+          IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+            CALL exchange_p2d_tile(ng,tile,LBi,UBi,LBj,UBj,u_scr)
+            CALL exchange_p2d_tile(ng,tile,LBi,UBi,LBj,UBj,v_scr)
+          END IF
+# ifdef DISTRIBUTE
+          CALL mp_exchange2d(ng,tile,iNLM,2,LBi,UBi,LBj,UBj,             &
+     &                       NghostPoints,EWperiodic(ng),NSperiodic(ng),   &
+     &                       u_scr,v_scr)
+# endif
+          DO j=JstrP-1,JendP+1
+            DO i=IstrP-1,IendP+1
+              IF (i.lt.IstrP.or.i.gt.IendP.or.                        &
+     &            j.lt.JstrP.or.j.gt.JendP) THEN
+                Si(i,j,ksa_new,isIuis)=u_scr(i,j)
+                Si(i,j,ksa_new,isIvis)=v_scr(i,j)
+              END IF
+            END DO
+          END DO
 !
           DO j=JstrP-1,JendP+1
             DO i=IstrP-1,IendP+1
@@ -408,6 +519,14 @@
                 Zv_old(i,j)=Zv(i,j)
                 Ru(i,j)=Ru(i,j)-alpha*Au(i,j)
                 Rv(i,j)=Rv(i,j)-alpha*Av(i,j)
+!  Enforce Dirichlet BCs on residual (prevent leakage).
+                IF ((Jstr.eq.1.and.j.eq.JstrP).or.                    &
+     &              (Jend.eq.Mm(ng).and.j.eq.JendP)) THEN
+                  Rv(i,j)=0.0_r8
+                END IF
+                IF (Istr.eq.1.and.i.eq.IstrP) THEN
+                  Ru(i,j)=0.0_r8
+                END IF
                 IF (diag_u(i,j).gt.eps) THEN
                   Zu(i,j)=Ru(i,j)/diag_u(i,j)
                 ELSE
@@ -442,6 +561,14 @@
               IF (pmask_ssa(i,j).eq.1.0_r8) THEN
                 Du(i,j)=Zu(i,j)+beta_cg*Du(i,j)
                 Dv(i,j)=Zv(i,j)+beta_cg*Dv(i,j)
+!  Enforce Dirichlet BCs on search direction.
+                IF ((Jstr.eq.1.and.j.eq.JstrP).or.                    &
+     &              (Jend.eq.Mm(ng).and.j.eq.JendP)) THEN
+                  Dv(i,j)=0.0_r8
+                END IF
+                IF (Istr.eq.1.and.i.eq.IstrP) THEN
+                  Du(i,j)=0.0_r8
+                END IF
               END IF
             END DO
           END DO
@@ -473,6 +600,22 @@
             Si(i,j,ksa_new,isIvis)=v_scr(i,j)
           END DO
         END DO
+!  Re-enforce lateral BCs after halo exchange.
+        IF (Jstr.eq.1) THEN
+          DO i=IstrP,IendP
+            Si(i,JstrP,ksa_new,isIvis)=0.0_r8
+          END DO
+        END IF
+        IF (Jend.eq.Mm(ng)) THEN
+          DO i=IstrP,IendP
+            Si(i,JendP,ksa_new,isIvis)=0.0_r8
+          END DO
+        END IF
+        IF (Istr.eq.1) THEN
+          DO j=JstrP,JendP
+            Si(IstrP,j,ksa_new,isIuis)=0.0_r8
+          END DO
+        END IF
 !
 !  PISM velocity cap.
 !
@@ -495,8 +638,28 @@
 !
 #   include <isf_viscosity.h>
 !
+!  Picard relaxation: u = alpha*u_new + (1-alpha)*u_old.
+!  Prevents oscillation between high/low viscosity regimes.
+!  Applied BEFORE convergence check so the check reflects the
+!  actual iterate that will be used in the next iteration.
+!
+        IF (nl_iter.gt.1) THEN
+          DO j=JstrP,JendP
+            DO i=IstrP,IendP
+              IF (pmask_ssa(i,j).eq.1.0_r8) THEN
+                Si(i,j,ksa_new,isIuis)=picard_alpha(ng)*               &
+     &            Si(i,j,ksa_new,isIuis)+(1.0_r8-picard_alpha(ng))*    &
+     &            Si(i,j,ksa_old,isIuis)
+                Si(i,j,ksa_new,isIvis)=picard_alpha(ng)*               &
+     &            Si(i,j,ksa_new,isIvis)+(1.0_r8-picard_alpha(ng))*    &
+     &            Si(i,j,ksa_old,isIvis)
+              END IF
+            END DO
+          END DO
+        END IF
+!
 !  Picard convergence check: relative velocity change.
-!  ||u_new - u_old|| / ||u_new|| < nl_tol
+!  ||u_relaxed - u_old|| / ||u_relaxed|| < nl_tol
 !
         vel_change=0.0_r8
         vel_norm=0.0_r8
@@ -518,6 +681,7 @@
         CALL mp_reduce(ng,iNLM,1,isf_dot_prod,op_handle)
         vel_change=isf_dot_prod
         isf_dot_prod=vel_norm
+        op_handle='SUM'
         CALL mp_reduce(ng,iNLM,1,isf_dot_prod,op_handle)
         vel_norm=isf_dot_prod
 # endif
@@ -529,6 +693,29 @@
 !
         IF (nl_resid.le.nl_tol(ng)) THEN
           converged=.TRUE.
+        END IF
+!
+!  DEBUG: Picard iteration diagnostics (tile 0 only, sparse output).
+!
+        IF (tile.eq.0) THEN
+          IF (converged.or.nl_iter.eq.1.or.                            &
+     &        MOD(nl_iter,10).eq.0) THEN
+            u_slide=0.0_r8
+            DO j=JstrP,JendP
+              DO i=IstrP,IendP
+                IF (pmask_ssa(i,j).eq.1.0_r8) THEN
+                  cff=SQRT(Si(i,j,ksa_new,isIuis)**2+                  &
+     &                     Si(i,j,ksa_new,isIvis)**2)
+                  IF (cff.gt.u_slide) u_slide=cff
+                END IF
+              END DO
+            END DO
+  #ifdef ISF_DEBUG
+          WRITE(*,'(A,I3,A,ES12.4,A,ES12.4,A,L1)')                   &
+     &        '  Picard iter ',nl_iter,' nl_resid=',nl_resid,          &
+     &        ' max|u|=',u_slide,' conv=',converged
+#endif
+          END IF
         END IF
 !
         IF (converged) EXIT
@@ -543,3 +730,21 @@
         END DO
 !
       END DO  ! nl_iter (Picard)
+!
+!  Post-Picard cleanup: zero velocity at ice-margin PSI points
+!  (min surrounding H < 10 m).  Applied once after convergence
+!  to remove garbage without affecting the nonlinear iteration.
+!
+      DO j=JstrP,JendP
+        DO i=IstrP,IendP
+          IF (pmask_ssa(i,j).eq.1.0_r8) THEN
+            IF (MIN(Si(i,j,ksa_old,isIhis),                           &
+     &            Si(i-1,j,ksa_old,isIhis),                           &
+     &            Si(i,j-1,ksa_old,isIhis),                           &
+     &            Si(i-1,j-1,ksa_old,isIhis)).lt.10.0_r8) THEN
+              Si(i,j,ksa_new,isIuis)=0.0_r8
+              Si(i,j,ksa_new,isIvis)=0.0_r8
+            END IF
+          END IF
+        END DO
+      END DO
