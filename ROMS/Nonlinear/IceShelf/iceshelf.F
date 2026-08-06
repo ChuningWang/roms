@@ -29,6 +29,9 @@
 # if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
       USE isf_sbl_mod,      ONLY : isf_sbl
 # endif
+# if defined ICESHEET_SSA && defined ICESHELF_THERMO
+      USE isf_coupler_mod,  ONLY : isf_coupler
+# endif
 # ifdef ICESHELF_MOM
       USE isf_mom_mod,      ONLY : isf_mom
 # endif
@@ -39,7 +42,7 @@
       USE isf_calving_mod,  ONLY : isf_calving
 # endif
       USE strings_mod,      ONLY : FoundError, uppercase
-# ifdef WET_DRY
+# if defined WET_DRY || defined ICESHEET_SSA
       USE isf_masks_mod,    ONLY : isf_masks
 # endif
 !
@@ -105,6 +108,11 @@
         END DO
 #  endif
 !
+!  MMS testing: skip ice-ocean thermodynamics.  isf_vbc (3EQN) melts
+!  or freezes ice thickness between SSA calls, corrupting the exact
+!  manufactured-solution state that the MMS operator check assumes.
+!
+#  ifndef SSA_MMS_TESTING
         DO ig=1,GridsInLayer(nl)
           ng=GridNumber(ig,nl)
           DO tile=first_tile(ng),last_tile(ng),+1
@@ -112,6 +120,27 @@
           END DO
 !$OMP BARRIER
         END DO
+#  endif
+# endif
+
+# if defined ICESHEET_SSA && defined ICESHELF_THERMO
+!
+!-----------------------------------------------------------------------
+!  Ice-ocean coupling: momentum exchange (ice-ocean drag stress)
+!  and basal melt rate temporal filtering (EMA).
+!  Called after isf_vbc so that Fi(icImel) has the instantaneous melt.
+!  Overwrites sustr/svstr under ice shelf, updates u*, filters melt.
+!-----------------------------------------------------------------------
+!
+#  ifndef SSA_MMS_TESTING
+        DO ig=1,GridsInLayer(nl)
+          ng=GridNumber(ig,nl)
+          DO tile=first_tile(ng),last_tile(ng),+1
+            CALL isf_coupler (ng, tile, model)
+          END DO
+!$OMP BARRIER
+        END DO
+#  endif
 # endif
 
 # ifdef ICESHELF_MOM
@@ -147,7 +176,14 @@
 !
         DO ig=1,GridsInLayer(nl)
           ng=GridNumber(ig,nl)
-          IF (MOD(iic(ng)-1,N_ssa(ng)*N_thick(ng)).eq.0) THEN
+!  Skip the cold-start first step: MOD(iic-1,N)=0 also triggers at
+!  iic=ntstart=1 where no time has elapsed, but the update would apply
+!  the full accumulated interval dt*N_ssa*N_thick, producing a spurious
+!  thickness change (e.g. large 3EQN freeze-on at a cold start).
+!  On a restart (ntstart>1) the first call IS needed: it covers the
+!  interval since the last recorded update.
+          IF (MOD(iic(ng)-1,N_ssa(ng)*N_thick(ng)).eq.0 .and.          &
+     &        iic(ng).gt.ntstart(ng)) THEN
             DO tile=first_tile(ng),last_tile(ng),+1
               CALL isf_thickness_adv (ng, tile, model)
             END DO
@@ -165,7 +201,9 @@
 !
         DO ig=1,GridsInLayer(nl)
           ng=GridNumber(ig,nl)
-          IF (MOD(iic(ng)-1,N_ssa(ng)*N_thick(ng)).eq.0) THEN
+!  Same cold-start skip as thickness advection above.
+          IF (MOD(iic(ng)-1,N_ssa(ng)*N_thick(ng)).eq.0 .and.          &
+     &        iic(ng).gt.ntstart(ng)) THEN
             DO tile=first_tile(ng),last_tile(ng),+1
               CALL isf_calving (ng, tile, model)
             END DO
@@ -174,18 +212,28 @@
         END DO
 # endif
 
-#ifdef WET_DRY
+#if defined WET_DRY || defined ICESHEET_SSA
 !
 !-----------------------------------------------------------------------
 !  Update grounding line position and ice shelf masks.
 !  With ICESHEET_SSA: executed every N_ssa*N_gl ocean timesteps.
-!  Without ICESHEET_SSA: executed every ocean timestep.
+!  With WET_DRY only (no ICESHEET_SSA): executed every ocean timestep.
+!
+!  Under ICESHEET_SSA the masks must be recomputed even without WET_DRY
+!  so that the dynamic zice/rmask_isf (flotation criterion) propagate to
+!  set_depth.F and isf_vbc.F.  Without WET_DRY the wet/dry *_ist masks
+!  are not updated (diagnostic only); the ocean grid mask (rmask) stays
+!  static, so a migrating grounding line does not dry out ocean cells
+!  (known limitation, see work_plan stage 4a.5).
 !-----------------------------------------------------------------------
 !
         DO ig=1,GridsInLayer(nl)
           ng=GridNumber(ig,nl)
 # ifdef ICESHEET_SSA
-          IF (MOD(iic(ng)-1,N_ssa(ng)*N_gl(ng)).eq.0) THEN
+!  Cold-start skip as above; initial.F already ran isf_masks during
+!  initialization, so the step-1 recomputation is redundant.
+          IF (MOD(iic(ng)-1,N_ssa(ng)*N_gl(ng)).eq.0 .and.             &
+     &        iic(ng).gt.ntstart(ng)) THEN
 # endif
             DO tile=first_tile(ng),last_tile(ng),+1
               CALL isf_masks (ng, tile, iNLM)

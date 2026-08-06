@@ -44,7 +44,7 @@ def u_exact(x, y):
     """Manufactured u-velocity."""
     return np.sin(np.pi * x / Lx) * np.sin(np.pi * y / Ly)
 
-def v_exact(x, y, X, Y):
+def v_exact(X, Y):
     """Manufactured v-velocity."""
     return np.sin(2*np.pi * X / Lx) * np.sin(2*np.pi * Y / Ly)
 
@@ -300,7 +300,7 @@ for nx, ny in resolutions:
     
     # Exact solution
     u_ex = u_exact(X, Y)
-    v_ex = np.sin(2*np.pi*X/Lx) * np.sin(2*np.pi*Y/Ly)
+    v_ex = v_exact(X, Y)
     
     # L2 error (using nodal quadrature)
     err_u = u_num - u_ex

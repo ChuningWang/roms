@@ -153,10 +153,6 @@
     min_thickness == 10.0d0
     ssa_max_speed == 1.0d5
 
-! Grounding line smoothing width [m].
-
-  gl_smooth_width == 6000.0d0
-
 ! Minimum ice shelf cavity thickness [m].
 ! Floating ice with cavity thinner than this is treated as grounded
 ! (numerical stability near the grounding line).
@@ -199,6 +195,36 @@ min_cavity_thickness == 20.0d0
           N_ssa == 10
         N_thick == 1
            N_gl == 1
+
+! Surface mass balance rate [m/s ice equivalent, positive = accumulation].
+! Uniform rate applied everywhere ice exists (H > 0).
+! Default = 0.0 (no SMB).
+! MISOMIP1 typical: 0.3 m/yr = 9.507e-9 m/s (Asay-Davis et al., 2016).
+
+        smb_rate == 0.0d0
+
+! Ice-ocean coupling parameters.
+! tau_melt: Exponential moving average (EMA) timescale for basal melt
+!           rate filtering [s].  Smooths high-frequency melt variability
+!           before feeding back to ice thickness evolution.
+!           Default = 86400 (1 day).  Set to 0 to disable filtering.
+! Cd_isf:   Ice-ocean interface quadratic drag coefficient [-].
+!           Used by isf_coupler to compute friction velocity u* and
+!           kinematic stress from ice-ocean relative velocity.
+!           Default = 5.0e-3 (typical for Antarctic ice shelves).
+! rho_w_ref: Reference seawater density [kg/m3] used in the flotation
+!           criterion (rho_i*H vs rho_w*h) for grounding line detection.
+!           Default = 1025.0.  For TEOS10 runs with strong density
+!           contrast, set to the local cavity-averaged density.
+! max_thickness: Safety cap on ice thickness [m] to prevent garbage
+!           values from initialization or numerical artifacts.
+!           Default = 5000 (allows real ice sheets up to ~4500 m).
+
+         tau_melt == 86400.0d0
+           Cd_isf == 5.0e-3
+        rho_w_ref == 1025.0d0
+    max_thickness == 5000.0d0
+   gl_float_width == 1000.0d0
 
 ! Logical switches (TRUE/FALSE) to activate writing of iceshelf
 ! variables into HISTORY output file.

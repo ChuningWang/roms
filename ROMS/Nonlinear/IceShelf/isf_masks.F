@@ -114,7 +114,7 @@
       USE mod_scalars
       USE mod_sources
 # ifdef ICESHEET_SSA
-      USE mod_isf, ONLY : rho_i, min_cavity_thickness
+      USE mod_isf, ONLY : rho_i, min_cavity_thickness, rho_w_ref
 # endif
 !
       USE exchange_2d_mod
@@ -186,6 +186,7 @@
 !-----------------------------------------------------------------------
 !
 # ifdef ICESHEET_SSA
+#  ifdef WET_DRY
 !  Dynamic grounding line: compute masks from flotation criterion.
 !    grounded:  rho_i * H > rho_w * h  (ice fills ocean column)
 !    floating:  rho_i * H <= rho_w * h  (ice shelf cavity exists)
@@ -194,16 +195,18 @@
 !  rmask_isf = 1 where floating ice (cavity exists)
 !  rmask_ist = 1 where grounded ice (under WET_DRY)
 !
-      rho_w_local=REAL(rho0,r8)
+      rho_w_local=rho_w_ref(ng)
 !
       DO j=JstrT,JendT
         DO i=IstrT,IendT
           H_rho=H_ice(i,j)
           IF (H_rho.gt.0.0_r8) THEN
             IF (rho_i*H_rho.gt.rho_w_local*h(i,j)) THEN
-!  Grounded ice: no cavity, zice=0.
+!  Grounded ice: no cavity.  Set zice=-h so that h+zice=0 (dry cell).
+!  This makes the ocean wet/dry criterion (zeta+h+zice<=Dcrit)
+!  correctly mark the cell as dry without modifying wetdry.F.
               rmask_isf(i,j)=0.0_r8
-              zice(i,j)=0.0_r8
+              zice(i,j)=-h(i,j)
             ELSE
 !  Floating ice: cavity exists, zice from hydrostatic equilibrium.
 !  Enforce minimum cavity thickness to avoid numerical instability
@@ -212,22 +215,22 @@
               zice(i,j)=-(rho_i/rho_w_local)*H_rho
               IF (h(i,j)+zice(i,j).lt.min_cavity_thickness(ng)) THEN
                 rmask_isf(i,j)=0.0_r8
-                zice(i,j)=0.0_r8
+                zice(i,j)=-h(i,j)
               END IF
             END IF
           ELSE
-!  Ice-free: use original zice criterion (static ice shelf).
-            IF (zice(i,j).ne.0.0_r8) THEN
-              rmask_isf(i,j)=1.0_r8
-            ELSE
-              rmask_isf(i,j)=0.0_r8
-            END IF
+!  Ice-free: no cavity exists.  Reset zice (may be a stale -h left
+!  by a previously grounded cell after calving) so the ocean sees
+!  open water rather than a phantom ice-shelf cavity.
+            rmask_isf(i,j)=0.0_r8
+            zice(i,j)=0.0_r8
           END IF
 #  if defined WET_DRY || defined MASKING
           rmask_isf(i,j)=rmask_isf(i,j)*rmask(i,j)
 #  endif
         END DO
       END DO
+#  endif
 # else
 !  Static ice shelf: use zice from grid file.
 !

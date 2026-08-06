@@ -15,7 +15,8 @@
 !  temperature (K), beta_p = 8.66e-4 K/m, R = 8.314 J/(mol K).
 !
 !  If A_glen > 0 in isf.in, use constant A directly to compute
-!  B^2 = A^(-1/n) (isothermal override for simplified tests like ISOMIP).
+!  B = A^(-1/n) (isothermal override for simplified tests like ISOMIP).
+!  Note: B_hardness is the Glen hardness B (= A^(-1/n)), NOT B^2.
 !
 !  Includes PISM robustness measures:
 !    - Additive nuH regularization (nuH += nuH_reg)
@@ -49,7 +50,7 @@
 !  ice temperature and thickness (pressure-adjusted T*).
 !
             IF (A_glen(ng).gt.0.0_r8) THEN
-              B_glen_sq=A_glen(ng)**(-1.0_r8/n_glen(ng))
+              B_hardness=A_glen(ng)**(-1.0_r8/n_glen(ng))
             ELSE
               T_star=Si(i,j,ksa_old,isItis)+273.15_r8+                  &
      &               8.66E-4_r8*0.5_r8*H_rho
@@ -59,7 +60,7 @@
               ELSE
                 A_pat=1.73E3_r8*EXP(-13.9E4_r8/RT_star)
               END IF
-              B_glen_sq=A_pat**(-1.0_r8/n_glen(ng))
+              B_hardness=A_pat**(-1.0_r8/n_glen(ng))
             END IF
 !
 !  Get 4 corner velocities (PSI points).
@@ -88,7 +89,10 @@
 !  Glen law effective viscosity.
 !    eps_e = sqrt(eps_xx^2 + eps_yy^2 + eps_xx*eps_yy + eps_xy^2
 !                + eps_glen_min^2)
-!    nuH = 0.5 * B^2 * eps_e^((1-n)/n) * H
+!    nuH = 0.5 * B * eps_e^((1-n)/(2n)) * H
+!  where B = A^(-1/n) is the Glen hardness.
+!  Note: exponent is (1-n)/(2n), the standard Glen law form
+!  (not (1-n)/n which is the STREAMICE convention for B_glen^2=A).
 !
             eps_e=SQRT(eps_xx*eps_xx+eps_yy*eps_yy+                      &
      &                 eps_xx*eps_yy+eps_xy*eps_xy+                      &
@@ -96,14 +100,11 @@
 !
             IF (H_rho.lt.min_thickness(ng)) THEN
 !
-!  PISM strength extension: constant nuH for thin ice to maintain
-!  ellipticity at the margin.
-!
-              nuH_rho(i,j)=0.5_r8*B_glen_sq*min_thickness(ng)*          &
-     &            eps_e**((1.0_r8-n_glen(ng))/n_glen(ng))
+              nuH_rho(i,j)=0.5_r8*B_hardness*min_thickness(ng)*          &
+     &            eps_e**((1.0_r8-n_glen(ng))/(2.0_r8*n_glen(ng)))
             ELSE
-              nuH_rho(i,j)=0.5_r8*B_glen_sq*                            &
-     &            eps_e**((1.0_r8-n_glen(ng))/n_glen(ng))*H_rho
+              nuH_rho(i,j)=0.5_r8*B_hardness*                            &
+     &            eps_e**((1.0_r8-n_glen(ng))/(2.0_r8*n_glen(ng)))*H_rho
             END IF
 !
 !  PISM additive regularization.

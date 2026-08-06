@@ -80,7 +80,7 @@
 !
       USE mod_param
       USE mod_scalars
-      USE mod_isf, ONLY : H_calve, rho_i
+      USE mod_isf, ONLY : H_calve
 !
       USE exchange_2d_mod
 # ifdef DISTRIBUTE
@@ -113,7 +113,6 @@
 !
       integer :: i, j
       logical :: is_front
-      real(r8) :: rho_w_local
 !
 # include "set_bounds.h"
 !
@@ -139,8 +138,6 @@
      &                    H_ice)
 # endif
 !
-      rho_w_local=REAL(rho0,r8)
-!
       DO j=JstrT,JendT
         DO i=IstrT,IendT
           IF (H_ice(i,j).gt.0.0_r8) THEN
@@ -158,10 +155,15 @@
 !
             IF (is_front.and.H_ice(i,j).lt.H_calve(ng)) THEN
               H_ice(i,j)=0.0_r8
-# ifdef WET_DRY
+!
+!  Update masks and zice so the ocean (set_depth.F, isf_vbc.F) stops
+!  seeing a phantom cavity where ice has calved away.  No WET_DRY guard:
+!  under ICESHEET_SSA the masks are recomputed from the flotation
+!  criterion anyway (isf_masks), and without it this keeps the ocean
+!  geometry consistent with the dynamic ice sheet.
+!
               rmask_isf(i,j)=0.0_r8
-              zice(i,j)=0.0_r8
-# endif
+              zice(i,j)=-h(i,j)
             END IF
           END IF
         END DO
@@ -173,29 +175,19 @@
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          H_ice)
-# ifdef WET_DRY
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          rmask_isf)
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          zice)
-# endif
       END IF
 # ifdef DISTRIBUTE
-#  ifdef WET_DRY
       CALL mp_exchange2d (ng, tile, model, 3,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    H_ice, rmask_isf, zice)
-#  else
-      CALL mp_exchange2d (ng, tile, model, 1,                           &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    NghostPoints,                                 &
-     &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    H_ice)
-#  endif
 # endif
 !
       RETURN

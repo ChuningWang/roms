@@ -191,8 +191,6 @@
 !
 !  Grounding line parameters
 !
-            CASE ('gl_smooth_width')
-              Npts=load_r(Nval, Rval, Ngrids, gl_smooth_width)
             CASE ('min_cavity_thickness')
               Npts=load_r(Nval, Rval, Ngrids, min_cavity_thickness)
 !
@@ -226,8 +224,29 @@
               Npts=load_i(Nval, Rval, Ngrids, N_thick)
             CASE ('N_gl')
               Npts=load_i(Nval, Rval, Ngrids, N_gl)
+!
+!  Surface mass balance parameters
+!
+            CASE ('smb_rate')
+              Npts=load_r(Nval, Rval, Ngrids, smb_rate)
+!
+!  Ice-ocean coupling parameters
+!
+            CASE ('tau_melt')
+              Npts=load_r(Nval, Rval, Ngrids, tau_melt)
+            CASE ('Cd_isf')
+              Npts=load_r(Nval, Rval, Ngrids, Cd_isf)
 #endif
 #ifdef ICESHELF_MOM
+!
+!  SSA geometry parameters (available under ICESHELF_MOM)
+!
+            CASE ('rho_w_ref')
+              Npts=load_r(Nval, Rval, Ngrids, rho_w_ref)
+            CASE ('max_thickness')
+              Npts=load_r(Nval, Rval, Ngrids, max_thickness)
+            CASE ('gl_float_width')
+              Npts=load_r(Nval, Rval, Ngrids, gl_float_width)
             CASE ('Hout(idIhis)')
               IF (idIhis.eq.0) THEN
                 IF (Master) WRITE (out,80) 'idIhis'
@@ -284,6 +303,28 @@
               END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Hout(idIeis,1:Ngrids)=Lswitch(1:Ngrids)
+!
+!  MMS testing parameters (only recognized when SSA_MMS_TESTING is
+!  compiled in; otherwise an unknown-keyword error is raised instead
+!  of silently accepting a never-used path)
+!
+# ifdef SSA_MMS_TESTING
+            CASE ('mms_source_file')
+              IF (Nval.eq.1) THEN
+                DO ng=1,Ngrids
+                  mms_source_file(ng)=Cval(1)
+                END DO
+              ELSE IF (Nval.eq.Ngrids) THEN
+                DO ng=1,Ngrids
+                  mms_source_file(ng)=Cval(ng)
+                END DO
+              ELSE
+                IF (Master) WRITE (out,90) Nval, 'mms_source_file'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=1
+# endif
 #endif
 #ifdef ICESHELF_THERMO
             CASE ('Hout(idImel)')
@@ -832,9 +873,8 @@
      &          'SSA minimum ice thickness [m].'
           WRITE (out,60) ssa_max_speed(ng), 'ssa_max_speed',              &
      &          'SSA velocity cap [m/s].'
-          WRITE (out,60) gl_smooth_width(ng), 'gl_smooth_width',          &
-     &          'Grounding line smoothing width [m].'
-          WRITE (out,60) min_cavity_thickness(ng), 'min_cavity_thickness', &
+          WRITE (out,60) min_cavity_thickness(ng),                      &
+     &          'min_cavity_thickness',                                  &
      &          'Minimum ice shelf cavity thickness [m].'
           WRITE (out,50) n_smooth(ng), 'n_smooth',                        &
      &          'Surface elevation smoothing iterations.'
@@ -852,6 +892,20 @@
      &          'Thickness update frequency [SSA steps].'
           WRITE (out,50) N_gl(ng), 'N_gl',                                &
      &          'Grounding line update frequency [SSA steps].'
+          WRITE (out,60) smb_rate(ng), 'smb_rate',                          &
+     &          'Surface mass balance rate [m/s ice equiv, +=accum].'
+          WRITE (out,60) tau_melt(ng), 'tau_melt',                        &
+     &          'Melt rate EMA filter timescale [s].'
+          WRITE (out,60) Cd_isf(ng), 'Cd_isf',                            &
+     &          'Ice-ocean quadratic drag coefficient [-].'
+#endif
+#ifdef ICESHELF_MOM
+          WRITE (out,60) rho_w_ref(ng), 'rho_w_ref',                      &
+     &          'Reference seawater density for flotation [kg/m3].'
+          WRITE (out,60) max_thickness(ng), 'max_thickness',              &
+     &          'Maximum ice thickness safety cap [m].'
+          WRITE (out,60) gl_float_width(ng), 'gl_float_width',            &
+     &          'Grounding line float_frac transition width [m].'
 #endif
 !
           IF (nHIS(ng).gt.0) THEN
@@ -878,6 +932,12 @@
             IF (Hout(idIeis,ng)) WRITE (out,70) Hout(idIeis,ng),        &
      &         'Hout(idIeis)',                                          &
      &         'Write out iceshelf enthalpy.'
+# ifdef SSA_MMS_TESTING
+          IF (LEN_TRIM(mms_source_file(ng)).gt.0) THEN
+            WRITE (out,'(12x,a,3x,a)') 'mms_source_file =',              &
+     &          TRIM(mms_source_file(ng))
+          END IF
+# endif
 #endif
 #ifdef ICESHELF_THERMO
             IF (Hout(idImel,ng)) WRITE (out,70) Hout(idImel,ng),        &
@@ -1187,6 +1247,8 @@
   60  FORMAT (1p,e11.4,2x,a,t32,a)
   70  FORMAT (10x,l1,2x,a,t32,a)
   80  FORMAT (/,' READ_IsfPar - variable index not yet loaded, ', a)
+  90  FORMAT (/,' READ_IsfPar - wrong number of values: ',i3,           &
+      &        ' for string parameter: ',a)
  180  FORMAT (10x,l1,2x,a,t32,a,i2.2,':',1x,a)
  185  FORMAT (10x,l1,2x,a,'(',i2.2,')',t32,a,i2.2,':',1x,a)
 !

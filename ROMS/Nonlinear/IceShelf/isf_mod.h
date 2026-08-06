@@ -127,7 +127,7 @@
       integer, parameter :: nIsfF_thermo = 0  ! thermo field variables
 #endif
 #if defined ICESHEET_SSA
-      integer, parameter :: nIsfF_ssa = 6    ! SSA diagnostic field variables
+      integer, parameter :: nIsfF_ssa = 7    ! SSA diagnostic field variables
 #else
       integer, parameter :: nIsfF_ssa = 0    ! SSA diagnostic field variables
 #endif
@@ -151,6 +151,7 @@
       integer, parameter :: icItdx = 13  ! Driving stress x-component
       integer, parameter :: icItdy = 14  ! Driving stress y-component
       integer, parameter :: icIbta = 15  ! Basal drag coefficient
+      integer, parameter :: icImef = 16  ! Filtered melt rate (EMA)
 #endif
 !
       integer :: isf_ic_brylast  ! Boundary layer salinity
@@ -236,7 +237,6 @@
 !
 !  Grounding line parameters
 !
-      real(r8), allocatable :: gl_smooth_width(:) ! grounding line smoothing width [m]
       real(r8), allocatable :: min_cavity_thickness(:) ! minimum cavity thickness [m]
 !
 !  Driving stress regularization parameters
@@ -261,6 +261,28 @@
       integer, allocatable :: N_ssa(:)            ! SSA solve frequency (ocean steps)
       integer, allocatable :: N_thick(:)          ! Thickness update frequency (SSA steps)
       integer, allocatable :: N_gl(:)             ! Grounding line update frequency
+!
+!  Surface mass balance parameters
+!
+      real(r8), allocatable :: smb_rate(:)          ! Uniform SMB rate [m/s ice equiv, +=accum]
+!
+!  Ice-ocean coupling parameters
+!
+      real(r8), allocatable :: tau_melt(:)        ! Melt rate EMA filter timescale [s]
+      real(r8), allocatable :: Cd_isf(:)          ! Ice-ocean quadratic drag coeff [-]
+#endif
+!
+!  SSA geometry parameters (available under ICESHELF_MOM so that
+!  isf_mom.F can compute flotation criterion without ICESHEET_SSA).
+!
+#if defined ICESHELF_MOM
+      real(r8), allocatable :: rho_w_ref(:)       ! Reference seawater density for flotation [kg/m3]
+      real(r8), allocatable :: max_thickness(:)   ! Maximum ice thickness safety cap [m]
+      real(r8), allocatable :: gl_float_width(:)  ! Grounding line float_frac transition width [m]
+!
+!  MMS testing parameters
+!
+      character(len=256), allocatable :: mms_source_file(:) ! MMS source NetCDF file path
 #endif
 !
 !  Other constant parameters
@@ -576,11 +598,6 @@
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
           ssa_max_speed(1:Ngrids)=1.0e5_r8
         END IF
-        IF (.not.allocated(gl_smooth_width)) THEN
-          allocate ( gl_smooth_width(Ngrids) )
-          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          gl_smooth_width(1:Ngrids)=6000.0_r8
-        END IF
         IF (.not.allocated(min_cavity_thickness)) THEN
           allocate ( min_cavity_thickness(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
@@ -626,6 +643,50 @@
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
           N_gl(1:Ngrids)=1
         END IF
+        IF (.not.allocated(smb_rate)) THEN
+          allocate ( smb_rate(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          smb_rate(1:Ngrids)=0.0_r8
+        END IF
+        IF (.not.allocated(tau_melt)) THEN
+          allocate ( tau_melt(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          tau_melt(1:Ngrids)=86400.0_r8
+        END IF
+        IF (.not.allocated(Cd_isf)) THEN
+          allocate ( Cd_isf(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          Cd_isf(1:Ngrids)=5.0E-3_r8
+        END IF
+#endif
+!
+!  SSA geometry parameters (allocated under ICESHELF_MOM so that
+!  isf_mom.F can compute flotation criterion without ICESHEET_SSA).
+!
+#if defined ICESHELF_MOM
+        IF (.not.allocated(rho_w_ref)) THEN
+          allocate ( rho_w_ref(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          rho_w_ref(1:Ngrids)=1025.0_r8
+        END IF
+        IF (.not.allocated(max_thickness)) THEN
+          allocate ( max_thickness(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          max_thickness(1:Ngrids)=5000.0_r8
+        END IF
+        IF (.not.allocated(gl_float_width)) THEN
+          allocate ( gl_float_width(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          gl_float_width(1:Ngrids)=1000.0_r8
+        END IF
+!
+!  MMS testing parameters
+!
+        IF (.not.allocated(mms_source_file)) THEN
+          allocate ( mms_source_file(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          mms_source_file(1:Ngrids)=' '
+        END IF
 #endif
 
       ELSE
@@ -644,6 +705,14 @@
 !
         allocate ( ISF(ng) % Fi(LBi:UBi,LBj:UBj,nIsfF) )
         Dmem(ng)=Dmem(ng)+REAL(nIsfF,r8)*size2d
+!
+!  Initialize diagnostic fields to zero so that time-dependent fields
+!  with memory (e.g. icImef EMA state, icIust friction velocity) are
+!  well-defined on the first step of a cold start, before any routine
+!  has written them (isf_vbc clamps with MAX(min_ustar,...), which
+!  cannot recover from garbage values).
+!
+        ISF(ng) % Fi=0.0_r8
 !
         allocate ( ISF(ng) % Oi(LBi:UBi,LBj:UBj,N(ng),nIsfO) )
         Dmem(ng)=Dmem(ng)+REAL(N(ng)*nIsfO,r8)*size2d
@@ -956,7 +1025,6 @@
       IF (allocated(nuH_reg))        deallocate ( nuH_reg )
       IF (allocated(min_thickness))  deallocate ( min_thickness )
       IF (allocated(ssa_max_speed))   deallocate ( ssa_max_speed )
-      IF (allocated(gl_smooth_width)) deallocate ( gl_smooth_width )
       IF (allocated(min_cavity_thickness)) deallocate ( min_cavity_thickness )
       IF (allocated(n_smooth))         deallocate ( n_smooth )
       IF (allocated(n_taper))          deallocate ( n_taper )
@@ -966,6 +1034,16 @@
       IF (allocated(N_ssa))            deallocate ( N_ssa )
       IF (allocated(N_thick))          deallocate ( N_thick )
       IF (allocated(N_gl))             deallocate ( N_gl )
+      IF (allocated(smb_rate))           deallocate ( smb_rate )
+      IF (allocated(tau_melt))         deallocate ( tau_melt )
+      IF (allocated(Cd_isf))           deallocate ( Cd_isf )
+#endif
+!
+#if defined ICESHELF_MOM
+      IF (allocated(rho_w_ref))        deallocate ( rho_w_ref )
+      IF (allocated(max_thickness))   deallocate ( max_thickness )
+      IF (allocated(gl_float_width))  deallocate ( gl_float_width )
+      IF (allocated(mms_source_file))   deallocate ( mms_source_file )
 #endif
 !
       RETURN

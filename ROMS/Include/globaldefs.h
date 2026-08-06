@@ -827,13 +827,41 @@
 ** ICESHELF_MOM (SSA is the ice sheet momentum equation). The umbrella
 ** macro ICESHEET gates all ice-sheet-specific code (grounding line,
 ** calving, SMB).
+**
+** SSA_MMS_TESTING is a standalone testing macro: it activates the SSA
+** momentum solver (ICESHELF_MOM) and MMS source injection without
+** pulling in ICESHEET_SSA, which would also enable thickness advection,
+** calving, grounding line dynamics, and multi-timescale scheduling.
+** This keeps the MMS test configuration minimal and isolated from
+** unrelated ice-sheet physics.
 */
+#if defined SSA_MMS_TESTING
+# define ICESHELF_MOM
+#endif
 #if defined ICESHEET_SSA
 # define ICESHELF_MOM
 #endif
 #if defined ICESHEET_SSA || defined ICESHEET_GL || \
     defined ICESHEET_CALVING || defined ICESHEET_SMB
 # define ICESHEET
+#endif
+
+/*
+** OCEAN_FIXED is a user-settable switch (documented in cppdefs.h):
+** freeze the ocean and sea ice (read initial conditions, skip all
+** forward integration) while the ice shelf/ice sheet model keeps
+** stepping on the ocean time clock.  It is an independent switch with
+** no derived macros: main3d.F guards the ocean evolution segments
+** with #ifndef OCEAN_FIXED.
+*/
+
+/*
+** OCEAN_FIXED safety: requires at least one ice model to be active,
+** otherwise the time loop runs with neither ocean nor ice evolution
+** (NTIMES steps of no-op).  This catches misconfigured test cases.
+*/
+#if defined OCEAN_FIXED && !defined ICESHELF_DYNAM && !defined ICE_MODEL
+# error OCEAN_FIXED requires ICESHELF_DYNAM or ICE_MODEL to be active.
 #endif
 
 /*

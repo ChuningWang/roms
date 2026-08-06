@@ -135,19 +135,35 @@
                 Fy_top=v_yface(i,j+1)*MAX(H_above,0.0_r8)
               END IF
 !
-!  Thickness update: dH/dt = -div(uH) - melt.
+!  Thickness update: dH/dt = -div(uH) - melt + SMB.
 !  On a uniform grid: div(uH) ≈ (Fx_right - Fx_left)*pm
 !                              + (Fy_top - Fy_bottom)*pn
+!
+!  Melt rate source: use EMA-filtered melt (icImef) when the coupler
+!  is active (ICESHEET_SSA + ICESHELF_THERMO); otherwise use the
+!  instantaneous melt (icImel) from isf_vbc.  Without ICESHELF_THERMO
+!  the coupler is not compiled, so icImef is never written and would
+!  silently stay at zero -- icImel is the correct source in that case.
+!
+!  Surface mass balance (SMB): uniform rate smb_rate(ng) [m/s ice
+!  equivalent, positive = accumulation].  Applied everywhere ice
+!  exists (H > 0), both grounded and floating.
 !
               H_new(i,j)=H_old                                         &
      &          -dt_sub*((Fx_right-Fx_left)*pm(i,j)                   &
      &                  +(Fy_top-Fy_bottom)*pn(i,j))                  &
-     &          -dt_sub*Fi(i,j,icImel)
+# if defined ICESHEET_SSA && defined ICESHELF_THERMO
+     &          -dt_sub*Fi(i,j,icImef)                                &
+# else
+     &          -dt_sub*Fi(i,j,icImel)                                &
+# endif
+     &          +dt_sub*smb_rate(ng)
 !
 !  Positivity preservation and safety cap.
 !
               IF (H_new(i,j).lt.0.0_r8) H_new(i,j)=0.0_r8
-              IF (H_new(i,j).gt.2000.0_r8) H_new(i,j)=2000.0_r8
+              IF (H_new(i,j).gt.max_thickness(ng))                    &
+     &          H_new(i,j)=max_thickness(ng)
 !
             ELSE
               H_new(i,j)=0.0_r8

@@ -475,10 +475,12 @@
             END DO
 # endif
 
-# if defined ICE_MODEL
+# if defined ICE_MODEL && !defined OCEAN_FIXED
 !
 !-----------------------------------------------------------------------
 !  Timestep the ice model.
+!  Skipped under OCEAN_FIXED: the sea ice is frozen together with the
+!  ocean (both read from the initial conditions and not advanced).
 !-----------------------------------------------------------------------
 !
             CALL seaice (iNLM)
@@ -533,10 +535,12 @@
             END DO
 # endif
 !
+# ifndef OCEAN_FIXED
 !-----------------------------------------------------------------------
 !  Compute time-dependent vertical/horizontal mixing coefficients for
 !  momentum and tracers. Compute S-coordinate vertical velocity,
 !  diagnostically from horizontal mass divergence.
+!  Skipped under OCEAN_FIXED (no ocean time evolution).
 !-----------------------------------------------------------------------
 !
             DO ig=1,GridsInLayer(nl)
@@ -560,6 +564,7 @@
               END DO
 !$OMP BARRIER
             END DO
+# endif
 
 # if !(defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3) || \
        defined DIAGNOSTICS       || defined AVERAGES
@@ -643,8 +648,10 @@
             END DO
 # endif
 !
+# ifndef OCEAN_FIXED
 !-----------------------------------------------------------------------
 !  Compute right-hand-side terms for 3D equations.
+!  Skipped under OCEAN_FIXED (no ocean time evolution).
 !-----------------------------------------------------------------------
 !
             DO ig=1,GridsInLayer(nl)
@@ -659,6 +666,7 @@
               END DO
 !$OMP BARRIER
             END DO
+# endif
 
 # ifdef NESTING
 !
@@ -674,6 +682,7 @@
             END DO
 # endif
 
+# ifndef OCEAN_FIXED
 # ifdef STEP2D_FB_AB3_AM4
 !
 !-----------------------------------------------------------------------
@@ -940,6 +949,8 @@
 #  endif
 
 # endif
+# endif
+!  (OCEAN_FIXED: skip the 2D barotropic engine entirely)
 
 # ifdef NESTING
 #  if defined MASKING && defined WET_DRY
@@ -971,11 +982,13 @@
             END DO
 # endif
 
+# ifndef OCEAN_FIXED
 # if !(defined STEP2D_FB_AB3_AM4 || defined STEP2D_FB_LF_AM3)
 !
 !-----------------------------------------------------------------------
 !  Recompute depths and thicknesses using the new time filtered
 !  free-surface.
+!  Skipped under OCEAN_FIXED (no ocean time evolution).
 !-----------------------------------------------------------------------
 !
             DO ig=1,GridsInLayer(nl)
@@ -985,6 +998,7 @@
               END DO
 !$OMP BARRIER
             END DO
+# endif
 # endif
 
 # ifdef NESTING
@@ -997,9 +1011,11 @@
 !             CALL nesting (ng, iNLM, nzwgt)
             END DO
 # endif
+# ifndef OCEAN_FIXED
 !
 !-----------------------------------------------------------------------
 !  Time-step 3D momentum equations.
+!  Skipped under OCEAN_FIXED (no ocean time evolution).
 !-----------------------------------------------------------------------
 !
 !  Time-step 3D momentum equations and couple with vertically
@@ -1094,6 +1110,8 @@
             END DO
 #  endif
 # endif
+# endif
+!  (OCEAN_FIXED: 3D momentum and tracer time-stepping skipped)
 
 # ifdef NESTING
 #  ifndef ONE_WAY

@@ -1,14 +1,24 @@
 !  isf_driving_stress.h - SSA driving stress RHS computation.
 !
-!  Computes the nodal force vector for the SSA driving stress using
-!  finite differences on a smoothed surface elevation field:
+!  Computes the mass-lumped Q1 nodal force vector for the SSA driving
+!  stress using finite differences on a smoothed surface elevation:
 !
-!    b_k = -rho_i * g * H * dS/dx * (nodal area)
+!    b_k = -rho_i * g * H_psi * dS/dx * (jac/4)
 !
-!  where S is the smoothed surface elevation, H is ice thickness
-!  interpolated to PSI nodes, and nodal area = jac/4 (mass-lumped Q1).
+!  where S is the smoothed surface elevation, H_psi is ice thickness
+!  averaged to PSI nodes, and jac/4 is the mass-lumped nodal area
+!  (each Q1 node is shared by 4 elements).
 !
-!  The surface elevation S is smoothed (20 iterations of 5-point
+!  NOTE: This is NOT a full FE assembly (which would use 2x2 Gauss
+!  quadrature of N_k * f dA).  It uses a FD gradient multiplied by
+!  the lumped nodal area, which is mathematically consistent with
+!  mass-lumped Q1 but may not achieve full O(h^2) convergence for
+!  non-smooth surface gradients.  The CG stiffness matrix A uses true
+!  2x2 Gauss quadrature.  This mismatch should be verified in Stage 2.6
+!  MMS convergence tests; if convergence is sub-optimal, replace the
+!  FD gradient with a proper FE integral.
+!
+!  The surface elevation S is smoothed (n_smooth iterations of 5-point
 !  Laplacian) before gradient computation to regularize the grounding
 !  line "kink" (discontinuity in dS/dn between grounded S=-h+H and
 !  floating S=(1-rho_i/rho_w)*H surfaces).
@@ -25,7 +35,7 @@
 !  Reference: PISM compute_nuH_everywhere (slope regularization),
 !             STREAMICE streamice_driving_stress.F
 !
-!  Initialize FE-integrated nodal forces to zero.
+!  Initialize mass-lumped nodal forces to zero.
 !
       DO j=JstrP,JendP
         DO i=IstrP,IendP
@@ -63,8 +73,12 @@
      &                     NghostPoints,EWperiodic(ng),NSperiodic(ng),  &
      &                     zs_smooth)
 # endif
-        DO j=Jstr-1,Jend+1
-          DO i=Istr-1,Iend+1
+!  Smooth only interior points (Jstr:Jend, Istr:Iend).  The 5-point
+!  neighbours are read from the exchanged halo, so the loop must NOT
+!  write zs_smooth(Istr-1..) which would underflow the global bounds
+!  (LBi:UBi) and corrupt memory on MPI decompositions.
+        DO j=Jstr,Jend
+          DO i=Istr,Iend
             IF (Si(i,j,ksa_old,isIhis).gt.0.0_r8) THEN
               zs_sum=zs_smooth(i,j)
               n_ice=1
@@ -205,7 +219,7 @@
      &                   taudx_psi,taudy_psi)
 # endif
 !
-!  Store FE-integrated driving force to diagnostic output fields.
+!  Store mass-lumped driving force to diagnostic output fields.
 !
       DO j=JstrT,JendT
         DO i=IstrT,IendT

@@ -73,7 +73,7 @@
 # ifdef PROFILE
       CALL wclock_on (ng, model, 42, __LINE__, MyFile)
 # endif
-      CALL isf_vbc_tile (ng, tile,                                      &
+      CALL isf_vbc_tile (ng, tile, model,                               &
      &                   LBi, UBi, LBj, UBj,                            &
      &                   IminS, ImaxS, JminS, JmaxS,                    &
      &                   nrhs(ng),                                      &
@@ -99,7 +99,7 @@
       END SUBROUTINE isf_vbc
 !
 !***********************************************************************
-      SUBROUTINE isf_vbc_tile (ng, tile,                                &
+      SUBROUTINE isf_vbc_tile (ng, tile, model,                         &
      &                         LBi, UBi, LBj, UBj,                      &
      &                         IminS, ImaxS, JminS, JmaxS,              &
      &                         nrhs,                                    &
@@ -120,13 +120,14 @@
       USE mod_isf
 !
       USE bc_2d_mod
+      USE exchange_2d_mod
 # ifdef DISTRIBUTE
       USE mp_exchange_mod, ONLY : mp_exchange2d
 # endif
 !
 !  Imported variable declarations.
 !
-      integer, intent(in) :: ng, tile
+      integer, intent(in) :: ng, tile, model
       integer, intent(in) :: LBi, UBi, LBj, UBj
       integer, intent(in) :: IminS, ImaxS, JminS, JmaxS
       integer, intent(in) :: nrhs
@@ -168,7 +169,7 @@
 !
       integer :: i, j, k, ic, itrc
       real(r8) :: Pradj, Scadj, cp_i
-      real(r8) :: Sm, Tm, TFb, turb, rhoi_on_rho0, ct
+      real(r8) :: Sm, Tm, turb, ct
       real(r8) :: Tm_theta, tracer_amb
       real(r8) :: cff, cff1, cff2, cff3
 # include "set_bounds.h"
@@ -185,7 +186,6 @@
       Pradj        = 12.5_r8*(Pr**(2.0_r8/3.0_r8))
       Scadj        = 12.5_r8*(Sc**(2.0_r8/3.0_r8))
       cp_i         = 152.5_r8+7.122_r8*(273.15_r8+Tis)
-      rhoi_on_rho0 = rho_i/rho0
 !
 # endif
       DO j=Jstr,Jend
@@ -264,10 +264,19 @@
 !
 !  Calculate exchange coefficients. Note that this assumes log profile.
 !
+#  ifdef ICESHEET_SSA
+!  Under dynamic ice sheet, u* is pre-computed by isf_coupler from
+!  ice-ocean relative velocity: u* = sqrt(Cd)*|u_ice - u_ocean|.
+!  The coupler runs after isf_vbc each step, so Fi(icIust) holds
+!  the previous step's value (one-step lag, negligible for slow ice).
+!
+            Fi(i,j,icIust) = MAX(min_ustar(ng), Fi(i,j,icIust))
+#  else
             cff = gamU(ng)*SQRT(SQRT(                                   &
      &            (0.5_r8*(sustr(i,j)+sustr(i+1,j)))**2+                &
      &            (0.5_r8*(svstr(i,j)+svstr(i,j+1)))**2))
             Fi(i,j,icIust) = MAX(min_ustar(ng), cff)
+#  endif
 #  ifdef ICESHELF_GAMMAS_KY1972
 !
 !  Use KY 1972 algorithm
@@ -300,7 +309,7 @@
 !  Use 3-EQ formula
 !
             cff1 = a*(Fi(i,j,icIgat)*Cp-Fi(i,j,icIgas)*cp_i)
-            cff2 = Fi(i,j,icIgas)*cp_i*(a*sM-b+c*zice(i,j)+Tis -        &
+            cff2 = Fi(i,j,icIgas)*cp_i*(a*Sm-b+c*zice(i,j)+Tis -        &
      &                                  (L/cp_i)) -                     &
      &             Fi(i,j,icIgat)*Cp*(Tm-b+c*zice(i,j)+a*Sis)
             cff3 = Fi(i,j,icIgas)*Sm*(cp_i*(b-c*zice(i,j)-Tis) + L) +   &
@@ -421,6 +430,25 @@
           END IF
         END DO
       END IF
+!
+!  Exchange halo for stflx (defensive: ensures tile-boundary values are
+!  consistent for any future consumer that reads stflx at halo points).
+!
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+        DO itrc=1,NT(ng)
+          CALL exchange_r2d_tile (ng, tile, LBi, UBi, LBj, UBj,           &
+     &                            stflx(:,:,itrc))
+        END DO
+      END IF
+# ifdef DISTRIBUTE
+      DO itrc=1,NT(ng)
+        CALL mp_exchange2d (ng, tile, model, 1,                         &
+     &                      LBi, UBi, LBj, UBj,                           &
+     &                      NghostPoints,                                 &
+     &                      EWperiodic(ng), NSperiodic(ng),               &
+     &                      stflx(:,:,itrc))
+      END DO
+# endif
 !
       RETURN
       END SUBROUTINE isf_vbc_tile
