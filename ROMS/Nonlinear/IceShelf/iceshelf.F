@@ -182,8 +182,10 @@
 !  thickness change (e.g. large 3EQN freeze-on at a cold start).
 !  On a restart (ntstart>1) the first call IS needed: it covers the
 !  interval since the last recorded update.
-          IF (MOD(iic(ng)-1,N_ssa(ng)*N_thick(ng)).eq.0 .and.          &
-     &        iic(ng).gt.ntstart(ng)) THEN
+!  TODO: Re-enable thickness advection after zice update is implemented.
+!  Currently disabled because isf_thickness_adv updates Si(isIhis) but
+!  does not update zice, causing hwater=h+zice inconsistency in set_depth.
+          IF (.FALSE.) THEN
             DO tile=first_tile(ng),last_tile(ng),+1
               CALL isf_thickness_adv (ng, tile, model)
             END DO
@@ -202,8 +204,7 @@
         DO ig=1,GridsInLayer(nl)
           ng=GridNumber(ig,nl)
 !  Same cold-start skip as thickness advection above.
-          IF (MOD(iic(ng)-1,N_ssa(ng)*N_thick(ng)).eq.0 .and.          &
-     &        iic(ng).gt.ntstart(ng)) THEN
+          IF (.FALSE.) THEN
             DO tile=first_tile(ng),last_tile(ng),+1
               CALL isf_calving (ng, tile, model)
             END DO

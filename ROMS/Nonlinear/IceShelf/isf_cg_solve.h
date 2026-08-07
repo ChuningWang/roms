@@ -708,6 +708,13 @@
           IF (ABS(dot_dad).lt.eps) EXIT
           alpha=dot_zr_old/dot_dad
 !
+          IF (alpha.ne.alpha.or.alpha.gt.1.0e30_r8) THEN
+            IF (Master) WRITE(stdout,'(a,i3,3e12.4)')                      &
+     &        ' SSA CG NaN: iter=',cg_iter,' dot_dad=',dot_dad,            &
+     &        ' dot_zr_old=',dot_zr_old
+            EXIT
+          END IF
+!
 !  Update solution, residual, and preconditioned residual.
 !
           dot_zr=0.0_r8
@@ -793,9 +800,10 @@
         END DO  ! cg_iter
 !
 !  Exchange halo for solution.
+!  Copy full range (including halo) to scratch, exchange, copy back.
 !
-        DO j=JstrP,JendP
-          DO i=IstrP,IendP
+        DO j=LBj,UBj
+          DO i=LBi,UBi
             u_scr(i,j)=Si(i,j,ksa_new,isIuis)
             v_scr(i,j)=Si(i,j,ksa_new,isIvis)
           END DO
@@ -809,8 +817,8 @@
      &                     NghostPoints,EWperiodic(ng),NSperiodic(ng),     &
      &                     u_scr,v_scr)
 # endif
-        DO j=JstrP,JendP
-          DO i=IstrP,IendP
+        DO j=LBj,UBj
+          DO i=LBi,UBi
             Si(i,j,ksa_new,isIuis)=u_scr(i,j)
             Si(i,j,ksa_new,isIvis)=v_scr(i,j)
           END DO
@@ -1048,6 +1056,22 @@
         END DO
 !
       END DO  ! nl_iter (Picard)
+!
+!  NaN check on SSA solution.
+!
+        DO j=JstrP,JendP
+          DO i=IstrP,IendP
+            IF (pmask_ssa(i,j).eq.1.0_r8) THEN
+              IF (Si(i,j,ksa_new,isIuis).ne.Si(i,j,ksa_new,isIuis).or.   &
+     &            Si(i,j,ksa_new,isIvis).ne.Si(i,j,ksa_new,isIvis)) THEN
+                IF (Master) WRITE(stdout,'(a,2i4)')                       &
+     &            ' SSA NaN at PSI node:',i,j
+                Si(i,j,ksa_new,isIuis)=0.0_r8
+                Si(i,j,ksa_new,isIvis)=0.0_r8
+              END IF
+            END IF
+          END DO
+        END DO
 !
 !  Post-Picard cleanup has been moved to isf_mom.F: thin-margin nodes
 !  are now deactivated (pmask_ssa=0) BEFORE the Picard solve, making

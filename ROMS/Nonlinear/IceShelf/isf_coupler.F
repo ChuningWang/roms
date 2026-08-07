@@ -186,9 +186,15 @@
      &                  v(i  ,j+1,N(ng),nrhs))
             spd=SQRT(du*du+dv*dv)
 !
-!  Kinematic stress (divided by rho0): tau/rho0 = Cd_isf*|du|*du.
+!  NaN guard: if ice velocity or ocean velocity produces NaN
+!  (e.g. from uninitialized halo at MPI tile boundary), set
+!  stress to zero to prevent corruption of the ocean solution.
 !
-            sustr(i,j)=Cd_isf(ng)*spd*du
+            IF (spd.ne.spd) THEN
+              sustr(i,j)=0.0_r8
+            ELSE
+              sustr(i,j)=Cd_isf(ng)*spd*du
+            END IF
           ELSE
 !  Outside ice shelf cavity: zero stress so migrating grounding lines
 !  do not leave stale drag values on newly-exposed ocean cells.
