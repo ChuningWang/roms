@@ -1724,8 +1724,8 @@
       nLBCvar=nLBCvar+1            ! TKE
 # endif
 #endif
-#ifdef ICESHELF_MOM
-      nLBCvar=nLBCvar+4            ! ISF varibles up to isItis=4
+#ifdef ICESHEET
+      nLBCvar=nLBCvar+4            ! ISF varibles up to isIeis=4
 #endif
 #ifdef ICE_MODEL
       nLBCvar=nLBCvar+11           ! ICE varibles up to isVice=11

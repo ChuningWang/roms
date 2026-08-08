@@ -1102,10 +1102,10 @@
               IF ((model.eq.iNLM).and.                                  &
                   ((S(ng)%ncid.eq.HIS(ng)%ncid).or.                     &
      &             (S(ng)%ncid.eq.QCK(ng)%ncid))) THEN
-                isfField2d => ISF(ng) % Tamb(LBi:UBi,LBj:UBj,ic)
+                isfField2d => ISF(ng) % Ai(LBi:UBi,LBj:UBj,ic)
 #  ifdef AVERAGES
               ELSE IF (S(ng)%ncid.eq.AVG(ng)%ncid) THEN
-                isfField2d => ISF_TambAVG(itrc,ng) % var(LBi:UBi,LBj:UBj)
+                isfField2d => ISF_AAVG(itrc,ng) % var(LBi:UBi,LBj:UBj)
 #  endif
               END IF
 !
@@ -1706,7 +1706,7 @@
               scale=1.0_dp
               CALL extract_sta2d (ng, model, Cgrid, ifield, r2dvar,     &
      &                            LBi, UBi, LBj, UBj,                   &
-     &                            scale, ISF(ng)%Tamb(:,:,ic),          &
+     &                            scale, ISF(ng)%Ai(:,:,ic),            &
      &                            Nstation(ng), Xpos, Ypos, psta)
 !
               CALL netcdf_put_fvar (ng, model, S(ng)%name,              &
@@ -2910,10 +2910,10 @@
               IF ((model.eq.iNLM).and.                                  &
      &            ((FileH.eq.ABS(HIS(ng)%pioFile%fh)).or.               &
      &             (FileH.eq.ABS(QCK(ng)%pioFile%fh)))) THEN
-                isfField2d => ISF(ng) % Tamb(LBi:UBi,LBj:UBj,ic)
+                isfField2d => ISF(ng) % Ai(LBi:UBi,LBj:UBj,ic)
 #   ifdef AVERAGES
               ELSE IF (FileH.eq.ABS(AVG(ng)%pioFile%fh)) THEN
-                isfField2d => ISF_TambAVG(itrc,ng) % var(LBi:UBi,LBj:UBj)
+                isfField2d => ISF_AAVG(itrc,ng) % var(LBi:UBi,LBj:UBj)
 #   endif
               END IF
 !
@@ -3543,7 +3543,7 @@
               scale=1.0_dp
               CALL extract_sta2d (ng, model, Cgrid, ifield, r2dvar,     &
      &                            LBi, UBi, LBj, UBj,                   &
-     &                            scale, ISF(ng)%Tamb(:,:,ic),          &
+     &                            scale, ISF(ng)%Ai(:,:,ic),            &
      &                            Nstation(ng), Xpos, Ypos, psta)
 !
               CALL pio_netcdf_put_fvar (ng, model, S(ng)%name,          &

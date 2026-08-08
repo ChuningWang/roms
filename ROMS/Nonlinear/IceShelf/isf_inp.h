@@ -82,7 +82,7 @@
         status=decode_line(line, KeyWord, Nval, Cval, Rval)
         IF (status.gt.0) THEN
           SELECT CASE (TRIM(KeyWord))
-#ifdef ICESHELF_MOM
+#ifdef ICESHEET
             CASE ('LBC(isIhis)')
               soff = isf_ic_brylast + isIhis
               Npts=load_lbc(Nval, Cval, line, nline, soff, igrid,       &
@@ -153,7 +153,7 @@
               END DO
 # endif
 #endif
-#ifdef ICESHEET_SSA
+#ifdef ICESHEET
 !
 !  SSA physical parameters
 !
@@ -188,11 +188,6 @@
               Npts=load_r(Nval, Rval, Ngrids, min_thickness)
             CASE ('ssa_max_speed')
               Npts=load_r(Nval, Rval, Ngrids, ssa_max_speed)
-!
-!  Grounding line parameters
-!
-            CASE ('min_cavity_thickness')
-              Npts=load_r(Nval, Rval, Ngrids, min_cavity_thickness)
 !
 !  Driving stress regularization parameters
 !
@@ -236,17 +231,35 @@
               Npts=load_r(Nval, Rval, Ngrids, tau_melt)
             CASE ('Cd_isf')
               Npts=load_r(Nval, Rval, Ngrids, Cd_isf)
-#endif
-#ifdef ICESHELF_MOM
 !
-!  SSA geometry parameters (available under ICESHELF_MOM)
+!  SSA geometry parameters (available under ICESHEET)
 !
-            CASE ('rho_w_ref')
-              Npts=load_r(Nval, Rval, Ngrids, rho_w_ref)
-            CASE ('max_thickness')
-              Npts=load_r(Nval, Rval, Ngrids, max_thickness)
             CASE ('gl_float_width')
               Npts=load_r(Nval, Rval, Ngrids, gl_float_width)
+# ifdef SSA_MMS_TESTING
+!
+!  MMS testing parameters (only recognized when SSA_MMS_TESTING is
+!  compiled in; otherwise an unknown-keyword error is raised instead
+!  of silently accepting a never-used path)
+!
+            CASE ('mms_source_file')
+              IF (Nval.eq.1) THEN
+                DO ng=1,Ngrids
+                  mms_source_file(ng)=Cval(1)
+                END DO
+              ELSE IF (Nval.eq.Ngrids) THEN
+                DO ng=1,Ngrids
+                  mms_source_file(ng)=Cval(ng)
+                END DO
+              ELSE
+                IF (Master) WRITE (out,90) Nval, 'mms_source_file'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=1
+# endif
+#endif
+#ifdef ICESHEET
             CASE ('Hout(idIhis)')
               IF (idIhis.eq.0) THEN
                 IF (Master) WRITE (out,80) 'idIhis'
@@ -303,28 +316,54 @@
               END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Hout(idIeis,1:Ngrids)=Lswitch(1:Ngrids)
-!
-!  MMS testing parameters (only recognized when SSA_MMS_TESTING is
-!  compiled in; otherwise an unknown-keyword error is raised instead
-!  of silently accepting a never-used path)
-!
-# ifdef SSA_MMS_TESTING
-            CASE ('mms_source_file')
-              IF (Nval.eq.1) THEN
-                DO ng=1,Ngrids
-                  mms_source_file(ng)=Cval(1)
-                END DO
-              ELSE IF (Nval.eq.Ngrids) THEN
-                DO ng=1,Ngrids
-                  mms_source_file(ng)=Cval(ng)
-                END DO
-              ELSE
-                IF (Master) WRITE (out,90) Nval, 'mms_source_file'
+            CASE ('Hout(idIzsf)')
+              IF (idIzsf.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIzsf'
                 exit_flag=5
                 RETURN
               END IF
-              Npts=1
-# endif
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(idIzsf,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Hout(idIzbd)')
+              IF (idIzbd.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIzbd'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(idIzbd,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Hout(idInuh)')
+              IF (idInuh.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idInuh'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(idInuh,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Hout(idItdx)')
+              IF (idItdx.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idItdx'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(idItdx,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Hout(idItdy)')
+              IF (idItdy.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idItdy'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(idItdy,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Hout(idIbta)')
+              IF (idIbta.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIbta'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(idIbta,1:Ngrids)=Lswitch(1:Ngrids)
 #endif
 #ifdef ICESHELF_THERMO
             CASE ('Hout(idImel)')
@@ -444,57 +483,7 @@
               END DO
 # endif
 #endif
-#ifdef ICESHEET_SSA
-            CASE ('Hout(idIzsf)')
-              IF (idIzsf.eq.0) THEN
-                IF (Master) WRITE (out,80) 'idIzsf'
-                exit_flag=5
-                RETURN
-              END IF
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Hout(idIzsf,1:Ngrids)=Lswitch(1:Ngrids)
-            CASE ('Hout(idIzbd)')
-              IF (idIzbd.eq.0) THEN
-                IF (Master) WRITE (out,80) 'idIzbd'
-                exit_flag=5
-                RETURN
-              END IF
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Hout(idIzbd,1:Ngrids)=Lswitch(1:Ngrids)
-            CASE ('Hout(idInuh)')
-              IF (idInuh.eq.0) THEN
-                IF (Master) WRITE (out,80) 'idInuh'
-                exit_flag=5
-                RETURN
-              END IF
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Hout(idInuh,1:Ngrids)=Lswitch(1:Ngrids)
-            CASE ('Hout(idItdx)')
-              IF (idItdx.eq.0) THEN
-                IF (Master) WRITE (out,80) 'idItdx'
-                exit_flag=5
-                RETURN
-              END IF
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Hout(idItdx,1:Ngrids)=Lswitch(1:Ngrids)
-            CASE ('Hout(idItdy)')
-              IF (idItdy.eq.0) THEN
-                IF (Master) WRITE (out,80) 'idItdy'
-                exit_flag=5
-                RETURN
-              END IF
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Hout(idItdy,1:Ngrids)=Lswitch(1:Ngrids)
-            CASE ('Hout(idIbta)')
-              IF (idIbta.eq.0) THEN
-                IF (Master) WRITE (out,80) 'idIbta'
-                exit_flag=5
-                RETURN
-              END IF
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Hout(idIbta,1:Ngrids)=Lswitch(1:Ngrids)
-#endif
-#ifdef ICESHELF_MOM
+#ifdef ICESHEET
             CASE ('Qout(idIhis)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idIhis,1:Ngrids)=Lswitch(1:Ngrids)
@@ -516,6 +505,24 @@
             CASE ('Qout(idIeis)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idIeis,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Qout(idIzsf)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Qout(idIzsf,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Qout(idIzbd)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Qout(idIzbd,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Qout(idInuh)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Qout(idInuh,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Qout(idItdx)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Qout(idItdx,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Qout(idItdy)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Qout(idItdy,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Qout(idIbta)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Qout(idIbta,1:Ngrids)=Lswitch(1:Ngrids)
 #endif
 #ifdef ICESHELF_THERMO
             CASE ('Qout(idImel)')
@@ -575,28 +582,8 @@
               END DO
 # endif
 #endif
-#ifdef ICESHEET_SSA
-            CASE ('Qout(idIzsf)')
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Qout(idIzsf,1:Ngrids)=Lswitch(1:Ngrids)
-            CASE ('Qout(idIzbd)')
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Qout(idIzbd,1:Ngrids)=Lswitch(1:Ngrids)
-            CASE ('Qout(idInuh)')
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Qout(idInuh,1:Ngrids)=Lswitch(1:Ngrids)
-            CASE ('Qout(idItdx)')
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Qout(idItdx,1:Ngrids)=Lswitch(1:Ngrids)
-            CASE ('Qout(idItdy)')
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Qout(idItdy,1:Ngrids)=Lswitch(1:Ngrids)
-            CASE ('Qout(idIbta)')
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Qout(idIbta,1:Ngrids)=Lswitch(1:Ngrids)
-#endif
 #ifdef AVERAGES
-# ifdef ICESHELF_MOM
+# ifdef ICESHEET
             CASE ('Aout(idIhis)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idIhis,1:Ngrids)=Lswitch(1:Ngrids)
@@ -618,6 +605,24 @@
             CASE ('Aout(idIeis)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idIeis,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Aout(idIzsf)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Aout(idIzsf,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Aout(idIzbd)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Aout(idIzbd,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Aout(idInuh)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Aout(idInuh,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Aout(idItdx)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Aout(idItdx,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Aout(idItdy)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Aout(idItdy,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Aout(idIbta)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Aout(idIbta,1:Ngrids)=Lswitch(1:Ngrids)
 # endif
 # ifdef ICESHELF_THERMO
             CASE ('Aout(idImel)')
@@ -678,28 +683,8 @@
 #  endif
 # endif
 #endif
-#ifdef ICESHEET_SSA
-            CASE ('Aout(idIzsf)')
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Aout(idIzsf,1:Ngrids)=Lswitch(1:Ngrids)
-            CASE ('Aout(idIzbd)')
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Aout(idIzbd,1:Ngrids)=Lswitch(1:Ngrids)
-            CASE ('Aout(idInuh)')
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Aout(idInuh,1:Ngrids)=Lswitch(1:Ngrids)
-            CASE ('Aout(idItdx)')
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Aout(idItdx,1:Ngrids)=Lswitch(1:Ngrids)
-            CASE ('Aout(idItdy)')
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Aout(idItdy,1:Ngrids)=Lswitch(1:Ngrids)
-            CASE ('Aout(idIbta)')
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Aout(idIbta,1:Ngrids)=Lswitch(1:Ngrids)
-#endif
 #ifdef STATIONS
-# ifdef ICESHELF_MOM
+# ifdef ICESHEET
             CASE ('Sout(idIhis)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idIhis,1:Ngrids)=Lswitch(1:Ngrids)
@@ -721,6 +706,24 @@
             CASE ('Sout(idIeis)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idIeis,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idIzsf)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idIzsf,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idIzbd)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idIzbd,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idInuh)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idInuh,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idItdx)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idItdx,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idItdy)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idItdy,1:Ngrids)=Lswitch(1:Ngrids)
+            CASE ('Sout(idIbta)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idIbta,1:Ngrids)=Lswitch(1:Ngrids)
 # endif
 # ifdef ICESHELF_THERMO
             CASE ('Sout(idImel)')
@@ -781,26 +784,6 @@
 #  endif
 # endif
 #endif
-#ifdef ICESHEET_SSA
-            CASE ('Sout(idIzsf)')
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Sout(idIzsf,1:Ngrids)=Lswitch(1:Ngrids)
-            CASE ('Sout(idIzbd)')
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Sout(idIzbd,1:Ngrids)=Lswitch(1:Ngrids)
-            CASE ('Sout(idInuh)')
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Sout(idInuh,1:Ngrids)=Lswitch(1:Ngrids)
-            CASE ('Sout(idItdx)')
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Sout(idItdx,1:Ngrids)=Lswitch(1:Ngrids)
-            CASE ('Sout(idItdy)')
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Sout(idItdy,1:Ngrids)=Lswitch(1:Ngrids)
-            CASE ('Sout(idIbta)')
-              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
-              Sout(idIbta,1:Ngrids)=Lswitch(1:Ngrids)
-#endif
           END SELECT
         END IF
       END DO
@@ -844,73 +827,70 @@
           END DO
 # endif
 #endif
-#ifdef ICESHEET_SSA
-          WRITE (out,60) n_glen(ng), 'n_glen',                            &
+#ifdef ICESHEET
+          WRITE (out,60) n_glen(ng), 'n_glen',                          &
      &          'SSA Glen flow law exponent.'
-          WRITE (out,60) A_glen(ng), 'A_glen',                            &
-     &          'SSA Glen rate factor (>0: const, <=0: Paterson) [Pa^-3 s^-1].'
-          WRITE (out,60) eps_glen_min(ng), 'eps_glen_min',                &
+          WRITE (out,60) A_glen(ng), 'A_glen',                          &
+     &          'SSA Glen rate factor [Pa^-3 s^-1].'
+          WRITE (out,60) eps_glen_min(ng), 'eps_glen_min',              &
      &          'SSA minimum strain rate regularization [1/s].'
-          WRITE (out,60) C_basal(ng), 'C_basal',                          &
+          WRITE (out,60) C_basal(ng), 'C_basal',                        &
      &          'SSA basal drag coefficient [Pa (s/m)^(1/m)].'
-          WRITE (out,60) n_basal(ng), 'n_basal',                          &
+          WRITE (out,60) n_basal(ng), 'n_basal',                        &
      &          'SSA basal sliding exponent.'
-          WRITE (out,60) eps_u_min(ng), 'eps_u_min',                      &
+          WRITE (out,60) eps_u_min(ng), 'eps_u_min',                    &
      &          'SSA minimum sliding velocity [m/s].'
-          WRITE (out,50) nl_max_iter(ng), 'nl_max_iter',                  &
+          WRITE (out,50) nl_max_iter(ng), 'nl_max_iter',                &
      &          'SSA max Picard iterations.'
-          WRITE (out,60) nl_tol(ng), 'nl_tol',                            &
+          WRITE (out,60) nl_tol(ng), 'nl_tol',                          &
      &          'SSA Picard relative tolerance.'
-          WRITE (out,60) nl_tol_fp(ng), 'nl_tol_fp',                      &
+          WRITE (out,60) nl_tol_fp(ng), 'nl_tol_fp',                    &
      &          'SSA Picard absolute velocity tolerance [m/s].'
-          WRITE (out,50) cg_max_iter(ng), 'cg_max_iter',                  &
+          WRITE (out,50) cg_max_iter(ng), 'cg_max_iter',                &
      &          'SSA max CG iterations.'
-          WRITE (out,60) cg_tol(ng), 'cg_tol',                            &
+          WRITE (out,60) cg_tol(ng), 'cg_tol',                          &
      &          'SSA CG relative tolerance.'
-          WRITE (out,60) nuH_reg(ng), 'nuH_reg',                          &
+          WRITE (out,60) nuH_reg(ng), 'nuH_reg',                        &
      &          'SSA nuH regularization [Pa s m].'
-          WRITE (out,60) min_thickness(ng), 'min_thickness',              &
+          WRITE (out,60) min_thickness(ng), 'min_thickness',            &
      &          'SSA minimum ice thickness [m].'
-          WRITE (out,60) ssa_max_speed(ng), 'ssa_max_speed',              &
+          WRITE (out,60) ssa_max_speed(ng), 'ssa_max_speed',            &
      &          'SSA velocity cap [m/s].'
-          WRITE (out,60) min_cavity_thickness(ng),                      &
-     &          'min_cavity_thickness',                                  &
-     &          'Minimum ice shelf cavity thickness [m].'
-          WRITE (out,50) n_smooth(ng), 'n_smooth',                        &
+          WRITE (out,50) n_smooth(ng), 'n_smooth',                      &
      &          'Surface elevation smoothing iterations.'
-          WRITE (out,50) n_taper(ng), 'n_taper',                          &
+          WRITE (out,50) n_taper(ng), 'n_taper',                        &
      &          'Ice margin taper width [cells].'
-          WRITE (out,60) picard_alpha(ng), 'picard_alpha',                &
+          WRITE (out,60) picard_alpha(ng), 'picard_alpha',              &
      &          'Picard relaxation factor (0 < alpha <= 1).'
-          WRITE (out,60) cfl_factor(ng), 'cfl_factor',                    &
+          WRITE (out,60) cfl_factor(ng), 'cfl_factor',                  &
      &          'Thickness advection CFL safety factor [-].'
-          WRITE (out,60) H_calve(ng), 'H_calve',                          &
+          WRITE (out,60) H_calve(ng), 'H_calve',                        &
      &          'Calving thickness threshold [m].'
-          WRITE (out,50) N_ssa(ng), 'N_ssa',                              &
+          WRITE (out,50) N_ssa(ng), 'N_ssa',                            &
      &          'SSA solve frequency [ocean steps].'
-          WRITE (out,50) N_thick(ng), 'N_thick',                          &
+          WRITE (out,50) N_thick(ng), 'N_thick',                        &
      &          'Thickness update frequency [SSA steps].'
-          WRITE (out,50) N_gl(ng), 'N_gl',                                &
+          WRITE (out,50) N_gl(ng), 'N_gl',                              &
      &          'Grounding line update frequency [SSA steps].'
-          WRITE (out,60) smb_rate(ng), 'smb_rate',                          &
+          WRITE (out,60) smb_rate(ng), 'smb_rate',                      &
      &          'Surface mass balance rate [m/s ice equiv, +=accum].'
-          WRITE (out,60) tau_melt(ng), 'tau_melt',                        &
+          WRITE (out,60) tau_melt(ng), 'tau_melt',                      &
      &          'Melt rate EMA filter timescale [s].'
-          WRITE (out,60) Cd_isf(ng), 'Cd_isf',                            &
+          WRITE (out,60) Cd_isf(ng), 'Cd_isf',                          &
      &          'Ice-ocean quadratic drag coefficient [-].'
-#endif
-#ifdef ICESHELF_MOM
-          WRITE (out,60) rho_w_ref(ng), 'rho_w_ref',                      &
-     &          'Reference seawater density for flotation [kg/m3].'
-          WRITE (out,60) max_thickness(ng), 'max_thickness',              &
-     &          'Maximum ice thickness safety cap [m].'
-          WRITE (out,60) gl_float_width(ng), 'gl_float_width',            &
+          WRITE (out,60) gl_float_width(ng), 'gl_float_width',          &
      &          'Grounding line float_frac transition width [m].'
+# ifdef SSA_MMS_TESTING
+          IF (LEN_TRIM(mms_source_file(ng)).gt.0) THEN
+            WRITE (out,'(12x,a,3x,a)') 'mms_source_file =',             &
+     &          TRIM(mms_source_file(ng))
+          END IF
+# endif
 #endif
 !
           IF (nHIS(ng).gt.0) THEN
             WRITE (out,'(1x)')
-#ifdef ICESHELF_MOM
+#ifdef ICESHEET
             IF (Hout(idIhis,ng)) WRITE (out,70) Hout(idIhis,ng),        &
      &         'Hout(idIhis)',                                          &
      &         'Write out iceshelf thickness.'
@@ -932,12 +912,24 @@
             IF (Hout(idIeis,ng)) WRITE (out,70) Hout(idIeis,ng),        &
      &         'Hout(idIeis)',                                          &
      &         'Write out iceshelf enthalpy.'
-# ifdef SSA_MMS_TESTING
-          IF (LEN_TRIM(mms_source_file(ng)).gt.0) THEN
-            WRITE (out,'(12x,a,3x,a)') 'mms_source_file =',              &
-     &          TRIM(mms_source_file(ng))
-          END IF
-# endif
+            IF (Hout(idIzsf,ng)) WRITE (out,70) Hout(idIzsf,ng),        &
+     &         'Hout(idIzsf)',                                          &
+     &         'Write out ice sheet surface elevation.'
+            IF (Hout(idIzbd,ng)) WRITE (out,70) Hout(idIzbd,ng),        &
+     &         'Hout(idIzbd)',                                          &
+     &         'Write out ice sheet bed elevation.'
+            IF (Hout(idInuh,ng)) WRITE (out,70) Hout(idInuh,ng),        &
+     &         'Hout(idInuh)',                                          &
+     &         'Write out depth-integrated ice effective viscosity.'
+            IF (Hout(idItdx,ng)) WRITE (out,70) Hout(idItdx,ng),        &
+     &         'Hout(idItdx)',                                          &
+     &         'Write out ice driving stress x-component.'
+            IF (Hout(idItdy,ng)) WRITE (out,70) Hout(idItdy,ng),        &
+     &         'Hout(idItdy)',                                          &
+     &         'Write out ice driving stress y-component.'
+            IF (Hout(idIbta,ng)) WRITE (out,70) Hout(idIbta,ng),        &
+     &         'Hout(idIbta)',                                          &
+     &         'Write out ice basal drag coefficient.'
 #endif
 #ifdef ICESHELF_THERMO
             IF (Hout(idImel,ng)) WRITE (out,70) Hout(idImel,ng),        &
@@ -985,7 +977,7 @@
 !
           IF (nQCK(ng).gt.0) THEN
             WRITE (out,'(1x)')
-#ifdef ICESHELF_MOM
+#ifdef ICESHEET
             IF (Qout(idIhis,ng)) WRITE (out,70) Qout(idIhis,ng),        &
      &         'Qout(idIhis)',                                          &
      &         'Write out iceshelf thickness.'
@@ -1030,6 +1022,24 @@
             IF (Qout(idIsbo,ng)) WRITE (out,70) Qout(idIsbo,ng),        &
      &         'Qout(idIsbo)',                                          &
      &         'Write out iceshelf laminar boundary layer salinity.'
+            IF (Qout(idIzsf,ng)) WRITE (out,70) Qout(idIzsf,ng),        &
+     &         'Qout(idIzsf)',                                          &
+     &         'Write out ice sheet surface elevation.'
+            IF (Qout(idIzbd,ng)) WRITE (out,70) Qout(idIzbd,ng),        &
+     &         'Qout(idIzbd)',                                          &
+     &         'Write out ice sheet bed elevation.'
+            IF (Qout(idInuh,ng)) WRITE (out,70) Qout(idInuh,ng),        &
+     &         'Qout(idInuh)',                                          &
+     &         'Write out depth-integrated ice effective viscosity.'
+            IF (Qout(idItdx,ng)) WRITE (out,70) Qout(idItdx,ng),        &
+     &         'Qout(idItdx)',                                          &
+     &         'Write out ice driving stress x-component.'
+            IF (Qout(idItdy,ng)) WRITE (out,70) Qout(idItdy,ng),        &
+     &         'Qout(idItdy)',                                          &
+     &         'Write out ice driving stress y-component.'
+            IF (Qout(idIbta,ng)) WRITE (out,70) Qout(idIbta,ng),        &
+     &         'Qout(idIbta)',                                          &
+     &         'Write out ice basal drag coefficient.'
 # ifdef T_PASSIVE
             IF (Qout(idIvol,ng)) WRITE (out,70) Qout(idIvol,ng),        &
      &         'Qout(idIvol)',                                          &
@@ -1055,7 +1065,7 @@
 !
           IF (nAVG(ng).gt.0) THEN
             WRITE (out,'(1x)')
-# ifdef ICESHELF_MOM
+# ifdef ICESHEET
             IF (Aout(idIhis,ng)) WRITE (out,70) Aout(idIhis,ng),        &
      &         'Aout(idIhis)',                                          &
      &         'Write out iceshelf thickness.'
@@ -1077,6 +1087,24 @@
             IF (Aout(idIeis,ng)) WRITE (out,70) Aout(idIeis,ng),        &
      &         'Aout(idIeis)',                                          &
      &         'Write out iceshelf enthalpy.'
+            IF (Aout(idIzsf,ng)) WRITE (out,70) Aout(idIzsf,ng),        &
+     &         'Aout(idIzsf)',                                          &
+     &         'Write out ice sheet surface elevation.'
+            IF (Aout(idIzbd,ng)) WRITE (out,70) Aout(idIzbd,ng),        &
+     &         'Aout(idIzbd)',                                          &
+     &         'Write out ice sheet bed elevation.'
+            IF (Aout(idInuh,ng)) WRITE (out,70) Aout(idInuh,ng),        &
+     &         'Aout(idInuh)',                                          &
+     &         'Write out depth-integrated ice effective viscosity.'
+            IF (Aout(idItdx,ng)) WRITE (out,70) Aout(idItdx,ng),        &
+     &         'Aout(idItdx)',                                          &
+     &         'Write out ice driving stress x-component.'
+            IF (Aout(idItdy,ng)) WRITE (out,70) Aout(idItdy,ng),        &
+     &         'Aout(idItdy)',                                          &
+     &         'Write out ice driving stress y-component.'
+            IF (Aout(idIbta,ng)) WRITE (out,70) Aout(idIbta,ng),        &
+     &         'Aout(idIbta)',                                          &
+     &         'Write out ice basal drag coefficient.'
 # endif
 # ifdef ICESHELF_THERMO
             IF (Aout(idImel,ng)) WRITE (out,70) Aout(idImel,ng),        &
@@ -1125,7 +1153,7 @@
 #ifdef STATIONS
           IF (Lstations(ng).and.nSTA(ng).gt.0) THEN
             WRITE (out,'(1x)')
-# ifdef ICESHELF_MOM
+# ifdef ICESHEET
             IF (Sout(idIhis,ng)) WRITE (out,70) Sout(idIhis,ng),        &
      &         'Sout(idIhis)',                                          &
      &         'Write out iceshelf thickness.'
@@ -1147,6 +1175,24 @@
             IF (Sout(idIeis,ng)) WRITE (out,70) Sout(idIeis,ng),        &
      &         'Sout(idIeis)',                                          &
      &         'Write out iceshelf enthalpy.'
+            IF (Sout(idIzsf,ng)) WRITE (out,70) Sout(idIzsf,ng),        &
+     &         'Sout(idIzsf)',                                          &
+     &         'Write out ice sheet surface elevation.'
+            IF (Sout(idIzbd,ng)) WRITE (out,70) Sout(idIzbd,ng),        &
+     &         'Sout(idIzbd)',                                          &
+     &         'Write out ice sheet bed elevation.'
+            IF (Sout(idInuh,ng)) WRITE (out,70) Sout(idInuh,ng),        &
+     &         'Sout(idInuh)',                                          &
+     &         'Write out depth-integrated ice effective viscosity.'
+            IF (Sout(idItdx,ng)) WRITE (out,70) Sout(idItdx,ng),        &
+     &         'Sout(idItdx)',                                          &
+     &         'Write out ice driving stress x-component.'
+            IF (Sout(idItdy,ng)) WRITE (out,70) Sout(idItdy,ng),        &
+     &         'Sout(idItdy)',                                          &
+     &         'Write out ice driving stress y-component.'
+            IF (Sout(idIbta,ng)) WRITE (out,70) Sout(idIbta,ng),        &
+     &         'Sout(idIbta)',                                          &
+     &         'Write out ice basal drag coefficient.'
 # endif
 # ifdef ICESHELF_THERMO
             IF (Sout(idImel,ng)) WRITE (out,70) Sout(idImel,ng),        &
@@ -1223,6 +1269,10 @@
       END DO
 # ifdef T_PASSIVE
 !
+      LisfVavg=.FALSE.
+      LisfTavg=.FALSE.
+      LisfAavg=.FALSE.
+!
       DO ng=1,Ngrids
         IF (Aout(idIvol,ng)) THEN
           LisfVavg(ng)=.TRUE.
@@ -1233,7 +1283,7 @@
             LisfTavg(itrc,ng)=.TRUE.
           END IF
           IF (Aout(idIamb(itrc),ng)) THEN
-            LisfTambavg(itrc,ng)=.TRUE.
+            LisfAavg(itrc,ng)=.TRUE.
           END IF
         END DO
       END DO

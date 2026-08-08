@@ -14,7 +14,7 @@
 !  properties.                                                         !
 !                                                                      !
 !  Variables:                                                          !
-#ifdef ICESHELF_MOM
+#ifdef ICESHEET
 !                                                                      !
 !  The iceshelf model prognostic 'state' variable are declares in      !
 !  compact form in the derived-type structure as:                      !
@@ -66,11 +66,35 @@
 !  Iceshelf model identification indices.
 !-----------------------------------------------------------------------
 !
+#ifdef ICESHEET
       integer :: idIhis       ! Iceshelf thickness
       integer :: idIuis       ! Iceshelf u-velocity
       integer :: idIvis       ! Iceshelf v-velocity
-      integer :: idIuer       ! iceshelf eastward velocity
-      integer :: idIvnr       ! iceshelf northward velocity
+      integer :: idItis       ! Iceshelf temperature
+      integer :: idIeis       ! Iceshelf enthalpy
+!
+      integer, parameter :: nIsfS = 5    ! number of state variables
+!
+      integer, parameter :: isIhis =  1  ! Iceshelf thickness
+      integer, parameter :: isIuis =  2  ! Iceshelf u-velocity
+      integer, parameter :: isIvis =  3  ! Iceshelf v-velocity
+      integer, parameter :: isItis =  4  ! Iceshelf temperature
+      integer, parameter :: isIeis =  5  ! Iceshelf enthalpy
+#else
+      integer, parameter :: nIsfS = 0    ! number of ice state variables
+#endif
+!
+!  Ice model state prognostic variables indices.
+!
+      integer :: iSisf(nIsfS)            ! state I/O indices
+!
+!  Iceshelf model state lateral boundary conditions indices.
+!
+      integer :: ibISF(nIsfS)            ! indices to LBC switch
+      integer :: isfOBC(4,nIsfS)         ! I/O metadata indices
+!
+#ifdef ICESHELF_THERMO
+!
       integer :: idItis       ! Iceshelf temperature
       integer :: idIeis       ! Iceshelf enthalpy
       integer :: idImel       ! Iceshelf melt rate
@@ -84,56 +108,7 @@
       integer :: idIsba       ! Ambient boundary layer salinity
       integer :: idIsbl       ! SBL vertical weight (for restart)
 !
-#if defined ICESHEET_SSA
-      integer :: idIzsf       ! Ice sheet surface elevation
-      integer :: idIzbd       ! Ice sheet bed elevation
-      integer :: idInuh       ! Depth-integrated effective viscosity
-      integer :: idItdx       ! Driving stress x-component
-      integer :: idItdy       ! Driving stress y-component
-      integer :: idIbta       ! Basal drag coefficient
-#endif
-!
-      integer              :: idIvol     ! Volume of refreezed water
-      integer, allocatable :: idItrc(:)  ! Tracer variables
-      integer, allocatable :: idIamb(:)  ! Ambient tracer variables
-!
-!  Ice model state prognostic variables indices.
-!
-#ifdef ICESHELF_MOM
-      integer, parameter :: nIsfS = 5    ! number of ice state variables
-#else
-      integer, parameter :: nIsfS = 0    ! number of ice state variables
-#endif
-!
-      integer :: iSisf(nIsfS)            ! state I/O indices
-!
-      integer, parameter :: isIhis =  1  ! Iceshelf thickness
-      integer, parameter :: isIuis =  2  ! Iceshelf u-velocity
-      integer, parameter :: isIvis =  3  ! Iceshelf v-velocity
-      integer, parameter :: isItis =  4  ! Iceshelf temperature
-      integer, parameter :: isIeis =  5  ! Iceshelf enthalpy
-
-#ifdef ICESHELF_MOM
-!
-!  Iceshelf model state lateral boundary conditions indices.
-!
-      integer :: ibISF(nIsfS)            ! indices to LBC switch
-      integer :: isfOBC(4,nIsfS)         ! I/O metadata indices
-#endif
-!
-#if defined ICESHELF_THERMO
       integer, parameter :: nIsfF_thermo = 9  ! thermo field variables
-#else
-      integer, parameter :: nIsfF_thermo = 0  ! thermo field variables
-#endif
-#if defined ICESHEET_SSA
-      integer, parameter :: nIsfF_ssa = 7    ! SSA diagnostic field variables
-#else
-      integer, parameter :: nIsfF_ssa = 0    ! SSA diagnostic field variables
-#endif
-      integer, parameter :: nIsfF = nIsfF_thermo + nIsfF_ssa
-!
-      integer :: iFisf(nIsfF)            ! internal fields I/O indices
 !
       integer, parameter :: icImel =  1  ! Iceshelf melt rate
       integer, parameter :: icIgat =  2  ! gammaT
@@ -144,32 +119,67 @@
       integer, parameter :: icIsbo =  7  ! Boundary layer salinity
       integer, parameter :: icItba =  8  ! Ambient T in boundary layer
       integer, parameter :: icIsba =  9  ! Ambient S in boundary layer
-#if defined ICESHEET_SSA
-      integer, parameter :: icIzsf = 10  ! Ice sheet surface elevation
-      integer, parameter :: icIzbd = 11  ! Ice sheet bed elevation
-      integer, parameter :: icInuh = 12  ! Depth-integrated effective viscosity
-      integer, parameter :: icItdx = 13  ! Driving stress x-component
-      integer, parameter :: icItdy = 14  ! Driving stress y-component
-      integer, parameter :: icIbta = 15  ! Basal drag coefficient
-      integer, parameter :: icImef = 16  ! Filtered melt rate (EMA)
-#endif
-!
-      integer :: isf_ic_brylast  ! Boundary layer salinity
 !
 !  Iceshelf model ocean variable indices (SBL vertical weights).
 !  Oi(i,j,k,ioHsbl) stores the fraction of ice shelf basal flux
 !  assigned to vertical layer k within the sub-boundary layer.
 !
       integer, parameter :: nIsfO = 1    ! number of ocean variables
+!
       integer, parameter :: ioHsbl = 1   ! SBL vertical weight
+#else
+!
+      integer, parameter :: nIsfF_thermo = 0  ! thermo field variables
+#endif
+#ifdef ICESHEET
+!
+      integer :: idIzsf       ! Ice sheet surface elevation
+      integer :: idIzbd       ! Ice sheet bed elevation
+      integer :: idInuh       ! Depth-integrated effective viscosity
+      integer :: idItdx       ! Driving stress x-component
+      integer :: idItdy       ! Driving stress y-component
+      integer :: idIbta       ! Basal drag coefficient
+!
+      integer, parameter :: nIsfF_ssa = 6    ! SSA diag field variables
+!
+# ifdef ICESHELF_THERMO
+      integer, parameter :: icIzsf = 10  ! Ice sheet surface elevation
+      integer, parameter :: icIzbd = 11  ! Ice sheet bed elevation
+      integer, parameter :: icInuh = 12  ! Depth-inte. eff. viscosity
+      integer, parameter :: icItdx = 13  ! Driving stress x-component
+      integer, parameter :: icItdy = 14  ! Driving stress y-component
+      integer, parameter :: icIbta = 15  ! Basal drag coefficient
+# else
+      integer, parameter :: icIzsf = 1   ! Ice sheet surface elevation
+      integer, parameter :: icIzbd = 2   ! Ice sheet bed elevation
+      integer, parameter :: icInuh = 3   ! Depth-inte. eff. viscosity
+      integer, parameter :: icItdx = 4   ! Driving stress x-component
+      integer, parameter :: icItdy = 5   ! Driving stress y-component
+      integer, parameter :: icIbta = 6   ! Basal drag coefficient
+# endif
+#else
+!
+      integer, parameter :: nIsfF_ssa = 0    ! SSA diag field variables
+#endif
+!
+      integer, parameter :: nIsfF = nIsfF_thermo + nIsfF_ssa
+!
+      integer :: iFisf(nIsfF)            ! internal fields I/O indices
+!
       integer :: iOisf(nIsfO)            ! ocean variables I/O indices
+!
+      integer :: isf_ic_brylast          ! Boundary layer salinity
+!
+      integer              :: idIvol     ! Volume of refreezed water
+      integer, allocatable :: idItrc(:)  ! Tracer variables
+      integer, allocatable :: idIamb(:)  ! Ambient tracer variables
 !
 !-----------------------------------------------------------------------
 !  Iceshelf model parameters.
 !                                                                      !
 !   a, b, c  - Freezing point EOS constants [degC PSU-1, N/A, degC m-1]!
 !   L        - Latent heat of melting [J kg-1]                         !
-#if defined ICESHELF_THERMO
+#ifdef ICESHELF_THERMO
 !   Pr, Sc   - Prandtl number and Schmidt number                       !
 !   Cd       - Drag coefficient                                        !
 !   visc     - Background viscosity                                    !
@@ -192,7 +202,7 @@
       logical, allocatable :: LisfSavg(:,:)     ! state variables
       logical, allocatable :: LisfVavg(:)       ! refreezed volume
       logical, allocatable :: LisfTavg(:,:)     ! refreezed tracer
-      logical, allocatable :: LisfTambavg(:,:)  ! ambient tracer
+      logical, allocatable :: LisfAavg(:,:)     ! ambient tracer
 #endif
 !
 !  Gamma constraining factors
@@ -214,86 +224,77 @@
 !
       real(r8), allocatable :: trcIsf(:,:)      ! tracer concentration
 !
-#if defined ICESHEET_SSA
+#ifdef ICESHEET
 !  SSA physical parameters
 !
-      real(r8), allocatable :: n_glen(:)          ! Glen flow law exponent
-      real(r8), allocatable :: A_glen(:)          ! Glen rate factor (>0: const A [Pa^-n s^-1], <=0: Paterson)
-      real(r8), allocatable :: eps_glen_min(:)    ! minimum strain rate regularization
-      real(r8), allocatable :: C_basal(:)         ! basal drag coefficient (sqrt of C)
-      real(r8), allocatable :: n_basal(:)         ! basal sliding exponent
-      real(r8), allocatable :: eps_u_min(:)       ! minimum sliding velocity regularization
+      real(r8), allocatable :: n_glen(:)        ! Glen flow law exponent
+      real(r8), allocatable :: A_glen(:)        ! Glen rate factor
+      real(r8), allocatable :: eps_glen_min(:)  ! minimum strain rate
+      real(r8), allocatable :: C_basal(:)       ! basal drag coefficient
+      real(r8), allocatable :: n_basal(:)       ! basal sliding exponent
+      real(r8), allocatable :: eps_u_min(:)     ! minimum sliding vel.
 !
 !  SSA solver parameters
 !
-      integer, allocatable :: nl_max_iter(:)      ! max Picard iterations
-      real(r8), allocatable :: nl_tol(:)          ! Picard relative tolerance
-      real(r8), allocatable :: nl_tol_fp(:)       ! Picard absolute velocity tolerance
-      integer, allocatable :: cg_max_iter(:)      ! max CG iterations
-      real(r8), allocatable :: cg_tol(:)          ! CG relative tolerance
-      real(r8), allocatable :: nuH_reg(:)         ! nuH regularization [Pa s m]
-      real(r8), allocatable :: min_thickness(:)   ! minimum ice thickness for SSA [m]
-      real(r8), allocatable :: ssa_max_speed(:)   ! velocity cap [m/s]
-!
-!  Grounding line parameters
-!
-      real(r8), allocatable :: min_cavity_thickness(:) ! minimum cavity thickness [m]
+      integer, allocatable :: nl_max_iter(:)    ! max Picard iterations
+      real(r8), allocatable :: nl_tol(:)        ! Picard relative tol.
+      real(r8), allocatable :: nl_tol_fp(:)     ! Picard vel. tol.
+      integer, allocatable :: cg_max_iter(:)    ! max CG iterations
+      real(r8), allocatable :: cg_tol(:)        ! CG relative tolerance
+      real(r8), allocatable :: nuH_reg(:)       ! nuH regularization
+      real(r8), allocatable :: min_thickness(:) ! minimum ice thickness
+      real(r8), allocatable :: ssa_max_speed(:) ! velocity cap [m/s]
 !
 !  Driving stress regularization parameters
 !
-      integer, allocatable :: n_smooth(:)         ! surface elevation smoothing iterations
-      integer, allocatable :: n_taper(:)          ! ice margin taper width [cells]
+      integer, allocatable :: n_smooth(:)       ! elev. smo. iter.
+      integer, allocatable :: n_taper(:)        ! ice margin taper width
 !
 !  Picard iteration parameters
 !
-      real(r8), allocatable :: picard_alpha(:)    ! Picard relaxation factor (0 < alpha <= 1)
+      real(r8), allocatable :: picard_alpha(:)  ! Picard relax. factor
 !
 !  Thickness advection parameters
 !
-      real(r8), allocatable :: cfl_factor(:)      ! CFL safety factor for sub-stepping
+      real(r8), allocatable :: cfl_factor(:)    ! CFL safety factor
 !
 !  Calving parameters
 !
-      real(r8), allocatable :: H_calve(:)         ! Thickness threshold for calving (m)
+      real(r8), allocatable :: H_calve(:)       ! Thick. thre. calv. [m]
 !
 !  Multi-timescale parameters
 !
-      integer, allocatable :: N_ssa(:)            ! SSA solve frequency (ocean steps)
-      integer, allocatable :: N_thick(:)          ! Thickness update frequency (SSA steps)
-      integer, allocatable :: N_gl(:)             ! Grounding line update frequency
+      integer, allocatable :: N_ssa(:)          ! SSA solve freq.
+      integer, allocatable :: N_thick(:)        ! Thickness update freq.
+      integer, allocatable :: N_gl(:)           ! GL update freq.
 !
 !  Surface mass balance parameters
 !
-      real(r8), allocatable :: smb_rate(:)          ! Uniform SMB rate [m/s ice equiv, +=accum]
+      real(r8), allocatable :: smb_rate(:)      ! Uniform SMB rate [m/s]
 !
 !  Ice-ocean coupling parameters
 !
-      real(r8), allocatable :: tau_melt(:)        ! Melt rate EMA filter timescale [s]
-      real(r8), allocatable :: Cd_isf(:)          ! Ice-ocean quadratic drag coeff [-]
-#endif
+      real(r8), allocatable :: tau_melt(:)      ! MR EMA filter TS [s]
+      real(r8), allocatable :: Cd_isf(:)        ! Ice-ocean Cd [-]
 !
-!  SSA geometry parameters (available under ICESHELF_MOM so that
-!  isf_mom.F can compute flotation criterion without ICESHEET_SSA).
+!  SSA geometry parameters
 !
-#if defined ICESHELF_MOM
-      real(r8), allocatable :: rho_w_ref(:)       ! Reference seawater density for flotation [kg/m3]
-      real(r8), allocatable :: max_thickness(:)   ! Maximum ice thickness safety cap [m]
-      real(r8), allocatable :: gl_float_width(:)  ! Grounding line float_frac transition width [m]
+      real(r8), allocatable :: gl_float_width(:)! GL floatfrac width [m]
 !
 !  MMS testing parameters
 !
-      character(len=256), allocatable :: mms_source_file(:) ! MMS source NetCDF file path
+      character(len=256), allocatable :: mms_source_file(:)
 #endif
 !
 !  Other constant parameters
 !
-      real(r8), parameter :: min_his = 1.0_r8
+      real(r8), parameter :: min_his = 10.0_r8
       real(r8), parameter :: a       = -0.057_r8
       real(r8), parameter :: b       = 0.0939_r8
       real(r8), parameter :: c       = -7.61e-4_r8
       real(r8), parameter :: L       = 3.33e5_r8
       real(r8), parameter :: rho_i   = 916.7_r8
-#if defined ICESHELF_THERMO
+#ifdef ICESHELF_THERMO
       real(r8), parameter :: Pr      = 13.8_r8
       real(r8), parameter :: Sc      = 2432.2_r8
       real(r8), parameter :: Cd      = 5.0e-3_r8
@@ -312,17 +313,17 @@
 !
       TYPE T_ISF
 
-        real(r8), pointer :: Fi(:,:,:)               ! [i,j,1:nIsfF]
-        real(r8), pointer :: Si(:,:,:,:)             ! [i,j,1:2,1:nIsfS]
-        real(r8), pointer :: Vi(:,:,:)               ! [i,j,1:2]
-        real(r8), pointer :: Ti(:,:,:,:)             ! [i,j,1:2,1:NTISF]
-        real(r8), pointer :: Oi(:,:,:,:)             ! [i,j,k,1:nIsfO]
-        real(r8), pointer :: Tamb(:,:,:)             ! [i,j,1:NTISF]
+        real(r8), pointer :: Fi(:,:,:)    ! [i, j,         1:nIsfF]
+        real(r8), pointer :: Si(:,:,:,:)  ! [i, j,    1:2, 1:nIsfS]
+        real(r8), pointer :: Vi(:,:,:)    ! [i, j,    1:2         ]
+        real(r8), pointer :: Ti(:,:,:,:)  ! [i, j,    1:2, 1:NTISF]
+        real(r8), pointer :: Oi(:,:,:,:)  ! [i, j, k,      1:nIsfO]
+        real(r8), pointer :: Ai(:,:,:)    ! [i, j,         1:NTISF]
 
       END TYPE T_ISF
 !
       TYPE (T_ISF), allocatable :: ISF(:)            ! [Ngrids]
-#ifdef ICESHELF_MOM
+#ifdef ICESHEET
 !
 !-----------------------------------------------------------------------
 !  Define derived-type structure iceshelf model lateral boundary
@@ -356,15 +357,15 @@
 !
       TYPE T_ISF_AVG
 
-        real(r8), pointer :: var(:,:)                ! [i,j]
+        real(r8), pointer :: var(:,:)                   ! [i,j]
 
       END TYPE T_ISF_AVG
 !
-      TYPE (T_ISF_AVG), allocatable :: ISF_FAVG(:,:) ! [nIsfF,Ngrids]
-      TYPE (T_ISF_AVG), allocatable :: ISF_SAVG(:,:) ! [nIsfS,Ngrids]
-      TYPE (T_ISF_AVG), allocatable :: ISF_VAVG(:)   ! [Ngrids]
-      TYPE (T_ISF_AVG), allocatable :: ISF_TAVG(:,:) ! [MT,Ngrids]
-      TYPE (T_ISF_AVG), allocatable :: ISF_TambAVG(:,:) ! [MT,Ngrids]
+      TYPE (T_ISF_AVG), allocatable :: ISF_FAVG(:,:)    ! [nIsfF,Ngrids]
+      TYPE (T_ISF_AVG), allocatable :: ISF_SAVG(:,:)    ! [nIsfS,Ngrids]
+      TYPE (T_ISF_AVG), allocatable :: ISF_VAVG(:)      ! [Ngrids]
+      TYPE (T_ISF_AVG), allocatable :: ISF_TAVG(:,:)    ! [MT,Ngrids]
+      TYPE (T_ISF_AVG), allocatable :: ISF_AAVG(:,:)    ! [MT,Ngrids]
 #endif
 !
       CONTAINS
@@ -457,10 +458,10 @@
           LisfTavg(1:MT,1:Ngrids)=.FALSE.
         END IF
 
-        IF (.not.allocated(LisfTambavg)) THEN
-          allocate ( LisfTambavg(MT,Ngrids) )
+        IF (.not.allocated(LisfAavg)) THEN
+          allocate ( LisfAavg(MT,Ngrids) )
           Dmem(1)=Dmem(1)+REAL(MT*Ngrids,r8)
-          LisfTambavg(1:MT,1:Ngrids)=.FALSE.
+          LisfAavg(1:MT,1:Ngrids)=.FALSE.
         END IF
 #endif
 
@@ -524,160 +525,142 @@
           trcIsf(1:MT,1:Ngrids)=IniVal
         END IF
 
-#ifdef ICESHEET_SSA
+#ifdef ICESHEET
 !
 !  Allocate SSA physical and solver parameters.
 !
         IF (.not.allocated(n_glen)) THEN
           allocate ( n_glen(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          n_glen(1:Ngrids)=3.0_r8
+          n_glen(1:Ngrids)=IniVal
         END IF
         IF (.not.allocated(A_glen)) THEN
           allocate ( A_glen(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          A_glen(1:Ngrids)=-1.0_r8
+          A_glen(1:Ngrids)=IniVal
         END IF
         IF (.not.allocated(eps_glen_min)) THEN
           allocate ( eps_glen_min(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          eps_glen_min(1:Ngrids)=1.0e-12_r8
+          eps_glen_min(1:Ngrids)=IniVal
         END IF
         IF (.not.allocated(C_basal)) THEN
           allocate ( C_basal(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          C_basal(1:Ngrids)=1.0e4_r8
+          C_basal(1:Ngrids)=IniVal
         END IF
         IF (.not.allocated(n_basal)) THEN
           allocate ( n_basal(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          n_basal(1:Ngrids)=1.0_r8
+          n_basal(1:Ngrids)=IniVal
         END IF
         IF (.not.allocated(eps_u_min)) THEN
           allocate ( eps_u_min(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          eps_u_min(1:Ngrids)=1.0e-9_r8
+          eps_u_min(1:Ngrids)=IniVal
         END IF
         IF (.not.allocated(nl_max_iter)) THEN
           allocate ( nl_max_iter(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          nl_max_iter(1:Ngrids)=50
+          nl_max_iter(1:Ngrids)=0
         END IF
         IF (.not.allocated(nl_tol)) THEN
           allocate ( nl_tol(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          nl_tol(1:Ngrids)=1.0e-6_r8
+          nl_tol(1:Ngrids)=IniVal
         END IF
         IF (.not.allocated(nl_tol_fp)) THEN
           allocate ( nl_tol_fp(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          nl_tol_fp(1:Ngrids)=1.0e-6_r8
+          nl_tol_fp(1:Ngrids)=IniVal
         END IF
         IF (.not.allocated(cg_max_iter)) THEN
           allocate ( cg_max_iter(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          cg_max_iter(1:Ngrids)=500
+          cg_max_iter(1:Ngrids)=0
         END IF
         IF (.not.allocated(cg_tol)) THEN
           allocate ( cg_tol(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          cg_tol(1:Ngrids)=1.0e-8_r8
+          cg_tol(1:Ngrids)=IniVal
         END IF
         IF (.not.allocated(nuH_reg)) THEN
           allocate ( nuH_reg(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          nuH_reg(1:Ngrids)=1.0e13_r8
+          nuH_reg(1:Ngrids)=IniVal
         END IF
         IF (.not.allocated(min_thickness)) THEN
           allocate ( min_thickness(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          min_thickness(1:Ngrids)=10.0_r8
+          min_thickness(1:Ngrids)=IniVal
         END IF
         IF (.not.allocated(ssa_max_speed)) THEN
           allocate ( ssa_max_speed(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          ssa_max_speed(1:Ngrids)=1.0e5_r8
-        END IF
-        IF (.not.allocated(min_cavity_thickness)) THEN
-          allocate ( min_cavity_thickness(Ngrids) )
-          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          min_cavity_thickness(1:Ngrids)=20.0_r8
+          ssa_max_speed(1:Ngrids)=IniVal
         END IF
         IF (.not.allocated(n_smooth)) THEN
           allocate ( n_smooth(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          n_smooth(1:Ngrids)=20
+          n_smooth(1:Ngrids)=0
         END IF
         IF (.not.allocated(n_taper)) THEN
           allocate ( n_taper(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          n_taper(1:Ngrids)=3
+          n_taper(1:Ngrids)=0
         END IF
         IF (.not.allocated(picard_alpha)) THEN
           allocate ( picard_alpha(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          picard_alpha(1:Ngrids)=0.7_r8
+          picard_alpha(1:Ngrids)=IniVal
         END IF
         IF (.not.allocated(cfl_factor)) THEN
           allocate ( cfl_factor(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          cfl_factor(1:Ngrids)=0.5_r8
+          cfl_factor(1:Ngrids)=IniVal
         END IF
         IF (.not.allocated(H_calve)) THEN
           allocate ( H_calve(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          H_calve(1:Ngrids)=100.0_r8
+          H_calve(1:Ngrids)=IniVal
         END IF
         IF (.not.allocated(N_ssa)) THEN
           allocate ( N_ssa(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          N_ssa(1:Ngrids)=1
+          N_ssa(1:Ngrids)=0
         END IF
         IF (.not.allocated(N_thick)) THEN
           allocate ( N_thick(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          N_thick(1:Ngrids)=1
+          N_thick(1:Ngrids)=0
         END IF
         IF (.not.allocated(N_gl)) THEN
           allocate ( N_gl(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          N_gl(1:Ngrids)=1
+          N_gl(1:Ngrids)=0
         END IF
         IF (.not.allocated(smb_rate)) THEN
           allocate ( smb_rate(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          smb_rate(1:Ngrids)=0.0_r8
+          smb_rate(1:Ngrids)=IniVal
         END IF
         IF (.not.allocated(tau_melt)) THEN
           allocate ( tau_melt(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          tau_melt(1:Ngrids)=86400.0_r8
+          tau_melt(1:Ngrids)=IniVal
         END IF
         IF (.not.allocated(Cd_isf)) THEN
           allocate ( Cd_isf(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          Cd_isf(1:Ngrids)=5.0E-3_r8
+          Cd_isf(1:Ngrids)=IniVal
         END IF
-#endif
 !
-!  SSA geometry parameters (allocated under ICESHELF_MOM so that
-!  isf_mom.F can compute flotation criterion without ICESHEET_SSA).
+!  SSA geometry parameters
 !
-#if defined ICESHELF_MOM
-        IF (.not.allocated(rho_w_ref)) THEN
-          allocate ( rho_w_ref(Ngrids) )
-          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          rho_w_ref(1:Ngrids)=1025.0_r8
-        END IF
-        IF (.not.allocated(max_thickness)) THEN
-          allocate ( max_thickness(Ngrids) )
-          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          max_thickness(1:Ngrids)=5000.0_r8
-        END IF
         IF (.not.allocated(gl_float_width)) THEN
           allocate ( gl_float_width(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          gl_float_width(1:Ngrids)=1000.0_r8
+          gl_float_width(1:Ngrids)=IniVal
         END IF
 !
 !  MMS testing parameters
@@ -706,14 +689,6 @@
         allocate ( ISF(ng) % Fi(LBi:UBi,LBj:UBj,nIsfF) )
         Dmem(ng)=Dmem(ng)+REAL(nIsfF,r8)*size2d
 !
-!  Initialize diagnostic fields to zero so that time-dependent fields
-!  with memory (e.g. icImef EMA state, icIust friction velocity) are
-!  well-defined on the first step of a cold start, before any routine
-!  has written them (isf_vbc clamps with MAX(min_ustar,...), which
-!  cannot recover from garbage values).
-!
-        ISF(ng) % Fi=0.0_r8
-!
         allocate ( ISF(ng) % Oi(LBi:UBi,LBj:UBj,N(ng),nIsfO) )
         Dmem(ng)=Dmem(ng)+REAL(N(ng)*nIsfO,r8)*size2d
 !
@@ -724,10 +699,10 @@
           allocate ( ISF(ng) % Ti(LBi:UBi,LBj:UBj,2,NTISF(ng)) )
           Dmem(ng)=Dmem(ng)+2.0_r8*REAL(NTISF(ng))*size2d
 !
-          allocate ( ISF(ng) % Tamb(LBi:UBi,LBj:UBj,NTISF(ng)) )
+          allocate ( ISF(ng) % Ai(LBi:UBi,LBj:UBj,NTISF(ng)) )
           Dmem(ng)=Dmem(ng)+REAL(NTISF(ng),r8)*size2d
         END IF
-#ifdef ICESHELF_MOM
+#ifdef ICESHEET
 !
 !-----------------------------------------------------------------------
 !  Allocate derived-type structure iceshelf model lateral boundary
@@ -819,7 +794,7 @@
         IF (ng.eq.1) THEN
           allocate ( ISF_VAVG(Ngrids) )
           allocate ( ISF_TAVG(MT,Ngrids) )
-          allocate ( ISF_TambAVG(MT,Ngrids) )
+          allocate ( ISF_AAVG(MT,Ngrids) )
         END IF
 !
         IF (LisfVavg(ng)) THEN
@@ -833,8 +808,8 @@
               allocate ( ISF_TAVG(itrc,ng) % var(LBi:UBi,LBj:UBj) )
               Dmem(ng)=Dmem(ng)+size2d
             END IF
-            IF (LisfTambavg(itrc,ng)) THEN
-              allocate ( ISF_TambAVG(itrc,ng) % var(LBi:UBi,LBj:UBj) )
+            IF (LisfAavg(itrc,ng)) THEN
+              allocate ( ISF_AAVG(itrc,ng) % var(LBi:UBi,LBj:UBj) )
               Dmem(ng)=Dmem(ng)+size2d
             END IF
           END DO
@@ -900,10 +875,10 @@
         IF (.not.destroy(ng, ISF(ng)%Ti, MyFile,                        &
      &                   __LINE__, 'ISF(ng)%Ti')) RETURN
 !
-        IF (.not.destroy(ng, ISF(ng)%Tamb, MyFile,                      &
-     &                   __LINE__, 'ISF(ng)%Tamb')) RETURN
+        IF (.not.destroy(ng, ISF(ng)%Ai, MyFile,                        &
+     &                   __LINE__, 'ISF(ng)%Ai')) RETURN
       END IF
-# ifdef ICESHELF_MOM
+# ifdef ICESHEET
 !
 !  Nonlinear iceshelf model state lateral boundary arrays.
 !
@@ -966,12 +941,12 @@
       IF (Lisftrc(ng)) THEN
         DO itrc=1,NT(ng)
           IF (LisfTavg(itrc,ng)) THEN
-            IF (.not.destroy(ng, ISF_TAVG(itrc,ng)%var, MyFile,             &
+            IF (.not.destroy(ng, ISF_TAVG(itrc,ng)%var, MyFile,         &
      &                       __LINE__,'ISF_TAVG(itrc,ng)%var')) RETURN
           END IF
-          IF (LisfTambavg(itrc,ng)) THEN
-            IF (.not.destroy(ng, ISF_TambAVG(itrc,ng)%var, MyFile,          &
-     &                       __LINE__,'ISF_TambAVG(itrc,ng)%var')) RETURN
+          IF (LisfAavg(itrc,ng)) THEN
+            IF (.not.destroy(ng, ISF_AAVG(itrc,ng)%var, MyFile,         &
+     &                       __LINE__,'ISF_AAVG(itrc,ng)%var')) RETURN
           END IF
         END DO
       END IF
@@ -985,7 +960,7 @@
 !-----------------------------------------------------------------------
 !
       IF (allocated(ISF))      deallocate ( ISF )
-#ifdef ICESHELF_MOM
+#ifdef ICESHEET
       IF (allocated(ISF_LOBC)) deallocate ( ISF_LOBC )
 #endif
 #ifdef AVERAGES
@@ -993,7 +968,7 @@
       IF (allocated(ISF_SAVG)) deallocate ( ISF_SAVG )
       IF (allocated(ISF_VAVG)) deallocate ( ISF_VAVG )
       IF (allocated(ISF_TAVG)) deallocate ( ISF_TAVG )
-      IF (allocated(ISF_TambAVG)) deallocate ( ISF_TambAVG )
+      IF (allocated(ISF_AAVG)) deallocate ( ISF_AAVG )
 #endif
 !
 !-----------------------------------------------------------------------
@@ -1005,12 +980,12 @@
       IF (allocated(LisfSavg)) deallocate ( LisfSavg )
       IF (allocated(LisfVavg)) deallocate ( LisfVavg )
       IF (allocated(LisfTavg)) deallocate ( LisfTavg )
-      IF (allocated(LisfTambavg)) deallocate ( LisfTambavg )
+      IF (allocated(LisfAavg)) deallocate ( LisfAavg )
 #endif
 !
       IF (allocated(isf_Hsbl))  deallocate ( isf_Hsbl )
 !
-#ifdef ICESHEET_SSA
+#ifdef ICESHEET
       IF (allocated(n_glen))         deallocate ( n_glen )
       IF (allocated(A_glen))         deallocate ( A_glen )
       IF (allocated(eps_glen_min))   deallocate ( eps_glen_min )
@@ -1024,26 +999,20 @@
       IF (allocated(cg_tol))         deallocate ( cg_tol )
       IF (allocated(nuH_reg))        deallocate ( nuH_reg )
       IF (allocated(min_thickness))  deallocate ( min_thickness )
-      IF (allocated(ssa_max_speed))   deallocate ( ssa_max_speed )
-      IF (allocated(min_cavity_thickness)) deallocate ( min_cavity_thickness )
-      IF (allocated(n_smooth))         deallocate ( n_smooth )
-      IF (allocated(n_taper))          deallocate ( n_taper )
-      IF (allocated(picard_alpha))     deallocate ( picard_alpha )
-      IF (allocated(cfl_factor))       deallocate ( cfl_factor )
-      IF (allocated(H_calve))          deallocate ( H_calve )
-      IF (allocated(N_ssa))            deallocate ( N_ssa )
-      IF (allocated(N_thick))          deallocate ( N_thick )
-      IF (allocated(N_gl))             deallocate ( N_gl )
-      IF (allocated(smb_rate))           deallocate ( smb_rate )
-      IF (allocated(tau_melt))         deallocate ( tau_melt )
-      IF (allocated(Cd_isf))           deallocate ( Cd_isf )
-#endif
-!
-#if defined ICESHELF_MOM
-      IF (allocated(rho_w_ref))        deallocate ( rho_w_ref )
-      IF (allocated(max_thickness))   deallocate ( max_thickness )
+      IF (allocated(ssa_max_speed))  deallocate ( ssa_max_speed )
+      IF (allocated(n_smooth))       deallocate ( n_smooth )
+      IF (allocated(n_taper))        deallocate ( n_taper )
+      IF (allocated(picard_alpha))   deallocate ( picard_alpha )
+      IF (allocated(cfl_factor))     deallocate ( cfl_factor )
+      IF (allocated(H_calve))        deallocate ( H_calve )
+      IF (allocated(N_ssa))          deallocate ( N_ssa )
+      IF (allocated(N_thick))        deallocate ( N_thick )
+      IF (allocated(N_gl))           deallocate ( N_gl )
+      IF (allocated(smb_rate))       deallocate ( smb_rate )
+      IF (allocated(tau_melt))       deallocate ( tau_melt )
+      IF (allocated(Cd_isf))         deallocate ( Cd_isf )
       IF (allocated(gl_float_width))  deallocate ( gl_float_width )
-      IF (allocated(mms_source_file))   deallocate ( mms_source_file )
+      IF (allocated(mms_source_file)) deallocate ( mms_source_file )
 #endif
 !
       RETURN
@@ -1145,13 +1114,13 @@
               DO i=Imin,Imax
                 ISF(ng) % Ti(i,j,1,ic) = IniVal
                 ISF(ng) % Ti(i,j,2,ic) = IniVal
-                ISF(ng) % Tamb(i,j,ic) = IniVal
+                ISF(ng) % Ai(i,j,  ic) = IniVal
               END DO
             END DO
           END IF
         END DO
       END IF
-#ifdef ICESHELF_MOM
+#ifdef ICESHEET
 !
 !-----------------------------------------------------------------------
 !  Initialize iceshelf model lateral boundary arrays.
@@ -1245,10 +1214,10 @@
               END DO
             END DO
           END IF
-          IF (LisfTambavg(itrc,ng)) THEN
+          IF (LisfAavg(itrc,ng)) THEN
             DO j=Jmin,Jmax
               DO i=Imin,Imax
-                ISF_TambAVG(itrc,ng) % var(i,j) = IniVal
+                ISF_AAVG(itrc,ng) % var(i,j) = IniVal
               END DO
             END DO
           END IF

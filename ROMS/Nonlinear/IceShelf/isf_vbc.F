@@ -90,7 +90,7 @@
      &                   ISF(ng) % Ti,                                  &
      &                   ISF(ng) % Fi,                                  &
      &                   ISF(ng) % Oi,                                  &
-     &                   ISF(ng) % Tamb,                                &
+     &                   ISF(ng) % Ai,                                  &
      &                   FORCES(ng) % stflx)
 # ifdef PROFILE
       CALL wclock_off (ng, model, 42, __LINE__, MyFile)
@@ -111,7 +111,7 @@
 # endif
      &                         Vi, Ti,                                  &
      &                         Fi,                                      &
-     &                         Oi, Tamb,                                &
+     &                         Oi, Ai,                                  &
      &                         stflx)
 !***********************************************************************
 !
@@ -145,7 +145,7 @@
       real(r8), intent(inout) :: Ti(LBi:,LBj:,:,:)
       real(r8), intent(out) :: Fi(LBi:,LBj:,:)
       real(r8), intent(in) :: Oi(LBi:,LBj:,:,:)
-      real(r8), intent(out) :: Tamb(LBi:,LBj:,:)
+      real(r8), intent(out) :: Ai(LBi:,LBj:,:)
       real(r8), intent(out) :: stflx(LBi:,LBj:,:)
 # else
       real(r8), intent(in) :: Hz(LBi:UBi,LBj:UBj,N(ng))
@@ -161,7 +161,7 @@
       real(r8), intent(inout) :: Ti(LBi:UBi,LBj:UBj,2,NTISF(ng))
       real(r8), intent(out) :: Fi(LBi:UBi,LBj:UBj,nIsfF)
       real(r8), intent(in) :: Oi(LBi:UBi,LBj:UBj,N(ng),nIsfO)
-      real(r8), intent(out) :: Tamb(LBi:UBi,LBj:UBj,NTISF(ng))
+      real(r8), intent(out) :: Ai(LBi:UBi,LBj:UBj,NTISF(ng))
       real(r8), intent(out) :: stflx(LBi:UBi,LBj:UBj,NT(ng))
 # endif
 !
@@ -376,16 +376,16 @@
 !
 # ifndef ICESHELF_NO_SBL
                   IF (isf_Hsbl(ng).gt.0.0_r8) THEN
-                    Tamb(i,j,ic)=0.0_r8
+                    Ai(i,j,ic)=0.0_r8
                     DO k=1,N(ng)
-                      Tamb(i,j,ic)=Tamb(i,j,ic) +                       &
-     &                             Oi(i,j,k,ioHsbl)*t(i,j,k,nrhs,itrc)
+                      Ai(i,j,ic)=Ai(i,j,ic) +                           &
+     &                           Oi(i,j,k,ioHsbl)*t(i,j,k,nrhs,itrc)
                     END DO
                   ELSE
-                    Tamb(i,j,ic)=t(i,j,N(ng),nrhs,itrc)
+                    Ai(i,j,ic)=t(i,j,N(ng),nrhs,itrc)
                   END IF
 # else
-                  Tamb(i,j,ic)=t(i,j,N(ng),nrhs,itrc)
+                  Ai(i,j,ic)=t(i,j,N(ng),nrhs,itrc)
 # endif
                   IF (Fi(i,j,icImel).gt.0.0_r8 .and.                    &
      &                Vi(i,j,lsnew(ng)).gt.0.0_r8) THEN
@@ -397,12 +397,12 @@
                     cff1=0.0_r8
                     cff2=0.0_r8
                   ELSE
-                    cff1=Tamb(i,j,ic)
+                    cff1=Ai(i,j,ic)
                     cff2=cff1
                   END IF
                   stflx(i,j,itrc)=stflx(i,j,itrc)+                      &
      &                            Fi(i,j,icImel)*                       &
-     &                            (cff2-Tamb(i,j,ic))
+     &                            (cff2-Ai(i,j,ic))
                   Ti(i,j,lsnew(ng),ic)=Ti(i,j,lsnew(ng),ic)-cff1*cff
                   Ti(i,j,lsnew(ng),ic)=MAX(Ti(i,j,lsnew(ng),ic), 0.0_r8)
                 END IF

@@ -29,20 +29,20 @@
 # if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
       USE isf_sbl_mod,      ONLY : isf_sbl
 # endif
-# if defined ICESHEET_SSA && defined ICESHELF_THERMO
+# if defined ICESHEET && defined ICESHELF_THERMO
       USE isf_coupler_mod,  ONLY : isf_coupler
 # endif
 # ifdef ICESHELF_MOM
       USE isf_mom_mod,      ONLY : isf_mom
 # endif
-# ifdef ICESHEET_SSA
+# ifdef ICESHEET
       USE isf_thickness_adv_mod, ONLY : isf_thickness_adv
 # endif
 # ifdef ICESHEET_CALVING
       USE isf_calving_mod,  ONLY : isf_calving
 # endif
       USE strings_mod,      ONLY : FoundError, uppercase
-# if defined WET_DRY || defined ICESHEET_SSA
+# if defined WET_DRY
       USE isf_masks_mod,    ONLY : isf_masks
 # endif
 !

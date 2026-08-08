@@ -3383,7 +3383,7 @@
       idBvar(isV3Sd)=idV3Sd
 # endif
 #endif
-#ifdef ICESHELF_MOM
+#ifdef ICESHEET
 !
 !  Set iceshelf model state boundary indices.  Currently, the last
 !  iceshelf model LBC state variable is isItis=4.

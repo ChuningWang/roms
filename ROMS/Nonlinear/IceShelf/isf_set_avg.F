@@ -182,10 +182,10 @@
               IF (Aout(idIamb(itrc),ng)) THEN
                 DO j=JstrR,JendR
                   DO i=IstrR,IendR
-                    ISF_TambAVG(itrc,ng)%var(i,j)=ISF(ng)%Tamb(i,j,ic)
+                    ISF_AAVG(itrc,ng)%var(i,j)=ISF(ng)%Ai(i,j,ic)
 # ifdef MASKING
-                    ISF_TambAVG(itrc,ng)%var(i,j)=                      &
-     &                ISF_TambAVG(itrc,ng)%var(i,j) *                   &
+                    ISF_AAVG(itrc,ng)%var(i,j)=                         &
+     &                ISF_AAVG(itrc,ng)%var(i,j) *                      &
      &                GRID(ng)%rmask_full(i,j)
 # endif
                   END DO
@@ -273,12 +273,12 @@
               IF (Aout(idIamb(itrc),ng)) THEN
                 DO j=JstrR,JendR
                   DO i=IstrR,IendR
-                    ISF_TambAVG(itrc,ng)%var(i,j)=                      &
-     &                ISF_TambAVG(itrc,ng)%var(i,j)+                    &
+                    ISF_AAVG(itrc,ng)%var(i,j)=                         &
+     &                ISF_AAVG(itrc,ng)%var(i,j)+                       &
 # ifdef MASKING
      &                GRID(ng)%rmask_full(i,j)*                         &
 # endif
-     &                ISF(ng)%Tamb(i,j,ic)
+     &                ISF(ng)%Ai(i,j,ic)
                   END DO
                 END DO
               END IF
@@ -427,20 +427,20 @@
               IF (Aout(idIamb(itrc),ng)) THEN
                 DO j=JstrR,JendR
                   DO i=IstrR,IendR
-                    ISF_TambAVG(itrc,ng)%var(i,j)=rfac(i,j) *           &
-     &                ISF_TambAVG(itrc,ng)%var(i,j)
+                    ISF_AAVG(itrc,ng)%var(i,j)=rfac(i,j) *              &
+     &                ISF_AAVG(itrc,ng)%var(i,j)
                   END DO
                 END DO
                 IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
                   CALL exchange_r2d_tile (ng, tile,                     &
      &                                    LBi, UBi, LBj, UBj,           &
-     &                                    ISF_TambAVG(itrc,ng)%var)
+     &                                    ISF_AAVG(itrc,ng)%var)
 # ifdef DISTRIBUTE
                   CALL mp_exchange2d (ng, tile, model, 1,               &
      &                                LBi, UBi, LBj, UBj,               &
      &                                NghostPoints,                     &
      &                                EWperiodic(ng), NSperiodic(ng),   &
-     &                                ISF_TambAVG(itrc,ng)%var)
+     &                                ISF_AAVG(itrc,ng)%var)
 # endif
                 END IF
               END IF

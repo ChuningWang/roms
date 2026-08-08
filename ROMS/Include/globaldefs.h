@@ -810,10 +810,10 @@
 /*
 ** Check if dynamic/thermodynamic ice shelf model is activated.
 ** ICESHELF_THERMO is user-settable and enables 3-equation ice/ocean
-** thermodynamics. ICESHELF_MOM enables ice sheet/shelf momentum.
+** thermodynamics. ICESHEET enables ice sheet/shelf momentum.
 ** Either activates the umbrella macros ICESHELF and ICESHELF_DYNAM.
 */
-#if defined ICESHELF_THERMO || defined ICESHELF_MOM
+#if defined ICESHELF_THERMO || defined ICESHEET
 # define ICESHELF
 # define ICESHELF_DYNAM
 #endif
@@ -824,26 +824,28 @@
 
 /*
 ** Check if ice sheet dynamics is activated. ICESHEET_SSA implies
-** ICESHELF_MOM (SSA is the ice sheet momentum equation). The umbrella
+** ICESHEET (SSA is the ice sheet momentum equation). The umbrella
 ** macro ICESHEET gates all ice-sheet-specific code (grounding line,
 ** calving, SMB).
 **
 ** SSA_MMS_TESTING is a standalone testing macro: it activates the SSA
-** momentum solver (ICESHELF_MOM) and MMS source injection without
+** momentum solver (ICESHEET) and MMS source injection without
 ** pulling in ICESHEET_SSA, which would also enable thickness advection,
 ** calving, grounding line dynamics, and multi-timescale scheduling.
 ** This keeps the MMS test configuration minimal and isolated from
 ** unrelated ice-sheet physics.
 */
-#if defined SSA_MMS_TESTING
-# define ICESHELF_MOM
-#endif
-#if defined ICESHEET_SSA
-# define ICESHELF_MOM
+#ifdef SSA_MMS_TESTING
+# define ICESHEET
 #endif
 #if defined ICESHEET_SSA || defined ICESHEET_GL || \
     defined ICESHEET_CALVING || defined ICESHEET_SMB
 # define ICESHEET
+#endif
+#ifdef ICESHEET
+# ifndef WET_DRY
+#  define WET_DRY
+# endif
 #endif
 
 /*
@@ -853,9 +855,7 @@
 ** stepping on the ocean time clock.  It is an independent switch with
 ** no derived macros: main3d.F guards the ocean evolution segments
 ** with #ifndef OCEAN_FIXED.
-*/
 
-/*
 ** OCEAN_FIXED safety: requires at least one ice model to be active,
 ** otherwise the time loop runs with neither ocean nor ice evolution
 ** (NTIMES steps of no-op).  This catches misconfigured test cases.
