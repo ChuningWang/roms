@@ -26,7 +26,6 @@
 !    isIhis    iceshelf thickness [m]                                  !
 !    isIuis    iceshelf U-velocity [m s-1]                             !
 !    isIvis    iceshelf V-velocity [m s-1]                             !
-!    isItis    iceshelf temperature [degC]                             !
 !    isIeis    iceshelf enthalpy [degC m]                              !
 #endif
 #ifdef ICESHELF_THERMO
@@ -70,16 +69,14 @@
       integer :: idIhis       ! Iceshelf thickness
       integer :: idIuis       ! Iceshelf u-velocity
       integer :: idIvis       ! Iceshelf v-velocity
-      integer :: idItis       ! Iceshelf temperature
       integer :: idIeis       ! Iceshelf enthalpy
 !
-      integer, parameter :: nIsfS = 5    ! number of state variables
+      integer, parameter :: nIsfS = 4    ! number of state variables
 !
       integer, parameter :: isIhis =  1  ! Iceshelf thickness
       integer, parameter :: isIuis =  2  ! Iceshelf u-velocity
       integer, parameter :: isIvis =  3  ! Iceshelf v-velocity
-      integer, parameter :: isItis =  4  ! Iceshelf temperature
-      integer, parameter :: isIeis =  5  ! Iceshelf enthalpy
+      integer, parameter :: isIeis =  4  ! Iceshelf enthalpy
 #else
       integer, parameter :: nIsfS = 0    ! number of ice state variables
 #endif
@@ -95,8 +92,6 @@
 !
 #ifdef ICESHELF_THERMO
 !
-      integer :: idItis       ! Iceshelf temperature
-      integer :: idIeis       ! Iceshelf enthalpy
       integer :: idImel       ! Iceshelf melt rate
       integer :: idIgat       ! gammaT
       integer :: idIgas       ! gammaS
@@ -133,6 +128,7 @@
 #endif
 #ifdef ICESHEET
 !
+      integer :: idItis       ! Iceshelf temperature
       integer :: idIzsf       ! Ice sheet surface elevation
       integer :: idIzbd       ! Ice sheet bed elevation
       integer :: idInuh       ! Depth-integrated effective viscosity
@@ -140,22 +136,24 @@
       integer :: idItdy       ! Driving stress y-component
       integer :: idIbta       ! Basal drag coefficient
 !
-      integer, parameter :: nIsfF_ssa = 6    ! SSA diag field variables
+      integer, parameter :: nIsfF_ssa = 7    ! SSA diag field variables
 !
 # ifdef ICESHELF_THERMO
-      integer, parameter :: icIzsf = 10  ! Ice sheet surface elevation
-      integer, parameter :: icIzbd = 11  ! Ice sheet bed elevation
-      integer, parameter :: icInuh = 12  ! Depth-inte. eff. viscosity
-      integer, parameter :: icItdx = 13  ! Driving stress x-component
-      integer, parameter :: icItdy = 14  ! Driving stress y-component
-      integer, parameter :: icIbta = 15  ! Basal drag coefficient
+      integer, parameter :: icItis = 10  ! Iceshelf temperature
+      integer, parameter :: icIzsf = 11  ! Ice sheet surface elevation
+      integer, parameter :: icIzbd = 12  ! Ice sheet bed elevation
+      integer, parameter :: icInuh = 13  ! Depth-inte. eff. viscosity
+      integer, parameter :: icItdx = 14  ! Driving stress x-component
+      integer, parameter :: icItdy = 15  ! Driving stress y-component
+      integer, parameter :: icIbta = 16  ! Basal drag coefficient
 # else
-      integer, parameter :: icIzsf = 1   ! Ice sheet surface elevation
-      integer, parameter :: icIzbd = 2   ! Ice sheet bed elevation
-      integer, parameter :: icInuh = 3   ! Depth-inte. eff. viscosity
-      integer, parameter :: icItdx = 4   ! Driving stress x-component
-      integer, parameter :: icItdy = 5   ! Driving stress y-component
-      integer, parameter :: icIbta = 6   ! Basal drag coefficient
+      integer, parameter :: icItis =  1  ! Iceshelf temperature
+      integer, parameter :: icIzsf =  2  ! Ice sheet surface elevation
+      integer, parameter :: icIzbd =  3  ! Ice sheet bed elevation
+      integer, parameter :: icInuh =  4  ! Depth-inte. eff. viscosity
+      integer, parameter :: icItdx =  5  ! Driving stress x-component
+      integer, parameter :: icItdy =  6  ! Driving stress y-component
+      integer, parameter :: icIbta =  7  ! Basal drag coefficient
 # endif
 #else
 !
@@ -279,6 +277,7 @@
 !
 !  SSA geometry parameters
 !
+      real(r8), allocatable :: max_thickness(:) ! thick. safety cap [m]
       real(r8), allocatable :: gl_float_width(:)! GL floatfrac width [m]
 !
 !  MMS testing parameters
@@ -657,6 +656,11 @@
 !
 !  SSA geometry parameters
 !
+        IF (.not.allocated(max_thickness)) THEN
+          allocate ( max_thickness(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          max_thickness(1:Ngrids)=IniVal
+        END IF
         IF (.not.allocated(gl_float_width)) THEN
           allocate ( gl_float_width(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
@@ -1011,6 +1015,7 @@
       IF (allocated(smb_rate))       deallocate ( smb_rate )
       IF (allocated(tau_melt))       deallocate ( tau_melt )
       IF (allocated(Cd_isf))         deallocate ( Cd_isf )
+      IF (allocated(max_thickness))   deallocate ( max_thickness )
       IF (allocated(gl_float_width))  deallocate ( gl_float_width )
       IF (allocated(mms_source_file)) deallocate ( mms_source_file )
 #endif

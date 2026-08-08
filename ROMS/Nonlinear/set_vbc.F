@@ -533,14 +533,13 @@
 !  If ice shelf cavities, replace surface wind stress with ice shelf
 !  cavity stress (m2/s2).
 !
-!  With ICESHEET_SSA + ICESHELF_THERMO the dynamic ice sheet coupler
+!  With ICESHEET + ICESHELF_THERMO the dynamic ice sheet coupler
 !  (isf_coupler) is the sole producer of sustr/svstr under the shelf,
 !  computed from the ice-ocean relative velocity.  Skip this block to
 !  avoid double-writing the stress; isf_coupler applies its own
 !  boundary conditions and halo exchange.
 !-----------------------------------------------------------------------
-
-#  if !defined ICESHEET_SSA || !defined ICESHELF_THERMO
+#  if !defined ICESHEET || !defined ICESHELF_THERMO
 #   if defined UV_LOGDRAG
 !
 !  Set logarithmic ice shelf cavity stress.

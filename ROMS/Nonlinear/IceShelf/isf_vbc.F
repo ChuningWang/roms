@@ -264,7 +264,7 @@
 !
 !  Calculate exchange coefficients. Note that this assumes log profile.
 !
-#  ifdef ICESHEET_SSA
+#  ifdef ICESHEET
 !  Under dynamic ice sheet, u* is pre-computed by isf_coupler from
 !  ice-ocean relative velocity: u* = sqrt(Cd)*|u_ice - u_ocean|.
 !  The coupler runs after isf_vbc each step, so Fi(icIust) holds

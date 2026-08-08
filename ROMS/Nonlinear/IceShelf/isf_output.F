@@ -142,7 +142,7 @@
         ELSE
           vtype=NF_FOUT
         END IF
-# ifdef ICESHELF_MOM
+# ifdef ICESHEET
 !
 !-----------------------------------------------------------------------
 !  Define isf model state prognostic variables.
@@ -284,7 +284,7 @@
           END IF
         END IF
 # endif
-# ifdef ICESHELF_THERMO
+# if defined ICESHEET || defined ICESHELF_THERMO
 !
 !-----------------------------------------------------------------------
 !  Define isf model internal variables.
@@ -473,7 +473,7 @@
 !  ice shelf variables. Get variable IDs.
 !
         DO i=1,n_var
-# ifdef ICESHELF_MOM
+# ifdef ICESHEET
           DO nf=1,nIsfS
             IF (iSisf(nf).gt.0) THEN
               ifield=iSisf(nf)
@@ -493,7 +493,7 @@
             S(ng)%Vid(idIvnr)=var_id(i)
           END IF
 # endif
-# ifdef ICESHELF_THERMO
+# if defined ICESHEET || defined ICESHELF_THERMO
 !
           DO nf=1,nIsfF
             IF (iFisf(nf).gt.0) THEN
@@ -529,7 +529,7 @@
 !
 !  Check if output variables are available in input NetCDF file.
 !
-# ifdef ICESHELF_MOM
+# ifdef ICESHEET
         DO nf=1,nIsfS
           IF (iSisf(nf).gt.0) THEN
             ifield=iSisf(nf)
@@ -555,7 +555,7 @@
           RETURN
         END IF
 # endif
-# ifdef ICESHELF_THERMO
+# if defined ICESHEET || defined ICESHELF_THERMO
 !
         DO nf=1,nIsfF
           IF (iFisf(nf).gt.0) THEN
@@ -664,7 +664,7 @@
 # else
       gfactor=1
 # endif
-# ifdef ICESHELF_MOM
+# ifdef ICESHEET
 !
 !-----------------------------------------------------------------------
 !  write out ice shelf model state prognostic variables.
@@ -841,7 +841,7 @@
         deallocate (Vr2d)
       END IF
 # endif
-# ifdef ICESHELF_THERMO
+# if defined ICESHEET || defined ICESHELF_THERMO
 !
 !-----------------------------------------------------------------------
 !  write out isf model internal variables.
@@ -1199,7 +1199,7 @@
 !
       DEFINE : IF (ldef) THEN
 
-#  ifdef ICESHELF_MOM
+#  ifdef ICESHEET
         DO nf=1,nIsfS
           IF (iSisf(nf).gt.0) THEN
             ifield=iSisf(nf)
@@ -1251,7 +1251,7 @@
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 #  endif
-#  ifdef ICESHELF_THERMO
+#  if defined ICESHEET || defined ICESHELF_THERMO
 !
 !-----------------------------------------------------------------------
 !  Define isf model internal variables.
@@ -1363,7 +1363,7 @@
 !  ice shelf variables. Get variable IDs.
 !
         DO i=1,n_var
-#  ifdef ICESHELF_MOM
+#  ifdef ICESHEET
           DO nf=1,nIsfS
             IF (iSisf(nf).gt.0) THEN
               ifield=iSisf(nf)
@@ -1383,7 +1383,7 @@
             S(ng)%Vid(idIvnr)=var_id(i)
           END IF
 #  endif
-#  ifdef ICESHELF_THERMO
+#  if defined ICESHEET || defined ICESHELF_THERMO
 !
           DO nf=1,nIsfF
             IF (iFisf(nf).gt.0) THEN
@@ -1419,7 +1419,7 @@
 !
 !  Check if output variables are available in input NetCDF file.
 !
-#  ifdef ICESHELF_MOM
+#  ifdef ICESHEET
         DO nf=1,nIsfS
           IF (iSisf(nf).gt.0) THEN
             ifield=iSisf(nf)
@@ -1445,7 +1445,7 @@
           RETURN
         END IF
 #  endif
-#  ifdef ICESHELF_THERMO
+#  if defined ICESHEET || defined ICESHELF_THERMO
 !
         DO nf=1,nIsfF
           IF (iFisf(nf).gt.0) THEN
@@ -1543,7 +1543,7 @@
         Xpos(i)=SCALARS(ng)%SposX(i)
         Ypos(i)=SCALARS(ng)%SposY(i)
       END DO
-#  ifdef ICESHELF_MOM
+#  ifdef ICESHEET
 !
 !-----------------------------------------------------------------------
 !  write out ice shelf model state prognostic variables.
@@ -1622,7 +1622,7 @@
         deallocate (Vr2d)
       END IF
 #  endif
-#  ifdef ICESHELF_THERMO
+#  if defined ICESHEET || defined ICESHELF_THERMO
 !
 !-----------------------------------------------------------------------
 !  write out isf model internal variables.
@@ -1817,7 +1817,7 @@
         ELSE
           vtype=PIO_FOUT
         END IF
-#  ifdef ICESHELF_MOM
+#  ifdef ICESHEET
 !
 !-----------------------------------------------------------------------
 !  Define isf model state prognostic variables.
@@ -1969,7 +1969,7 @@
           END IF
         END IF
 #  endif
-#  ifdef ICESHELF_THERMO
+#  if defined ICESHEET || defined ICESHELF_THERMO
 !
 !-----------------------------------------------------------------------
 !  Define isf model internal variables.
@@ -2175,7 +2175,7 @@
         END IF
 !
         DO i=1,n_var
-#  ifdef ICESHELF_MOM
+#  ifdef ICESHEET
           DO nf=1,nIsfS
             IF (iSisf(nf).gt.0) THEN
               ifield=iSisf(nf)
@@ -2210,7 +2210,7 @@
             S(ng)%pioVar(idIvnr)%gtype=r2dvar
           END IF
 #  endif
-#  ifdef ICESHELF_THERMO
+#  if defined ICESHEET || defined ICESHELF_THERMO
 !
           DO nf=1,nIsfF
             IF (iFisf(nf).gt.0) THEN
@@ -2252,7 +2252,7 @@
 !
 !  Check if output variables are available in input NetCDF file.
 !
-#  ifdef ICESHELF_MOM
+#  ifdef ICESHEET
         DO nf=1,nIsfS
           IF (iSisf(nf).gt.0) THEN
             ifield=iSisf(nf)
@@ -2278,7 +2278,7 @@
           RETURN
         END IF
 #  endif
-#  ifdef ICESHELF_THERMO
+#  if defined ICESHEET || defined ICESHELF_THERMO
 !
         DO nf=1,nIsfF
           IF (iFisf(nf).gt.0) THEN
@@ -2392,7 +2392,7 @@
 #  else
       gfactor=1
 #  endif
-#  ifdef ICESHELF_MOM
+#  ifdef ICESHEET
 !
 !-----------------------------------------------------------------------
 !  write out ice shelf model state prognostic variables.
@@ -2615,7 +2615,7 @@
         deallocate (Vr2d)
       END IF
 #  endif
-#  ifdef ICESHELF_THERMO
+#  if defined ICESHEET || defined ICESHELF_THERMO
 !
 !-----------------------------------------------------------------------
 !  write out isf model internal variables.
@@ -3010,7 +3010,7 @@
 !
       DEFINE : IF (ldef) THEN
 
-#   ifdef ICESHELF_MOM
+#   ifdef ICESHEET
         DO nf=1,nIsfS
           IF (iSisf(nf).gt.0) THEN
             ifield=iSisf(nf)
@@ -3068,7 +3068,7 @@
           IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
         END IF
 #   endif
-#   ifdef ICESHELF_THERMO
+#   if defined ICESHEET || defined ICESHELF_THERMO
 !
 !-----------------------------------------------------------------------
 !  Define isf model internal variables.
@@ -3188,7 +3188,7 @@
 !  ice shelf variables. Get variable IDs.
 !
         DO i=1,n_var
-#   ifdef ICESHELF_MOM
+#   ifdef ICESHEET
           DO nf=1,nIsfS
             IF (iSisf(nf).gt.0) THEN
               ifield=iSisf(nf)
@@ -3214,7 +3214,7 @@
             S(ng)%pioVar(idIvnr)%gtype=0
           END IF
 #   endif
-#   ifdef ICESHELF_THERMO
+#   if defined ICESHEET || defined ICESHELF_THERMO
 !
           DO nf=1,nIsfF
             IF (iFisf(nf).gt.0) THEN
@@ -3256,7 +3256,7 @@
 !
 !  Check if output variables are available in input NetCDF file.
 !
-#   ifdef ICESHELF_MOM
+#   ifdef ICESHEET
         DO nf=1,nIsfS
           IF (iSisf(nf).gt.0) THEN
             ifield=iSisf(nf)
@@ -3282,7 +3282,7 @@
           RETURN
         END IF
 #   endif
-#   ifdef ICESHELF_THERMO
+#   if defined ICESHEET || defined ICESHELF_THERMO
 !
         DO nf=1,nIsfF
           IF (iFisf(nf).gt.0) THEN
@@ -3380,7 +3380,7 @@
         Xpos(i)=SCALARS(ng)%SposX(i)
         Ypos(i)=SCALARS(ng)%SposY(i)
       END DO
-#   ifdef ICESHELF_MOM
+#   ifdef ICESHEET
 !
 !-----------------------------------------------------------------------
 !  write out ice shelf model state prognostic variables.
@@ -3459,7 +3459,7 @@
         deallocate (Vr2d)
       END IF
 #   endif
-#   ifdef ICESHELF_THERMO
+#   if defined ICESHEET || defined ICESHELF_THERMO
 !
 !-----------------------------------------------------------------------
 !  write out isf model internal variables.

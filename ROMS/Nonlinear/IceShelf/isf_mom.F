@@ -2,7 +2,7 @@
 
       MODULE isf_mom_mod
 
-#ifdef ICESHELF_MOM
+#ifdef ICESHEET
 !
 !================================================== Hernan G. Arango ===
 !  Copyright (c) 2002-2024 The ROMS/TOMS Group          Chuning Wang   !
@@ -253,12 +253,11 @@
       ksa_old=lsold(ng)
       ksa_new=lsnew(ng)
 !
-!  Use rho_w_ref as seawater density for flotation criterion.
-!  This is configurable via isf.in (default 1025.0).  For TEOS10 runs
-!  with strong density contrast, set to the local cavity-averaged
-!  density for more accurate grounding line positioning.
+!  Use reference seawater density for the flotation criterion.
+!  Reuse mod_scalars rho0 (mean Boussinesq density, default 1025.0)
+!  for consistency with the isf_masks.F grounding-line criterion.
 !
-      rho_w_local=rho_w_ref(ng)
+      rho_w_local=rho0
 !
 !-----------------------------------------------------------------------
 !  Prepare the scalar ice state (thickness, temperature, enthalpy)
@@ -287,22 +286,18 @@
         CALL exchange_r2d_tile(ng,tile,LBi,UBi,LBj,UBj,                &
      &                         Si(:,:,ksa_old,isIhis))
         CALL exchange_r2d_tile(ng,tile,LBi,UBi,LBj,UBj,                &
-     &                         Si(:,:,ksa_old,isItis))
-        CALL exchange_r2d_tile(ng,tile,LBi,UBi,LBj,UBj,                &
      &                         Si(:,:,ksa_old,isIeis))
       END IF
 # ifdef DISTRIBUTE
-      CALL mp_exchange2d(ng,tile,iNLM,3,LBi,UBi,LBj,UBj,               &
+      CALL mp_exchange2d(ng,tile,iNLM,2,LBi,UBi,LBj,UBj,               &
      &                   NghostPoints,EWperiodic(ng),NSperiodic(ng),     &
      &                   Si(:,:,ksa_old,isIhis),                         &
-     &                   Si(:,:,ksa_old,isItis),                         &
      &                   Si(:,:,ksa_old,isIeis))
 # endif
 !
       DO j=JstrT,JendT
         DO i=IstrT,IendT
           Si(i,j,ksa_new,isIhis)=Si(i,j,ksa_old,isIhis)
-          Si(i,j,ksa_new,isItis)=Si(i,j,ksa_old,isItis)
           Si(i,j,ksa_new,isIeis)=Si(i,j,ksa_old,isIeis)
         END DO
       END DO
@@ -310,15 +305,12 @@
         CALL exchange_r2d_tile(ng,tile,LBi,UBi,LBj,UBj,                &
      &                         Si(:,:,ksa_new,isIhis))
         CALL exchange_r2d_tile(ng,tile,LBi,UBi,LBj,UBj,                &
-     &                         Si(:,:,ksa_new,isItis))
-        CALL exchange_r2d_tile(ng,tile,LBi,UBi,LBj,UBj,                &
      &                         Si(:,:,ksa_new,isIeis))
       END IF
 # ifdef DISTRIBUTE
-      CALL mp_exchange2d(ng,tile,iNLM,3,LBi,UBi,LBj,UBj,               &
+      CALL mp_exchange2d(ng,tile,iNLM,2,LBi,UBi,LBj,UBj,               &
      &                   NghostPoints,EWperiodic(ng),NSperiodic(ng),     &
      &                   Si(:,:,ksa_new,isIhis),                         &
-     &                   Si(:,:,ksa_new,isItis),                         &
      &                   Si(:,:,ksa_new,isIeis))
 # endif
 !
@@ -336,6 +328,16 @@
 !  This intentional asynchrony is part of the sequential coupling
 !  design: solve velocity from old geometry, then advect thickness,
 !  then update ocean-side masks from new geometry.
+!
+!  The flotation density rho_w_local is mod_scalars rho0 (mean
+!  Boussinesq density, overridable via RHO0 in the ocean input
+!  script) -- the same rho0 used by isf_masks.F.  Unlike isf_masks.F,
+!  the SSA-side criterion uses the static water depth h (no zeta,
+!  Dcrit, eps terms): the SSA solve runs before the barotropic step
+!  and must not chase high-frequency sea level oscillations in the
+!  grounding-line position.  The ocean-side wet/dry masks are the
+!  authority for the cavity (isf_masks.F); SSA float_frac only
+!  modulates basal drag in the momentum equation.
 !
       DO j=JstrT,JendT
         DO i=IstrT,IendT
@@ -442,9 +444,10 @@
 !  float_frac = 0.5 * (1 + cos(pi * (H - H_float + dH) / (2*dH)))
 !  clamped to [0, 1].
 !
-!  min_cavity_thickness consistency: cells with a cavity thinner than
-!  min_cavity_thickness are treated as grounded (float_frac=0), matching
-!  isf_masks.F's criterion so SSA and ocean see the same grounding line.
+!  NOTE: no thin-cavity clamp here.  isf_masks.F no longer treats thin
+!  cavities as grounded (min_cavity_thickness removed), so the SSA
+!  float_frac and the ocean-side masks share the same flotation-only
+!  criterion.
 !
       gl_half=0.5_r8*gl_float_width(ng)
       DO j=JstrT,JendT
@@ -455,26 +458,13 @@
             IF (H_rho.ge.H_float+gl_half) THEN
               float_frac(i,j)=0.0_r8         ! fully grounded
             ELSE IF (H_rho.le.H_float-gl_half) THEN
-!  Fully floating: check min_cavity_thickness; if cavity too thin,
-!  treat as grounded (consistent with isf_masks.F).
-              IF (h(i,j)-(rho_i/rho_w_local)*H_rho.lt.                 &
-     &            min_cavity_thickness(ng)) THEN
-                float_frac(i,j)=0.0_r8
-              ELSE
-                float_frac(i,j)=1.0_r8       ! floating
-              END IF
+              float_frac(i,j)=1.0_r8         ! floating
             ELSE
 !  Transition zone: cosine interpolation from floating (1, thin ice)
 !  to grounded (0, thick ice).
               float_frac(i,j)=0.5_r8*(1.0_r8+                          &
      &          COS(pi_const*(H_rho-H_float+gl_half)/                 &
      &              (2.0_r8*gl_half)))
-!  Clamp to grounded if cavity is thinner than min_cavity_thickness,
-!  so SSA and isf_masks.F see the same grounding line (F).
-              IF (h(i,j)-(rho_i/rho_w_local)*H_rho.lt.                 &
-     &            min_cavity_thickness(ng)) THEN
-                float_frac(i,j)=0.0_r8
-              END IF
             END IF
           ELSE
             float_frac(i,j)=0.0_r8           ! ice-free

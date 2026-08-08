@@ -1459,12 +1459,12 @@
       is=LEN_TRIM(Coptions)+1
       Coptions(is:is+17)=' ICESHELF_THERMO,'
 #  endif
-#  ifdef ICESHELF_MOM
+#  ifdef ICESHEET
 !
-      IF (Master) WRITE (stdout,20) 'ICESHELF_MOM',                     &
-     &   'Include Ice Shelf Momemtum'
+      IF (Master) WRITE (stdout,20) 'ICESHEET',                         &
+     &   'Include Ice Sheet Dynamics'
       is=LEN_TRIM(Coptions)+1
-      Coptions(is:is+14)=' ICESHELF_MOM,'
+      Coptions(is:is+9)=' ICESHEET,'
 #  endif
 # endif
 #endif

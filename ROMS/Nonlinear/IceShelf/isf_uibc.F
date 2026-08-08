@@ -2,7 +2,7 @@
 
       MODULE isf_uibc_mod
 
-#ifdef ICESHELF_MOM
+#ifdef ICESHEET
 !
 !git $Id$
 !=======================================================================

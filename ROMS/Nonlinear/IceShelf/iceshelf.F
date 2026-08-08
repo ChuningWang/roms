@@ -32,7 +32,7 @@
 # if defined ICESHEET && defined ICESHELF_THERMO
       USE isf_coupler_mod,  ONLY : isf_coupler
 # endif
-# ifdef ICESHELF_MOM
+# ifdef ICESHEET
       USE isf_mom_mod,      ONLY : isf_mom
 # endif
 # ifdef ICESHEET
@@ -123,7 +123,7 @@
 #  endif
 # endif
 
-# if defined ICESHEET_SSA && defined ICESHELF_THERMO
+# if defined ICESHEET && defined ICESHELF_THERMO
 !
 !-----------------------------------------------------------------------
 !  Ice-ocean coupling: momentum exchange (ice-ocean drag stress)
@@ -143,16 +143,16 @@
 #  endif
 # endif
 
-# ifdef ICESHELF_MOM
+# ifdef ICESHEET
 !
 !-----------------------------------------------------------------------
-!  Compute the iceshelf momentum (SSA).  With ICESHEET_SSA, solved
+!  Compute the iceshelf momentum (SSA).  With ICESHEET, solved
 !  every N_ssa ocean timesteps for multi-timescale coupling.
 !-----------------------------------------------------------------------
 !
         DO ig=1,GridsInLayer(nl)
           ng=GridNumber(ig,nl)
-#  ifdef ICESHEET_SSA
+#  ifdef ICESHEET
           IF (MOD(iic(ng)-1,N_ssa(ng)).eq.0) THEN
 #  endif
             lsold(ng)=lsnew(ng)
@@ -161,13 +161,13 @@
               CALL isf_mom (ng, tile, model)
             END DO
 !$OMP BARRIER
-#  ifdef ICESHEET_SSA
+#  ifdef ICESHEET
           END IF
 #  endif
         END DO
 # endif
 
-# ifdef ICESHEET_SSA
+# ifdef ICESHEET
 !
 !-----------------------------------------------------------------------
 !  Compute ice thickness advection (mass conservation).
@@ -213,14 +213,14 @@
         END DO
 # endif
 
-#if defined WET_DRY || defined ICESHEET_SSA
+#if defined WET_DRY || defined ICESHEET
 !
 !-----------------------------------------------------------------------
 !  Update grounding line position and ice shelf masks.
-!  With ICESHEET_SSA: executed every N_ssa*N_gl ocean timesteps.
-!  With WET_DRY only (no ICESHEET_SSA): executed every ocean timestep.
+!  With ICESHEET: executed every N_ssa*N_gl ocean timesteps.
+!  With WET_DRY only (no ICESHEET): executed every ocean timestep.
 !
-!  Under ICESHEET_SSA the masks must be recomputed even without WET_DRY
+!  Under ICESHEET the masks must be recomputed even without WET_DRY
 !  so that the dynamic zice/rmask_isf (flotation criterion) propagate to
 !  set_depth.F and isf_vbc.F.  Without WET_DRY the wet/dry *_ist masks
 !  are not updated (diagnostic only); the ocean grid mask (rmask) stays
@@ -230,7 +230,7 @@
 !
         DO ig=1,GridsInLayer(nl)
           ng=GridNumber(ig,nl)
-# ifdef ICESHEET_SSA
+# ifdef ICESHEET
 !  Cold-start skip as above; initial.F already ran isf_masks during
 !  initialization, so the step-1 recomputation is redundant.
           IF (MOD(iic(ng)-1,N_ssa(ng)*N_gl(ng)).eq.0 .and.             &
@@ -240,7 +240,7 @@
               CALL isf_masks (ng, tile, iNLM)
             END DO
 !$OMP BARRIER
-# ifdef ICESHEET_SSA
+# ifdef ICESHEET
           END IF
 # endif
         END DO

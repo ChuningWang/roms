@@ -20,7 +20,7 @@
 **  Iceshelf state variables.
 */
 
-#ifdef ICESHELF_MOM
+#ifdef ICESHEET
           CASE ('isIhis(iwest)')
             isfOBC(iwest,isIhis)=varid
           CASE ('isIhis(ieast)')
@@ -45,14 +45,14 @@
             isfOBC(isouth,isIvis)=varid
           CASE ('isIvis(inorth)')
             isfOBC(inorth,isIvis)=varid
-          CASE ('isItis(iwest)')
-            isfOBC(iwest,isItis)=varid
-          CASE ('isItis(ieast)')
-            isfOBC(ieast,isItis)=varid
-          CASE ('isItis(isouth)')
-            isfOBC(isouth,isItis)=varid
-          CASE ('isItis(inorth)')
-            isfOBC(inorth,isItis)=varid
+          CASE ('isIeis(iwest)')
+            isfOBC(iwest,isIeis)=varid
+          CASE ('isIeis(ieast)')
+            isfOBC(ieast,isIeis)=varid
+          CASE ('isIeis(isouth)')
+            isfOBC(isouth,isIeis)=varid
+          CASE ('isIeis(inorth)')
+            isfOBC(inorth,isIeis)=varid
           CASE ('idIhis')
             idIhis=varid
             iSisf(isIhis)=idIhis
@@ -66,12 +66,30 @@
             idIuer=varid
           CASE ('idIvnr')
             idIvnr=varid
-          CASE ('idItis')
-            idItis=varid
-            iSisf(isItis)=idItis
           CASE ('idIeis')
             idIeis=varid
             iSisf(isIeis)=idIeis
+          CASE ('idItis')
+            idItis=varid
+            iFisf(icItis)=idItis
+          CASE ('idIzsf')
+            idIzsf=varid
+            iFisf(icIzsf)=idIzsf
+          CASE ('idIzbd')
+            idIzbd=varid
+            iFisf(icIzbd)=idIzbd
+          CASE ('idInuh')
+            idInuh=varid
+            iFisf(icInuh)=idInuh
+          CASE ('idItdx')
+            idItdx=varid
+            iFisf(icItdx)=idItdx
+          CASE ('idItdy')
+            idItdy=varid
+            iFisf(icItdy)=idItdy
+          CASE ('idIbta')
+            idIbta=varid
+            iFisf(icIbta)=idIbta
 #endif
 #ifdef ICESHELF_THERMO
           CASE ('idImel')
@@ -110,24 +128,4 @@
             load=.TRUE.
           CASE ('idIamb(inert(i))')
             load=.TRUE.
-#endif
-#ifdef ICESHEET_SSA
-          CASE ('idIzsf')
-            idIzsf=varid
-            iFisf(icIzsf)=idIzsf
-          CASE ('idIzbd')
-            idIzbd=varid
-            iFisf(icIzbd)=idIzbd
-          CASE ('idInuh')
-            idInuh=varid
-            iFisf(icInuh)=idInuh
-          CASE ('idItdx')
-            idItdx=varid
-            iFisf(icItdx)=idItdx
-          CASE ('idItdy')
-            idItdy=varid
-            iFisf(icItdy)=idItdy
-          CASE ('idIbta')
-            idIbta=varid
-            iFisf(icIbta)=idIbta
 #endif

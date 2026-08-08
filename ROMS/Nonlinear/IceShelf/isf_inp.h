@@ -95,10 +95,10 @@
               soff = isf_ic_brylast + isIvis
               Npts=load_lbc(Nval, Cval, line, nline, soff, igrid,       &
      &                      0, 0, Vname(1,idIvis), LBC)
-            CASE ('LBC(isItis)')
-              soff = isf_ic_brylast + isItis
+            CASE ('LBC(isIeis)')
+              soff = isf_ic_brylast + isIeis
               Npts=load_lbc(Nval, Cval, line, nline, soff, igrid,       &
-     &                      0, 0, Vname(1,idItis), LBC)
+     &                      0, 0, Vname(1,idIeis), LBC)
 #endif
             CASE ('isf_drdz')
               Npts=load_r(Nval, Rval, Ngrids, isf_drdz)
@@ -234,6 +234,8 @@
 !
 !  SSA geometry parameters (available under ICESHEET)
 !
+            CASE ('max_thickness')
+              Npts=load_r(Nval, Rval, Ngrids, max_thickness)
             CASE ('gl_float_width')
               Npts=load_r(Nval, Rval, Ngrids, gl_float_width)
 # ifdef SSA_MMS_TESTING
@@ -880,6 +882,8 @@
      &          'Ice-ocean quadratic drag coefficient [-].'
           WRITE (out,60) gl_float_width(ng), 'gl_float_width',          &
      &          'Grounding line float_frac transition width [m].'
+          WRITE (out,60) max_thickness(ng), 'max_thickness',            &
+     &          'Maximum ice thickness safety cap [m].'
 # ifdef SSA_MMS_TESTING
           IF (LEN_TRIM(mms_source_file(ng)).gt.0) THEN
             WRITE (out,'(12x,a,3x,a)') 'mms_source_file =',             &

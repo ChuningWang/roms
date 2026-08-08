@@ -139,11 +139,9 @@
 !  On a uniform grid: div(uH) ≈ (Fx_right - Fx_left)*pm
 !                              + (Fy_top - Fy_bottom)*pn
 !
-!  Melt rate source: use EMA-filtered melt (icImef) when the coupler
-!  is active (ICESHEET_SSA + ICESHELF_THERMO); otherwise use the
-!  instantaneous melt (icImel) from isf_vbc.  Without ICESHELF_THERMO
-!  the coupler is not compiled, so icImef is never written and would
-!  silently stay at zero -- icImel is the correct source in that case.
+!  Melt rate source: instantaneous basal melt (icImel) from isf_vbc.
+!  No EMA-filtered field is maintained (icImef was removed from the
+!  variable architecture).
 !
 !  Surface mass balance (SMB): uniform rate smb_rate(ng) [m/s ice
 !  equivalent, positive = accumulation].  Applied everywhere ice
@@ -152,11 +150,7 @@
               H_new(i,j)=H_old                                         &
      &          -dt_sub*((Fx_right-Fx_left)*pm(i,j)                   &
      &                  +(Fy_top-Fy_bottom)*pn(i,j))                  &
-# if defined ICESHEET_SSA && defined ICESHELF_THERMO
-     &          -dt_sub*Fi(i,j,icImef)                                &
-# else
      &          -dt_sub*Fi(i,j,icImel)                                &
-# endif
      &          +dt_sub*smb_rate(ng)
 !
 !  Positivity preservation and safety cap.

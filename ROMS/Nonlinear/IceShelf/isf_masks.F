@@ -13,9 +13,10 @@
 # ifdef ICESHEET
 !                                                                      !
 !  If using ice flow model, activate wetting and drying. The grounding !
-!  line is computed dynamically from the flotation criterion:          !
-!    grounded:  rho_i * H >  rho_w * (h+zeta-Dcrit)                    !
-!    floating:  rho_i * H <= rho_w * (h+zeta-Dcrit)  (and H > 0)       !
+!  line is computed dynamically from the flotation criterion (using    !
+!  mod_scalars rho0 as seawater density):                              !
+!    grounded:  rho_i * H >  rho0 * (zeta+h-Dcrit-eps)                 !
+!    floating:  rho_i * H <= rho0 * (zeta+h-Dcrit-eps)  (and H > 0)    !
 # endif
 !                                                                      !
 !=======================================================================

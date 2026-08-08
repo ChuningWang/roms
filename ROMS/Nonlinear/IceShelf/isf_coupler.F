@@ -2,7 +2,7 @@
 
       MODULE isf_coupler_mod
 
-#if defined ICESHEET_SSA && defined ICESHELF_THERMO
+#if defined ICESHEET && defined ICESHELF_THERMO
 !
 !git $Id$
 !====================================================== Chuning Wang ===
@@ -16,18 +16,17 @@
 !  This module provides:                                               !
 !    1. Ice-ocean momentum coupling: computes the drag stress at the   !
 !       ice-ocean interface from the relative velocity between ice     !
-!       (SSA) and ocean (top layer), and writes it to sustr/svstr      !
+!       (ICESHEET) and ocean (top layer), and writes it to sustr/svstr !
 !       so the ocean momentum equation sees the correct top BC.        !
-!    2. Friction velocity update: computes u* = sqrt(Cd_isf)*|du| at       !
+!    2. Friction velocity update: computes u* = sqrt(Cd_isf)*|du| at   !
 !       RHO points for use by the 3EQN thermodynamics (isf_vbc).       !
 !    3. Basal melt rate temporal filtering: applies an exponential     !
 !       moving average (EMA) to smooth high-frequency melt variability !
 !       before it feeds back to ice thickness evolution.               !
 !                                                                      !
 !  References:                                                         !
-!    Holland & Jenkins (1999), J. Phys. Oceanogr. 29, 1787-1800.      !
+!    Holland & Jenkins (1999), J. Phys. Oceanogr. 29, 1787-1800.       !
 !    McPhee (1987), J. Geophys. Res. 92, 7017-7032.                    !
-!    MITgcm SHELFICE: shelfice_v_drag_coeff.F                          !
 !                                                                      !
 !=======================================================================
 !
@@ -131,9 +130,9 @@
 !
       integer :: i, j, know
 !
-      real(r8) :: alpha, dt_step, du, dv, spd
+      real(r8) :: du, dv, spd
       real(r8) :: ui_u, vi_v, ustar_rho
-      real(r8) :: cff, cff1, cff2, melt_inst, melt_prev
+      real(r8) :: cff, cff1, cff2
 !
 # include "set_bounds.h"
 !
@@ -150,7 +149,6 @@
 !=======================================================================
 !
       know=lsnew(ng)
-      dt_step=dt(ng)
 !
 !  U-stress at U-points.
 !
@@ -284,41 +282,9 @@
         END DO
       END DO
 !
-!=======================================================================
-!  Step 3: Basal melt rate EMA temporal filtering.
-!
-!  Apply exponential moving average to smooth high-frequency melt
-!  variability before it feeds back to ice thickness evolution:
-!    melt_filtered = alpha*melt_instant + (1-alpha)*melt_prev
-!  where alpha = dt / (tau_melt + dt).
-!
-!  Fi(i,j,icImel) holds the instantaneous melt rate from isf_vbc.
-!  Fi(i,j,icImef) stores the EMA state (persistent between steps).
-!  isf_thickness_adv reads Fi(i,j,icImef) for the thickness source.
-!=======================================================================
-!
-      IF (tau_melt(ng).gt.0.0_r8) THEN
-        alpha=dt_step/(tau_melt(ng)+dt_step)
-        DO j=Jstr,Jend
-          DO i=Istr,Iend
-            IF (rmask_isf(i,j).eq.1.0_r8) THEN
-              melt_inst=Fi(i,j,icImel)
-              melt_prev=Fi(i,j,icImef)
-              Fi(i,j,icImef)=alpha*melt_inst+                           &
-     &                       (1.0_r8-alpha)*melt_prev
-            ELSE
-              Fi(i,j,icImef)=0.0_r8
-            END IF
-          END DO
-        END DO
-      ELSE
-!  No filtering: pass through instantaneous melt rate.
-        DO j=Jstr,Jend
-          DO i=Istr,Iend
-            Fi(i,j,icImef)=Fi(i,j,icImel)
-          END DO
-        END DO
-      END IF
+!  Basal melt rate passes through to thickness evolution unfiltered:
+!  isf_thickness_adv reads Fi(i,j,icImel) (instantaneous melt rate from
+!  isf_vbc) as the thickness source.  No EMA filtering is applied here.
 !
       RETURN
       END SUBROUTINE isf_coupler_tile

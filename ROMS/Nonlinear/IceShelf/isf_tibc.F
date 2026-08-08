@@ -2,7 +2,7 @@
 
       MODULE isf_tibc_mod
 
-#ifdef ICESHELF_MOM
+#ifdef ICESHEET
 !
 !git $Id$
 !=======================================================================
@@ -54,7 +54,6 @@
      &                    ISF(ng) % Si(:,:,:,isIuis),                   &
      &                    ISF(ng) % Si(:,:,:,isIvis),                   &
      &                    ISF(ng) % Si(:,:,:,isIhis),                   &
-     &                    ISF(ng) % Si(:,:,:,isItis),                   &
      &                    ISF(ng) % Si(:,:,:,isIeis))
 # ifdef PROFILE
       CALL wclock_off (ng, model, 42, __LINE__, MyFile)
@@ -67,7 +66,7 @@
       SUBROUTINE isf_tibc_tile (ng, tile, model,                        &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          lsold, lsnew,                           &
-     &                          ui, vi, hi, ti, enthalpy)
+     &                          ui, vi, hi, enthalpy)
 !***********************************************************************
 !
 !  Imported variable declarations.
@@ -80,13 +79,11 @@
       real(r8), intent(in)    :: ui(LBi:,LBj:,:)
       real(r8), intent(in)    :: vi(LBi:,LBj:,:)
       real(r8), intent(in)    :: hi(LBi:,LBj:,:)
-      real(r8), intent(inout) :: ti(LBi:,LBj:,:)
       real(r8), intent(inout) :: enthalpy(LBi:,LBj:,:)
 # else
       real(r8), intent(in)    :: ui(LBi:UBi,LBj:UBj,2)
       real(r8), intent(in)    :: vi(LBi:UBi,LBj:UBj,2)
       real(r8), intent(in)    :: hi(LBi:UBi,LBj:UBj,2)
-      real(r8), intent(inout) :: ti(LBi:UBi,LBj:UBj,2)
       real(r8), intent(inout) :: enthalpy(LBi:UBi,LBj:UBj,2)
 # endif
 !
@@ -106,10 +103,9 @@
 !
 !  Western edge, clamped boundary condition.
 !
-        IF (LBC(iwest,ibISF(isItis),ng)%clamped) THEN
+        IF (LBC(iwest,ibISF(isIeis),ng)%clamped) THEN
           DO j=Jstr,Jend
-            enthalpy(Istr-1,j,lsnew)=ISF_LOBC(isIhis,ng)%isf_west(j)*   &
-     &                               ISF_LOBC(isItis,ng)%isf_west(j)
+            enthalpy(Istr-1,j,lsnew)=ISF_LOBC(isIeis,ng)%isf_west(j)
 # ifdef MASKING
             enthalpy(Istr-1,j,lsnew)=enthalpy(Istr-1,j,lsnew)*          &
      &                               GRID(ng)%rmask(Istr-1,j)
@@ -118,21 +114,17 @@
             enthalpy(Istr-1,j,lsnew)=enthalpy(Istr-1,j,lsnew)*          &
      &                               GRID(ng)%rmask_wet(Istr-1,j)
 # endif
-            ti(Istr-1,j,lsnew)=enthalpy(Istr-1,j,lsnew)/                &
-     &                         MAX(hi(Istr-1,j,lsnew),eps)
             IF (hi(Istr-1,j,lsnew).le.min_his) THEN
               enthalpy(Istr-1,j,lsnew)=0.0_r8
-              ti(Istr-1,j,lsnew)=0.0_r8
             END IF
           END DO
 !
 !  Western edge, clamped on inflow, gradient on outflow.
 !
-        ELSE IF (LBC(iwest,ibISF(isItis),ng)%mixed) THEN
+        ELSE IF (LBC(iwest,ibISF(isIeis),ng)%mixed) THEN
           DO j=Jstr,Jend
             IF (ui(Istr,j,lsnew).ge.0.0_r8) THEN
-              enthalpy(Istr-1,j,lsnew)=ISF_LOBC(isIhis,ng)%isf_west(j)* &
-     &                                 ISF_LOBC(isItis,ng)%isf_west(j)
+              enthalpy(Istr-1,j,lsnew)=ISF_LOBC(isIeis,ng)%isf_west(j)
 # ifdef MASKING
               enthalpy(Istr-1,j,lsnew)=enthalpy(Istr-1,j,lsnew)*        &
      &                                 GRID(ng)%rmask(Istr-1,j)
@@ -152,20 +144,16 @@
      &                                 GRID(ng)%rmask_wet(Istr-1,j)
 # endif
             END IF
-            ti(Istr-1,j,lsnew)=enthalpy(Istr-1,j,lsnew)/                &
-     &                         MAX(hi(Istr-1,j,lsnew),eps)
             IF (hi(Istr-1,j,lsnew).le.min_his) THEN
               enthalpy(Istr-1,j,lsnew)=0.0_r8
-              ti(Istr-1,j,lsnew)=0.0_r8
             END IF
           END DO
 !
 !  Western edge, gradient boundary condition.
 !
-        ELSE IF (LBC(iwest,ibISF(isItis),ng)%gradient) THEN
+        ELSE IF (LBC(iwest,ibISF(isIeis),ng)%gradient) THEN
           DO j=Jstr,Jend
-            enthalpy(Istr-1,j,lsnew)=hi(Istr,j,lsnew)*                  &
-     &                               ti(Istr,j,lsnew)
+            enthalpy(Istr-1,j,lsnew)=enthalpy(Istr,j,lsnew)
 # ifdef MASKING
             enthalpy(Istr-1,j,lsnew)=enthalpy(Istr-1,j,lsnew)*          &
      &                               GRID(ng)%rmask(Istr-1,j)
@@ -174,20 +162,16 @@
             enthalpy(Istr-1,j,lsnew)=enthalpy(Istr-1,j,lsnew)*          &
      &                               GRID(ng)%rmask_wet(Istr-1,j)
 # endif
-            ti(Istr-1,j,lsnew)=enthalpy(Istr-1,j,lsnew)/                &
-     &                         MAX(hi(Istr-1,j,lsnew),eps)
             IF (hi(Istr-1,j,lsnew).le.min_his) THEN
               enthalpy(Istr-1,j,lsnew)=0.0_r8
-              ti(Istr-1,j,lsnew)=0.0_r8
             END IF
           END DO
 !
 !  Western edge, closed boundary condition.
 !
-        ELSE IF (LBC(iwest,ibISF(isItis),ng)%closed) THEN
+        ELSE IF (LBC(iwest,ibISF(isIeis),ng)%closed) THEN
           DO j=Jstr,Jend
-            enthalpy(Istr-1,j,lsnew)=hi(Istr,j,lsnew)*                  &
-     &                               ti(Istr,j,lsnew)
+            enthalpy(Istr-1,j,lsnew)=enthalpy(Istr,j,lsnew)
 # ifdef MASKING
             enthalpy(Istr-1,j,lsnew)=enthalpy(Istr-1,j,lsnew)*          &
      &                               GRID(ng)%rmask(Istr-1,j)
@@ -196,11 +180,8 @@
             enthalpy(Istr-1,j,lsnew)=enthalpy(Istr-1,j,lsnew)*          &
      &                               GRID(ng)%rmask_wet(Istr-1,j)
 # endif
-            ti(Istr-1,j,lsnew)=enthalpy(Istr-1,j,lsnew)/                &
-     &                         MAX(hi(Istr-1,j,lsnew),eps)
             IF (hi(Istr-1,j,lsnew).le.min_his) THEN
               enthalpy(Istr-1,j,lsnew)=0.0_r8
-              ti(Istr-1,j,lsnew)=0.0_r8
             END IF
           END DO
         END IF
@@ -211,13 +192,12 @@
 !-----------------------------------------------------------------------
 !
       IF (DOMAIN(ng)%Eastern_Edge(tile)) THEN
-        IF (LBC(ieast,ibISF(isItis),ng)%clamped) THEN
+        IF (LBC(ieast,ibISF(isIeis),ng)%clamped) THEN
 !
 !  Eastern edge, clamped boundary condition.
 !
           DO j=Jstr,Jend
-            enthalpy(Iend+1,j,lsnew)=ISF_LOBC(isIhis,ng)%isf_east(j)*   &
-     &                               ISF_LOBC(isItis,ng)%isf_east(j)
+            enthalpy(Iend+1,j,lsnew)=ISF_LOBC(isIeis,ng)%isf_east(j)
 # ifdef MASKING
             enthalpy(Iend+1,j,lsnew)=enthalpy(Iend+1,j,lsnew)*          &
      &                               GRID(ng)%rmask(Iend+1,j)
@@ -226,21 +206,17 @@
             enthalpy(Iend+1,j,lsnew)=enthalpy(Iend+1,j,lsnew)*          &
      &                               GRID(ng)%rmask_wet(Iend+1,j)
 # endif
-            ti(Iend+1,j,lsnew)=enthalpy(Iend+1,j,lsnew)/                &
-     &                         MAX(hi(Iend+1,j,lsnew),eps)
             IF (hi(Iend+1,j,lsnew).le.min_his) THEN
               enthalpy(Iend+1,j,lsnew)=0.0_r8
-              ti(Iend+1,j,lsnew)=0.0_r8
             END IF
           END DO
 !
 !  Eastern edge, clamped on inflow, gradient on outflow.
 !
-        ELSE IF (LBC(ieast,ibISF(isItis),ng)%mixed) THEN
+        ELSE IF (LBC(ieast,ibISF(isIeis),ng)%mixed) THEN
           DO j=Jstr,Jend
             IF (ui(Iend+1,j,lsnew).le.0.0_r8) THEN
-              enthalpy(Iend+1,j,lsnew)=ISF_LOBC(isIhis,ng)%isf_east(j)* &
-     &                                 ISF_LOBC(isItis,ng)%isf_east(j)
+              enthalpy(Iend+1,j,lsnew)=ISF_LOBC(isIeis,ng)%isf_east(j)
 # ifdef MASKING
               enthalpy(Iend+1,j,lsnew)=enthalpy(Iend+1,j,lsnew)*        &
      &                                 GRID(ng)%rmask(Iend+1,j)
@@ -250,8 +226,7 @@
      &                                 GRID(ng)%rmask_wet(Iend+1,j)
 # endif
             ELSE
-              enthalpy(Iend+1,j,lsnew)=hi(Iend,j,lsold)*                &
-     &                                 ti(Iend,j,lsold)
+              enthalpy(Iend+1,j,lsnew)=enthalpy(Iend,j,lsold)
 # ifdef MASKING
               enthalpy(Iend+1,j,lsnew)=enthalpy(Iend+1,j,lsnew)*        &
      &                                 GRID(ng)%rmask(Iend+1,j)
@@ -260,21 +235,17 @@
               enthalpy(Iend+1,j,lsnew)=enthalpy(Iend+1,j,lsnew)*        &
      &                                 GRID(ng)%rmask_wet(Iend+1,j)
 # endif
-              ti(Iend+1,j,lsnew)=enthalpy(Iend+1,j,lsnew)/              &
-     &                           MAX(hi(Iend+1,j,lsnew),eps)
               IF (hi(Iend+1,j,lsnew).le.min_his) THEN
                 enthalpy(Iend+1,j,lsnew)=0.0_r8
-                ti(Iend+1,j,lsnew)=0.0_r8
               END IF
             END IF
           END DO
 !
 !  Eastern edge, gradient boundary condition.
 !
-        ELSE IF (LBC(ieast,ibISF(isItis),ng)%gradient) THEN
+        ELSE IF (LBC(ieast,ibISF(isIeis),ng)%gradient) THEN
           DO j=Jstr,Jend
-            enthalpy(Iend+1,j,lsnew)=hi(Iend,j,lsnew)*                  &
-     &                               ti(Iend,j,lsnew)
+            enthalpy(Iend+1,j,lsnew)=enthalpy(Iend,j,lsnew)
 # ifdef MASKING
             enthalpy(Iend+1,j,lsnew)=enthalpy(Iend+1,j,lsnew)*          &
      &                               GRID(ng)%rmask(Iend+1,j)
@@ -283,20 +254,16 @@
             enthalpy(Iend+1,j,lsnew)=enthalpy(Iend+1,j,lsnew)*          &
      &                               GRID(ng)%rmask_wet(Iend+1,j)
 # endif
-            ti(Iend+1,j,lsnew)=enthalpy(Iend+1,j,lsnew)/                &
-     &                         MAX(hi(Iend+1,j,lsnew),eps)
             IF (hi(Iend+1,j,lsnew).le.min_his) THEN
               enthalpy(Iend+1,j,lsnew)=0.0_r8
-              ti(Iend+1,j,lsnew)=0.0_r8
             END IF
           END DO
 !
 !  Eastern edge, closed boundary condition.
 !
-        ELSE IF (LBC(ieast,ibISF(isItis),ng)%closed) THEN
+        ELSE IF (LBC(ieast,ibISF(isIeis),ng)%closed) THEN
           DO j=Jstr,Jend
-            enthalpy(Iend+1,j,lsnew)=hi(Iend,j,lsnew)*                  &
-     &                               ti(Iend,j,lsnew)
+            enthalpy(Iend+1,j,lsnew)=enthalpy(Iend,j,lsnew)
 # ifdef MASKING
             enthalpy(Iend+1,j,lsnew)=enthalpy(Iend+1,j,lsnew)*          &
      &                               GRID(ng)%rmask(Iend+1,j)
@@ -305,11 +272,8 @@
             enthalpy(Iend+1,j,lsnew)=enthalpy(Iend+1,j,lsnew)*          &
      &                               GRID(ng)%rmask_wet(Iend+1,j)
 # endif
-            ti(Iend+1,j,lsnew)=enthalpy(Iend+1,j,lsnew)/                &
-     &                         MAX(hi(Iend+1,j,lsnew),eps)
             IF (hi(Iend+1,j,lsnew).le.min_his) THEN
               enthalpy(Iend+1,j,lsnew)=0.0_r8
-              ti(Iend+1,j,lsnew)=0.0_r8
             END IF
           END DO
         END IF
@@ -320,13 +284,12 @@
 !-----------------------------------------------------------------------
 !
       IF (DOMAIN(ng)%Southern_Edge(tile)) THEN
-        IF (LBC(isouth,ibISF(isItis),ng)%clamped) THEN
+        IF (LBC(isouth,ibISF(isIeis),ng)%clamped) THEN
 !
 !  Southern edge, clamped boundary condition.
 !
           DO i=Istr,Iend
-            enthalpy(i,Jstr-1,lsnew)=ISF_LOBC(isIhis,ng)%isf_south(i)*  &
-     &                               ISF_LOBC(isItis,ng)%isf_south(i)
+            enthalpy(i,Jstr-1,lsnew)=ISF_LOBC(isIeis,ng)%isf_south(i)
 # ifdef MASKING
             enthalpy(i,Jstr-1,lsnew)=enthalpy(i,Jstr-1,lsnew)*          &
      &                               GRID(ng)%rmask(i,Jstr-1)
@@ -335,21 +298,17 @@
             enthalpy(i,Jstr-1,lsnew)=enthalpy(i,Jstr-1,lsnew)*          &
      &                               GRID(ng)%rmask_wet(i,Jstr-1)
 # endif
-            ti(i,Jstr-1,lsnew)=enthalpy(i,Jstr-1,lsnew)/                &
-     &                         MAX(hi(i,Jstr-1,lsnew),eps)
             IF (hi(i,Jstr-1,lsnew).le.min_his) THEN
               enthalpy(i,Jstr-1,lsnew)=0.0_r8
-              ti(i,Jstr-1,lsnew)=0.0_r8
             END IF
           END DO
 !
 !  Southern edge, clamped boundary condition.
 !
-        ELSE IF (LBC(isouth,ibISF(isItis),ng)%mixed) THEN
+        ELSE IF (LBC(isouth,ibISF(isIeis),ng)%mixed) THEN
           DO i=Istr,Iend
             IF (vi(i,1,lsnew).ge.0.0_r8) THEN
-              enthalpy(i,Jstr-1,lsnew)=ISF_LOBC(isIhis,ng)%isf_south(i)*&
-     &                                 ISF_LOBC(isItis,ng)%isf_south(i)
+              enthalpy(i,Jstr-1,lsnew)=ISF_LOBC(isIeis,ng)%isf_south(i)
 # ifdef MASKING
               enthalpy(i,Jstr-1,lsnew)=enthalpy(i,Jstr-1,lsnew)*        &
      &                                 GRID(ng)%rmask(i,Jstr-1)
@@ -368,40 +327,15 @@
               enthalpy(i,Jstr-1,lsnew)=enthalpy(i,Jstr-1,lsnew)*        &
      &                                 GRID(ng)%rmask_wet(i,Jstr-1)
 # endif
-              ti(i,Jstr-1,lsnew)=enthalpy(i,Jstr-1,lsnew)/              &
-     &                           MAX(hi(i,Jstr-1,lsnew),eps)
               IF (hi(i,Jstr-1,lsnew).le.min_his) THEN
                 enthalpy(i,Jstr-1,lsnew)=0.0_r8
-                ti(i,Jstr-1,lsnew)=0.0_r8
               END IF
             ENDIF
           END DO
 !
 !  Southern edge, gradient boundary condition.
 !
-        ELSE IF (LBC(isouth,ibISF(isItis),ng)%gradient) THEN
-          DO i=Istr,Iend
-            enthalpy(i,Jstr-1,lsnew)=hi(i,Jstr,lsnew)*                  &
-     &                               ti(i,Jstr,lsnew)
-# ifdef MASKING
-            enthalpy(i,Jstr-1,lsnew)=enthalpy(i,Jstr-1,lsnew)*          &
-     &                               GRID(ng)%rmask(i,Jstr-1)
-# endif
-# ifdef WET_DRY
-            enthalpy(i,Jstr-1,lsnew)=enthalpy(i,Jstr-1,lsnew)*          &
-     &                               GRID(ng)%rmask_wet(i,Jstr-1)
-# endif
-            ti(i,Jstr-1,lsnew)=enthalpy(i,Jstr-1,lsnew)/                &
-     &                         MAX(hi(i,Jstr-1,lsnew),eps)
-            IF (hi(i,Jstr-1,lsnew).le.min_his) THEN
-              enthalpy(i,Jstr-1,lsnew)=0.0_r8
-              ti(i,Jstr-1,lsnew)=0.0_r8
-            END IF
-          END DO
-!
-!  Southern edge, closed boundary condition.
-!
-        ELSE IF (LBC(isouth,ibISF(isItis),ng)%closed) THEN
+        ELSE IF (LBC(isouth,ibISF(isIeis),ng)%gradient) THEN
           DO i=Istr,Iend
             enthalpy(i,Jstr-1,lsnew)=enthalpy(i,Jstr,lsnew)
 # ifdef MASKING
@@ -412,11 +346,26 @@
             enthalpy(i,Jstr-1,lsnew)=enthalpy(i,Jstr-1,lsnew)*          &
      &                               GRID(ng)%rmask_wet(i,Jstr-1)
 # endif
-            ti(i,Jstr-1,lsnew)=enthalpy(i,Jstr-1,lsnew)/                &
-     &                         MAX(hi(i,Jstr-1,lsnew),eps)
             IF (hi(i,Jstr-1,lsnew).le.min_his) THEN
               enthalpy(i,Jstr-1,lsnew)=0.0_r8
-              ti(i,Jstr-1,lsnew)=0.0_r8
+            END IF
+          END DO
+!
+!  Southern edge, closed boundary condition.
+!
+        ELSE IF (LBC(isouth,ibISF(isIeis),ng)%closed) THEN
+          DO i=Istr,Iend
+            enthalpy(i,Jstr-1,lsnew)=enthalpy(i,Jstr,lsnew)
+# ifdef MASKING
+            enthalpy(i,Jstr-1,lsnew)=enthalpy(i,Jstr-1,lsnew)*          &
+     &                               GRID(ng)%rmask(i,Jstr-1)
+# endif
+# ifdef WET_DRY
+            enthalpy(i,Jstr-1,lsnew)=enthalpy(i,Jstr-1,lsnew)*          &
+     &                               GRID(ng)%rmask_wet(i,Jstr-1)
+# endif
+            IF (hi(i,Jstr-1,lsnew).le.min_his) THEN
+              enthalpy(i,Jstr-1,lsnew)=0.0_r8
             END IF
           END DO
         END IF
@@ -427,13 +376,12 @@
 !-----------------------------------------------------------------------
 !
       IF (DOMAIN(ng)%Northern_Edge(tile)) THEN
-        IF (LBC(inorth,ibISF(isItis),ng)%clamped) THEN
+        IF (LBC(inorth,ibISF(isIeis),ng)%clamped) THEN
 !
 !  Northern edge, clamped boundary condition.
 !
           DO i=Istr,Iend
-            enthalpy(i,Jend+1,lsnew)=ISF_LOBC(isIhis,ng)%isf_north(i)*  &
-     &                               ISF_LOBC(isItis,ng)%isf_north(i)
+            enthalpy(i,Jend+1,lsnew)=ISF_LOBC(isIeis,ng)%isf_north(i)
 # ifdef MASKING
             enthalpy(i,Jend+1,lsnew)=enthalpy(i,Jend+1,lsnew)*          &
      &                               GRID(ng)%rmask(i,Jend+1)
@@ -442,21 +390,17 @@
             enthalpy(i,Jend+1,lsnew)=enthalpy(i,Jend+1,lsnew)*          &
      &                               GRID(ng)%rmask_wet(i,Jend+1)
 # endif
-            ti(i,Jend+1,lsnew)=enthalpy(i,Jend+1,lsnew)/                &
-     &                         MAX(hi(i,Jend+1,lsnew),eps)
             IF (hi(i,Jend+1,lsnew).le.min_his) THEN
               enthalpy(i,Jend+1,lsnew)=0.0_r8
-              ti(i,Jend+1,lsnew)=0.0_r8
             END IF
           END DO
 !
 !  Northern edge, clamped on inflow, gradient on outflow.
 !
-        ELSE IF (LBC(inorth,ibISF(isItis),ng)%mixed) THEN
+        ELSE IF (LBC(inorth,ibISF(isIeis),ng)%mixed) THEN
           DO i=Istr,Iend
             IF (vi(i,Jend+1,lsnew).le.0.0_r8) THEN
-              enthalpy(i,Jend+1,lsnew)=ISF_LOBC(isIhis,ng)%isf_north(i)*&
-     &                                 ISF_LOBC(isItis,ng)%isf_north(i)
+              enthalpy(i,Jend+1,lsnew)=ISF_LOBC(isIeis,ng)%isf_north(i)
 # ifdef MASKING
               enthalpy(i,Jend+1,lsnew)=enthalpy(i,Jend+1,lsnew)*        &
      &                                 GRID(ng)%rmask(i,Jend+1)
@@ -476,20 +420,16 @@
      &                                 GRID(ng)%rmask_wet(i,Jend+1)
 # endif
             ENDIF
-            ti(i,Jend+1,lsnew)=enthalpy(i,Jend+1,lsnew)/                &
-     &                         MAX(hi(i,Jend+1,lsnew),eps)
             IF (hi(i,Jend+1,lsnew).le.min_his) THEN
               enthalpy(i,Jend+1,lsnew)=0.0_r8
-              ti(i,Jend+1,lsnew)=0.0_r8
             END IF
           END DO
 !
 !  Northern edge, gradient boundary condition.
 !
-        ELSE IF (LBC(inorth,ibISF(isItis),ng)%gradient) THEN
+        ELSE IF (LBC(inorth,ibISF(isIeis),ng)%gradient) THEN
           DO i=Istr,Iend
-            enthalpy(i,Jend+1,lsnew)=hi(i,Jend,lsnew)*                  &
-     &                               ti(i,Jend,lsnew)
+            enthalpy(i,Jend+1,lsnew)=enthalpy(i,Jend,lsnew)
 # ifdef MASKING
             enthalpy(i,Jend+1,lsnew)=enthalpy(i,Jend+1,lsnew)*          &
      &                               GRID(ng)%rmask(i,Jend+1)
@@ -499,24 +439,18 @@
      &                               GRID(ng)%rmask_wet(i,Jend+1)
 # endif
 # ifdef SOGLOBEC
-            ti(i,Jend+1,lsnew)=enthalpy(i,Jend+1,lsnew)/                &
-     &                         MAX(hi(i,Jend,lsnew),eps)
 # else
-            ti(i,Jend+1,lsnew)=enthalpy(i,Jend+1,lsnew)/                &
-     &                         MAX(hi(i,Jend+1,lsnew),eps)
 # endif
             IF (hi(i,Jend+1,lsnew).le.min_his) THEN
               enthalpy(i,Jend+1,lsnew)=0.0_r8
-              ti(i,Jend+1,lsnew)=0.0_r8
             END IF
           END DO
 !
 !  Northern edge, closed boundary condition.
 !
-        ELSE IF (LBC(inorth,ibISF(isItis),ng)%closed) THEN
+        ELSE IF (LBC(inorth,ibISF(isIeis),ng)%closed) THEN
           DO i=Istr,Iend
-            enthalpy(i,Jend+1,lsnew)=hi(i,Jend,lsnew)*                  &
-     &                               ti(i,Jend,lsnew)
+            enthalpy(i,Jend+1,lsnew)=enthalpy(i,Jend,lsnew)
 # ifdef MASKING
             enthalpy(i,Jend+1,lsnew)=enthalpy(i,Jend+1,lsnew)*          &
      &                               GRID(ng)%rmask(i,Jend+1)
@@ -525,11 +459,8 @@
             enthalpy(i,Jend+1,lsnew)=enthalpy(i,Jend+1,lsnew)*          &
      &                               GRID(ng)%rmask_wet(i,Jend+1)
 # endif
-            ti(i,Jend+1,lsnew)=enthalpy(i,Jend+1,lsnew)/                &
-     &                         MAX(hi(i,Jend+1,lsnew),eps)
             IF (hi(i,Jend+1,lsnew).le.min_his) THEN
               enthalpy(i,Jend+1,lsnew)=0.0_r8
-              ti(i,Jend+1,lsnew)=0.0_r8
             END IF
           END DO
         END IF
@@ -552,11 +483,8 @@
           enthalpy(Istr-1,Jstr-1,lsnew)=enthalpy(Istr-1,Jstr-1,lsnew)*  &
      &                                 GRID(ng)%rmask_wet(Istr-1,Jstr-1)
 # endif
-          ti(Istr-1,Jstr-1,lsnew)=enthalpy(Istr-1,Jstr-1,lsnew)/        &
-     &                            MAX(hi(Istr-1,Jstr-1,lsnew),eps)
           IF (hi(Istr-1,Jstr-1,lsnew).le.min_his) THEN
             enthalpy(Istr-1,Jstr-1,lsnew)=0.0_r8
-              ti(Istr-1,Jstr-1,lsnew)=0.0_r8
           END IF
         END IF
         IF (DOMAIN(ng)%SouthEast_Corner(tile)) THEN
@@ -571,11 +499,8 @@
           enthalpy(Iend+1,Jstr-1,lsnew)=enthalpy(Iend+1,Jstr-1,lsnew)*  &
      &                                 GRID(ng)%rmask_wet(Iend+1,Jstr-1)
 # endif
-          ti(Iend+1,Jstr-1,lsnew)=enthalpy(Iend+1,Jstr-1,lsnew)/        &
-     &                            MAX(hi(Iend+1,Jstr-1,lsnew),eps)
           IF (hi(Iend+1,Jstr-1,lsnew).LE.min_his) THEN
             enthalpy(Iend+1,Jstr-1,lsnew)=0.0_r8
-            ti(Iend+1,Jstr-1,lsnew)=0.0_r8
           END IF
         END IF
         IF (DOMAIN(ng)%NorthWest_Corner(tile)) THEN
@@ -590,11 +515,8 @@
           enthalpy(Istr-1,Jend+1,lsnew)=enthalpy(Istr-1,Jend+1,lsnew)*  &
      &                                 GRID(ng)%rmask_wet(Istr-1,Jend+1)
 # endif
-          ti(Istr-1,Jend+1,lsnew)=enthalpy(Istr-1,Jend+1,lsnew)/        &
-     &                            MAX(hi(Istr-1,Jend+1,lsnew),eps)
           IF (hi(Istr-1,Jend+1,lsnew).le.min_his) THEN
             enthalpy(Istr-1,Jend+1,lsnew)=0.0_r8
-            ti(Istr-1,Jend+1,lsnew)=0.0_r8
           END IF
         END IF
         IF (DOMAIN(ng)%NorthEast_Corner(tile)) THEN
@@ -609,11 +531,8 @@
           enthalpy(Iend+1,Jend+1,lsnew)=enthalpy(Iend+1,Jend+1,lsnew)*  &
      &                                 GRID(ng)%rmask_wet(Iend+1,Jend+1)
 # endif
-          ti(Iend+1,Jend+1,lsnew)=enthalpy(Iend+1,Jend+1,lsnew)/        &
-     &                            MAX(hi(Iend+1,Jend+1,lsnew),eps)
           IF (hi(Iend+1,Jend+1,lsnew).le.min_his) THEN
             enthalpy(Iend+1,Jend+1,lsnew)=0.0_r8
-            ti(Iend+1,Jend+1,lsnew)=0.0_r8
           END IF
         END IF
       END IF

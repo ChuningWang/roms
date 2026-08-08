@@ -668,24 +668,26 @@
 **                                                                           **
 ** Ice shelf model OPTIONS:                                                  **
 **                                                                           **
-** ICESHELF_MOM         use to activate iceshelf dynamics calculation        **
 ** ICESHELF_THERMO      use to activate 3-equation ice/ocean thermodynamics  **
 ** ICESHELF_TEOS10      use to activate TEOS10 in-situ T calculation         **
 ** ICESHELF_NO_SBL      use to disable sub-boundary layer flux distribution  **
 **                                                                           **
 ** Ice sheet model OPTIONS:                                                  **
 **                                                                           **
+** ICESHEET             umbrella macro (auto-derived) for ice sheet/shelf    **
+**                      dynamics: gates isf_mom.F (SSA momentum), ice sheet  **
+**                      masks, and lateral boundary conditions               **
 ** ICESHEET_SSA         use to activate SSA ice sheet momentum equation      **
 ** ICESHEET_GL          use to activate grounding line dynamics              **
 ** ICESHEET_CALVING     use to activate calving parameterization             **
 ** ICESHEET_SMB         use to activate surface mass balance                 **
 ** SSA_MMS_TESTING      use to activate MMS source injection for SSA         **
 **                      solver verification (reads mms_fu/fv from NetCDF     **
-**                      and adds to CG RHS; testing only).  This macro      **
-**                      activates ICESHELF_MOM (so isf_mom.F is compiled    **
+**                      and adds to CG RHS; testing only).  This macro       **
+**                      activates ICESHEET (so isf_mom.F is compiled         **
 **                      and called) but NOT ICESHEET_SSA, isolating the SSA  **
-**                      solver from thickness advection, calving, grounding **
-**                      line dynamics, and multi-timescale scheduling.      **
+**                      solver from thickness advection, calving, grounding  **
+**                      line dynamics, and multi-timescale scheduling.       **
 **                                                                           **
 ** OCEAN_FIXED          freeze the ocean: read the initial conditions and    **
 **                      skip all forward time integration of the ocean       **
