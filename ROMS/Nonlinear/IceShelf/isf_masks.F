@@ -1,6 +1,6 @@
 #include "cppdefs.h"
       MODULE isf_masks_mod
-#if defined ICESHELF
+#ifdef ICESHELF
 !
 !git $Id$
 !====================================================== Chuning Wang ===
@@ -226,7 +226,7 @@
 !
       DO j=JstrT,JendT
         DO i=IstrT,IendT
-          IF (zice(i,j).lt.-eps) THEN
+          IF (ABS(zice(i,j)).gt.eps) THEN
             rmask_isf(i,j)=1.0_r8
           ELSE
             rmask_isf(i,j)=0.0_r8

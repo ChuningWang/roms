@@ -245,13 +245,9 @@
 #if defined UV_QDRAG
           real(r8), pointer :: rdrag2(:,:)
 #endif
-#if defined ICESHELF_LDRAG
+#ifdef ICESHELF
           real(r8), pointer :: rdrag_isf(:,:)
-#endif
-#if defined ICESHELF_QDRAG
           real(r8), pointer :: rdrag2_isf(:,:)
-#endif
-#if defined ICESHELF_LOGDRAG
           real(r8), pointer :: ZoSur_isf(:,:)
 #endif
           real(r8), pointer :: xp(:,:)
@@ -577,15 +573,11 @@
       Dmem(ng)=Dmem(ng)+size2d
 #endif
 
-#if defined ICESHELF_LDRAG
+#ifdef ICESHELF
       allocate ( GRID(ng) % rdrag_isf(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
-#endif
-#if defined ICESHELF_QDRAG
       allocate ( GRID(ng) % rdrag2_isf(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
-#endif
-#if defined ICESHELF_LOGDRAG
       allocate ( GRID(ng) % ZoSur_isf(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
 #endif
@@ -1075,15 +1067,11 @@
      &                 __LINE__, 'GRID(ng)%rdrag2')) RETURN
 # endif
 
-# if defined ICESHELF_LDRAG
+# ifdef ICESHELF
       IF (.not.destroy(ng, GRID(ng)%rdrag_isf, MyFile,                  &
      &                 __LINE__, 'GRID(ng)%rdrag_isf')) RETURN
-# endif
-# if defined ICESHELF_QDRAG
       IF (.not.destroy(ng, GRID(ng)%rdrag2_isf, MyFile,                 &
      &                 __LINE__, 'GRID(ng)%rdrag2_isf')) RETURN
-# endif
-# if defined ICESHELF_LOGDRAG
       IF (.not.destroy(ng, GRID(ng)%ZoSur_isf, MyFile,                  &
      &                 __LINE__, 'GRID(ng)%ZoSur_isf')) RETURN
 # endif
@@ -1483,14 +1471,10 @@
 #if defined UV_QDRAG
             GRID(ng) % rdrag2(i,j) = rdrg2(ng)
 #endif
-#if defined ICESHELF_LDRAG
+#ifdef ICESHELF
             GRID(ng) % rdrag_isf(i,j) = rdrg_isf(ng)
-#endif
-#if defined ICESHELF_QDRAG
             GRID(ng) % rdrag2_isf(i,j) = rdrg2_isf(ng)
-#endif
-#if defined ICESHELF_LOGDRAG
-            GRID(ng) % ZoSur_isf(i,j) = ZoSur_isf(ng)
+            GRID(ng) % ZoSur_isf(i,j) = ZoSr_isf(ng)
 #endif
             GRID(ng) % xp(i,j) = IniVal
             GRID(ng) % xr(i,j) = IniMetricVal

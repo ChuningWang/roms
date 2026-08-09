@@ -830,7 +830,7 @@
 **   ICESHELF_LDRAG    linear drag (tau = rdrag_isf du)
 ** The drag parameters are grid arrays (GRID%rdrag_isf/rdrag2_isf/
 ** ZoSur_isf) defaulted to the scalar RDRG_ISF/RDRG2_ISF/ZOSUR_ISF from
-** the ocean input script, and overridden by the grid file under
+** the ISF input script (isf.in), and overridden by the grid file under
 ** ICESHELF_DRAG_GRID.
 ** If ICESHELF is active but no ice-shelf drag scheme is specified,
 ** default to the same scheme as the bottom drag (UV_*).
@@ -843,6 +843,8 @@
 # elif defined UV_LDRAG
 #  define ICESHELF_LDRAG
 # elif defined UV_QDRAG
+#  define ICESHELF_QDRAG
+# else
 #  define ICESHELF_QDRAG
 # endif
 #endif

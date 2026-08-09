@@ -181,7 +181,7 @@
 #  endif
 !
       USE bc_2d_mod
-#  if defined ICESHELF && defined ICESHELF_THERMO
+#  ifdef ICESHELF
       USE isf_coupler_mod, ONLY : isf_coupler
 #  endif
 #  ifdef DISTRIBUTE
@@ -536,139 +536,15 @@
 !  If ice shelf cavities, replace surface wind stress with ice shelf
 !  cavity stress (m2/s2).
 !
-!  With ICESHELF_THERMO the ice shelf coupler (isf_coupler)
-!  is the sole producer of sustr/svstr under the shelf.  It computes
-!  the drag stress from the ice-ocean relative velocity (ice velocity
-!  from the SSA solver, or zero for a static ice shelf without
-!  ICESHEET), using the drag scheme selected by ICESHELF_LOGDRAG /
-!  ICESHELF_QDRAG / ICESHELF_LDRAG, and applies its own boundary
-!  conditions and halo exchange.
-!  Without ICESHELF_THERMO (no coupler) the inline block below
-!  computes the stress from the ocean top velocity alone.
+!  isf_coupler is the sole producer of sustr/svstr under the shelf.
+!  It computes the drag stress from the ice-ocean relative velocity
+!  (ice velocity from the SSA solver, or zero for a static ice shelf
+!  without ICESHEET), using the drag scheme selected by
+!  ICESHELF_LOGDRAG / ICESHELF_QDRAG / ICESHELF_LDRAG, and applies
+!  its own boundary conditions and halo exchange.
 !-----------------------------------------------------------------------
-#  if defined ICESHELF_THERMO
+#  ifdef ICESHELF
       CALL isf_coupler (ng, tile, iNLM)
-#  else
-#   if defined UV_LOGDRAG
-!
-!  Set logarithmic ice shelf cavity stress.
-!
-      DO j=JstrV-1,Jend
-        DO i=IstrU-1,Iend
-          cff1=1.0_r8/LOG((z_w(i,j,N(ng))-z_r(i,j,N(ng)))/ZoBot(i,j))
-          cff2=vonKar*vonKar*cff1*cff1
-          wrk(i,j)=MIN(Cdb_max,MAX(Cdb_min,cff2))
-        END DO
-      END DO
-      DO j=Jstr,Jend
-        DO i=IstrU,Iend
-          IF (rmask_isf(i,j)*rmask_isf(i-1,j).eq.1.0_r8) THEN
-            cff1=0.25_r8*(v(i  ,j  ,N(ng),nrhs)+                        &
-     &                    v(i  ,j+1,N(ng),nrhs)+                        &
-     &                    v(i-1,j  ,N(ng),nrhs)+                        &
-     &                    v(i-1,j+1,N(ng),nrhs))
-            cff2=SQRT(u(i,j,N(ng),nrhs)*u(i,j,N(ng),nrhs)+cff1*cff1)
-            sustr(i,j)=-0.5_r8*(wrk(i-1,j)+wrk(i,j))*                   &
-     &                 u(i,j,N(ng),nrhs)*cff2
-          END IF
-        END DO
-      END DO
-      DO j=JstrV,Jend
-        DO i=Istr,Iend
-          IF (rmask_isf(i,j)*rmask_isf(i,j-1).eq.1.0_r8) THEN
-            cff1=0.25_r8*(u(i  ,j  ,N(ng),nrhs)+                        &
-     &                    u(i+1,j  ,N(ng),nrhs)+                        &
-     &                    u(i  ,j-1,N(ng),nrhs)+                        &
-     &                    u(i+1,j-1,N(ng),nrhs))
-            cff2=SQRT(cff1*cff1+v(i,j,N(ng),nrhs)*v(i,j,N(ng),nrhs))
-            svstr(i,j)=-0.5_r8*(wrk(i,j-1)+wrk(i,j))*                   &
-     &                 v(i,j,N(ng),nrhs)*cff2
-          END IF
-        END DO
-      END DO
-#   elif defined UV_QDRAG
-!
-!  Set quadratic ice shelf cavity stress.
-!
-      DO j=Jstr,Jend
-        DO i=IstrU,Iend
-          IF (rmask_isf(i,j)*rmask_isf(i-1,j).eq.1.0_r8) THEN
-            cff1=0.25_r8*(v(i  ,j  ,N(ng),nrhs)+                        &
-     &                    v(i  ,j+1,N(ng),nrhs)+                        &
-     &                    v(i-1,j  ,N(ng),nrhs)+                        &
-     &                    v(i-1,j+1,N(ng),nrhs))
-            cff2=SQRT(u(i,j,N(ng),nrhs)*u(i,j,N(ng),nrhs)+cff1*cff1)
-            sustr(i,j)=-0.5_r8*(rdrag2(i-1,j)+rdrag2(i,j))*             &
-     &                 u(i,j,N(ng),nrhs)*cff2
-          END IF
-        END DO
-      END DO
-      DO j=JstrV,Jend
-        DO i=Istr,Iend
-          IF (rmask_isf(i,j)*rmask_isf(i,j-1).eq.1.0_r8) THEN
-            cff1=0.25_r8*(u(i  ,j  ,N(ng),nrhs)+                        &
-     &                    u(i+1,j  ,N(ng),nrhs)+                        &
-     &                    u(i  ,j-1,N(ng),nrhs)+                        &
-     &                    u(i+1,j-1,N(ng),nrhs))
-            cff2=SQRT(cff1*cff1+v(i,j,N(ng),nrhs)*v(i,j,N(ng),nrhs))
-            svstr(i,j)=-0.5_r8*(rdrag2(i,j-1)+rdrag2(i,j))*             &
-     &                 v(i,j,N(ng),nrhs)*cff2
-          END IF
-        END DO
-      END DO
-#   elif defined UV_LDRAG
-!
-!  Set linear ice shelf cavity stress.
-!
-      DO j=Jstr,Jend
-        DO i=IstrU,Iend
-          IF (rmask_isf(i,j)*rmask_isf(i-1,j).eq.1.0_r8) THEN
-            sustr(i,j)=-0.5_r8*(rdrag(i-1,j)+rdrag(i,j))*               &
-     &                 u(i,j,N(ng),nrhs)
-          END IF
-        END DO
-      END DO
-      DO j=JstrV,Jend
-        DO i=Istr,Iend
-          IF (rmask_isf(i,j)*rmask_isf(i,j-1).eq.1.0_r8) THEN
-            svstr(i,j)=-0.5_r8*(rdrag(i,j-1)+rdrag(i,j))*               &
-     &                 v(i,j,N(ng),nrhs)
-          END IF
-        END DO
-      END DO
-#   else
-      DO j=Jstr,Jend
-        DO i=IstrU,Iend
-          IF (rmask_isf(i,j)*rmask_isf(i-1,j).eq.1.0_r8) THEN
-            sustr(i,j)=0.0_r8
-          END IF
-        END DO
-      END DO
-      DO j=JstrV,Jend
-        DO i=Istr,Iend
-          IF (rmask_isf(i,j)*rmask_isf(i,j-1).eq.1.0_r8) THEN
-            svstr(i,j)=0.0_r8
-          END IF
-        END DO
-      END DO
-#   endif
-!
-!  Apply periodic or gradient boundary conditions for output
-!  purposes only.
-!
-      CALL bc_u2d_tile (ng, tile,                                       &
-     &                  LBi, UBi, LBj, UBj,                             &
-     &                  sustr)
-      CALL bc_v2d_tile (ng, tile,                                       &
-     &                  LBi, UBi, LBj, UBj,                             &
-     &                  svstr)
-#   ifdef DISTRIBUTE
-      CALL mp_exchange2d (ng, tile, iNLM, 2,                            &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    NghostPoints,                                 &
-     &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    sustr, svstr)
-#   endif
 #  endif
 #  endif
 

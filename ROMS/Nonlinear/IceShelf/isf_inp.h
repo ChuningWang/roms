@@ -102,15 +102,7 @@
 #endif
             CASE ('isf_drdz')
               Npts=load_r(Nval, Rval, Ngrids, isf_drdz)
-#ifdef ICESHELF_THERMO
-            CASE ('gamU')
-              Npts=load_r(Nval, Rval, Ngrids, gamU)
-            CASE ('min_ustar')
-              Npts=load_r(Nval, Rval, Ngrids, min_ustar)
-            CASE ('isf_Hsbl')
-              Npts=load_r(Nval, Rval, Ngrids, isf_Hsbl)
-            CASE ('tau_melt')
-              Npts=load_r(Nval, Rval, Ngrids, tau_melt)
+#ifdef ICESHELF
 # ifdef ICESHELF_LDRAG
             CASE ('RDRG_ISF')
               Npts=load_r(Nval, Rval, Ngrids, rdrg_isf)
@@ -121,8 +113,18 @@
 # endif
 # ifdef ICESHELF_LOGDRAG
             CASE ('ZOSUR_ISF')
-              Npts=load_r(Nval, Rval, Ngrids, ZoSur_isf)
+              Npts=load_r(Nval, Rval, Ngrids, ZoSr_isf)
 # endif
+#endif
+#ifdef ICESHELF_THERMO
+            CASE ('gamU')
+              Npts=load_r(Nval, Rval, Ngrids, gamU)
+            CASE ('min_ustar')
+              Npts=load_r(Nval, Rval, Ngrids, min_ustar)
+            CASE ('isf_Hsbl')
+              Npts=load_r(Nval, Rval, Ngrids, isf_Hsbl)
+            CASE ('tau_melt')
+              Npts=load_r(Nval, Rval, Ngrids, tau_melt)
 # ifdef T_PASSIVE
             CASE ('LtracerIsf')
               Npts=load_l(Nval, Cval, NPT, Ngrids, Linert)
@@ -792,15 +794,7 @@
       IF (Lwrite) THEN
         DO ng=1,Ngrids
           WRITE (out,40) ng
-#ifdef ICESHELF_THERMO
-          WRITE (out,60) gamU(ng), 'gamU',                              &
-     &          'Iceshelf Ustar scaling factor (nondimensional).'
-          WRITE (out,60) min_ustar(ng), 'min_ustar',                    &
-     &          'Iceshelf minimum Ustar value.'
-          WRITE (out,60) isf_Hsbl(ng), 'isf_Hsbl',                      &
-     &          'Iceshelf sub-boundary layer thickness [m].'
-          WRITE (out,60) tau_melt(ng), 'tau_melt',                      &
-     &          'Melt rate EMA filter timescale [s].'
+#ifdef ICESHELF
 # ifdef ICESHELF_LDRAG
           WRITE (out,60) rdrg_isf(ng), 'rdrg_isf',                      &
      &          'Linear ice shelf drag coefficient (m/s).'
@@ -810,9 +804,19 @@
      &          'Quadratic ice shelf drag coefficient.'
 # endif
 # ifdef ICESHELF_LOGDRAG
-          WRITE (out,60) ZoSur_isf(ng), 'ZoSur_isf',                    &
+          WRITE (out,60) ZoSr_isf(ng), 'ZoSr_isf',                    &
      &          'Ice shelf surface roughness (m).'
 # endif
+#endif
+#ifdef ICESHELF_THERMO
+          WRITE (out,60) gamU(ng), 'gamU',                              &
+     &          'Iceshelf Ustar scaling factor (nondimensional).'
+          WRITE (out,60) min_ustar(ng), 'min_ustar',                    &
+     &          'Iceshelf minimum Ustar value.'
+          WRITE (out,60) isf_Hsbl(ng), 'isf_Hsbl',                      &
+     &          'Iceshelf sub-boundary layer thickness [m].'
+          WRITE (out,60) tau_melt(ng), 'tau_melt',                      &
+     &          'Melt rate EMA filter timescale [s].'
 # ifdef T_PASSIVE
           DO i=1,NPT
             itrc=inert(i)

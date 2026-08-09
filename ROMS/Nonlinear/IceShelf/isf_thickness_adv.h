@@ -150,7 +150,9 @@
               H_new(i,j)=H_old                                         &
      &          -dt_sub*((Fx_right-Fx_left)*pm(i,j)                   &
      &                  +(Fy_top-Fy_bottom)*pn(i,j))                  &
+# ifdef ICESHELF_THERMO
      &          -dt_sub*Fi(i,j,icImel)                                &
+# endif
      &          +dt_sub*smb_rate(ng)
 !
 !  Positivity preservation and safety cap.

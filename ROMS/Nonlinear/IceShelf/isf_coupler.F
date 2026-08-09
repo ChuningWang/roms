@@ -2,7 +2,7 @@
 
       MODULE isf_coupler_mod
 
-#if defined ICESHELF && defined ICESHELF_THERMO
+#ifdef ICESHELF
 !
 !git $Id$
 !====================================================== Chuning Wang ===
@@ -25,8 +25,10 @@
 !       (ice at PSI points interpolated to U/V points); for a static   !
 !       ice shelf (no ICESHEET) the ice velocity is zero and the drag  !
 !       acts on the ocean top velocity alone.                          !
-!    2. Friction velocity update: computes u* = |tau|^(1/2) at RHO     !
-!       points for use by the 3EQN thermodynamics (isf_vbc).           !
+!    2. Friction velocity update (ICESHEET only): computes u* =       !
+!       |tau|^(1/2) at RHO points for use by the 3EQN thermodynamics  !
+!       (isf_vbc); for a static ice shelf isf_vbc derives u* from      !
+!       gamU and the stress field instead.                            !
 !                                                                      !
 !  References:                                                         !
 !    Holland & Jenkins (1999), J. Phys. Oceanogr. 29, 1787-1800.       !
@@ -195,13 +197,12 @@
 !  where du = u_ice - u_ocean is the relative velocity (ice velocity is
 !  zero for a static ice shelf without ICESHEET).  The drag parameters
 !  rdrag_isf/rdrag2_isf/ZoSur_isf are grid arrays (defaulted to the
-!  scalar rdrg_isf/rdrg2_isf/ZoSur_isf, overridden by the grid file
+!  scalar rdrg_isf/rdrg2_isf/ZoSr_isf, overridden by the grid file
 !  under ICESHELF_DRAG_GRID).
 !
 !  Ice velocity is at PSI points; interpolate to U/V points.
 !  Ocean velocity is at U/V points (top layer k=N).
 !  Write stress to sustr/svstr (ocean surface stress).
-!  Compute friction velocity u* at RHO points for 3EQN.
 !=======================================================================
 !
       know=lsnew(ng)
@@ -348,6 +349,7 @@
      &                    sustr, svstr)
 # endif
 !
+# if defined ICESHEET && defined ICESHELF_THERMO
 !=======================================================================
 !  Step 2: Compute friction velocity u* at RHO points (ICESHEET only).
 !
@@ -358,9 +360,9 @@
 !  Under ICESHEET this replaces the gamU-based u* in isf_vbc.  For a
 !  static ice shelf (no ICESHEET) Step 2 is skipped: isf_vbc computes
 !  u* from sustr/svstr with the gamU scaling factor instead.
+!  Also requires ICESHELF_THERMO (Fi array must be allocated).
 !=======================================================================
 !
-# ifdef ICESHEET
       DO j=Jstr,Jend
         DO i=Istr,Iend
           IF (rmask_isf(i,j).eq.1.0_r8) THEN
@@ -377,11 +379,6 @@
         END DO
       END DO
 # endif
-!
-!  Basal melt rate passes through to thickness evolution unfiltered:
-!  isf_thickness_adv reads Fi(i,j,icImel) (instantaneous melt rate from
-!  isf_vbc) as the thickness source.  No EMA filtering is applied here.
-!
       RETURN
       END SUBROUTINE isf_coupler_tile
 !

@@ -217,18 +217,14 @@
       real(r8), allocatable :: min_ustar(:)     ! minimum ustar value
       real(r8), allocatable :: isf_Hsbl(:)      ! SBL thickness [m]
 !
-!  Ice-ocean coupling parameters (used by isf_coupler under ICESHELF)
+!  Ice-ocean coupling parameters
 !
       real(r8), allocatable :: tau_melt(:)      ! MR EMA filter TS [s]
-# ifdef ICESHELF_LDRAG
+#ifdef ICESHELF
       real(r8), allocatable :: rdrg_isf(:)      ! linear drag coeff. [m/s]
-# endif
-# ifdef ICESHELF_QDRAG
       real(r8), allocatable :: rdrg2_isf(:)     ! quadratic drag coeff. [-]
-# endif
-# ifdef ICESHELF_LOGDRAG
-      real(r8), allocatable :: ZoSur_isf(:)     ! surface roughness [m]
-# endif
+      real(r8), allocatable :: ZoSr_isf(:)     ! surface roughness [m]
+#endif
 !
 !  Logical switches
 !
@@ -503,27 +499,23 @@
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
           tau_melt(1:Ngrids)=IniVal
         END IF
-# ifdef ICESHELF_LDRAG
+#ifdef ICESHELF
         IF (.not.allocated(rdrg_isf)) THEN
           allocate ( rdrg_isf(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
           rdrg_isf(1:Ngrids)=IniVal
         END IF
-# endif
-# ifdef ICESHELF_QDRAG
         IF (.not.allocated(rdrg2_isf)) THEN
           allocate ( rdrg2_isf(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
           rdrg2_isf(1:Ngrids)=IniVal
         END IF
-# endif
-# ifdef ICESHELF_LOGDRAG
-        IF (.not.allocated(ZoSur_isf)) THEN
-          allocate ( ZoSur_isf(Ngrids) )
+        IF (.not.allocated(ZoSr_isf)) THEN
+          allocate ( ZoSr_isf(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          ZoSur_isf(1:Ngrids)=IniVal
+          ZoSr_isf(1:Ngrids)=IniVal
         END IF
-# endif
+#endif
 
         IF (.not.allocated(NTISF)) THEN
           allocate ( NTISF(Ngrids) )
@@ -1008,15 +1000,11 @@
 !
       IF (allocated(isf_Hsbl))  deallocate ( isf_Hsbl )
       IF (allocated(tau_melt))  deallocate ( tau_melt )
-# ifdef ICESHELF_LDRAG
+#ifdef ICESHELF
       IF (allocated(rdrg_isf))  deallocate ( rdrg_isf )
-# endif
-# ifdef ICESHELF_QDRAG
       IF (allocated(rdrg2_isf)) deallocate ( rdrg2_isf )
-# endif
-# ifdef ICESHELF_LOGDRAG
-      IF (allocated(ZoSur_isf)) deallocate ( ZoSur_isf )
-# endif
+      IF (allocated(ZoSr_isf)) deallocate ( ZoSr_isf )
+#endif
 !
 #ifdef ICESHEET
       IF (allocated(n_glen))         deallocate ( n_glen )
