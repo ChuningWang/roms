@@ -2356,7 +2356,7 @@
       ELSE
         IF (Master) THEN
           WRITE (stdout,30) 'ice shelf linear drag '//                  &
-     &                      'coefficient: rdrag_isf',                  &
+     &                      'coefficient: rdrag_isf',                   &
      &                      ng, TRIM(ncname), Fmin, Fmax
 #   ifdef CHECKSUM
           WRITE (stdout,60) Fhash

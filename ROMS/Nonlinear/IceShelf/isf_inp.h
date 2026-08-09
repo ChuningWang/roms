@@ -804,7 +804,7 @@
      &          'Quadratic ice shelf drag coefficient.'
 # endif
 # ifdef ICESHELF_LOGDRAG
-          WRITE (out,60) ZoSr_isf(ng), 'ZoSr_isf',                    &
+          WRITE (out,60) ZoSr_isf(ng), 'ZoSr_isf',                      &
      &          'Ice shelf surface roughness (m).'
 # endif
 #endif

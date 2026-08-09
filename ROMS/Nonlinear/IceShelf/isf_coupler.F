@@ -18,17 +18,17 @@
 !       ice-ocean interface and writes it to sustr/svstr so the ocean  !
 !       momentum equation sees the correct top BC.  Three drag         !
 !       parameterizations mirror the bottom drag options:              !
-!         ICESHELF_LOGDRAG  logarithmic law (ZoSur_isf + von Karman)    !
-!         ICESHELF_QDRAG    quadratic drag (tau = rdrag2_isf |du| du)   !
-!         ICESHELF_LDRAG    linear drag (tau = rdrag_isf du)            !
+!         ICESHELF_LOGDRAG  logarithmic law (ZoSur_isf + von Karman)   !
+!         ICESHELF_QDRAG    quadratic drag (tau = rdrag2_isf |du| du)  !
+!         ICESHELF_LDRAG    linear drag (tau = rdrag_isf du)           !
 !       With ICESHEET the drag acts on the ice-ocean relative velocity !
 !       (ice at PSI points interpolated to U/V points); for a static   !
 !       ice shelf (no ICESHEET) the ice velocity is zero and the drag  !
 !       acts on the ocean top velocity alone.                          !
-!    2. Friction velocity update (ICESHEET only): computes u* =       !
-!       |tau|^(1/2) at RHO points for use by the 3EQN thermodynamics  !
+!    2. Friction velocity update (ICESHEET only): computes u* =        !
+!       |tau|^(1/2) at RHO points for use by the 3EQN thermodynamics   !
 !       (isf_vbc); for a static ice shelf isf_vbc derives u* from      !
-!       gamU and the stress field instead.                            !
+!       gamU and the stress field instead.                             !
 !                                                                      !
 !  References:                                                         !
 !    Holland & Jenkins (1999), J. Phys. Oceanogr. 29, 1787-1800.       !
