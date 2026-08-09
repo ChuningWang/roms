@@ -226,7 +226,7 @@
 !
       DO j=JstrT,JendT
         DO i=IstrT,IendT
-          IF (zice(i,j).ne.0.0_r8) THEN
+          IF (zice(i,j).lt.-eps) THEN
             rmask_isf(i,j)=1.0_r8
           ELSE
             rmask_isf(i,j)=0.0_r8

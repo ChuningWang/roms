@@ -123,18 +123,14 @@
 !
         DO ig=1,GridsInLayer(nl)
           ng=GridNumber(ig,nl)
-#  ifdef ICESHEET
           IF (MOD(iic(ng)-1,N_ssa(ng)).eq.0) THEN
-#  endif
             lsold(ng)=lsnew(ng)
             lsnew(ng)=3-lsold(ng)
             DO tile=first_tile(ng),last_tile(ng),+1
               CALL isf_mom (ng, tile, model)
             END DO
 !$OMP BARRIER
-#  ifdef ICESHEET
           END IF
-#  endif
         END DO
 # endif
 
@@ -143,26 +139,22 @@
 !-----------------------------------------------------------------------
 !  Compute ice thickness advection (mass conservation).
 !  Executed every N_ssa*N_thick ocean timesteps.
+!
+!  Currently disabled: isf_thickness_adv updates Si(isIhis) but does
+!  not update zice, causing hwater=h+zice inconsistency in set_depth.
+!  Re-enable after zice synchronization is implemented.
 !-----------------------------------------------------------------------
 !
-        DO ig=1,GridsInLayer(nl)
-          ng=GridNumber(ig,nl)
-!  Skip the cold-start first step: MOD(iic-1,N)=0 also triggers at
-!  iic=ntstart=1 where no time has elapsed, but the update would apply
-!  the full accumulated interval dt*N_ssa*N_thick, producing a spurious
-!  thickness change (e.g. large 3EQN freeze-on at a cold start).
-!  On a restart (ntstart>1) the first call IS needed: it covers the
-!  interval since the last recorded update.
-!  TODO: Re-enable thickness advection after zice update is implemented.
-!  Currently disabled because isf_thickness_adv updates Si(isIhis) but
-!  does not update zice, causing hwater=h+zice inconsistency in set_depth.
-          IF (.FALSE.) THEN
-            DO tile=first_tile(ng),last_tile(ng),+1
-              CALL isf_thickness_adv (ng, tile, model)
-            END DO
-!$OMP BARRIER
-          END IF
-        END DO
+!        DO ig=1,GridsInLayer(nl)
+!          ng=GridNumber(ig,nl)
+!          IF (MOD(iic(ng)-1,N_ssa(ng)*N_thick(ng)).eq.0 .and.
+!     &        iic(ng).gt.ntstart(ng)) THEN
+!            DO tile=first_tile(ng),last_tile(ng),+1
+!              CALL isf_thickness_adv (ng, tile, model)
+!            END DO
+! !$OMP BARRIER
+!          END IF
+!        END DO
 # endif
 
 # ifdef ICESHEET_CALVING
@@ -170,18 +162,20 @@
 !-----------------------------------------------------------------------
 !  Apply calving (thickness threshold).
 !  Executed together with thickness advection.
+!
+!  Currently disabled (same reason as thickness advection above).
 !-----------------------------------------------------------------------
 !
-        DO ig=1,GridsInLayer(nl)
-          ng=GridNumber(ig,nl)
-!  Same cold-start skip as thickness advection above.
-          IF (.FALSE.) THEN
-            DO tile=first_tile(ng),last_tile(ng),+1
-              CALL isf_calving (ng, tile, model)
-            END DO
-!$OMP BARRIER
-          END IF
-        END DO
+!        DO ig=1,GridsInLayer(nl)
+!          ng=GridNumber(ig,nl)
+!          IF (MOD(iic(ng)-1,N_ssa(ng)*N_thick(ng)).eq.0 .and.
+!     &        iic(ng).gt.ntstart(ng)) THEN
+!            DO tile=first_tile(ng),last_tile(ng),+1
+!              CALL isf_calving (ng, tile, model)
+!            END DO
+! !$OMP BARRIER
+!          END IF
+!        END DO
 # endif
 
 #if defined WET_DRY || defined ICESHEET

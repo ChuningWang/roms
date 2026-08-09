@@ -265,13 +265,16 @@
 !  Calculate exchange coefficients. Note that this assumes log profile.
 !
 #  ifdef ICESHEET
-!  Under dynamic ice sheet, u* is pre-computed by isf_coupler from
-!  ice-ocean relative velocity: u* = sqrt(Cd)*|u_ice - u_ocean|.
-!  The coupler runs after isf_vbc each step, so Fi(icIust) holds
-!  the previous step's value (one-step lag, negligible for slow ice).
+!  Under dynamic ice sheet, u* is pre-computed by isf_coupler (Step 2)
+!  from the ice-ocean drag stress: u* = |tau|^(1/2).  isf_coupler runs
+!  in set_vbc (before iceshelf.F), so Fi(icIust) holds the current
+!  step's value when isf_vbc executes.  Apply the minimum floor.
 !
             Fi(i,j,icIust) = MAX(min_ustar(ng), Fi(i,j,icIust))
 #  else
+!  Static ice shelf: u* is computed from the drag stress (sustr/svstr)
+!  written by isf_coupler (Step 1), scaled by gamU.
+!
             cff = gamU(ng)*SQRT(SQRT(                                   &
      &            (0.5_r8*(sustr(i,j)+sustr(i+1,j)))**2+                &
      &            (0.5_r8*(svstr(i,j)+svstr(i,j+1)))**2))

@@ -330,10 +330,9 @@
         END DO
       END DO
 !
-!  Exchange halo of the ice-shelf drag stress so that Step 2 (friction
-!  velocity at RHO points) reads consistent U/V-point values at tile
-!  boundaries.  Mirrors the boundary-condition treatment at the end of
-!  the ice shelf cavity stress block in set_vbc.F.
+!  Exchange halo of the ice-shelf drag stress so that downstream
+!  consumers (isf_vbc static u* path, output) read consistent U/V-point
+!  values at tile boundaries.
 !
       CALL bc_u2d_tile (ng, tile,                                       &
      &                  LBi, UBi, LBj, UBj,                             &
@@ -350,15 +349,18 @@
 # endif
 !
 !=======================================================================
-!  Step 2: Compute friction velocity u* at RHO points.
+!  Step 2: Compute friction velocity u* at RHO points (ICESHEET only).
 !
 !  u* = |tau|^(1/2) = (tau_x^2 + tau_y^2)^(1/4), valid for all three
 !  drag schemes: QDRAG gives u* = sqrt(rdrag2_isf) |du|, LOGDRAG gives
 !  u* = sqrt(Cd_log) |du|, and LDRAG gives u* = sqrt(rdrag_isf |du|).
 !
-!  This replaces the wind-stress-based u* in isf_vbc.
+!  Under ICESHEET this replaces the gamU-based u* in isf_vbc.  For a
+!  static ice shelf (no ICESHEET) Step 2 is skipped: isf_vbc computes
+!  u* from sustr/svstr with the gamU scaling factor instead.
 !=======================================================================
 !
+# ifdef ICESHEET
       DO j=Jstr,Jend
         DO i=Istr,Iend
           IF (rmask_isf(i,j).eq.1.0_r8) THEN
@@ -374,6 +376,7 @@
           END IF
         END DO
       END DO
+# endif
 !
 !  Basal melt rate passes through to thickness evolution unfiltered:
 !  isf_thickness_adv reads Fi(i,j,icImel) (instantaneous melt rate from

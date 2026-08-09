@@ -536,7 +536,7 @@
 !  If ice shelf cavities, replace surface wind stress with ice shelf
 !  cavity stress (m2/s2).
 !
-!  With ICESHELF + ICESHELF_THERMO the ice shelf coupler (isf_coupler)
+!  With ICESHELF_THERMO the ice shelf coupler (isf_coupler)
 !  is the sole producer of sustr/svstr under the shelf.  It computes
 !  the drag stress from the ice-ocean relative velocity (ice velocity
 !  from the SSA solver, or zero for a static ice shelf without
