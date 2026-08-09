@@ -104,9 +104,6 @@
 # endif
       USE mp_exchange_mod, ONLY : mp_exchange2d
       USE exchange_2d_mod
-# ifdef SSA_MMS_TESTING
-      USE isf_mms_source_mod, ONLY : isf_read_mms_source
-# endif
 !
 !  Imported variable declarations.
 !
@@ -226,15 +223,6 @@
       real(r8) :: H11, H21, H12, H22, H_psi
       real(r8) :: dSdx, dSdy, jac_avg
       real(r8), parameter :: sqrt3_inv = 1.0_r8/SQRT(3.0_r8)
-# ifdef SSA_MMS_TESTING
-!  MMS source terms are written by isf_read_mms_source with GLOBAL
-!  indices (LBi:UBi, LBj:UBj).  The arrays must be declared on the
-!  global bounds, NOT the tile-local IminS:ImaxS range, otherwise the
-!  subroutine overruns the array on multi-tile MPI decompositions
-!  (memory corruption -> Picard divergence).
-      real(r8), dimension(LBi:UBi,LBj:UBj) :: mms_fu_psi
-      real(r8), dimension(LBi:UBi,LBj:UBj) :: mms_fv_psi
-# endif
 # ifdef DISTRIBUTE
       character(len=3) :: op_handle
 # endif
@@ -559,43 +547,12 @@
 #   include <isf_driving_stress.h>
 #  endif
 !
-# ifdef SSA_MMS_TESTING
-!  Read MMS source terms from NetCDF (one-time per SSA call).
-      CALL isf_read_mms_source (ng, tile, LBi, UBi, LBj, UBj,          &
-     &                          mms_fu_psi, mms_fv_psi)
-#  ifdef ISF_DEBUG
-!  Report initial velocity (ksa_old - the layer read from the ini file),
-!  mms and thickness magnitudes (tile 0).
-      IF (tile.eq.0) THEN
-        u_slide=0.0_r8; cff=0.0_r8; cff1=0.0_r8
-        DO j=JstrT,JendT
-          DO i=IstrT,IendT
-            cff=MAX(cff,ABS(Si(i,j,ksa_old,isIhis)))
-          END DO
-        END DO
-        DO j=JstrP,JendP
-          DO i=IstrP,IendP
-            IF (pmask_ssa(i,j).eq.1.0_r8) THEN
-              u_slide=MAX(u_slide,SQRT(Si(i,j,ksa_old,isIuis)**2+      &
-     &                                 Si(i,j,ksa_old,isIvis)**2))
-              cff1=MAX(cff1,ABS(mms_fu_psi(i,j)))
-            END IF
-          END DO
-        END DO
-        WRITE(*,'(A,ES12.4,A,ES12.4,A,ES12.4)')                        &
-     &      '  MMS init: max|u_old|=',u_slide,' max|mms_fu|=',cff1,   &
-     &      ' max|H|=',cff
-      END IF
-#  endif
-# endif
-!
 !-----------------------------------------------------------------------
 !  SSA Picard iteration: solve A(u)*u = taud using matrix-free PCG.
-!  Active under ICESHEET_SSA (full ice-sheet) or SSA_MMS_TESTING
-!  (standalone solver verification).
+!  Active under ICESHEET_SSA (full ice-sheet).
 !-----------------------------------------------------------------------
 !
-#  if defined ICESHEET_SSA || defined SSA_MMS_TESTING
+#  ifdef ICESHEET_SSA
 !  NOTE: the halo exchange of the ksa_new velocity estimate happens
 !  INSIDE isf_cg_solve.h, AFTER the initial-guess copy (ksa_old ->
 !  ksa_new) and the Dirichlet BC enforcement.  Exchanging before the

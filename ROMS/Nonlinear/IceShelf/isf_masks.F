@@ -1,6 +1,6 @@
 #include "cppdefs.h"
       MODULE isf_masks_mod
-#if defined ICESHELF && defined WET_DRY
+#if defined ICESHELF
 !
 !git $Id$
 !====================================================== Chuning Wang ===

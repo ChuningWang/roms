@@ -689,13 +689,6 @@
 ** ICESHEET_GL          use to activate grounding line dynamics              **
 ** ICESHEET_CALVING     use to activate calving parameterization             **
 ** ICESHEET_SMB         use to activate surface mass balance                 **
-** SSA_MMS_TESTING      use to activate MMS source injection for SSA         **
-**                      solver verification (reads mms_fu/fv from NetCDF     **
-**                      and adds to CG RHS; testing only).  This macro       **
-**                      activates ICESHEET (so isf_mom.F is compiled         **
-**                      and called) but NOT ICESHEET_SSA, isolating the SSA  **
-**                      solver from thickness advection, calving, grounding  **
-**                      line dynamics, and multi-timescale scheduling.       **
 **                                                                           **
 ** OCEAN_FIXED          freeze the ocean: read the initial conditions and    **
 **                      skip all forward time integration of the ocean       **

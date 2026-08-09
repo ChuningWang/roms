@@ -852,17 +852,7 @@
 ** ICESHEET (SSA is the ice sheet momentum equation). The umbrella
 ** macro ICESHEET gates all ice-sheet-specific code (grounding line,
 ** calving, SMB).
-**
-** SSA_MMS_TESTING is a standalone testing macro: it activates the SSA
-** momentum solver (ICESHEET) and MMS source injection without
-** pulling in ICESHEET_SSA, which would also enable thickness advection,
-** calving, grounding line dynamics, and multi-timescale scheduling.
-** This keeps the MMS test configuration minimal and isolated from
-** unrelated ice-sheet physics.
 */
-#ifdef SSA_MMS_TESTING
-# define ICESHEET
-#endif
 #if defined ICESHEET_SSA || defined ICESHEET_GL || \
     defined ICESHEET_CALVING || defined ICESHEET_SMB
 # define ICESHEET

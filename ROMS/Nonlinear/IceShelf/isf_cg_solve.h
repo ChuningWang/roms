@@ -75,15 +75,6 @@
 !  The warm-start is only meaningful when basal drag is present.
 !  With C_basal ~ 0 (floating shelf, or the viscous-only MMS test)
 !  skip it and keep the previous/initial velocity field.
-!
-!  In MMS mode the initial velocity is the exact manufactured solution
-!  (read from the ini file), so the warm-start must be skipped entirely:
-!  the drag-balance estimate mms_fu*cff is inconsistent with the MMS
-!  source term and would corrupt the exact initial state at nodes where
-!  the manufactured velocity is near zero (u* ~ 0 near the sinusoid
-!  zeros), causing Picard to diverge.
-!
-# ifndef SSA_MMS_TESTING
       C_basal_sq=C_basal(ng)*C_basal(ng)
 !  Warm-start is only valid for linear sliding (n_basal=1).  For
 !  nonlinear sliding (n_basal != 1) the drag balance tau_d = C^2*u^m
@@ -113,7 +104,6 @@
         END DO
       END DO
       END IF
-# endif
 !
 !  Re-enforce lateral BCs after warm-start.
 !
@@ -132,43 +122,6 @@
           Si(IstrP,j,ksa_new,isIuis)=0.0_r8
         END DO
       END IF
-# ifdef SSA_MMS_TESTING
-!  MMS mode: enforce Dirichlet u=0 at the east boundary on the initial
-!  guess as well (manufactured solution u* vanishes at x=Lx).
-      IF (Iend.eq.Lm(ng)) THEN
-        DO j=JstrP,JendP
-          Si(IendP,j,ksa_new,isIuis)=0.0_r8
-        END DO
-      END IF
-#  ifdef ISF_DEBUG
-!  MMS diagnostic: is the initial guess the manufactured solution?
-      IF (tile.eq.0) THEN
-        cff=0.0_r8; cff1=0.0_r8
-        DO j=JstrP,JendP
-          DO i=IstrP,IendP
-            IF (pmask_ssa(i,j).eq.1.0_r8) THEN
-              cff=MAX(cff,ABS(Si(i,j,ksa_new,isIuis)))
-              cff1=MAX(cff1,SQRT(Si(i,j,ksa_new,isIuis)**2+           &
-     &                           Si(i,j,ksa_new,isIvis)**2))
-            END IF
-          END DO
-        END DO
-        WRITE(*,'(A,ES12.4,A,ES12.4)')                                 &
-     &      '  MMS guess: max|u0|=',cff,' max|vel0|=',cff1
-!  Track the thickness field used by the viscosity (ksa_old level):
-!  if isf_vbc (3EQN thermo) melts/freezes H between SSA calls, this
-!  max will change and corrupt the MMS operator.
-        cff=0.0_r8
-        DO j=Jstr,Jend
-          DO i=Istr,Iend
-            cff=MAX(cff,ABS(Si(i,j,ksa_old,isIhis)))
-          END DO
-        END DO
-        WRITE(*,'(A,I6,A,ES12.4)') '  MMS state iic=',iic(ng),         &
-     &      ' max|H(ksa_old)|=',cff
-      END IF
-#  endif
-# endif
 !
 !  Initialize CG work arrays to zero over their full declared ranges.
 !  NOTE: Au/Av/diag_u/diag_v/u_scr/v_scr are declared on the GLOBAL
@@ -449,66 +402,6 @@
      &                     Au,Av)
 # endif
 !
-# ifdef ISF_DEBUG
-#  ifdef SSA_MMS_TESTING
-!  MMS diagnostic (Picard iter 1 only): residual of the manufactured
-!  initial guess.  If the Fortran operator matched the generator, this
-!  would be at machine precision; a large value localizes an operator
-!  inconsistency.  Strongly constrained Dirichlet nodes (Ru/Rv zeroed
-!  in the solver) are skipped since their Au/Av values are irrelevant.
-        IF (nl_iter.eq.1.and.tile.eq.0) THEN
-          cff=0.0_r8; cff1=0.0_r8; cff2=0.0_r8
-          DO j=JstrP,JendP
-            DO i=IstrP,IendP
-              IF (pmask_ssa(i,j).eq.1.0_r8) THEN
-                IF (.not.((Istr.eq.1.and.i.eq.IstrP).or.               &
-     &                    (Iend.eq.Lm(ng).and.i.eq.IendP)))            &
-     &            cff=MAX(cff,ABS(Au(i,j)-mms_fu_psi(i,j)))
-                IF (.not.((Jstr.eq.1.and.j.eq.JstrP).or.               &
-     &                    (Jend.eq.Mm(ng).and.j.eq.JendP)))            &
-     &            cff=MAX(cff,ABS(Av(i,j)-mms_fv_psi(i,j)))
-                cff1=MAX(cff1,ABS(mms_fu_psi(i,j)),                    &
-     &                        ABS(mms_fv_psi(i,j)))
-                cff2=MAX(cff2,ABS(Au(i,j)),ABS(Av(i,j)))
-              END IF
-            END DO
-          END DO
-          WRITE(*,'(A,ES12.4,A,ES12.4,A,ES12.4)')                      &
-     &        '  MMS op chk: max|Au-mms|=',cff,                        &
-     &        ' max|mms|=',cff1,' max|Au|=',cff2
-!  Sample coefficients at a fixed interior RHO cell (200,20) so they
-!  can be cross-checked against the generator (gen_mms_source.py).
-          IF (200.ge.Istr.and.200.le.Iend.and.                        &
-     &        20.ge.Jstr.and.20.le.Jend) THEN
-            WRITE(*,'(A,2ES15.6)')                                     &
-     &          '  MMS coef(200,20) nuH,beta:',                        &
-     &          nuH_rho(200,20),beta_rho(200,20)
-          END IF
-!  Dump the Fortran-assembled A(u*) field (global bounds) for an
-!  offline diff against the generator operator.  Must run only at the
-!  FIRST Picard iteration (initial guess = manufactured solution);
-!  later iterations hold A(u_k) with the current iterate.
-!  Dump the first two SSA calls of every rank so call 1 and call 2
-!  fields can be diffed offline (call-2 operator blow-up diagnosis).
-          IF (nl_iter.eq.1.and.iic(ng).le.ntstart(ng)+1) THEN
-            WRITE(dump_fname,'(A,I1,A,I4.4,A)') 'mms_au_dump_',        &
-     &        MyRank,'_',iic(ng),'.bin'
-            OPEN(99,FILE=dump_fname,FORM='unformatted',                &
-     &           ACCESS='stream',STATUS='replace')
-            WRITE(99) ((Au(i,j),i=LBi,UBi),j=LBj,UBj)
-            WRITE(99) ((Av(i,j),i=LBi,UBi),j=LBj,UBj)
-            WRITE(99) ((pmask_ssa(i,j),i=LBi,UBi),j=LBj,UBj)
-            WRITE(99) ((Si(i,j,ksa_old,isIhis),i=LBi,UBi),j=LBj,UBj)
-            WRITE(99) ((Si(i,j,ksa_new,isIuis),i=LBi,UBi),j=LBj,UBj)
-            WRITE(99) ((Si(i,j,ksa_new,isIvis),i=LBi,UBi),j=LBj,UBj)
-            WRITE(99) ((nuH_rho(i,j),i=LBi,UBi),j=LBj,UBj)
-            WRITE(99) ((beta_rho(i,j),i=LBi,UBi),j=LBj,UBj)
-            CLOSE(99)
-            WRITE(*,'(A,A)') '  MMS dump written: ',dump_fname
-          END IF
-        END IF
-#  endif
-# endif
 !
 !  Initial residual: r = b - A*u
 !  b = taudx_psi/taudy_psi is the FE-assembled driving stress nodal
@@ -518,16 +411,8 @@
         DO j=JstrP,JendP
           DO i=IstrP,IendP
             IF (pmask_ssa(i,j).eq.1.0_r8) THEN
-# ifdef SSA_MMS_TESTING
-!  MMS mode: the manufactured source term is the ONLY RHS forcing.
-!  Superimposing the real driving stress would prevent the solution
-!  from converging to the manufactured field.
-              Ru(i,j)=mms_fu_psi(i,j)-Au(i,j)
-              Rv(i,j)=mms_fv_psi(i,j)-Av(i,j)
-# else
               Ru(i,j)=taudx_psi(i,j)-Au(i,j)
               Rv(i,j)=taudy_psi(i,j)-Av(i,j)
-# endif
 !  Enforce BCs: zero residual for constrained velocity components.
               IF ((Jstr.eq.1.and.j.eq.JstrP).or.                        &
      &            (Jend.eq.Mm(ng).and.j.eq.JendP)) THEN
@@ -536,13 +421,6 @@
               IF (Istr.eq.1.and.i.eq.IstrP) THEN
                 Ru(i,j)=0.0_r8
               END IF
-# ifdef SSA_MMS_TESTING
-!  MMS mode: enforce Dirichlet u=0 at east boundary (manufactured
-!  solution u* vanishes at x=0 but not at x=Lx; apply strong BC).
-              IF (Iend.eq.Lm(ng).and.i.eq.IendP) THEN
-                Ru(i,j)=0.0_r8
-              END IF
-# endif
               IF (diag_u(i,j).gt.eps) THEN
                 Zu(i,j)=Ru(i,j)/diag_u(i,j)
               ELSE
@@ -737,11 +615,6 @@
                 IF (Istr.eq.1.and.i.eq.IstrP) THEN
                   Ru(i,j)=0.0_r8
                 END IF
-# ifdef SSA_MMS_TESTING
-                IF (Iend.eq.Lm(ng).and.i.eq.IendP) THEN
-                  Ru(i,j)=0.0_r8
-                END IF
-# endif
                 IF (diag_u(i,j).gt.eps) THEN
                   Zu(i,j)=Ru(i,j)/diag_u(i,j)
                 ELSE
@@ -784,13 +657,6 @@
                 IF (Istr.eq.1.and.i.eq.IstrP) THEN
                   Du(i,j)=0.0_r8
                 END IF
-# ifdef SSA_MMS_TESTING
-!  MMS mode: zero the search direction at the east boundary so the CG
-!  iterate cannot advance u(IendP) away from its Dirichlet value.
-                IF (Iend.eq.Lm(ng).and.i.eq.IendP) THEN
-                  Du(i,j)=0.0_r8
-                END IF
-# endif
               END IF
             END DO
           END DO
@@ -948,19 +814,11 @@
               vel_norm=vel_norm+                                        &
      &          Si(i,j,ksa_new,isIuis)**2+                             &
      &          Si(i,j,ksa_new,isIvis)**2
-# ifndef SSA_MMS_TESTING
               resid_norm=resid_norm+                                    &
      &          (Au(i,j)-taudx_psi(i,j))**2+                           &
      &          (Av(i,j)-taudy_psi(i,j))**2
               rhs_norm=rhs_norm+                                        &
      &          taudx_psi(i,j)**2+taudy_psi(i,j)**2
-# else
-              resid_norm=resid_norm+                                    &
-     &          (Au(i,j)-mms_fu_psi(i,j))**2+                         &
-     &          (Av(i,j)-mms_fv_psi(i,j))**2
-              rhs_norm=rhs_norm+                                        &
-     &          mms_fu_psi(i,j)**2+mms_fv_psi(i,j)**2
-# endif
             END IF
           END DO
         END DO
@@ -1021,25 +879,9 @@
             END DO
             cff=0.0_r8
             cff1=0.0_r8
-#  ifdef SSA_MMS_TESTING
-            DO jj=JstrP,JendP
-              DO ii=IstrP,IendP
-                IF (pmask_ssa(ii,jj).eq.1.0_r8) THEN
-                  cff=MAX(cff,ABS(Ru(ii,jj)),ABS(Rv(ii,jj)))
-                  cff1=MAX(cff1,ABS(mms_fu_psi(ii,jj)),                &
-     &                      ABS(mms_fv_psi(ii,jj)))
-                END IF
-              END DO
-            END DO
-            WRITE(*,'(A,I3,A,ES12.4,A,ES12.4,A,ES12.4,A,ES12.4,A,L1)') &
-     &          '  Picard iter ',nl_iter,' nl_resid=',nl_resid,        &
-     &          ' max|u|=',u_slide,' max|Ru|=',cff,' max|mms|=',cff1, &
-     &          ' conv=',converged
-#  else
             WRITE(*,'(A,I3,A,ES12.4,A,ES12.4,A,L1)')                   &
      &          '  Picard iter ',nl_iter,' nl_resid=',nl_resid,        &
      &          ' max|u|=',u_slide,' conv=',converged
-#  endif
           END IF
         END IF
 # endif
@@ -1078,14 +920,3 @@
 !  them Dirichlet (u=v=0) throughout the iteration.  This ensures the
 !  solved problem is consistent with the returned solution.
 !
-# ifdef SSA_MMS_TESTING
-!  MMS mode: strongly enforce u=0 at the east boundary on the final
-!  solution.  This is the last write to ksa_new before isf_mom returns,
-!  so it covers every path (warm-start, Picard relaxation, cleanup)
-!  that could have touched the boundary nodes.
-      IF (Iend.eq.Lm(ng)) THEN
-        DO j=JstrP,JendP
-          Si(IendP,j,ksa_new,isIuis)=0.0_r8
-        END DO
-      END IF
-# endif

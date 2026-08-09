@@ -79,6 +79,13 @@
       integer, parameter :: isIeis =  4  ! Iceshelf enthalpy
 #else
       integer, parameter :: nIsfS = 0    ! number of ice state variables
+!  Placeholder state indices so that code compiled under ICESHELF_DYNAM
+!  (e.g. isf_get_state) still parses; the zero-size state arrays are
+!  never accessed at run time without ICESHEET.
+      integer, parameter :: isIhis =  1  ! Iceshelf thickness
+      integer, parameter :: isIuis =  2  ! Iceshelf u-velocity
+      integer, parameter :: isIvis =  3  ! Iceshelf v-velocity
+      integer, parameter :: isIeis =  4  ! Iceshelf enthalpy
 #endif
 !
 !  Ice model state prognostic variables indices.
@@ -287,10 +294,6 @@
 !
       real(r8), allocatable :: max_thickness(:) ! thick. safety cap [m]
       real(r8), allocatable :: gl_float_width(:)! GL floatfrac width [m]
-!
-!  MMS testing parameters
-!
-      character(len=256), allocatable :: mms_source_file(:)
 #endif
 !
 !  Other constant parameters
@@ -690,14 +693,6 @@
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
           gl_float_width(1:Ngrids)=IniVal
         END IF
-!
-!  MMS testing parameters
-!
-        IF (.not.allocated(mms_source_file)) THEN
-          allocate ( mms_source_file(Ngrids) )
-          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          mms_source_file(1:Ngrids)=' '
-        END IF
 #endif
 
       ELSE
@@ -1049,7 +1044,6 @@
       IF (allocated(smb_rate))       deallocate ( smb_rate )
       IF (allocated(max_thickness))   deallocate ( max_thickness )
       IF (allocated(gl_float_width))  deallocate ( gl_float_width )
-      IF (allocated(mms_source_file)) deallocate ( mms_source_file )
 #endif
 !
       RETURN

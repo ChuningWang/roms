@@ -31,9 +31,6 @@
       USE mod_grid
       USE mod_forces
       USE mod_ocean
-#  if defined ICESHELF && defined ICESHELF_THERMO
-      USE isf_coupler_mod, ONLY : isf_coupler
-#  endif
 #  if defined ICE_MODEL && defined ICE_NO_CORRECTION
       USE mod_ice
 #  endif
@@ -184,6 +181,9 @@
 #  endif
 !
       USE bc_2d_mod
+#  if defined ICESHELF && defined ICESHELF_THERMO
+      USE isf_coupler_mod, ONLY : isf_coupler
+#  endif
 #  ifdef DISTRIBUTE
       USE mp_exchange_mod, ONLY : mp_exchange2d
 #  endif
@@ -546,9 +546,9 @@
 !  Without ICESHELF_THERMO (no coupler) the inline block below
 !  computes the stress from the ocean top velocity alone.
 !-----------------------------------------------------------------------
-#  if defined ICESHELF_THERMO && !defined SSA_MMS_TESTING
+#  if defined ICESHELF_THERMO
       CALL isf_coupler (ng, tile, iNLM)
-#  elif !defined SSA_MMS_TESTING
+#  else
 #   if defined UV_LOGDRAG
 !
 !  Set logarithmic ice shelf cavity stress.

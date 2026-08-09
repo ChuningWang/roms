@@ -105,11 +105,6 @@
         END DO
 #  endif
 !
-!  MMS testing: skip ice-ocean thermodynamics.  isf_vbc (3EQN) melts
-!  or freezes ice thickness between SSA calls, corrupting the exact
-!  manufactured-solution state that the MMS operator check assumes.
-!
-#  ifndef SSA_MMS_TESTING
         DO ig=1,GridsInLayer(nl)
           ng=GridNumber(ig,nl)
           DO tile=first_tile(ng),last_tile(ng),+1
@@ -117,7 +112,6 @@
           END DO
 !$OMP BARRIER
         END DO
-#  endif
 # endif
 
 # ifdef ICESHEET

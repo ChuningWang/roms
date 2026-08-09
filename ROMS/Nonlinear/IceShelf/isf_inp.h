@@ -245,28 +245,6 @@
               Npts=load_r(Nval, Rval, Ngrids, max_thickness)
             CASE ('gl_float_width')
               Npts=load_r(Nval, Rval, Ngrids, gl_float_width)
-# ifdef SSA_MMS_TESTING
-!
-!  MMS testing parameters (only recognized when SSA_MMS_TESTING is
-!  compiled in; otherwise an unknown-keyword error is raised instead
-!  of silently accepting a never-used path)
-!
-            CASE ('mms_source_file')
-              IF (Nval.eq.1) THEN
-                DO ng=1,Ngrids
-                  mms_source_file(ng)=Cval(1)
-                END DO
-              ELSE IF (Nval.eq.Ngrids) THEN
-                DO ng=1,Ngrids
-                  mms_source_file(ng)=Cval(ng)
-                END DO
-              ELSE
-                IF (Master) WRITE (out,90) Nval, 'mms_source_file'
-                exit_flag=5
-                RETURN
-              END IF
-              Npts=1
-# endif
 #endif
 #ifdef ICESHEET
             CASE ('Hout(idIhis)')
@@ -901,12 +879,6 @@
      &          'Grounding line float_frac transition width [m].'
           WRITE (out,60) max_thickness(ng), 'max_thickness',            &
      &          'Maximum ice thickness safety cap [m].'
-# ifdef SSA_MMS_TESTING
-          IF (LEN_TRIM(mms_source_file(ng)).gt.0) THEN
-            WRITE (out,'(12x,a,3x,a)') 'mms_source_file =',             &
-     &          TRIM(mms_source_file(ng))
-          END IF
-# endif
 #endif
 !
           IF (nHIS(ng).gt.0) THEN
@@ -1014,12 +986,30 @@
             IF (Qout(idIvnr,ng)) WRITE (out,70) Qout(idIvnr,ng),        &
      &         'Qout(idIvnr)',                                          &
      &         'Write out iceshelf northward velocity.'
-            IF (Qout(idItis,ng)) WRITE (out,70) Qout(idItis,ng),        &
-     &         'Qout(idItis)',                                          &
-     &         'Write out iceshelf temperature.'
             IF (Qout(idIeis,ng)) WRITE (out,70) Qout(idIeis,ng),        &
      &         'Qout(idIeis)',                                          &
      &         'Write out iceshelf enthalpy.'
+            IF (Qout(idItis,ng)) WRITE (out,70) Qout(idItis,ng),        &
+     &         'Qout(idItis)',                                          &
+     &         'Write out ice temperature.'
+            IF (Qout(idIzsf,ng)) WRITE (out,70) Qout(idIzsf,ng),        &
+     &         'Qout(idIzsf)',                                          &
+     &         'Write out ice sheet surface elevation.'
+            IF (Qout(idIzbd,ng)) WRITE (out,70) Qout(idIzbd,ng),        &
+     &         'Qout(idIzbd)',                                          &
+     &         'Write out ice sheet bed elevation.'
+            IF (Qout(idInuh,ng)) WRITE (out,70) Qout(idInuh,ng),        &
+     &         'Qout(idInuh)',                                          &
+     &         'Write out depth-integrated ice effective viscosity.'
+            IF (Qout(idItdx,ng)) WRITE (out,70) Qout(idItdx,ng),        &
+     &         'Qout(idItdx)',                                          &
+     &         'Write out ice driving stress x-component.'
+            IF (Qout(idItdy,ng)) WRITE (out,70) Qout(idItdy,ng),        &
+     &         'Qout(idItdy)',                                          &
+     &         'Write out ice driving stress y-component.'
+            IF (Qout(idIbta,ng)) WRITE (out,70) Qout(idIbta,ng),        &
+     &         'Qout(idIbta)',                                          &
+     &         'Write out ice basal drag coefficient.'
 #endif
 #ifdef ICESHELF_THERMO
             IF (Qout(idImel,ng)) WRITE (out,70) Qout(idImel,ng),        &
@@ -1043,24 +1033,6 @@
             IF (Qout(idIsbo,ng)) WRITE (out,70) Qout(idIsbo,ng),        &
      &         'Qout(idIsbo)',                                          &
      &         'Write out iceshelf laminar boundary layer salinity.'
-            IF (Qout(idIzsf,ng)) WRITE (out,70) Qout(idIzsf,ng),        &
-     &         'Qout(idIzsf)',                                          &
-     &         'Write out ice sheet surface elevation.'
-            IF (Qout(idIzbd,ng)) WRITE (out,70) Qout(idIzbd,ng),        &
-     &         'Qout(idIzbd)',                                          &
-     &         'Write out ice sheet bed elevation.'
-            IF (Qout(idInuh,ng)) WRITE (out,70) Qout(idInuh,ng),        &
-     &         'Qout(idInuh)',                                          &
-     &         'Write out depth-integrated ice effective viscosity.'
-            IF (Qout(idItdx,ng)) WRITE (out,70) Qout(idItdx,ng),        &
-     &         'Qout(idItdx)',                                          &
-     &         'Write out ice driving stress x-component.'
-            IF (Qout(idItdy,ng)) WRITE (out,70) Qout(idItdy,ng),        &
-     &         'Qout(idItdy)',                                          &
-     &         'Write out ice driving stress y-component.'
-            IF (Qout(idIbta,ng)) WRITE (out,70) Qout(idIbta,ng),        &
-     &         'Qout(idIbta)',                                          &
-     &         'Write out ice basal drag coefficient.'
 # ifdef T_PASSIVE
             IF (Qout(idIvol,ng)) WRITE (out,70) Qout(idIvol,ng),        &
      &         'Qout(idIvol)',                                          &
