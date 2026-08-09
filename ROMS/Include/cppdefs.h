@@ -671,6 +671,14 @@
 ** ICESHELF_THERMO      use to activate 3-equation ice/ocean thermodynamics  **
 ** ICESHELF_TEOS10      use to activate TEOS10 in-situ T calculation         **
 ** ICESHELF_NO_SBL      use to disable sub-boundary layer flux distribution  **
+** ICESHELF_LOGDRAG     logarithmic ice shelf friction (ZoSur_isf+vonKar)    **
+** ICESHELF_LDRAG       linear ice shelf friction (tau = rdrag_isf du)       **
+** ICESHELF_QDRAG       quadratic ice shelf friction (tau=rdrag2_isf|du|du)  **
+**                      (default: same scheme as the bottom drag UV_*)       **
+** ICESHELF_DRAG_GRID   if spatially varying ice shelf drag parameters.      **
+**                      rdrag_isf/rdrag2_isf/ZoSur_isf are read from the     **
+**                      grid file instead of the scalar RDRG_ISF/RDRG2_ISF/  **
+**                      ZOSUR_ISF isf.in values.                             **
 **                                                                           **
 ** Ice sheet model OPTIONS:                                                  **
 **                                                                           **

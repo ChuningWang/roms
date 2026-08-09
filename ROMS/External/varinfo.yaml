@@ -3520,6 +3520,39 @@ metadata:
     add_offset:     0.0d0
     scale:          1.0d0
 
+  - variable:       rdrag_isf                                       # Input/Output
+    standard_name:  ice_shelf_linear_drag_coefficient
+    long_name:      ice shelf linear drag coefficient
+    units:          meter second-1                                   # [m/s]
+    field:          ice shelf linear drag
+    time:           ocean_time
+    index_code:     idisfL
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       rdrag2_isf                                      # Input/Output
+    standard_name:  ice_shelf_quadratic_drag_coefficient
+    long_name:      ice shelf quadratic drag coefficient
+    units:          nondimensional                                   # [nondimensional]
+    field:          ice shelf quadratic drag
+    time:           ocean_time
+    index_code:     idisfQ
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       ZoSur_isf                                       # Input/Output
+    standard_name:  ice_shelf_surface_roughness_length_scale
+    long_name:      time invariant, ice shelf surface roughness length
+    units:          meter                                            # [m]
+    field:          ice shelf surface roughness
+    time:           ocean_time
+    index_code:     idisfZ
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
   - variable:       ZoBot                                            # Input/Output
     standard_name:  sea_bottom_roughness_length_scale
     long_name:      time invariant, bottom roughness length

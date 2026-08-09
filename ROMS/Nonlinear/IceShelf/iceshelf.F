@@ -29,9 +29,6 @@
 # if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
       USE isf_sbl_mod,      ONLY : isf_sbl
 # endif
-# if defined ICESHEET && defined ICESHELF_THERMO
-      USE isf_coupler_mod,  ONLY : isf_coupler
-# endif
 # ifdef ICESHEET
       USE isf_mom_mod,      ONLY : isf_mom
 # endif
@@ -117,26 +114,6 @@
           ng=GridNumber(ig,nl)
           DO tile=first_tile(ng),last_tile(ng),+1
             CALL isf_vbc (ng, tile, model)
-          END DO
-!$OMP BARRIER
-        END DO
-#  endif
-# endif
-
-# if defined ICESHEET && defined ICESHELF_THERMO
-!
-!-----------------------------------------------------------------------
-!  Ice-ocean coupling: momentum exchange (ice-ocean drag stress)
-!  and basal melt rate temporal filtering (EMA).
-!  Called after isf_vbc so that Fi(icImel) has the instantaneous melt.
-!  Overwrites sustr/svstr under ice shelf, updates u*, filters melt.
-!-----------------------------------------------------------------------
-!
-#  ifndef SSA_MMS_TESTING
-        DO ig=1,GridsInLayer(nl)
-          ng=GridNumber(ig,nl)
-          DO tile=first_tile(ng),last_tile(ng),+1
-            CALL isf_coupler (ng, tile, model)
           END DO
 !$OMP BARRIER
         END DO
@@ -233,7 +210,7 @@
 # ifdef ICESHEET
 !  Cold-start skip as above; initial.F already ran isf_masks during
 !  initialization, so the step-1 recomputation is redundant.
-          IF (MOD(iic(ng)-1,N_ssa(ng)*N_gl(ng)).eq.0 .and.             &
+          IF (MOD(iic(ng)-1,N_ssa(ng)*N_gl(ng)).eq.0 .and.              &
      &        iic(ng).gt.ntstart(ng)) THEN
 # endif
             DO tile=first_tile(ng),last_tile(ng),+1

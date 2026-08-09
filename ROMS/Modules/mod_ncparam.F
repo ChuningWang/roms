@@ -300,6 +300,9 @@
       integer  :: idsnow        ! snowfall rate
       integer  :: idragL        ! bottom linear drag coefficient
       integer  :: idragQ        ! bottom quadratic drag coefficient
+      integer  :: idisfL        ! ice shelf linear drag coefficient
+      integer  :: idisfQ        ! ice shelf quadratic drag coefficient
+      integer  :: idisfZ        ! ice shelf surface roughness length
       integer  :: idSdif        ! vertical S-diffusion coefficient
       integer  :: idSinW        ! SIN(omega(k)*t)
       integer  :: idSin2        ! SIN(omega(k)*t)*SIN(omega(l)*t)
@@ -1965,6 +1968,16 @@
             idragQ=varid
           CASE ('idZoBL')
             idZoBL=varid
+#endif
+#ifdef ICESHELF_DRAG_GRID
+          CASE ('idisfL')
+            idisfL=varid
+          CASE ('idisfQ')
+            idisfQ=varid
+# ifdef ICESHELF_LOGDRAG
+          CASE ('idisfZ')
+            idisfZ=varid
+# endif
 #endif
           CASE ('idUbot')
             idUbot=varid

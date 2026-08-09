@@ -74,33 +74,33 @@
 
 ! C value (Drho/Dz) in Zhou and Hatterman (2020) [kg/m4].
 
-    isf_drdz == 0.00478
+         isf_drdz == 0.00478
 
 ! Iceshelf Ustar scaling factor [non-dimensional].
 
-        gamU == 1.0d0
+             gamU == 1.0d0
 
 ! Iceshelf Ustar minimum value [m/s]. 8.0d-6 for diffusion only,
 ! 1.0d-3 for diffusion + tidal forcing.
 
-   min_ustar == 8.0d-6
+        min_ustar == 8.0d-6
 
 ! Iceshelf sub-boundary layer thickness [m]. Set to 0 or negative to
 ! disable SBL and use original top-cell flux injection.
 
-    isf_Hsbl == 30.0d0
+         isf_Hsbl == 30.0d0
 
 ! Logical switches for iceshelf-ocean tracer exchange.
 
-  LtracerIsf == T     ! dye_01, ...        inert passive tracers
+       LtracerIsf == T     ! dye_01, ...        inert passive tracers
 
 ! Logical switches for iceshelf melt water tracer source.
 
-  LsourceIsf == T     ! dye_01, ...        inert passive tracers
+       LsourceIsf == T     ! dye_01, ...        inert passive tracers
 
 ! Iceshelf melt water tracer concentration.
 
-      trcIsf == 1.0d0 ! dye_01, ...        inert passive tracers
+           trcIsf == 1.0d0 ! dye_01, ...        inert passive tracers
 
 !-----------------------------------------------------------------------
 ! SSA ice sheet dynamics parameters
@@ -159,14 +159,14 @@
 ! n_taper: ice margin taper width [cells]. Driving stress is linearly
 !   tapered to zero within n_taper cells of the ice margin.
 
-        n_smooth == 20
-         n_taper == 3
+         n_smooth == 20
+          n_taper == 3
 
 ! Picard iteration relaxation factor (0 < alpha <= 1).
 ! New velocity = alpha * u_computed + (1-alpha) * u_previous.
 ! Lower values improve stability at the cost of slower convergence.
 
-    picard_alpha == 0.7d0
+     picard_alpha == 0.7d0
 
 ! Thickness advection CFL safety factor [-].
 ! Controls sub-stepping: dt_sub = cfl_factor / max(|u|/dx + |v|/dy).
@@ -178,7 +178,7 @@
 ! Ice at the calving front thinner than H_calve is removed.
 ! MISOMIP1 protocol: H_calve = 100 m (Asay-Davis et al., 2016).
 
-         H_calve == 100.0d0
+          H_calve == 100.0d0
 
 ! Multi-timescale coupling parameters.
 ! N_ssa:   SSA momentum is solved every N_ssa ocean timesteps.
@@ -186,32 +186,39 @@
 ! N_gl:    Grounding line position is updated every N_gl SSA solves.
 ! Default = 1 (every step) for tight coupling; increase for efficiency.
 
-          N_ssa == 10
-        N_thick == 1
-           N_gl == 1
+            N_ssa == 10
+          N_thick == 1
+             N_gl == 1
 
 ! Surface mass balance rate [m/s ice equivalent, positive = accumulation].
 ! Uniform rate applied everywhere ice exists (H > 0).
 ! Default = 0.0 (no SMB).
 ! MISOMIP1 typical: 0.3 m/yr = 9.507e-9 m/s (Asay-Davis et al., 2016).
 
-        smb_rate == 0.0d0
+         smb_rate == 0.0d0
 
 ! Ice-ocean coupling parameters.
 ! tau_melt: Exponential moving average (EMA) timescale for basal melt
 !           rate filtering [s].  Smooths high-frequency melt variability
 !           before feeding back to ice thickness evolution.
 !           Default = 86400 (1 day).  Set to 0 to disable filtering.
-! Cd_isf:   Ice-ocean interface quadratic drag coefficient [-].
-!           Used by isf_coupler to compute friction velocity u* and
-!           kinematic stress from ice-ocean relative velocity.
-!           Default = 5.0e-3 (typical for Antarctic ice shelves).
+!
+! Ice shelf drag coefficients (read from this ISF input script, not
+! from the ocean input script, for backward compatibility):
+!   RDRG_ISF:   linear drag coefficient [m/s]      (ICESHELF_LDRAG)
+!   RDRG2_ISF:  quadratic drag coefficient [-]     (ICESHELF_QDRAG)
+!   ZOSUR_ISF:  surface roughness length [m]       (ICESHELF_LOGDRAG)
+! With ICESHELF_DRAG_GRID the spatially varying values are read from
+! the grid file instead.
+!
 ! max_thickness: Safety cap on ice thickness [m] to prevent garbage
 !           values from initialization or numerical artifacts.
 !           Default = 5000 (allows real ice sheets up to ~4500 m).
 
          tau_melt == 86400.0d0
-           Cd_isf == 5.0e-3
+         RDRG_ISF == 3.0d-4
+        RDRG2_ISF == 3.0d-3
+        ZOSUR_ISF == 0.01d0
     max_thickness == 5000.0d0
    gl_float_width == 1000.0d0
 

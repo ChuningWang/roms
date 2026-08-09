@@ -823,6 +823,31 @@
 #endif
 
 /*
+** Ice shelf bottom stress parameterization.  Three options mirror the
+** bottom drag options (UV_LOGDRAG/UV_LDRAG/UV_QDRAG):
+**   ICESHELF_LOGDRAG  logarithmic law (ZoSur_isf + von Karman)
+**   ICESHELF_QDRAG    quadratic drag (tau = rdrag2_isf |du| du)
+**   ICESHELF_LDRAG    linear drag (tau = rdrag_isf du)
+** The drag parameters are grid arrays (GRID%rdrag_isf/rdrag2_isf/
+** ZoSur_isf) defaulted to the scalar RDRG_ISF/RDRG2_ISF/ZOSUR_ISF from
+** the ocean input script, and overridden by the grid file under
+** ICESHELF_DRAG_GRID.
+** If ICESHELF is active but no ice-shelf drag scheme is specified,
+** default to the same scheme as the bottom drag (UV_*).
+*/
+#if defined ICESHELF && \
+    !defined ICESHELF_LOGDRAG && !defined ICESHELF_QDRAG && \
+    !defined ICESHELF_LDRAG
+# if defined UV_LOGDRAG
+#  define ICESHELF_LOGDRAG
+# elif defined UV_LDRAG
+#  define ICESHELF_LDRAG
+# elif defined UV_QDRAG
+#  define ICESHELF_QDRAG
+# endif
+#endif
+
+/*
 ** Check if ice sheet dynamics is activated. ICESHEET_SSA implies
 ** ICESHEET (SSA is the ice sheet momentum equation). The umbrella
 ** macro ICESHEET gates all ice-sheet-specific code (grounding line,

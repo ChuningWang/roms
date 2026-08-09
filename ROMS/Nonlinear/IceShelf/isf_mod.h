@@ -210,6 +210,19 @@
       real(r8), allocatable :: min_ustar(:)     ! minimum ustar value
       real(r8), allocatable :: isf_Hsbl(:)      ! SBL thickness [m]
 !
+!  Ice-ocean coupling parameters (used by isf_coupler under ICESHELF)
+!
+      real(r8), allocatable :: tau_melt(:)      ! MR EMA filter TS [s]
+# ifdef ICESHELF_LDRAG
+      real(r8), allocatable :: rdrg_isf(:)      ! linear drag coeff. [m/s]
+# endif
+# ifdef ICESHELF_QDRAG
+      real(r8), allocatable :: rdrg2_isf(:)     ! quadratic drag coeff. [-]
+# endif
+# ifdef ICESHELF_LOGDRAG
+      real(r8), allocatable :: ZoSur_isf(:)     ! surface roughness [m]
+# endif
+!
 !  Logical switches
 !
       integer, allocatable :: NTISF(:)
@@ -269,11 +282,6 @@
 !  Surface mass balance parameters
 !
       real(r8), allocatable :: smb_rate(:)      ! Uniform SMB rate [m/s]
-!
-!  Ice-ocean coupling parameters
-!
-      real(r8), allocatable :: tau_melt(:)      ! MR EMA filter TS [s]
-      real(r8), allocatable :: Cd_isf(:)        ! Ice-ocean Cd [-]
 !
 !  SSA geometry parameters
 !
@@ -487,6 +495,32 @@
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
           isf_Hsbl(1:Ngrids)=IniVal
         END IF
+        IF (.not.allocated(tau_melt)) THEN
+          allocate ( tau_melt(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          tau_melt(1:Ngrids)=IniVal
+        END IF
+# ifdef ICESHELF_LDRAG
+        IF (.not.allocated(rdrg_isf)) THEN
+          allocate ( rdrg_isf(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          rdrg_isf(1:Ngrids)=IniVal
+        END IF
+# endif
+# ifdef ICESHELF_QDRAG
+        IF (.not.allocated(rdrg2_isf)) THEN
+          allocate ( rdrg2_isf(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          rdrg2_isf(1:Ngrids)=IniVal
+        END IF
+# endif
+# ifdef ICESHELF_LOGDRAG
+        IF (.not.allocated(ZoSur_isf)) THEN
+          allocate ( ZoSur_isf(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          ZoSur_isf(1:Ngrids)=IniVal
+        END IF
+# endif
 
         IF (.not.allocated(NTISF)) THEN
           allocate ( NTISF(Ngrids) )
@@ -642,16 +676,6 @@
           allocate ( smb_rate(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
           smb_rate(1:Ngrids)=IniVal
-        END IF
-        IF (.not.allocated(tau_melt)) THEN
-          allocate ( tau_melt(Ngrids) )
-          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          tau_melt(1:Ngrids)=IniVal
-        END IF
-        IF (.not.allocated(Cd_isf)) THEN
-          allocate ( Cd_isf(Ngrids) )
-          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          Cd_isf(1:Ngrids)=IniVal
         END IF
 !
 !  SSA geometry parameters
@@ -988,6 +1012,16 @@
 #endif
 !
       IF (allocated(isf_Hsbl))  deallocate ( isf_Hsbl )
+      IF (allocated(tau_melt))  deallocate ( tau_melt )
+# ifdef ICESHELF_LDRAG
+      IF (allocated(rdrg_isf))  deallocate ( rdrg_isf )
+# endif
+# ifdef ICESHELF_QDRAG
+      IF (allocated(rdrg2_isf)) deallocate ( rdrg2_isf )
+# endif
+# ifdef ICESHELF_LOGDRAG
+      IF (allocated(ZoSur_isf)) deallocate ( ZoSur_isf )
+# endif
 !
 #ifdef ICESHEET
       IF (allocated(n_glen))         deallocate ( n_glen )
@@ -1013,8 +1047,6 @@
       IF (allocated(N_thick))        deallocate ( N_thick )
       IF (allocated(N_gl))           deallocate ( N_gl )
       IF (allocated(smb_rate))       deallocate ( smb_rate )
-      IF (allocated(tau_melt))       deallocate ( tau_melt )
-      IF (allocated(Cd_isf))         deallocate ( Cd_isf )
       IF (allocated(max_thickness))   deallocate ( max_thickness )
       IF (allocated(gl_float_width))  deallocate ( gl_float_width )
       IF (allocated(mms_source_file)) deallocate ( mms_source_file )

@@ -109,6 +109,20 @@
               Npts=load_r(Nval, Rval, Ngrids, min_ustar)
             CASE ('isf_Hsbl')
               Npts=load_r(Nval, Rval, Ngrids, isf_Hsbl)
+            CASE ('tau_melt')
+              Npts=load_r(Nval, Rval, Ngrids, tau_melt)
+# ifdef ICESHELF_LDRAG
+            CASE ('RDRG_ISF')
+              Npts=load_r(Nval, Rval, Ngrids, rdrg_isf)
+# endif
+# ifdef ICESHELF_QDRAG
+            CASE ('RDRG2_ISF')
+              Npts=load_r(Nval, Rval, Ngrids, rdrg2_isf)
+# endif
+# ifdef ICESHELF_LOGDRAG
+            CASE ('ZOSUR_ISF')
+              Npts=load_r(Nval, Rval, Ngrids, ZoSur_isf)
+# endif
 # ifdef T_PASSIVE
             CASE ('LtracerIsf')
               Npts=load_l(Nval, Cval, NPT, Ngrids, Linert)
@@ -224,13 +238,6 @@
 !
             CASE ('smb_rate')
               Npts=load_r(Nval, Rval, Ngrids, smb_rate)
-!
-!  Ice-ocean coupling parameters
-!
-            CASE ('tau_melt')
-              Npts=load_r(Nval, Rval, Ngrids, tau_melt)
-            CASE ('Cd_isf')
-              Npts=load_r(Nval, Rval, Ngrids, Cd_isf)
 !
 !  SSA geometry parameters (available under ICESHEET)
 !
@@ -814,6 +821,20 @@
      &          'Iceshelf minimum Ustar value.'
           WRITE (out,60) isf_Hsbl(ng), 'isf_Hsbl',                      &
      &          'Iceshelf sub-boundary layer thickness [m].'
+          WRITE (out,60) tau_melt(ng), 'tau_melt',                      &
+     &          'Melt rate EMA filter timescale [s].'
+# ifdef ICESHELF_LDRAG
+          WRITE (out,60) rdrg_isf(ng), 'rdrg_isf',                      &
+     &          'Linear ice shelf drag coefficient (m/s).'
+# endif
+# ifdef ICESHELF_QDRAG
+          WRITE (out,60) rdrg2_isf(ng), 'rdrg2_isf',                    &
+     &          'Quadratic ice shelf drag coefficient.'
+# endif
+# ifdef ICESHELF_LOGDRAG
+          WRITE (out,60) ZoSur_isf(ng), 'ZoSur_isf',                    &
+     &          'Ice shelf surface roughness (m).'
+# endif
 # ifdef T_PASSIVE
           DO i=1,NPT
             itrc=inert(i)
@@ -876,10 +897,6 @@
      &          'Grounding line update frequency [SSA steps].'
           WRITE (out,60) smb_rate(ng), 'smb_rate',                      &
      &          'Surface mass balance rate [m/s ice equiv, +=accum].'
-          WRITE (out,60) tau_melt(ng), 'tau_melt',                      &
-     &          'Melt rate EMA filter timescale [s].'
-          WRITE (out,60) Cd_isf(ng), 'Cd_isf',                          &
-     &          'Ice-ocean quadratic drag coefficient [-].'
           WRITE (out,60) gl_float_width(ng), 'gl_float_width',          &
      &          'Grounding line float_frac transition width [m].'
           WRITE (out,60) max_thickness(ng), 'max_thickness',            &

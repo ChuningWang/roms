@@ -31,6 +31,9 @@
       USE mod_grid
       USE mod_forces
       USE mod_ocean
+#  if defined ICESHELF && defined ICESHELF_THERMO
+      USE isf_coupler_mod, ONLY : isf_coupler
+#  endif
 #  if defined ICE_MODEL && defined ICE_NO_CORRECTION
       USE mod_ice
 #  endif
@@ -533,13 +536,19 @@
 !  If ice shelf cavities, replace surface wind stress with ice shelf
 !  cavity stress (m2/s2).
 !
-!  With ICESHEET + ICESHELF_THERMO the dynamic ice sheet coupler
-!  (isf_coupler) is the sole producer of sustr/svstr under the shelf,
-!  computed from the ice-ocean relative velocity.  Skip this block to
-!  avoid double-writing the stress; isf_coupler applies its own
-!  boundary conditions and halo exchange.
+!  With ICESHELF + ICESHELF_THERMO the ice shelf coupler (isf_coupler)
+!  is the sole producer of sustr/svstr under the shelf.  It computes
+!  the drag stress from the ice-ocean relative velocity (ice velocity
+!  from the SSA solver, or zero for a static ice shelf without
+!  ICESHEET), using the drag scheme selected by ICESHELF_LOGDRAG /
+!  ICESHELF_QDRAG / ICESHELF_LDRAG, and applies its own boundary
+!  conditions and halo exchange.
+!  Without ICESHELF_THERMO (no coupler) the inline block below
+!  computes the stress from the ocean top velocity alone.
 !-----------------------------------------------------------------------
-#  if !defined ICESHEET || !defined ICESHELF_THERMO
+#  if defined ICESHELF_THERMO && !defined SSA_MMS_TESTING
+      CALL isf_coupler (ng, tile, iNLM)
+#  elif !defined SSA_MMS_TESTING
 #   if defined UV_LOGDRAG
 !
 !  Set logarithmic ice shelf cavity stress.

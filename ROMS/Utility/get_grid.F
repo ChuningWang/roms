@@ -120,6 +120,12 @@
 # if defined UV_DRAG_GRID && !defined ANA_DRAG
       integer :: varid_dragL, varid_dragQ, varid_ZoBL
 # endif
+# if defined ICESHELF_DRAG_GRID
+      integer :: varid_isfL, varid_isfQ
+#  ifdef ICESHELF_LOGDRAG
+      integer :: varid_isfZ
+#  endif
+# endif
 #if defined UV_WAVEDRAG
       integer :: varid_dragW
 #endif
@@ -327,6 +333,35 @@
      &                     varid_dragQ)) THEN
         IF (Master) WRITE (stdout,20) TRIM(Vname(1,idragQ)),            &
      &                                TRIM(ncname)
+        exit_flag=2
+        RETURN
+      END IF
+#  endif
+# endif
+# if defined ICESHELF_DRAG_GRID
+#  ifdef ICESHELF_LDRAG
+      IF (.not.find_string(var_name,n_var,TRIM(Vname(1,idisfL)),        &
+                                                                        &
+        IF (Master) WRITE (stdout,20) TRIM(Vname(1,idisfL)),            &
+                                                                        &
+        exit_flag=2
+        RETURN
+      END IF
+#  endif
+#  ifdef ICESHELF_QDRAG
+      IF (.not.find_string(var_name,n_var,TRIM(Vname(1,idisfQ)),        &
+                                                                        &
+        IF (Master) WRITE (stdout,20) TRIM(Vname(1,idisfQ)),            &
+                                                                        &
+        exit_flag=2
+        RETURN
+      END IF
+#  endif
+#  ifdef ICESHELF_LOGDRAG
+      IF (.not.find_string(var_name,n_var,TRIM(Vname(1,idisfZ)),        &
+                                                                        &
+        IF (Master) WRITE (stdout,20) TRIM(Vname(1,idisfZ)),            &
+                                                                        &
         exit_flag=2
         RETURN
       END IF
@@ -2289,6 +2324,149 @@
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    GRID(ng) % rdrag2)
+#   endif
+#  endif
+# endif
+# if defined ICESHELF_DRAG_GRID
+#  ifdef ICESHELF_LDRAG
+!
+!  Read in spacially varying ice shelf linear drag coefficients (m/s).
+!
+      gtype=r2dvar
+      status=nf_fread2d(ng, model, ncname, GRD(ng)%ncid,                &
+     &                  Vname(1,idisfL), varid_isfL,                    &
+     &                  0, gtype, Vsize,                                &
+     &                  LBi, UBi, LBj, UBj,                             &
+     &                  Fscl, Fmin, Fmax,                               &
+#   ifdef MASKING
+     &                  GRID(ng) % rmask,                               &
+#   endif
+#   ifdef CHECKSUM
+     &                  GRID(ng) % rdrag_isf,                           &
+                                                                        &
+#   else
+                                                                        &
+#   endif
+      IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+        IF (Master) WRITE (stdout,40) TRIM(Vname(1,idisfL)),            &
+                                                                        &
+        exit_flag=2
+        ioerror=status
+        RETURN
+      ELSE
+        IF (Master) THEN
+          WRITE (stdout,30) 'ice shelf linear drag coefficient: '//     &
+                                                                        &
+#   ifdef CHECKSUM
+                WRITE (stdout,60) Fhash
+#   endif
+        END IF
+      END IF
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+                                                                        &
+      END IF
+#   ifdef DISTRIBUTE
+      CALL mp_exchange2d (ng, tile, model, 1,                           &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+                                                                        &
+#   endif
+#  endif
+#  ifdef ICESHELF_QDRAG
+!
+!  Read in spacially varying ice shelf quadratic drag coefficients.
+!
+      gtype=r2dvar
+      status=nf_fread2d(ng, model, ncname, GRD(ng)%ncid,                &
+     &                  Vname(1,idisfQ), varid_isfQ,                    &
+     &                  0, gtype, Vsize,                                &
+     &                  LBi, UBi, LBj, UBj,                             &
+     &                  Fscl, Fmin, Fmax,                               &
+#   ifdef MASKING
+     &                  GRID(ng) % rmask,                               &
+#   endif
+#   ifdef CHECKSUM
+     &                  GRID(ng) % rdrag2_isf,                          &
+                                                                        &
+#   else
+                                                                        &
+#   endif
+      IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+        IF (Master) WRITE (stdout,40) TRIM(Vname(1,idisfQ)),            &
+                                                                        &
+        exit_flag=2
+        ioerror=status
+        RETURN
+      ELSE
+        IF (Master) THEN
+          WRITE (stdout,30) 'ice shelf quadratic drag coefficient: '//  &
+                                                                        &
+#   ifdef CHECKSUM
+                WRITE (stdout,60) Fhash
+#   endif
+        END IF
+      END IF
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+                                                                        &
+      END IF
+#   ifdef DISTRIBUTE
+      CALL mp_exchange2d (ng, tile, model, 1,                           &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+                                                                        &
+#   endif
+#  endif
+#  ifdef ICESHELF_LOGDRAG
+!
+!  Read in spacially varying ice shelf surface roughness length (m).
+!
+      gtype=r2dvar
+      status=nf_fread2d(ng, model, ncname, GRD(ng)%ncid,                &
+     &                  Vname(1,idisfZ), varid_isfZ,                    &
+     &                  0, gtype, Vsize,                                &
+     &                  LBi, UBi, LBj, UBj,                             &
+     &                  Fscl, Fmin, Fmax,                               &
+#   ifdef MASKING
+     &                  GRID(ng) % rmask,                               &
+#   endif
+#   ifdef CHECKSUM
+     &                  GRID(ng) % ZoSur_isf,                           &
+                                                                        &
+#   else
+                                                                        &
+#   endif
+      IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+        IF (Master) WRITE (stdout,40) TRIM(Vname(1,idisfZ)),            &
+                                                                        &
+        exit_flag=2
+        ioerror=status
+        RETURN
+      ELSE
+        IF (Master) THEN
+          WRITE (stdout,30) 'ice shelf surface roughness length: '//    &
+                                                                        &
+#   ifdef CHECKSUM
+                WRITE (stdout,60) Fhash
+#   endif
+        END IF
+      END IF
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+                                                                        &
+      END IF
+#   ifdef DISTRIBUTE
+      CALL mp_exchange2d (ng, tile, model, 1,                           &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+                                                                        &
 #   endif
 #  endif
 # endif
