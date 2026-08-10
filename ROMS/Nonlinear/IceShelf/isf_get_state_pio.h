@@ -1,3 +1,4 @@
+#    ifdef ICESHEET
 !
 !  Read iceshelf model state variables.
 !
@@ -10,7 +11,7 @@
               IF (foundit) THEN
                 my_pioVar%vd=var_desc(vindex)
                 SELECT CASE (i)
-                  CASE (isIuis)
+                  CASE (isIuis, isIvis)
                     IF (Perfect2D) THEN
                       my_pioVar%gtype=p3dvar
                     ELSE
@@ -38,83 +39,30 @@
      &                                  InpRec, ioDesc, Vsize,          &
      &                                  LBi, UBi, LBj, UBj, 1, 2,       &
      &                                  Fscl, Fmin, Fmax,               &
-#    ifdef MASKING
+#     ifdef MASKING
      &                                  GRID(ng) % pmask,               &
-#    endif
-#    ifdef CHECKSUM
+#     endif
+#     ifdef CHECKSUM
      &                                  ISF(ng) % Si(:,:,:,i),          &
      &                                  checksum = Fhash)
-#    else
+#     else
      &                                  ISF(ng) % Si(:,:,:,i))
-#    endif
+#     endif
                     ELSE
                       status=nf_fread2d(ng, IDmod, ncname, pioFile,     &
      &                                  Vname(1,ifield), my_pioVar,     &
      &                                  InpRec, ioDesc, Vsize,          &
      &                                  LBi, UBi, LBj, UBj,             &
      &                                  Fscl, Fmin, Fmax,               &
-#    ifdef MASKING
+#     ifdef MASKING
      &                                  GRID(ng) % pmask,               &
-#    endif
-#    ifdef CHECKSUM
+#     endif
+#     ifdef CHECKSUM
      &                                  ISF(ng) % Si(:,:,Tindex,i),     &
      &                                  checksum = Fhash)
-#    else
+#     else
      &                                  ISF(ng) % Si(:,:,Tindex,i))
-#    endif
-                    END IF
-                  CASE (isIvis)
-                    IF (Perfect2D) THEN
-                      my_pioVar%gtype=p3dvar
-                    ELSE
-                      my_pioVar%gtype=p2dvar
-                    END IF
-                    IF (KIND(ISF(ng)%Si).eq.8) THEN
-                      my_pioVar%dkind=PIO_double
-                      IF (Perfect2D) THEN
-                        ioDesc => ioDesc_dp_p3dvar(ng)
-                      ELSE
-                        ioDesc => ioDesc_dp_p2dvar(ng)
-                      END IF
-                    ELSE
-                      my_pioVar%dkind=PIO_real
-                      IF (Perfect2D) THEN
-                        ioDesc => ioDesc_sp_p3dvar(ng)
-                      ELSE
-                        ioDesc => ioDesc_sp_p2dvar(ng)
-                      END IF
-                    END IF
-!
-                    IF (Perfect2D) THEN
-                      status=nf_fread3d(ng, IDmod, ncname, pioFile,     &
-     &                                  Vname(1,ifield), my_pioVar,     &
-     &                                  InpRec, ioDesc, Vsize,          &
-     &                                  LBi, UBi, LBj, UBj, 1, 2,       &
-     &                                  Fscl, Fmin, Fmax,               &
-#    ifdef MASKING
-     &                                  GRID(ng) % pmask,               &
-#    endif
-#    ifdef CHECKSUM
-     &                                  ISF(ng) % Si(:,:,:,i),          &
-     &                                  checksum = Fhash)
-#    else
-     &                                  ISF(ng) % Si(:,:,:,i))
-#    endif
-                    ELSE
-                      status=nf_fread2d(ng, IDmod, ncname, pioFile,     &
-     &                                  Vname(1,ifield), my_pioVar,     &
-     &                                  InpRec, ioDesc, Vsize,          &
-     &                                  LBi, UBi, LBj, UBj,             &
-     &                                  Fscl, Fmin, Fmax,               &
-#    ifdef MASKING
-     &                                  GRID(ng) % pmask,               &
-#    endif
-#    ifdef CHECKSUM
-     &                                  ISF(ng) % Si(:,:,Tindex,i),     &
-     &                                  checksum = Fhash)
-#    else
-     &                                  ISF(ng) % Si(:,:,Tindex,i))
-#    endif
+#     endif
                     END IF
                   CASE DEFAULT
                     IF (Perfect2D) THEN
@@ -144,30 +92,30 @@
      &                                  InpRec, ioDesc, Vsize,          &
      &                                  LBi, UBi, LBj, UBj, 1, 2,       &
      &                                  Fscl, Fmin, Fmax,               &
-#    ifdef MASKING
+#     ifdef MASKING
      &                                  GRID(ng) % rmask,               &
-#    endif
-#    ifdef CHECKSUM
+#     endif
+#     ifdef CHECKSUM
      &                                  ISF(ng) % Si(:,:,:,i),          &
      &                                  checksum = Fhash)
-#    else
+#     else
      &                                  ISF(ng) % Si(:,:,:,i))
-#    endif
+#     endif
                     ELSE
                       status=nf_fread2d(ng, IDmod, ncname, pioFile,     &
      &                                  Vname(1,ifield), my_pioVar,     &
      &                                  InpRec, ioDesc, Vsize,          &
      &                                  LBi, UBi, LBj, UBj,             &
      &                                  Fscl, Fmin, Fmax,               &
-#    ifdef MASKING
+#     ifdef MASKING
      &                                  GRID(ng) % rmask,               &
-#    endif
-#    ifdef CHECKSUM
+#     endif
+#     ifdef CHECKSUM
      &                                  ISF(ng) % Si(:,:,Tindex,i),     &
      &                                  checksum = Fhash)
-#    else
+#     else
      &                                  ISF(ng) % Si(:,:,Tindex,i))
-#    endif
+#     endif
                     END IF
                 END SELECT
 !
@@ -182,12 +130,12 @@
                   RETURN
                 ELSE
                   IF (Master) THEN
-#    ifdef CHECKSUM
+#     ifdef CHECKSUM
                     WRITE (stdout,70) TRIM(Vname(2,ifield)),            &
      &                                Fmin, Fmax, Fhash
-#    else
+#     else
                     WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
-#    endif
+#     endif
                   END IF
                 END IF
               ELSE
@@ -204,6 +152,7 @@
             END IF
           END IF
         END DO
+#    endif
 !
 !  Read sea ice model state variables.
 !

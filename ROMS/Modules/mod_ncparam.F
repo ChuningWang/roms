@@ -3398,12 +3398,14 @@
 #endif
 #ifdef ICESHEET
 !
-!  Set iceshelf model state boundary indices.  Currently, the last
-!  iceshelf model LBC state variable is isIeis=4 (enthalpy).
+!  Set iceshelf model state boundary indices.  The last iceshelf model
+!  LBC state variable is isIeis=4.  NOTE: the isIeis boundary file
+!  carries the ice TEMPERATURE, not the enthalpy; the enthalpy boundary
+!  value is computed as h*T in isf_tibc (see isf.in).
 !
       isf_ic_brylast=ic_brylast
       DO i=1,nIsfS
-        ibISF(i)=i
+        ibISF(i)=isf_ic_brylast+i
       END DO
       ic=ic_brylast
       DO i=1,isIeis

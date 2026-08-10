@@ -95,6 +95,10 @@
               soff = isf_ic_brylast + isIvis
               Npts=load_lbc(Nval, Cval, line, nline, soff, igrid,       &
      &                      0, 0, Vname(1,idIvis), LBC)
+!
+!  NOTE: the isIeis boundary file carries the ice TEMPERATURE, not the
+!  enthalpy; the enthalpy boundary value is computed as h*T in isf_tibc.
+!
             CASE ('LBC(isIeis)')
               soff = isf_ic_brylast + isIeis
               Npts=load_lbc(Nval, Cval, line, nline, soff, igrid,       &

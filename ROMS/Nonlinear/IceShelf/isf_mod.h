@@ -81,13 +81,6 @@
       integer, parameter :: isIeis =  4  ! Iceshelf enthalpy
 #else
       integer, parameter :: nIsfS = 0    ! number of ice state variables
-!  Placeholder state indices so that code compiled under ICESHELF_DYNAM
-!  (e.g. isf_get_state) still parses; the zero-size state arrays are
-!  never accessed at run time without ICESHEET.
-      integer, parameter :: isIhis =  1  ! Iceshelf thickness
-      integer, parameter :: isIuis =  2  ! Iceshelf u-velocity
-      integer, parameter :: isIvis =  3  ! Iceshelf v-velocity
-      integer, parameter :: isIeis =  4  ! Iceshelf enthalpy
 #endif
 !
 !  Ice model state prognostic variables indices.

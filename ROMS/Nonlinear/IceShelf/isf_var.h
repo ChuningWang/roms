@@ -21,37 +21,42 @@
 */
 
 #ifdef ICESHEET
-          CASE ('isIhis(iwest)')
+          CASE ('idIhis(iwest)')
             isfOBC(iwest,isIhis)=varid
-          CASE ('isIhis(ieast)')
+          CASE ('idIhis(ieast)')
             isfOBC(ieast,isIhis)=varid
-          CASE ('isIhis(isouth)')
+          CASE ('idIhis(isouth)')
             isfOBC(isouth,isIhis)=varid
-          CASE ('isIhis(inorth)')
+          CASE ('idIhis(inorth)')
             isfOBC(inorth,isIhis)=varid
-          CASE ('isIuis(iwest)')
+          CASE ('idIuis(iwest)')
             isfOBC(iwest,isIuis)=varid
-          CASE ('isIuis(ieast)')
+          CASE ('idIuis(ieast)')
             isfOBC(ieast,isIuis)=varid
-          CASE ('isIuis(isouth)')
+          CASE ('idIuis(isouth)')
             isfOBC(isouth,isIuis)=varid
-          CASE ('isIuis(inorth)')
+          CASE ('idIuis(inorth)')
             isfOBC(inorth,isIuis)=varid
-          CASE ('isIvis(iwest)')
+          CASE ('idIvis(iwest)')
             isfOBC(iwest,isIvis)=varid
-          CASE ('isIvis(ieast)')
+          CASE ('idIvis(ieast)')
             isfOBC(ieast,isIvis)=varid
-          CASE ('isIvis(isouth)')
+          CASE ('idIvis(isouth)')
             isfOBC(isouth,isIvis)=varid
-          CASE ('isIvis(inorth)')
+          CASE ('idIvis(inorth)')
             isfOBC(inorth,isIvis)=varid
-          CASE ('isIeis(iwest)')
+!
+!  The isIeis boundary file carries the ice TEMPERATURE (not the
+!  enthalpy); the enthalpy boundary value is computed as h*T in
+!  isf_tibc.
+!
+          CASE ('idIeis(iwest)')
             isfOBC(iwest,isIeis)=varid
-          CASE ('isIeis(ieast)')
+          CASE ('idIeis(ieast)')
             isfOBC(ieast,isIeis)=varid
-          CASE ('isIeis(isouth)')
+          CASE ('idIeis(isouth)')
             isfOBC(isouth,isIeis)=varid
-          CASE ('isIeis(inorth)')
+          CASE ('idIeis(inorth)')
             isfOBC(inorth,isIeis)=varid
           CASE ('idIhis')
             idIhis=varid

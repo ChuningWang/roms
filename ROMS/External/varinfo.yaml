@@ -7829,6 +7829,182 @@ metadata:
     add_offset:     0.0d0
     scale:          1.0d0
 
+  - variable:       is_h_west
+    standard_name:  iceshelf_thickness
+    long_name:      ice shelf thickness western BC
+    units:          meter                                            # [m]
+    field:          ice shelf thickness western BC
+    time:           ocean_time
+    index_code:     idIhis(iwest)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_h_east
+    standard_name:  iceshelf_thickness
+    long_name:      ice shelf thickness eastern BC
+    units:          meter                                            # [m]
+    field:          ice shelf thickness eastern BC
+    time:           ocean_time
+    index_code:     idIhis(ieast)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_h_south
+    standard_name:  iceshelf_thickness
+    long_name:      ice shelf thickness southern BC
+    units:          meter                                            # [m]
+    field:          ice shelf thickness southern BC
+    time:           ocean_time
+    index_code:     idIhis(isouth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_h_north
+    standard_name:  iceshelf_thickness
+    long_name:      ice shelf thickness northern BC
+    units:          meter                                            # [m]
+    field:          ice shelf thickness northern BC
+    time:           ocean_time
+    index_code:     idIhis(inorth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_u_west
+    standard_name:  iceshelf_u_velocity
+    long_name:      ice shelf U-velocity western BC
+    units:          meter second-1                                   # [m/s]
+    field:          ice shelf U-velocity western BC
+    time:           ocean_time
+    index_code:     idIuis(iwest)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_u_east
+    standard_name:  iceshelf_u_velocity
+    long_name:      ice shelf U-velocity eastern BC
+    units:          meter second-1                                   # [m/s]
+    field:          ice shelf U-velocity eastern BC
+    time:           ocean_time
+    index_code:     idIuis(ieast)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_u_south
+    standard_name:  iceshelf_u_velocity
+    long_name:      ice shelf U-velocity southern BC
+    units:          meter second-1                                   # [m/s]
+    field:          ice shelf U-velocity southern BC
+    time:           ocean_time
+    index_code:     idIuis(isouth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_u_north
+    standard_name:  iceshelf_u_velocity
+    long_name:      ice shelf U-velocity northern BC
+    units:          meter second-1                                   # [m/s]
+    field:          ice shelf U-velocity northern BC
+    time:           ocean_time
+    index_code:     idIuis(inorth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_v_west
+    standard_name:  iceshelf_v_velocity
+    long_name:      ice shelf V-velocity western BC
+    units:          meter second-1                                   # [m/s]
+    field:          ice shelf V-velocity western BC
+    time:           ocean_time
+    index_code:     idIvis(iwest)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_v_east
+    standard_name:  iceshelf_v_velocity
+    long_name:      ice shelf V-velocity eastern BC
+    units:          meter second-1                                   # [m/s]
+    field:          ice shelf V-velocity eastern BC
+    time:           ocean_time
+    index_code:     idIvis(ieast)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_v_south
+    standard_name:  iceshelf_v_velocity
+    long_name:      ice shelf V-velocity southern BC
+    units:          meter second-1                                   # [m/s]
+    field:          ice shelf V-velocity southern BC
+    time:           ocean_time
+    index_code:     idIvis(isouth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_v_north
+    standard_name:  iceshelf_v_velocity
+    long_name:      ice shelf V-velocity northern BC
+    units:          meter second-1                                   # [m/s]
+    field:          ice shelf V-velocity northern BC
+    time:           ocean_time
+    index_code:     idIvis(inorth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_enthalpy_west
+    standard_name:  iceshelf_temperature
+    long_name:      ice shelf temperature western BC (enthalpy = h*T)
+    units:          Celcius
+    field:          ice shelf temperature western BC
+    time:           ocean_time
+    index_code:     idIeis(iwest)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_enthalpy_east
+    standard_name:  iceshelf_temperature
+    long_name:      ice shelf temperature eastern BC (enthalpy = h*T)
+    units:          Celcius
+    field:          ice shelf temperature eastern BC
+    time:           ocean_time
+    index_code:     idIeis(ieast)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_enthalpy_south
+    standard_name:  iceshelf_temperature
+    long_name:      ice shelf temperature southern BC (enthalpy = h*T)
+    units:          Celcius
+    field:          ice shelf temperature southern BC
+    time:           ocean_time
+    index_code:     idIeis(isouth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_enthalpy_north
+    standard_name:  iceshelf_temperature
+    long_name:      ice shelf temperature northern BC (enthalpy = h*T)
+    units:          Celcius
+    field:          ice shelf temperature northern BC
+    time:           ocean_time
+    index_code:     idIeis(inorth)
+    type:           nulvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
   - variable:       is_mr
     standard_name:  iceshelf_melt_rate
     long_name:      ice shelf basal melt rate

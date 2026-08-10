@@ -54,10 +54,14 @@
 !    Cla        Clamped                              |     4     |
 !    Clo        Closed                               |           |
 !    Gra        Gradient                           1 W           E 3
-!    Nud        Nudging                              |           |
+!    Mix        Mixed                                |           |
 !    Per        Periodic                             |_____S_____|
-!    Rad        Radiation                                  2          j=1
+!                                                          2          j=1
 !                                                   i=1         i=Lm
+!
+! NOTE: the isIeis boundary file carries the ice TEMPERATURE, NOT the
+! enthalpy.  The enthalpy boundary value is computed as h*T in isf_tibc
+! (T from the isIeis boundary data, h from the isIhis boundary data).
 !
 !                   W       S       E       N
 !                   e       o       a       o
@@ -70,7 +74,7 @@
    LBC(isIhis) ==   Clo     Clo     Clo     Clo         ! thickness
    LBC(isIuis) ==   Clo     Clo     Clo     Clo         ! U-velocity
    LBC(isIvis) ==   Clo     Clo     Clo     Clo         ! V-velocity
-   LBC(isIeis) ==   Clo     Clo     Clo     Clo         ! enthalpy
+   LBC(isIeis) ==   Clo     Clo     Clo     Clo         ! temperature
 
 ! C value (Drho/Dz) in Zhou and Hatterman (2020) [kg/m4].
 

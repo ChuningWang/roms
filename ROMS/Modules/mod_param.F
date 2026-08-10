@@ -1725,7 +1725,7 @@
 # endif
 #endif
 #ifdef ICESHEET
-      nLBCvar=nLBCvar+4            ! ISF varibles up to isIeis=4
+      nLBCvar=nLBCvar+4            ! ISF variables up to isIeis=4
 #endif
 #ifdef ICE_MODEL
       nLBCvar=nLBCvar+11           ! ICE varibles up to isVice=11
