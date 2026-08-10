@@ -264,30 +264,14 @@
 !
 !  Calculate exchange coefficients. Note that this assumes log profile.
 !
-#  ifdef ICESHEET
-!  Under dynamic ice sheet, u* is pre-computed by isf_coupler (Step 2)
-!  from the ice-ocean drag stress: u* = |tau|^(1/2).  isf_coupler runs
-!  in set_vbc (before iceshelf.F), so Fi(icIust) holds the current
-!  step's value when isf_vbc executes.  Apply the minimum floor.
-!
-            Fi(i,j,icIust) = MAX(min_ustar(ng), Fi(i,j,icIust))
-#  else
-!  Static ice shelf: u* is computed from the drag stress (sustr/svstr)
-!  written by isf_coupler (Step 1), scaled by gamU.
-!
-            cff = gamU(ng)*SQRT(SQRT(                                   &
-     &            (0.5_r8*(sustr(i,j)+sustr(i+1,j)))**2+                &
-     &            (0.5_r8*(svstr(i,j)+svstr(i,j+1)))**2))
-            Fi(i,j,icIust) = MAX(min_ustar(ng), cff)
-#  endif
-#  ifdef ICESHELF_GAMMAS_KY1972
+# ifdef ICESHELF_GAMMAS_KY1972
 !
 !  Use KY 1972 algorithm
 !
             turb = 2.12_r8*LOG((Fi(i,j,icIust)*Hz(i,j,N(ng)))/visc)
             Fi(i,j,icIgat) = Fi(i,j,icIust)/(turb + Pradj - 9.0_r8)
             Fi(i,j,icIgas) = Fi(i,j,icIust)/(turb + Scadj - 9.0_r8)
-#  elif defined ICESHELF_GAMMAS_MC1987
+# elif defined ICESHELF_GAMMAS_MC1987
 !
 !  Use simplified version of McPhee 1987 algorithm
 !
@@ -301,13 +285,13 @@
 !
             Fi(i,j,icIgat) = Fi(i,j,icIust)/(turb + Pradj - 6.0_r8)
             Fi(i,j,icIgas) = Fi(i,j,icIust)/(turb + Scadj - 6.0_r8)
-#  else
+# else
 !
 !  Use constant exchange coefficients
 !
             Fi(i,j,icIgat) = 1.00e-4_r8
             Fi(i,j,icIgas) = 5.05e-7_r8
-#  endif
+# endif
 !
 !  Use 3-EQ formula
 !

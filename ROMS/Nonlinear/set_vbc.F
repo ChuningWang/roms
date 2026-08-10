@@ -535,17 +535,9 @@
 !-----------------------------------------------------------------------
 !  If ice shelf cavities, replace surface wind stress with ice shelf
 !  cavity stress (m2/s2).
-!
-!  isf_coupler is the sole producer of sustr/svstr under the shelf.
-!  It computes the drag stress from the ice-ocean relative velocity
-!  (ice velocity from the SSA solver, or zero for a static ice shelf
-!  without ICESHEET), using the drag scheme selected by
-!  ICESHELF_LOGDRAG / ICESHELF_QDRAG / ICESHELF_LDRAG, and applies
-!  its own boundary conditions and halo exchange.
 !-----------------------------------------------------------------------
-#  ifdef ICESHELF
+!
       CALL isf_coupler (ng, tile, iNLM)
-#  endif
 #  endif
 
 #  ifndef BBL_MODEL

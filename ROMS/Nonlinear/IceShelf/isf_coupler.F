@@ -25,7 +25,7 @@
 !       (ice at PSI points interpolated to U/V points); for a static   !
 !       ice shelf (no ICESHEET) the ice velocity is zero and the drag  !
 !       acts on the ocean top velocity alone.                          !
-!    2. Friction velocity update (ICESHEET only): computes u* =        !
+!    2. Friction velocity update (ICESHELF_THERMO only): computes u* = !
 !       |tau|^(1/2) at RHO points for use by the 3EQN thermodynamics   !
 !       (isf_vbc); for a static ice shelf isf_vbc derives u* from      !
 !       gamU and the stress field instead.                             !
@@ -332,8 +332,7 @@
       END DO
 !
 !  Exchange halo of the ice-shelf drag stress so that downstream
-!  consumers (isf_vbc static u* path, output) read consistent U/V-point
-!  values at tile boundaries.
+!  consumers read consistent U/V-point values at tile boundaries.
 !
       CALL bc_u2d_tile (ng, tile,                                       &
      &                  LBi, UBi, LBj, UBj,                             &
@@ -349,18 +348,13 @@
      &                    sustr, svstr)
 # endif
 !
-# if defined ICESHEET && defined ICESHELF_THERMO
+# ifdef ICESHELF_THERMO
 !=======================================================================
-!  Step 2: Compute friction velocity u* at RHO points (ICESHEET only).
+!  Step 2: Compute friction velocity u* at RHO points.
 !
-!  u* = |tau|^(1/2) = (tau_x^2 + tau_y^2)^(1/4), valid for all three
+!  u* = gamU*|tau|^(1/2) = gamU*(tau_x^2 + tau_y^2)^(1/4), valid for all
 !  drag schemes: QDRAG gives u* = sqrt(rdrag2_isf) |du|, LOGDRAG gives
 !  u* = sqrt(Cd_log) |du|, and LDRAG gives u* = sqrt(rdrag_isf |du|).
-!
-!  Under ICESHEET this replaces the gamU-based u* in isf_vbc.  For a
-!  static ice shelf (no ICESHEET) Step 2 is skipped: isf_vbc computes
-!  u* from sustr/svstr with the gamU scaling factor instead.
-!  Also requires ICESHELF_THERMO (Fi array must be allocated).
 !=======================================================================
 !
       DO j=Jstr,Jend
@@ -371,8 +365,8 @@
 !
             cff1=0.5_r8*(sustr(i,j)+sustr(i+1,j))
             cff2=0.5_r8*(svstr(i,j)+svstr(i,j+1))
-            ustar_rho=SQRT(SQRT(cff1*cff1+cff2*cff2))
-            Fi(i,j,icIust)=MAX(1.0E-6_r8, ustar_rho)
+            ustar_rho=gamU(ng)*SQRT(SQRT(cff1*cff1+cff2*cff2))
+            Fi(i,j,icIust)=MAX(min_ustar(ng), ustar_rho)
           ELSE
             Fi(i,j,icIust)=0.0_r8
           END IF
