@@ -70,6 +70,8 @@
       integer :: idIuis       ! Iceshelf u-velocity
       integer :: idIvis       ! Iceshelf v-velocity
       integer :: idIeis       ! Iceshelf enthalpy
+      integer :: idIuer       ! Iceshelf eastward velocity (output)
+      integer :: idIvnr       ! Iceshelf northward velocity (output)
 !
       integer, parameter :: nIsfS = 4    ! number of state variables
 !

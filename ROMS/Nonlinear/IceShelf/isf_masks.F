@@ -36,7 +36,7 @@
       USE mod_grid
 # ifdef ICESHEET
       USE mod_stepping, ONLY : knew
-      USE mod_ocean,    ONLY : zeta
+      USE mod_ocean
       USE mod_isf,      ONLY : lsnew, isIhis, ISF
 # endif
 !
@@ -60,7 +60,7 @@
      &                     GRID(ng) % h,                                &
      &                     GRID(ng) % zice,                             &
 # ifdef ICESHEET
-     &                     OCEAN(ng)%zeta(:,:,knew(ng)),                &
+     &                     OCEAN(ng) % zeta(:,:,knew(ng)),              &
      &                     ISF(ng) % Si(:,:,lsnew(ng),isIhis),          &
      &                     GRID(ng) % pmask_ist,                        &
      &                     GRID(ng) % rmask_ist,                        &

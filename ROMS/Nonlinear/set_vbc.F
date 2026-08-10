@@ -65,7 +65,7 @@
 #  elif defined UV_QDRAG
      &                   GRID(ng) % rdrag2,                             &
 #  endif
-#  if !defined BBL_MODEL || defined ICESHELF
+#  if !defined BBL_MODEL
      &                   GRID(ng) % z_r,                                &
      &                   GRID(ng) % z_w,                                &
 #  endif
@@ -75,11 +75,8 @@
 #  ifdef WET_DRY
      &                   GRID(ng) % rmask_wet,                          &
 #  endif
-#  if defined ICESHELF
-     &                   GRID(ng) % rmask_isf,                          &
-#  endif
      &                   OCEAN(ng) % t,                                 &
-#  if !defined BBL_MODEL || defined ICESHELF
+#  if !defined BBL_MODEL
      &                   OCEAN(ng) % u,                                 &
      &                   OCEAN(ng) % v,                                 &
 #  endif
@@ -94,13 +91,6 @@
 #  endif
 #  if defined ICE_MODEL && defined ICE_NO_CORRECTION
      &                   ICE(ng) % Si,                                  &
-#  endif
-#  if defined ICESHELF
-#   ifdef SHORTWAVE
-     &                   FORCES(ng) % srflx,                            &
-#   endif
-     &                   FORCES(ng) % sustr,                            &
-     &                   FORCES(ng) % svstr,                            &
 #  endif
 #  ifndef BBL_MODEL
      &                   FORCES(ng) % bustr,                            &
@@ -133,7 +123,7 @@
 #  elif defined UV_QDRAG
      &                         rdrag2,                                  &
 #  endif
-#  if !defined BBL_MODEL || defined ICESHELF
+#  if !defined BBL_MODEL
      &                         z_r, z_w,                                &
 #  endif
 #  if defined MASKING
@@ -142,11 +132,8 @@
 #  ifdef WET_DRY
      &                         rmask_wet,                               &
 #  endif
-#  if defined ICESHELF
-     &                         rmask_isf,                               &
-#  endif
      &                         t,                                       &
-#  if !defined BBL_MODEL || defined ICESHELF
+#  if !defined BBL_MODEL
      &                         u, v,                                    &
 #  endif
 #  ifdef QCORRECTION
@@ -160,12 +147,6 @@
 #  endif
 #  if defined ICE_MODEL && defined ICE_NO_CORRECTION
      &                         Si,                                      &
-#  endif
-#  if defined ICESHELF
-#   ifdef SHORTWAVE
-     &                         srflx,                                   &
-#   endif
-     &                         sustr, svstr,                            &
 #  endif
 #  ifndef BBL_MODEL
      &                         bustr, bvstr,                            &
@@ -181,9 +162,6 @@
 #  endif
 !
       USE bc_2d_mod
-#  ifdef ICESHELF
-      USE isf_coupler_mod, ONLY : isf_coupler
-#  endif
 #  ifdef DISTRIBUTE
       USE mp_exchange_mod, ONLY : mp_exchange2d
 #  endif
@@ -207,7 +185,7 @@
 #   elif defined UV_QDRAG
       real(r8), intent(in) :: rdrag2(LBi:,LBj:)
 #   endif
-#   if !defined BBL_MODEL || defined ICESHELF
+#   if !defined BBL_MODEL
       real(r8), intent(in) :: z_r(LBi:,LBj:,:)
       real(r8), intent(in) :: z_w(LBi:,LBj:,0:)
 #   endif
@@ -217,11 +195,8 @@
 #   ifdef WET_DRY
       real(r8), intent(in) :: rmask_wet(LBi:,LBj:)
 #   endif
-#   if defined ICESHELF
-      real(r8), intent(in) :: rmask_isf(LBi:,LBj:)
-#   endif
       real(r8), intent(in) :: t(LBi:,LBj:,:,:,:)
-#   if !defined BBL_MODEL || defined ICESHELF
+#   if !defined BBL_MODEL
       real(r8), intent(in) :: u(LBi:,LBj:,:,:)
       real(r8), intent(in) :: v(LBi:,LBj:,:,:)
 #   endif
@@ -239,13 +214,6 @@
 #   endif
       real(r8), intent(in) :: stflux(LBi:,LBj:,:)
       real(r8), intent(in) :: btflux(LBi:,LBj:,:)
-#   if defined ICESHELF
-#    ifdef SHORTWAVE
-      real(r8), intent(inout) :: srflx(LBi:,LBj:)
-#    endif
-      real(r8), intent(inout) :: sustr(LBi:,LBj:)
-      real(r8), intent(inout) :: svstr(LBi:,LBj:)
-#   endif
 #   ifndef BBL_MODEL
       real(r8), intent(inout) :: bustr(LBi:,LBj:)
       real(r8), intent(inout) :: bvstr(LBi:,LBj:)
@@ -261,7 +229,7 @@
 #   elif defined UV_QDRAG
       real(r8), intent(in) :: rdrag2(LBi:UBi,LBj:UBj)
 #   endif
-#   if !defined BBL_MODEL || defined ICESHELF
+#   if !defined BBL_MODEL
       real(r8), intent(in) :: z_r(LBi:UBi,LBj:UBj,N(ng))
       real(r8), intent(in) :: z_w(LBi:UBi,LBj:UBj,0:N(ng))
 #   endif
@@ -271,11 +239,8 @@
 #   ifdef WET_DRY
       real(r8), intent(in) :: rmask_wet(LBi:UBi,LBj:UBj)
 #   endif
-#   if defined ICESHELF
-      real(r8), intent(in) :: rmask_isf(LBi:UBi,LBj:UBj)
-#   endif
       real(r8), intent(in) :: t(LBi:UBi,LBj:UBj,N(ng),3,NT(ng))
-#   if !defined BBL_MODEL || defined ICESHELF
+#   if !defined BBL_MODEL
       real(r8), intent(in) :: u(LBi:UBi,LBj:UBj,N(ng),2)
       real(r8), intent(in) :: v(LBi:UBi,LBj:UBj,N(ng),2)
 #   endif
@@ -293,13 +258,6 @@
 #   endif
       real(r8), intent(in) :: stflux(LBi:UBi,LBj:UBj,NT(ng))
       real(r8), intent(in) :: btflux(LBi:UBi,LBj:UBj,NT(ng))
-#   if defined ICESHELF
-#    ifdef SHORTWAVE
-      real(r8), intent(inout) :: srflx(LBi:UBi,LBj:UBj)
-#    endif
-      real(r8), intent(inout) :: sustr(LBi:UBi,LBj:UBj)
-      real(r8), intent(inout) :: svstr(LBi:UBi,LBj:UBj)
-#   endif
 #   ifndef BBL_MODEL
       real(r8), intent(inout) :: bustr(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: bvstr(LBi:UBi,LBj:UBj)
@@ -316,12 +274,11 @@
 #  if defined ICE_MODEL && defined ICE_NO_CORRECTION
       real(r8) :: fac_ice
 #  endif
-#  if !defined BBL_MODEL || defined ICESHELF || \
-       defined LIMIT_STFLX_COOLING
+#  if !defined BBL_MODEL || defined LIMIT_STFLX_COOLING
       real(r8) :: cff, cff1, cff2, cff3
 #  endif
 
-#  if (!defined BBL_MODEL || defined ICESHELF) && defined UV_LOGDRAG
+#  if !defined BBL_MODEL && defined UV_LOGDRAG
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: wrk
 #  endif
 
@@ -508,36 +465,6 @@
           END DO
         END DO
       END DO
-#  endif
-
-#  ifdef ICESHELF
-!
-!-----------------------------------------------------------------------
-!  If ice shelf cavities, zero out for now the surface tracer flux
-!  over the ice.
-!-----------------------------------------------------------------------
-!
-      DO itrc=1,NT(ng)
-        DO j=JstrR,JendR
-          DO i=IstrR,IendR
-            stflx(i,j,itrc)=stflx(i,j,itrc)*(1.0_r8-rmask_isf(i,j))
-          END DO
-        END DO
-      END DO
-#   ifdef SHORTWAVE
-      DO j=JstrR,JendR
-        DO i=IstrR,IendR
-          srflx(i,j)=srflx(i,j)*(1.0_r8-rmask_isf(i,j))
-        END DO
-      END DO
-#   endif
-!
-!-----------------------------------------------------------------------
-!  If ice shelf cavities, replace surface wind stress with ice shelf
-!  cavity stress (m2/s2).
-!-----------------------------------------------------------------------
-!
-      CALL isf_coupler (ng, tile, iNLM)
 #  endif
 
 #  ifndef BBL_MODEL

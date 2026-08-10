@@ -22,6 +22,7 @@
       USE mod_stepping
       USE mod_isf
       USE mod_forces
+      USE isf_coupler_mod,  ONLY : isf_coupler
 !
 # ifdef ICESHELF_THERMO
       USE isf_vbc_mod,      ONLY : isf_vbc
@@ -82,6 +83,25 @@
 !  grid application (NestLayers = 1).
 !
       NEST_LAYER : DO nl=1,NestLayers
+!
+!-----------------------------------------------------------------------
+!  Ice-ocean momentum coupling and surface flux masking.
+!
+!  Computes the drag stress at the ice-ocean interface (sustr/svstr),
+!  zeroes atmospheric surface tracer fluxes over cavity cells, and
+!  (under ICESHELF_THERMO) computes the friction velocity u* for the
+!  3EQN thermodynamics.  Must run before isf_vbc, which reads sustr/
+!  svstr and Fi(icIust).
+!-----------------------------------------------------------------------
+!
+        DO ig=1,GridsInLayer(nl)
+          ng=GridNumber(ig,nl)
+          DO tile=first_tile(ng),last_tile(ng),+1
+            CALL isf_coupler (ng, tile, iNLM)
+          END DO
+!$OMP BARRIER
+        END DO
+
 # ifdef ICESHELF_THERMO
 !
 !-----------------------------------------------------------------------

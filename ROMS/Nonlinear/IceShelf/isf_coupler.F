@@ -25,10 +25,13 @@
 !       (ice at PSI points interpolated to U/V points); for a static   !
 !       ice shelf (no ICESHEET) the ice velocity is zero and the drag  !
 !       acts on the ocean top velocity alone.                          !
-!    2. Friction velocity update (ICESHELF_THERMO only): computes u* = !
-!       |tau|^(1/2) at RHO points for use by the 3EQN thermodynamics   !
-!       (isf_vbc); for a static ice shelf isf_vbc derives u* from      !
-!       gamU and the stress field instead.                             !
+!    2. Surface tracer flux masking: zeroes stflx (all tracers) and    !
+!       srflx (SHORTWAVE) over ice shelf cavity cells (rmask_isf=1)    !
+!       so atmospheric fluxes are replaced by ice-ocean fluxes from    !
+!       the 3EQN thermodynamics in isf_vbc.                            !
+!    3. Friction velocity update (ICESHELF_THERMO only): computes u* = !
+!       gamU*|tau|^(1/2) at RHO points for use by the 3EQN             !
+!       thermodynamics (isf_vbc).                                      !
 !                                                                      !
 !  References:                                                         !
 !    Holland & Jenkins (1999), J. Phys. Oceanogr. 29, 1787-1800.       !
@@ -89,8 +92,13 @@
      &                       OCEAN(ng) % v,                             &
      &                       ISF(ng) % Si,                              &
      &                       ISF(ng) % Fi,                              &
+     &                       FORCES(ng) % stflx,                        &
+# ifdef SHORTWAVE
+     &                       FORCES(ng) % srflx,                        &
+# else
      &                       FORCES(ng) % sustr,                        &
      &                       FORCES(ng) % svstr)
+# endif
 # ifdef PROFILE
       CALL wclock_off (ng, model, 42, __LINE__, MyFile)
 # endif
@@ -115,7 +123,12 @@
 # endif
      &                             u, v,                                &
      &                             Si, Fi,                              &
+     &                             stflx,                               &
+# ifdef SHORTWAVE
+     &                             srflx,                               &
+# else
      &                             sustr, svstr)
+# endif
 !***********************************************************************
 !
       USE mod_param
@@ -151,6 +164,10 @@
       real(r8), intent(in) :: v(LBi:,LBj:,:,:)
       real(r8), intent(in) :: Si(LBi:,LBj:,:,:)
       real(r8), intent(inout) :: Fi(LBi:,LBj:,:)
+      real(r8), intent(inout) :: stflx(LBi:,LBj:,:)
+#  ifdef SHORTWAVE
+      real(r8), intent(inout) :: srflx(LBi:,LBj:)
+#  endif
       real(r8), intent(inout) :: sustr(LBi:,LBj:)
       real(r8), intent(inout) :: svstr(LBi:,LBj:)
 # else
@@ -170,13 +187,17 @@
       real(r8), intent(in) :: v(LBi:UBi,LBj:UBj,N(ng),2)
       real(r8), intent(in) :: Si(LBi:UBi,LBj:UBj,2,nIsfS)
       real(r8), intent(inout) :: Fi(LBi:UBi,LBj:UBj,nIsfF)
+      real(r8), intent(inout) :: stflx(LBi:UBi,LBj:UBj,NT(ng))
+#  ifdef SHORTWAVE
+      real(r8), intent(inout) :: srflx(LBi:UBi,LBj:UBj)
+#  endif
       real(r8), intent(inout) :: sustr(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: svstr(LBi:UBi,LBj:UBj)
 # endif
 !
 !  Local variable declarations.
 !
-      integer :: i, j, know
+      integer :: i, j, know, itrc
 !
       real(r8) :: du, dv, spd
       real(r8) :: ui_u, vi_v, ustar_rho
@@ -228,8 +249,7 @@
         DO i=IstrU,Iend
 !
 !  Check if ice shelf cavity exists at both adjacent RHO points.
-!  Same criterion as set_vbc.F (rmask_isf*rmask_isf.eq.1) so the
-!  drag stress is only applied where both cells are cavity water.
+!  Drag stress is only applied where both cells are cavity water.
 !
           IF (rmask_isf(i-1,j)*rmask_isf(i,j).eq.1.0_r8) THEN
 !
@@ -249,7 +269,7 @@
 !
 !  Relative velocity: ice - ocean.
 !  Ocean v is at V-points; interpolate to U-point (i,j) with the
-!  same 4-point average as set_vbc.F:
+!  4-point average:
 !    v(U) = 0.25*(v(i-1,j) + v(i,j) + v(i-1,j+1) + v(i,j+1))
 !
             du=ui_u-u(i,j,N(ng),nrhs)
@@ -301,7 +321,7 @@
 !
 !  Relative velocity: ice - ocean.
 !  Ocean u is at U-points; interpolate to V-point (i,j) with the
-!  same 4-point average as set_vbc.F:
+!  4-point average:
 !    u(V) = 0.25*(u(i,j-1) + u(i+1,j-1) + u(i,j) + u(i+1,j))
 !
             dv=vi_v-v(i,j,N(ng),nrhs)
@@ -348,9 +368,34 @@
      &                    sustr, svstr)
 # endif
 !
+!=======================================================================
+!  Step 2: Zero out surface tracer fluxes over the ice shelf cavity.
+!
+!  Over cavity water (rmask_isf=1) the ocean surface is the ice base,
+!  not the atmosphere, so atmospheric heat, salt, and passive-tracer
+!  fluxes must be suppressed.  The 3EQN thermodynamics in isf_vbc
+!  overwrites stflx(:,:,itemp/isalt) for cavity cells; other tracers
+!  remain zeroed here.  Shortwave radiation is similarly masked.
+!=======================================================================
+!
+      DO itrc=1,NT(ng)
+        DO j=JstrR,JendR
+          DO i=IstrR,IendR
+            stflx(i,j,itrc)=stflx(i,j,itrc)*(1.0_r8-rmask_isf(i,j))
+          END DO
+        END DO
+      END DO
+# ifdef SHORTWAVE
+      DO j=JstrR,JendR
+        DO i=IstrR,IendR
+          srflx(i,j)=srflx(i,j)*(1.0_r8-rmask_isf(i,j))
+        END DO
+      END DO
+# endif
+!
 # ifdef ICESHELF_THERMO
 !=======================================================================
-!  Step 2: Compute friction velocity u* at RHO points.
+!  Step 3: Compute friction velocity u* at RHO points.
 !
 !  u* = gamU*|tau|^(1/2) = gamU*(tau_x^2 + tau_y^2)^(1/4), valid for all
 !  drag schemes: QDRAG gives u* = sqrt(rdrag2_isf) |du|, LOGDRAG gives
