@@ -9,7 +9,7 @@
 
 list( APPEND _files
       ROMS/Nonlinear/IceShelf/iceshelf.F
-      ROMS/Nonlinear/IceShelf/isf_coupler.F
+      ROMS/Nonlinear/IceShelf/isf_stress.F
       ROMS/Nonlinear/IceShelf/isf_masks.F
       ROMS/Nonlinear/IceShelf/isf_mms_source.F
       ROMS/Nonlinear/IceShelf/isf_mom.F

@@ -22,7 +22,7 @@
       USE mod_stepping
       USE mod_isf
       USE mod_forces
-      USE isf_coupler_mod,  ONLY : isf_coupler
+      USE isf_stress_mod,  ONLY : isf_stress
 !
 # ifdef ICESHELF_THERMO
       USE isf_vbc_mod,      ONLY : isf_vbc
@@ -97,7 +97,7 @@
         DO ig=1,GridsInLayer(nl)
           ng=GridNumber(ig,nl)
           DO tile=first_tile(ng),last_tile(ng),+1
-            CALL isf_coupler (ng, tile, iNLM)
+            CALL isf_stress (ng, tile, iNLM)
           END DO
 !$OMP BARRIER
         END DO

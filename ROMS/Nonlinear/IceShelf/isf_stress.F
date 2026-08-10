@@ -1,6 +1,6 @@
 #include "cppdefs.h"
 
-      MODULE isf_coupler_mod
+      MODULE isf_stress_mod
 
 #ifdef ICESHELF
 !
@@ -42,12 +42,12 @@
       implicit none
 !
       PRIVATE
-      PUBLIC :: isf_coupler
+      PUBLIC :: isf_stress
 !
       CONTAINS
 !
 !***********************************************************************
-      SUBROUTINE isf_coupler (ng, tile, model)
+      SUBROUTINE isf_stress (ng, tile, model)
 !***********************************************************************
 !
       USE mod_param
@@ -72,7 +72,7 @@
 # ifdef PROFILE
       CALL wclock_on (ng, model, 42, __LINE__, MyFile)
 # endif
-      CALL isf_coupler_tile (ng, tile, model,                           &
+      CALL isf_stress_tile (ng, tile, model,                           &
      &                       LBi, UBi, LBj, UBj,                        &
      &                       IminS, ImaxS, JminS, JmaxS,                &
      &                       nrhs(ng),                                  &
@@ -104,10 +104,10 @@
 # endif
 !
       RETURN
-      END SUBROUTINE isf_coupler
+      END SUBROUTINE isf_stress
 !
 !***********************************************************************
-      SUBROUTINE isf_coupler_tile (ng, tile, model,                     &
+      SUBROUTINE isf_stress_tile (ng, tile, model,                     &
      &                             LBi, UBi, LBj, UBj,                  &
      &                             IminS, ImaxS, JminS, JmaxS,          &
      &                             nrhs,                                &
@@ -419,7 +419,7 @@
       END DO
 # endif
       RETURN
-      END SUBROUTINE isf_coupler_tile
+      END SUBROUTINE isf_stress_tile
 !
 #endif
-      END MODULE isf_coupler_mod
+      END MODULE isf_stress_mod
