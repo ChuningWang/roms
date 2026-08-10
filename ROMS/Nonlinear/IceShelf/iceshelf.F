@@ -68,8 +68,6 @@
       integer :: tile
       integer :: ig, ng, nl
 !
-      real(r8), parameter :: dt_large = 1.0E+23_r8
-!
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__
 !

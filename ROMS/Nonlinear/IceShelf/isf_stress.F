@@ -95,10 +95,9 @@
      &                       FORCES(ng) % stflx,                        &
 # ifdef SHORTWAVE
      &                       FORCES(ng) % srflx,                        &
-# else
+# endif
      &                       FORCES(ng) % sustr,                        &
      &                       FORCES(ng) % svstr)
-# endif
 # ifdef PROFILE
       CALL wclock_off (ng, model, 42, __LINE__, MyFile)
 # endif
@@ -126,9 +125,8 @@
      &                             stflx,                               &
 # ifdef SHORTWAVE
      &                             srflx,                               &
-# else
-     &                             sustr, svstr)
 # endif
+     &                             sustr, svstr)
 !***********************************************************************
 !
       USE mod_param
@@ -201,7 +199,7 @@
 !
       real(r8) :: du, dv, spd
       real(r8) :: ui_u, vi_v, ustar_rho
-      real(r8) :: cff, cff1, cff2
+      real(r8) :: cff1, cff2
 # if defined ICESHELF_LOGDRAG
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: wrk
 # endif

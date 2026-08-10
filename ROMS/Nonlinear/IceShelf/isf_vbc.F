@@ -82,10 +82,6 @@
      &                   GRID(ng) % f,                                  &
      &                   GRID(ng) % rmask_isf,                          &
      &                   OCEAN(ng) % t,                                 &
-# ifdef ICESHELF_THERMO
-     &                   FORCES(ng) % sustr,                            &
-     &                   FORCES(ng) % svstr,                            &
-# endif
      &                   ISF(ng) % Vi,                                  &
      &                   ISF(ng) % Ti,                                  &
      &                   ISF(ng) % Fi,                                  &
@@ -106,9 +102,6 @@
      &                         Hz, zice, f,                             &
      &                         rmask_isf,                               &
      &                         t,                                       &
-# ifdef ICESHELF_THERMO
-     &                         sustr, svstr,                            &
-# endif
      &                         Vi, Ti,                                  &
      &                         Fi,                                      &
      &                         Oi, Ai,                                  &
@@ -137,10 +130,6 @@
       real(r8), intent(in) :: f(LBi:,LBj:)
       real(r8), intent(in) :: rmask_isf(LBi:,LBj:)
       real(r8), intent(in) :: t(LBi:,LBj:,:,:,:)
-#  ifdef ICESHELF_THERMO
-      real(r8), intent(in) :: sustr(LBi:,LBj:)
-      real(r8), intent(in) :: svstr(LBi:,LBj:)
-#  endif
       real(r8), intent(inout) :: Vi(LBi:,LBj:,:)
       real(r8), intent(inout) :: Ti(LBi:,LBj:,:,:)
       real(r8), intent(out) :: Fi(LBi:,LBj:,:)
@@ -153,10 +142,6 @@
       real(r8), intent(in) :: f(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: rmask_isf(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: t(LBi:UBi,LBj:UBj,N(ng),3,NT(ng))
-#  ifdef ICESHELF_THERMO
-      real(r8), intent(in) :: sustr(LBi:UBi,LBj:UBj)
-      real(r8), intent(in) :: svstr(LBi:UBi,LBj:UBj)
-#  endif
       real(r8), intent(inout) :: Vi(LBi:UBi,LBj:UBj,2)
       real(r8), intent(inout) :: Ti(LBi:UBi,LBj:UBj,2,NTISF(ng))
       real(r8), intent(out) :: Fi(LBi:UBi,LBj:UBj,nIsfF)
