@@ -27,6 +27,9 @@
 # ifdef ICE_MODEL
       USE ice_ini_fields_mod,   ONLY : ice_ini_fields
 # endif
+# ifdef ICESHEET
+      USE isf_ini_fields_mod,   ONLY : isf_ini_fields
+# endif
 # ifdef NESTING
       USE mod_nesting,    ONLY : ngetD
       USE nesting_mod,    ONLY : nesting
@@ -73,6 +76,9 @@
         CALL ini_fields (ng, tile, model)
 # ifdef ICE_MODEL
         CALL ice_ini_fields (ng, tile, model)
+# endif
+# ifdef ICESHEET
+        CALL isf_ini_fields (ng, tile, model)
 # endif
       END DO
 !$OMP BARRIER

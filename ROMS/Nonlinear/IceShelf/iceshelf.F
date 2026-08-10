@@ -36,6 +36,11 @@
 # ifdef ICESHEET
       USE isf_thickness_adv_mod, ONLY : isf_thickness_adv
 # endif
+# ifdef ICESHEET
+      USE isf_bc2d_mod,     ONLY : isf_bc2d
+      USE isf_pibc_mod,     ONLY : isf_pibc
+      USE isf_tibc_mod,     ONLY : isf_tibc
+# endif
 # ifdef ICESHEET_CALVING
       USE isf_calving_mod,  ONLY : isf_calving
 # endif
@@ -146,6 +151,25 @@
             lsnew(ng)=3-lsold(ng)
             DO tile=first_tile(ng),last_tile(ng),+1
               CALL isf_mom (ng, tile, model)
+            END DO
+!$OMP BARRIER
+!
+!  Apply the iceshelf state lateral boundary conditions at the same
+!  cadence as the SSA solve.  Order matters: the velocity boundary
+!  (isf_pibc) and the thickness boundary (isf_bc2d) must be applied
+!  before the enthalpy boundary (isf_tibc), which computes the
+!  boundary enthalpy as h*T and divides by the boundary thickness.
+!
+            DO tile=first_tile(ng),last_tile(ng),+1
+              CALL isf_pibc (ng, tile, model)
+            END DO
+!$OMP BARRIER
+            DO tile=first_tile(ng),last_tile(ng),+1
+              CALL isf_bc2d (ng, tile, model)
+            END DO
+!$OMP BARRIER
+            DO tile=first_tile(ng),last_tile(ng),+1
+              CALL isf_tibc (ng, tile, model)
             END DO
 !$OMP BARRIER
           END IF
