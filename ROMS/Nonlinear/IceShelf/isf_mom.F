@@ -484,6 +484,7 @@
         DO i=IstrT,IendT
           H_rho=Si(i,j,ksa_old,isIhis)
           IF (H_rho.gt.0.0_r8) THEN
+            Fi(i,j,icItis)=Si(i,j,ksa_old,isIeis)/H_rho
             IF (rmask_ist_scr(i,j).eq.1.0_r8) THEN
               Fi(i,j,icIzsf)=-h(i,j)+H_rho
               Fi(i,j,icIzbd)=-h(i,j)
@@ -492,6 +493,7 @@
               Fi(i,j,icIzbd)=-(rho_i/rho_w_local)*H_rho
             END IF
           ELSE
+            Fi(i,j,icItis)=0.0_r8
             Fi(i,j,icIzsf)=0.0_r8
             Fi(i,j,icIzbd)=-h(i,j)
           END IF

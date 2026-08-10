@@ -42,6 +42,9 @@
 #ifdef ICE_MODEL
       USE mod_ice
 #endif
+#ifdef ICESHEET
+      USE mod_isf, ONLY : ISF_LOBC, ibISF, isfOBC, nIsfS
+#endif
       USE mod_scalars
       USE mod_sources
       USE mod_stepping
@@ -1440,6 +1443,72 @@
      &                      recordless, update(1),                      &
      &                      ILB, IUB, 1, 2, istr0, Lm(ng)+1, 1,         &
      &                      ICE_LOBC(i,ng) % iceG_north)
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+          END IF
+        END DO
+      END IF
+#endif
+
+#if defined ICESHEET && !defined ANA_ISF_OBC
+      IF (LprocessOBC(ng)) THEN
+!
+!  Iceshelf model state lateral boundary data.  The iceshelf U- and
+!  V-velocities are stored at PSI points (p2dvar), so the boundary
+!  arrays span [1:Lm+1] (south/north) and [1:Mm+1] (west/east), one
+!  point shorter than the RHO-point ranges used for the sea ice model.
+!  NOTE: the isIeis boundary file carries the ice TEMPERATURE, not the
+!  enthalpy; the enthalpy boundary value is computed as h*T by isf_tibc.
+!
+        DO i=1,nIsfS
+          IF (LBC(iwest,ibISF(i),ng)%acquire) THEN
+            CALL get_ngfld (ng, iNLM, isfOBC(iwest,i),                 &
+     &                      BRYncid(isfOBC(iwest,i),ng),               &
+# if defined PIO_LIB && defined DISTRIBUTE
+     &                      BRYpioFile(isfOBC(iwest,i),ng),            &
+# endif
+     &                      nBCfiles(ng), BRY(1,ng),                   &
+     &                      recordless, update(1),                     &
+     &                      JLB, JUB, 1, 2, 1, Mm(ng)+1, 1,            &
+     &                      ISF_LOBC(i,ng) % isfG_west)
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+          END IF
+!
+          IF (LBC(ieast,ibISF(i),ng)%acquire) THEN
+            CALL get_ngfld (ng, iNLM, isfOBC(ieast,i),                 &
+     &                      BRYncid(isfOBC(ieast,i),ng),               &
+# if defined PIO_LIB && defined DISTRIBUTE
+     &                      BRYpioFile(isfOBC(ieast,i),ng),            &
+# endif
+     &                      nBCfiles(ng), BRY(1,ng),                   &
+     &                      recordless, update(1),                     &
+     &                      JLB, JUB, 1, 2, 1, Mm(ng)+1, 1,            &
+     &                      ISF_LOBC(i,ng) % isfG_east)
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+          END IF
+!
+          IF (LBC(isouth,ibISF(i),ng)%acquire) THEN
+            CALL get_ngfld (ng, iNLM, isfOBC(isouth,i),                &
+     &                      BRYncid(isfOBC(isouth,i),ng),              &
+# if defined PIO_LIB && defined DISTRIBUTE
+     &                      BRYpioFile(isfOBC(isouth,i),ng),           &
+# endif
+     &                      nBCfiles(ng), BRY(1,ng),                   &
+     &                      recordless, update(1),                     &
+     &                      ILB, IUB, 1, 2, 1, Lm(ng)+1, 1,            &
+     &                      ISF_LOBC(i,ng) % isfG_south)
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+          END IF
+!
+          IF (LBC(inorth,ibISF(i),ng)%acquire) THEN
+            CALL get_ngfld (ng, iNLM, isfOBC(inorth,i),                &
+     &                      BRYncid(isfOBC(inorth,i),ng),              &
+# if defined PIO_LIB && defined DISTRIBUTE
+     &                      BRYpioFile(isfOBC(inorth,i),ng),           &
+# endif
+     &                      nBCfiles(ng), BRY(1,ng),                   &
+     &                      recordless, update(1),                     &
+     &                      ILB, IUB, 1, 2, 1, Lm(ng)+1, 1,            &
+     &                      ISF_LOBC(i,ng) % isfG_north)
             IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
           END IF
         END DO

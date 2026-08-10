@@ -18,10 +18,11 @@ list( APPEND _files
       ROMS/Nonlinear/IceShelf/isf_set_avg.F
       ROMS/Nonlinear/IceShelf/isf_thickness_adv.F
       ROMS/Nonlinear/IceShelf/isf_calving.F
+      ROMS/Nonlinear/IceShelf/isf_bc2d.F
+      ROMS/Nonlinear/IceShelf/isf_ini_fields.F
+      ROMS/Nonlinear/IceShelf/isf_pibc.F
       ROMS/Nonlinear/IceShelf/isf_tibc.F
-      ROMS/Nonlinear/IceShelf/isf_uibc.F
       ROMS/Nonlinear/IceShelf/isf_vbc.F
-      ROMS/Nonlinear/IceShelf/isf_vibc.F
 )
 
 set ( ROMS_Nonlinear_IceShelf_files

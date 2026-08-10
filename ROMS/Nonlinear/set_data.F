@@ -60,6 +60,9 @@
 # ifdef ICE_MODEL
       USE mod_ice
 # endif
+# ifdef ICESHEET
+      USE mod_isf, ONLY : ISF_LOBC, ibISF, isfOBC, nIsfS
+# endif
       USE mod_stepping
       USE mod_scalars
       USE mod_sources
@@ -1379,6 +1382,64 @@
             END IF
           END IF
         END DO
+#  endif
+      END IF
+# endif
+# ifdef ICESHEET
+!
+!  Set iceshelf model state lateral boundary conditions.  The
+!  velocities live at PSI points, so the boundary arrays span
+!  [1:Lm+1] (south/north) and [1:Mm+1] (west/east).  NOTE: the isIeis
+!  boundary file carries the ice TEMPERATURE, not the enthalpy; the
+!  enthalpy boundary value is computed as h*T by isf_tibc.
+!
+      IF (LprocessOBC(ng)) THEN
+#  ifdef ANA_ISF_OBC
+        CALL ana_isfobc (ng, tile, iNLM)
+#  else
+        IF (DOMAIN(ng)%SouthWest_Test(tile)) THEN
+          DO i=1,nIsfS
+            IF (LBC(iwest,ibISF(i),ng)%acquire) THEN
+              CALL set_ngfld (ng, iNLM, isfOBC(iwest,i), JLB, JUB, 1,   &
+     &                        1, Mm(ng)+1, 1,                           &
+     &                        ISF_LOBC(i,ng) % isfG_west,               &
+     &                        ISF_LOBC(i,ng) % isf_west,                &
+     &                        update)
+              IF (FoundError(exit_flag, NoError, __LINE__, MyFile))     &
+     &          RETURN
+            END IF
+!
+            IF (LBC(ieast,ibISF(i),ng)%acquire) THEN
+              CALL set_ngfld (ng, iNLM, isfOBC(ieast,i), JLB, JUB, 1,   &
+     &                        1, Mm(ng)+1, 1,                           &
+     &                        ISF_LOBC(i,ng) % isfG_east,               &
+     &                        ISF_LOBC(i,ng) % isf_east,                &
+     &                        update)
+              IF (FoundError(exit_flag, NoError, __LINE__, MyFile))     &
+     &          RETURN
+            END IF
+!
+            IF (LBC(isouth,ibISF(i),ng)%acquire) THEN
+              CALL set_ngfld (ng, iNLM, isfOBC(isouth,i), ILB, IUB, 1,  &
+     &                        1, Lm(ng)+1, 1,                           &
+     &                        ISF_LOBC(i,ng) % isfG_south,              &
+     &                        ISF_LOBC(i,ng) % isf_south,               &
+     &                        update)
+              IF (FoundError(exit_flag, NoError, __LINE__, MyFile))     &
+     &          RETURN
+            END IF
+!
+            IF (LBC(inorth,ibISF(i),ng)%acquire) THEN
+              CALL set_ngfld (ng, iNLM, isfOBC(inorth,i), ILB, IUB, 1,  &
+     &                        1, Lm(ng)+1, 1,                           &
+     &                        ISF_LOBC(i,ng) % isfG_north,              &
+     &                        ISF_LOBC(i,ng) % isf_north,               &
+     &                        update)
+              IF (FoundError(exit_flag, NoError, __LINE__, MyFile))     &
+     &          RETURN
+            END IF
+          END DO
+        END IF
 #  endif
       END IF
 # endif
