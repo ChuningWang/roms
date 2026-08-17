@@ -808,6 +808,24 @@
 #endif
 
 /*
+** Check if ice sheet dynamics is activated. ICESHEET_SSA implies
+** ICESHEET (SSA is the ice sheet momentum equation). The umbrella
+** macro ICESHEET gates all ice-sheet-specific code (grounding line,
+** calving, SMB).  NOTE: this derivation must precede the
+** ICESHELF_DYNAM check below so that ICESHEET_SSA-only applications
+** also activate the iceshelf umbrella macros.
+*/
+#if defined ICESHEET_SSA || defined ICESHEET_GL || \
+    defined ICESHEET_CALVING || defined ICESHEET_SMB
+# define ICESHEET
+#endif
+#ifdef ICESHEET
+# ifndef WET_DRY
+#  define WET_DRY
+# endif
+#endif
+
+/*
 ** Check if dynamic/thermodynamic ice shelf model is activated.
 ** ICESHELF_THERMO is user-settable and enables 3-equation ice/ocean
 ** thermodynamics. ICESHEET enables ice sheet/shelf momentum.
@@ -846,22 +864,6 @@
 #  define ICESHELF_QDRAG
 # else
 #  define ICESHELF_QDRAG
-# endif
-#endif
-
-/*
-** Check if ice sheet dynamics is activated. ICESHEET_SSA implies
-** ICESHEET (SSA is the ice sheet momentum equation). The umbrella
-** macro ICESHEET gates all ice-sheet-specific code (grounding line,
-** calving, SMB).
-*/
-#if defined ICESHEET_SSA || defined ICESHEET_GL || \
-    defined ICESHEET_CALVING || defined ICESHEET_SMB
-# define ICESHEET
-#endif
-#ifdef ICESHEET
-# ifndef WET_DRY
-#  define WET_DRY
 # endif
 #endif
 

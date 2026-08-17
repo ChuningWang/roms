@@ -127,6 +127,10 @@
 #else
 !
       integer, parameter :: nIsfF_thermo = 0  ! thermo field variables
+!  Placeholders so that ICESHEET applications without ICESHELF_THERMO
+!  (no SBL weights) still compile: iOisf/Oi become zero-sized.
+      integer, parameter :: nIsfO      = 0    ! number of ocean variables
+      integer, parameter :: ioHsbl     = 1    ! SBL vertical weight
 #endif
 #ifdef ICESHEET
 !

@@ -233,8 +233,10 @@
 #   endif
 #  endif
 !
-!  Read in iceshelf refreezed volume (m).
+!  Read in iceshelf refreezed volume (m).  Only present under
+!  ICESHELF_THERMO (refreezing is a thermodynamic process).
 !
+#  if defined ICESHELF_THERMO
         ifield=idIvol
         IF (get_var(ifield)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,ifield)),   &
@@ -307,9 +309,12 @@
             END IF
           END IF
         END IF
+#  endif
 !
-!  Read in integrated tracer (m Tunits).
+!  Read in integrated tracer (m Tunits).  Only present under
+!  ICESHELF_THERMO (ice tracers are thermodynamic tracers).
 !
+#  if defined ICESHELF_THERMO
         itrc=0
         DO i=NAT+1,NT(ng)
           ifield=idItrc(i)
@@ -386,3 +391,4 @@
             END IF
           END IF
         END DO
+#  endif
