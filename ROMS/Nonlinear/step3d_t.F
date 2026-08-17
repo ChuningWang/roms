@@ -53,7 +53,7 @@
       USE mod_stepping
 # if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
       USE mod_forces
-      USE mod_isf, ONLY : ISF, ioHsbl, isf_Hsbl
+      USE mod_isf, ONLY : ISF
 # endif
 !
 !  Imported variable declarations.
