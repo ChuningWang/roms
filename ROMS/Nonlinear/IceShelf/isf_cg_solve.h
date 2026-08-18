@@ -26,24 +26,42 @@
         END DO
       END DO
 !
-!  Enforce lateral boundary conditions (free-slip / ice divide):
-!    - v = 0 at southern/northern domain boundaries (no cross-flow)
-!    - u = 0 at western domain boundary (ice divide / symmetry)
-!    - Eastern boundary (calving front) is left free.
+!  Enforce lateral boundary conditions (LBC-aware).  The treatment of
+!  each domain edge follows the LBC switch set in the ISF input script:
+!    closed   -> Dirichlet, velocity = 0      (no-slip / ice divide)
+!    clamped  -> Dirichlet, velocity = boundary data from ISF_LOBC
+!    mixed    -> treated as clamped (inflow value held at the BC data)
+!    gradient -> free (no enforcement; zero-gradient outflow)
+!  The eastern boundary (calving front) is always left free.
 !
-      IF (Jstr.eq.1) THEN
+      IF (Jstr.eq.1.and.Lv_south_fix) THEN
         DO i=IstrP,IendP
-          Si(i,JstrP,ksa_new,isIvis)=0.0_r8
+          IF (Lv_south_clamp) THEN
+            Si(i,JstrP,ksa_new,isIvis)=                                 &
+     &        ISF_LOBC(isIvis,ng)%isf_south(i)
+          ELSE
+            Si(i,JstrP,ksa_new,isIvis)=0.0_r8
+          END IF
         END DO
       END IF
-      IF (Jend.eq.Mm(ng)) THEN
+      IF (Jend.eq.Mm(ng).and.Lv_north_fix) THEN
         DO i=IstrP,IendP
-          Si(i,JendP,ksa_new,isIvis)=0.0_r8
+          IF (Lv_north_clamp) THEN
+            Si(i,JendP,ksa_new,isIvis)=                                 &
+     &        ISF_LOBC(isIvis,ng)%isf_north(i)
+          ELSE
+            Si(i,JendP,ksa_new,isIvis)=0.0_r8
+          END IF
         END DO
       END IF
-      IF (Istr.eq.1) THEN
+      IF (Istr.eq.1.and.Lu_west_fix) THEN
         DO j=JstrP,JendP
-          Si(IstrP,j,ksa_new,isIuis)=0.0_r8
+          IF (Lu_west_clamp) THEN
+            Si(IstrP,j,ksa_new,isIuis)=                                 &
+     &        ISF_LOBC(isIuis,ng)%isf_west(j)
+          ELSE
+            Si(IstrP,j,ksa_new,isIuis)=0.0_r8
+          END IF
         END DO
       END IF
 !
@@ -105,21 +123,36 @@
       END DO
       END IF
 !
-!  Re-enforce lateral BCs after warm-start.
+!  Re-enforce lateral BCs after warm-start (LBC-aware, see above).
 !
-      IF (Jstr.eq.1) THEN
+      IF (Jstr.eq.1.and.Lv_south_fix) THEN
         DO i=IstrP,IendP
-          Si(i,JstrP,ksa_new,isIvis)=0.0_r8
+          IF (Lv_south_clamp) THEN
+            Si(i,JstrP,ksa_new,isIvis)=                                 &
+     &        ISF_LOBC(isIvis,ng)%isf_south(i)
+          ELSE
+            Si(i,JstrP,ksa_new,isIvis)=0.0_r8
+          END IF
         END DO
       END IF
-      IF (Jend.eq.Mm(ng)) THEN
+      IF (Jend.eq.Mm(ng).and.Lv_north_fix) THEN
         DO i=IstrP,IendP
-          Si(i,JendP,ksa_new,isIvis)=0.0_r8
+          IF (Lv_north_clamp) THEN
+            Si(i,JendP,ksa_new,isIvis)=                                 &
+     &        ISF_LOBC(isIvis,ng)%isf_north(i)
+          ELSE
+            Si(i,JendP,ksa_new,isIvis)=0.0_r8
+          END IF
         END DO
       END IF
-      IF (Istr.eq.1) THEN
+      IF (Istr.eq.1.and.Lu_west_fix) THEN
         DO j=JstrP,JendP
-          Si(IstrP,j,ksa_new,isIuis)=0.0_r8
+          IF (Lu_west_clamp) THEN
+            Si(IstrP,j,ksa_new,isIuis)=                                 &
+     &        ISF_LOBC(isIuis,ng)%isf_west(j)
+          ELSE
+            Si(IstrP,j,ksa_new,isIuis)=0.0_r8
+          END IF
         END DO
       END IF
 !
@@ -414,11 +447,12 @@
               Ru(i,j)=taudx_psi(i,j)-Au(i,j)
               Rv(i,j)=taudy_psi(i,j)-Av(i,j)
 !  Enforce BCs: zero residual for constrained velocity components.
-              IF ((Jstr.eq.1.and.j.eq.JstrP).or.                        &
-     &            (Jend.eq.Mm(ng).and.j.eq.JendP)) THEN
+              IF ((Jstr.eq.1.and.j.eq.JstrP.and.Lv_south_fix).or.       &
+     &            (Jend.eq.Mm(ng).and.j.eq.JendP.and.Lv_north_fix))     &
+     &          THEN
                 Rv(i,j)=0.0_r8
               END IF
-              IF (Istr.eq.1.and.i.eq.IstrP) THEN
+              IF (Istr.eq.1.and.i.eq.IstrP.and.Lu_west_fix) THEN
                 Ru(i,j)=0.0_r8
               END IF
               IF (diag_u(i,j).gt.eps) THEN
@@ -608,11 +642,12 @@
                 Ru(i,j)=Ru(i,j)-alpha*Au(i,j)
                 Rv(i,j)=Rv(i,j)-alpha*Av(i,j)
 !  Enforce Dirichlet BCs on residual (prevent leakage).
-                IF ((Jstr.eq.1.and.j.eq.JstrP).or.                    &
-     &              (Jend.eq.Mm(ng).and.j.eq.JendP)) THEN
+                IF ((Jstr.eq.1.and.j.eq.JstrP.and.Lv_south_fix).or.     &
+     &              (Jend.eq.Mm(ng).and.j.eq.JendP.and.Lv_north_fix))   &
+     &            THEN
                   Rv(i,j)=0.0_r8
                 END IF
-                IF (Istr.eq.1.and.i.eq.IstrP) THEN
+                IF (Istr.eq.1.and.i.eq.IstrP.and.Lu_west_fix) THEN
                   Ru(i,j)=0.0_r8
                 END IF
                 IF (diag_u(i,j).gt.eps) THEN
@@ -650,11 +685,12 @@
                 Du(i,j)=Zu(i,j)+beta_cg*Du(i,j)
                 Dv(i,j)=Zv(i,j)+beta_cg*Dv(i,j)
 !  Enforce Dirichlet BCs on search direction.
-                IF ((Jstr.eq.1.and.j.eq.JstrP).or.                    &
-     &              (Jend.eq.Mm(ng).and.j.eq.JendP)) THEN
+                IF ((Jstr.eq.1.and.j.eq.JstrP.and.Lv_south_fix).or.     &
+     &              (Jend.eq.Mm(ng).and.j.eq.JendP.and.Lv_north_fix))   &
+     &            THEN
                   Dv(i,j)=0.0_r8
                 END IF
-                IF (Istr.eq.1.and.i.eq.IstrP) THEN
+                IF (Istr.eq.1.and.i.eq.IstrP.and.Lu_west_fix) THEN
                   Du(i,j)=0.0_r8
                 END IF
               END IF
@@ -689,20 +725,35 @@
             Si(i,j,ksa_new,isIvis)=v_scr(i,j)
           END DO
         END DO
-!  Re-enforce lateral BCs after halo exchange.
-        IF (Jstr.eq.1) THEN
+!  Re-enforce lateral BCs after halo exchange (LBC-aware, see above).
+        IF (Jstr.eq.1.and.Lv_south_fix) THEN
           DO i=IstrP,IendP
-            Si(i,JstrP,ksa_new,isIvis)=0.0_r8
+            IF (Lv_south_clamp) THEN
+              Si(i,JstrP,ksa_new,isIvis)=                               &
+     &          ISF_LOBC(isIvis,ng)%isf_south(i)
+            ELSE
+              Si(i,JstrP,ksa_new,isIvis)=0.0_r8
+            END IF
           END DO
         END IF
-        IF (Jend.eq.Mm(ng)) THEN
+        IF (Jend.eq.Mm(ng).and.Lv_north_fix) THEN
           DO i=IstrP,IendP
-            Si(i,JendP,ksa_new,isIvis)=0.0_r8
+            IF (Lv_north_clamp) THEN
+              Si(i,JendP,ksa_new,isIvis)=                               &
+     &          ISF_LOBC(isIvis,ng)%isf_north(i)
+            ELSE
+              Si(i,JendP,ksa_new,isIvis)=0.0_r8
+            END IF
           END DO
         END IF
-        IF (Istr.eq.1) THEN
+        IF (Istr.eq.1.and.Lu_west_fix) THEN
           DO j=JstrP,JendP
-            Si(IstrP,j,ksa_new,isIuis)=0.0_r8
+            IF (Lu_west_clamp) THEN
+              Si(IstrP,j,ksa_new,isIuis)=                               &
+     &          ISF_LOBC(isIuis,ng)%isf_west(j)
+            ELSE
+              Si(IstrP,j,ksa_new,isIuis)=0.0_r8
+            END IF
           END DO
         END IF
 !
@@ -770,20 +821,35 @@
             Si(i,j,ksa_new,isIvis)=v_scr(i,j)
           END DO
         END DO
-!  Re-enforce lateral BCs after halo exchange.
-        IF (Jstr.eq.1) THEN
+!  Re-enforce lateral BCs after halo exchange (LBC-aware, see above).
+        IF (Jstr.eq.1.and.Lv_south_fix) THEN
           DO i=IstrP,IendP
-            Si(i,JstrP,ksa_new,isIvis)=0.0_r8
+            IF (Lv_south_clamp) THEN
+              Si(i,JstrP,ksa_new,isIvis)=                               &
+     &          ISF_LOBC(isIvis,ng)%isf_south(i)
+            ELSE
+              Si(i,JstrP,ksa_new,isIvis)=0.0_r8
+            END IF
           END DO
         END IF
-        IF (Jend.eq.Mm(ng)) THEN
+        IF (Jend.eq.Mm(ng).and.Lv_north_fix) THEN
           DO i=IstrP,IendP
-            Si(i,JendP,ksa_new,isIvis)=0.0_r8
+            IF (Lv_north_clamp) THEN
+              Si(i,JendP,ksa_new,isIvis)=                               &
+     &          ISF_LOBC(isIvis,ng)%isf_north(i)
+            ELSE
+              Si(i,JendP,ksa_new,isIvis)=0.0_r8
+            END IF
           END DO
         END IF
-        IF (Istr.eq.1) THEN
+        IF (Istr.eq.1.and.Lu_west_fix) THEN
           DO j=JstrP,JendP
-            Si(IstrP,j,ksa_new,isIuis)=0.0_r8
+            IF (Lu_west_clamp) THEN
+              Si(IstrP,j,ksa_new,isIuis)=                               &
+     &          ISF_LOBC(isIuis,ng)%isf_west(j)
+            ELSE
+              Si(IstrP,j,ksa_new,isIuis)=0.0_r8
+            END IF
           END DO
         END IF
 !

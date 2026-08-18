@@ -139,6 +139,15 @@
       integer :: i, j, iter, ii, jj
       integer :: ksa_old, ksa_new
 !
+!  LBC-aware lateral boundary flags for the SSA solver (see
+!  isf_cg_solve.h): *_fix marks a Dirichlet-constrained edge (closed,
+!  clamped or mixed); *_clamp marks an edge with a prescribed boundary
+!  value from ISF_LOBC (clamped or mixed).  Gradient edges are free.
+!
+      logical :: Lu_west_fix, Lu_west_clamp
+      logical :: Lv_south_fix, Lv_south_clamp
+      logical :: Lv_north_fix, Lv_north_clamp
+!
       real(r8) :: cff, eps_e, H_rho, u_mid, v_mid, avg_ff
 # ifdef ISF_DEBUG
       real(r8) :: cff1, cff2
@@ -553,6 +562,24 @@
 !  SSA Picard iteration: solve A(u)*u = taud using matrix-free PCG.
 !  Active under ICESHEET_SSA (full ice-sheet).
 !-----------------------------------------------------------------------
+!
+!  Determine the LBC-aware lateral boundary flags used by the solver.
+!
+      Lu_west_fix   = LBC(iwest ,ibISF(isIuis),ng)%closed .or.          &
+     &                LBC(iwest ,ibISF(isIuis),ng)%clamped .or.         &
+     &                LBC(iwest ,ibISF(isIuis),ng)%mixed
+      Lu_west_clamp = LBC(iwest ,ibISF(isIuis),ng)%clamped .or.         &
+     &                LBC(iwest ,ibISF(isIuis),ng)%mixed
+      Lv_south_fix  = LBC(isouth,ibISF(isIvis),ng)%closed .or.          &
+     &                LBC(isouth,ibISF(isIvis),ng)%clamped .or.         &
+     &                LBC(isouth,ibISF(isIvis),ng)%mixed
+      Lv_south_clamp= LBC(isouth,ibISF(isIvis),ng)%clamped .or.         &
+     &                LBC(isouth,ibISF(isIvis),ng)%mixed
+      Lv_north_fix  = LBC(inorth,ibISF(isIvis),ng)%closed .or.          &
+     &                LBC(inorth,ibISF(isIvis),ng)%clamped .or.         &
+     &                LBC(inorth,ibISF(isIvis),ng)%mixed
+      Lv_north_clamp= LBC(inorth,ibISF(isIvis),ng)%clamped .or.         &
+     &                LBC(inorth,ibISF(isIvis),ng)%mixed
 !
 #  ifdef ICESHEET_SSA
 !  NOTE: the halo exchange of the ksa_new velocity estimate happens
