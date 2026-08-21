@@ -17,9 +17,8 @@
 !                                                                      !
 !  Supported boundary condition types (see isf.in):                    !
 !     clamped    - set the boundary ring to the boundary data          !
-!     mixed      - clamp on inflow, gradient on outflow                !
 !     gradient   - copy the interior value to the boundary             !
-!     closed     - zero (or gamma2 free-slip on the S/N edges)         !
+!     closed     - zero                                                !
 !                                                                      !
 !  The ice-sheet model does NOT support radiation or nudging options.  !
 !                                                                      !
@@ -63,9 +62,8 @@
       CALL isf_pibc_tile (ng, tile, model,                              &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    IminS, ImaxS, JminS, JmaxS,                   &
-     &                    lsold(ng), lsnew(ng),                         &
-     &                    ISF(ng) % Si(:,:,:,isIuis),                   &
-     &                    ISF(ng) % Si(:,:,:,isIvis))
+     &                    ISF(ng) % Si(:,:,lsnew(ng),isIuis),           &
+     &                    ISF(ng) % Si(:,:,lsnew(ng),isIvis))
 # ifdef PROFILE
       CALL wclock_off (ng, model, 42, __LINE__, MyFile)
 # endif
@@ -77,7 +75,6 @@
       SUBROUTINE isf_pibc_tile (ng, tile, model,                        &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          IminS, ImaxS, JminS, JmaxS,             &
-     &                          lsold, lsnew,                           &
      &                          ui, vi)
 !***********************************************************************
 !
@@ -86,373 +83,222 @@
       integer, intent(in) :: ng, tile, model
       integer, intent(in) :: LBi, UBi, LBj, UBj
       integer, intent(in) :: IminS, ImaxS, JminS, JmaxS
-      integer, intent(in) :: lsold, lsnew
 !
 # ifdef ASSUMED_SHAPE
-      real(r8), intent(inout) :: ui(LBi:,LBj:,:)
-      real(r8), intent(inout) :: vi(LBi:,LBj:,:)
+      real(r8), intent(inout) :: ui(LBi:,LBj:)
+      real(r8), intent(inout) :: vi(LBi:,LBj:)
 # else
-      real(r8), intent(inout) :: ui(LBi:UBi,LBj:UBj,2)
-      real(r8), intent(inout) :: vi(LBi:UBi,LBj:UBj,2)
+      real(r8), intent(inout) :: ui(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: vi(LBi:UBi,LBj:UBj)
 # endif
 !
 !  Local variable declarations.
 !
       integer :: i, j
 !
-!  PSI-point boundary ring.  The PSI grid spans [1:Lm+1]x[1:Mm+1]
-!  (one point shorter than RHO in each direction); IstrP..IendP and
-!  JstrP..JendP are the PSI interior bounds.  The ring immediately
-!  outside the interior (IstrP-1/IendP+1, JstrP-1/JendP+1) is the
-!  ghost layer read by the SSA element assembly and the thickness
-!  advection, so it is filled with the same boundary value.
+!  PSI-point boundary ring.  The PSI grid spans [1:Lm+1]x[1:Mm+1]:
+!  IstrP..IendP and JstrP..JendP are the PSI tile bounds including the
+!  boundary nodes themselves (at the western/southern physical edge
+!  IstrP=Istr, JstrP=Jstr; at the eastern/northern edge IendP=Iend+1,
+!  JendP=Jend+1).  Each physical edge writes its boundary node only
+!  (IstrP/IendP column, JstrP/JendP row) over the full PSI extent in
+!  the tangential direction; the four corner nodes are written by both
+!  adjacent edges with the south/north edges applied last.  The ghost
+!  ring outside the boundary node (IstrP-1/IendP+1, ...) is NOT filled:
+!  the SSA solver exchanges its own halos and owns every node it reads.
 !
 #include "set_bounds.h"
+      IF (.not.EWperiodic(ng)) THEN
 !
 !-----------------------------------------------------------------------
 !  Lateral boundary conditions at the western edge.
 !-----------------------------------------------------------------------
 !
-      IF (DOMAIN(ng)%Western_Edge(tile)) THEN
-        IF (LBC(iwest,ibISF(isIuis),ng)%clamped) THEN
-          DO j=JstrP,JendP
-            ui(IstrP  ,j,lsnew)=ISF_LOBC(isIuis,ng)%isf_west(j)
-            ui(IstrP-1,j,lsnew)=ui(IstrP,j,lsnew)
-            vi(IstrP  ,j,lsnew)=ISF_LOBC(isIvis,ng)%isf_west(j)
-            vi(IstrP-1,j,lsnew)=vi(IstrP,j,lsnew)
-# ifdef MASKING
-            ui(IstrP,j,lsnew)=ui(IstrP,j,lsnew)*                        &
-     &                        GRID(ng)%pmask(IstrP,j)
-            ui(IstrP-1,j,lsnew)=ui(IstrP-1,j,lsnew)*                    &
-     &                          GRID(ng)%pmask(IstrP-1,j)
-            vi(IstrP,j,lsnew)=vi(IstrP,j,lsnew)*                        &
-     &                        GRID(ng)%pmask(IstrP,j)
-            vi(IstrP-1,j,lsnew)=vi(IstrP-1,j,lsnew)*                    &
-     &                          GRID(ng)%pmask(IstrP-1,j)
-# endif
-          END DO
+        IF (DOMAIN(ng)%Western_Edge(tile)) THEN
 !
-        ELSE IF (LBC(iwest,ibISF(isIuis),ng)%mixed) THEN
-          DO j=JstrP,JendP
-            IF (ui(IstrP,j,lsnew).ge.0.0_r8) THEN
-              ui(IstrP,j,lsnew)=ISF_LOBC(isIuis,ng)%isf_west(j)
-            ELSE
-              ui(IstrP,j,lsnew)=ui(IstrP+1,j,lsnew)
-            END IF
-            IF (vi(IstrP,j,lsnew).ge.0.0_r8) THEN
-              vi(IstrP,j,lsnew)=ISF_LOBC(isIvis,ng)%isf_west(j)
-            ELSE
-              vi(IstrP,j,lsnew)=vi(IstrP+1,j,lsnew)
-            END IF
-            ui(IstrP-1,j,lsnew)=ui(IstrP,j,lsnew)
-            vi(IstrP-1,j,lsnew)=vi(IstrP,j,lsnew)
+          IF (LBC(iwest,ibISF(isIuis),ng)%clamped) THEN
+            DO j=JstrP,JendP
+              ui(IstrP,j)=ISF_LOBC(isIuis,ng)%isf_west(j)
 # ifdef MASKING
-            ui(IstrP,j,lsnew)=ui(IstrP,j,lsnew)*                        &
-     &                        GRID(ng)%pmask(IstrP,j)
-            ui(IstrP-1,j,lsnew)=ui(IstrP-1,j,lsnew)*                    &
-     &                          GRID(ng)%pmask(IstrP-1,j)
-            vi(IstrP,j,lsnew)=vi(IstrP,j,lsnew)*                        &
-     &                        GRID(ng)%pmask(IstrP,j)
-            vi(IstrP-1,j,lsnew)=vi(IstrP-1,j,lsnew)*                    &
-     &                          GRID(ng)%pmask(IstrP-1,j)
+              ui(IstrP,j)=ui(IstrP,j)*GRID(ng)%pumask_ist(IstrP,j)
 # endif
-          END DO
-!
-        ELSE IF (LBC(iwest,ibISF(isIuis),ng)%gradient) THEN
-          DO j=JstrP,JendP
-            ui(IstrP,j,lsnew)=ui(IstrP+1,j,lsnew)
-            ui(IstrP-1,j,lsnew)=ui(IstrP,j,lsnew)
-            vi(IstrP,j,lsnew)=vi(IstrP+1,j,lsnew)
-            vi(IstrP-1,j,lsnew)=vi(IstrP,j,lsnew)
+            END DO
+          ELSE IF (LBC(iwest,ibISF(isIuis),ng)%gradient) THEN
+            DO j=JstrP,JendP
+              ui(IstrP,j)=ui(IstrP+1,j)
 # ifdef MASKING
-            ui(IstrP,j,lsnew)=ui(IstrP,j,lsnew)*                        &
-     &                        GRID(ng)%pmask(IstrP,j)
-            ui(IstrP-1,j,lsnew)=ui(IstrP-1,j,lsnew)*                    &
-     &                          GRID(ng)%pmask(IstrP-1,j)
-            vi(IstrP,j,lsnew)=vi(IstrP,j,lsnew)*                        &
-     &                        GRID(ng)%pmask(IstrP,j)
-            vi(IstrP-1,j,lsnew)=vi(IstrP-1,j,lsnew)*                    &
-     &                          GRID(ng)%pmask(IstrP-1,j)
+              ui(IstrP,j)=ui(IstrP,j)*GRID(ng)%pumask_ist(IstrP,j)
 # endif
-          END DO
+            END DO
+          ELSE IF (LBC(iwest,ibISF(isIuis),ng)%closed) THEN
+            DO j=JstrP,JendP
+              ui(IstrP,j)=0.0_r8
+            END DO
+          END IF
 !
-        ELSE IF (LBC(iwest,ibISF(isIuis),ng)%closed) THEN
-          DO j=JstrP,JendP
-            ui(IstrP  ,j,lsnew)=0.0_r8
-            ui(IstrP-1,j,lsnew)=0.0_r8
-            vi(IstrP  ,j,lsnew)=0.0_r8
-            vi(IstrP-1,j,lsnew)=0.0_r8
-          END DO
+          IF (LBC(iwest,ibISF(isIvis),ng)%clamped) THEN
+            DO j=JstrP,JendP
+              vi(IstrP,j)=ISF_LOBC(isIvis,ng)%isf_west(j)
+# ifdef MASKING
+              vi(IstrP,j)=vi(IstrP,j)*GRID(ng)%pvmask_ist(IstrP,j)
+# endif
+            END DO
+          ELSE IF (LBC(iwest,ibISF(isIvis),ng)%gradient) THEN
+            DO j=JstrP,JendP
+              vi(IstrP,j)=vi(IstrP+1,j)
+# ifdef MASKING
+              vi(IstrP,j)=vi(IstrP,j)*GRID(ng)%pvmask_ist(IstrP,j)
+# endif
+            END DO
+          ELSE IF (LBC(iwest,ibISF(isIvis),ng)%closed) THEN
+            DO j=JstrP,JendP
+              vi(IstrP,j)=0.0_r8
+            END DO
+          END IF
         END IF
-      END IF
 !
 !-----------------------------------------------------------------------
 !  Lateral boundary conditions at the eastern edge.
 !-----------------------------------------------------------------------
 !
-      IF (DOMAIN(ng)%Eastern_Edge(tile)) THEN
-        IF (LBC(ieast,ibISF(isIuis),ng)%clamped) THEN
-          DO j=JstrP,JendP
-            ui(IendP  ,j,lsnew)=ISF_LOBC(isIuis,ng)%isf_east(j)
-            ui(IendP+1,j,lsnew)=ui(IendP,j,lsnew)
-            vi(IendP  ,j,lsnew)=ISF_LOBC(isIvis,ng)%isf_east(j)
-            vi(IendP+1,j,lsnew)=vi(IendP,j,lsnew)
-# ifdef MASKING
-            ui(IendP,j,lsnew)=ui(IendP,j,lsnew)*                        &
-     &                        GRID(ng)%pmask(IendP,j)
-            ui(IendP+1,j,lsnew)=ui(IendP+1,j,lsnew)*                    &
-     &                          GRID(ng)%pmask(IendP+1,j)
-            vi(IendP,j,lsnew)=vi(IendP,j,lsnew)*                        &
-     &                        GRID(ng)%pmask(IendP,j)
-            vi(IendP+1,j,lsnew)=vi(IendP+1,j,lsnew)*                    &
-     &                          GRID(ng)%pmask(IendP+1,j)
-# endif
-          END DO
+        IF (DOMAIN(ng)%Eastern_Edge(tile)) THEN
 !
-        ELSE IF (LBC(ieast,ibISF(isIuis),ng)%mixed) THEN
-          DO j=JstrP,JendP
-            IF (ui(IendP+1,j,lsnew).le.0.0_r8) THEN
-              ui(IendP+1,j,lsnew)=ISF_LOBC(isIuis,ng)%isf_east(j)
-            ELSE
-              ui(IendP+1,j,lsnew)=ui(IendP,j,lsnew)
-            END IF
-            IF (vi(IendP+1,j,lsnew).le.0.0_r8) THEN
-              vi(IendP+1,j,lsnew)=ISF_LOBC(isIvis,ng)%isf_east(j)
-            ELSE
-              vi(IendP+1,j,lsnew)=vi(IendP,j,lsnew)
-            END IF
-            ui(IendP  ,j,lsnew)=ui(IendP+1,j,lsnew)
-            vi(IendP  ,j,lsnew)=vi(IendP+1,j,lsnew)
+          IF (LBC(ieast,ibISF(isIuis),ng)%clamped) THEN
+            DO j=JstrP,JendP
+              ui(IendP,j)=ISF_LOBC(isIuis,ng)%isf_east(j)
 # ifdef MASKING
-            ui(IendP,j,lsnew)=ui(IendP,j,lsnew)*                        &
-     &                        GRID(ng)%pmask(IendP,j)
-            ui(IendP+1,j,lsnew)=ui(IendP+1,j,lsnew)*                    &
-     &                          GRID(ng)%pmask(IendP+1,j)
-            vi(IendP,j,lsnew)=vi(IendP,j,lsnew)*                        &
-     &                        GRID(ng)%pmask(IendP,j)
-            vi(IendP+1,j,lsnew)=vi(IendP+1,j,lsnew)*                    &
-     &                          GRID(ng)%pmask(IendP+1,j)
+              ui(IendP,j)=ui(IendP,j)*GRID(ng)%pumask_ist(IendP,j)
 # endif
-          END DO
-!
-        ELSE IF (LBC(ieast,ibISF(isIuis),ng)%gradient) THEN
-          DO j=JstrP,JendP
-            ui(IendP+1,j,lsnew)=ui(IendP,j,lsnew)
-            ui(IendP  ,j,lsnew)=ui(IendP+1,j,lsnew)
-            vi(IendP+1,j,lsnew)=vi(IendP,j,lsnew)
-            vi(IendP  ,j,lsnew)=vi(IendP+1,j,lsnew)
+            END DO
+          ELSE IF (LBC(ieast,ibISF(isIuis),ng)%gradient) THEN
+            DO j=JstrP,JendP
+              ui(IendP,j)=ui(IendP-1,j)
 # ifdef MASKING
-            ui(IendP,j,lsnew)=ui(IendP,j,lsnew)*                        &
-     &                        GRID(ng)%pmask(IendP,j)
-            ui(IendP+1,j,lsnew)=ui(IendP+1,j,lsnew)*                    &
-     &                          GRID(ng)%pmask(IendP+1,j)
-            vi(IendP,j,lsnew)=vi(IendP,j,lsnew)*                        &
-     &                        GRID(ng)%pmask(IendP,j)
-            vi(IendP+1,j,lsnew)=vi(IendP+1,j,lsnew)*                    &
-     &                          GRID(ng)%pmask(IendP+1,j)
+              ui(IendP,j)=ui(IendP,j)*GRID(ng)%pumask_ist(IendP,j)
 # endif
-          END DO
+            END DO
+          ELSE IF (LBC(ieast,ibISF(isIuis),ng)%closed) THEN
+            DO j=JstrP,JendP
+              ui(IendP,j)=0.0_r8
+            END DO
+          END IF
 !
-        ELSE IF (LBC(ieast,ibISF(isIuis),ng)%closed) THEN
-          DO j=JstrP,JendP
-            ui(IendP  ,j,lsnew)=0.0_r8
-            ui(IendP+1,j,lsnew)=0.0_r8
-            vi(IendP  ,j,lsnew)=0.0_r8
-            vi(IendP+1,j,lsnew)=0.0_r8
-          END DO
+          IF (LBC(ieast,ibISF(isIvis),ng)%clamped) THEN
+            DO j=JstrP,JendP
+              vi(IendP,j)=ISF_LOBC(isIvis,ng)%isf_east(j)
+# ifdef MASKING
+              vi(IendP,j)=vi(IendP,j)*GRID(ng)%pvmask_ist(IendP,j)
+# endif
+            END DO
+          ELSE IF (LBC(ieast,ibISF(isIvis),ng)%gradient) THEN
+            DO j=JstrP,JendP
+              vi(IendP,j)=vi(IendP-1,j)
+# ifdef MASKING
+              vi(IendP,j)=vi(IendP,j)*GRID(ng)%pvmask_ist(IendP,j)
+# endif
+            END DO
+          ELSE IF (LBC(ieast,ibISF(isIvis),ng)%closed) THEN
+            DO j=JstrP,JendP
+              vi(IendP,j)=0.0_r8
+            END DO
+          END IF
         END IF
       END IF
+
+      IF (.not.NSperiodic(ng)) THEN
 !
 !-----------------------------------------------------------------------
 !  Lateral boundary conditions at the southern edge.
 !-----------------------------------------------------------------------
 !
-      IF (DOMAIN(ng)%Southern_Edge(tile)) THEN
-        IF (LBC(isouth,ibISF(isIuis),ng)%clamped) THEN
-          DO i=IstrP,IendP
-            ui(i,JstrP  ,lsnew)=ISF_LOBC(isIuis,ng)%isf_south(i)
-            ui(i,JstrP-1,lsnew)=ui(i,JstrP,lsnew)
-            vi(i,JstrP  ,lsnew)=ISF_LOBC(isIvis,ng)%isf_south(i)
-            vi(i,JstrP-1,lsnew)=vi(i,JstrP,lsnew)
-# ifdef MASKING
-            ui(i,JstrP,lsnew)=ui(i,JstrP,lsnew)*                        &
-     &                        GRID(ng)%pmask(i,JstrP)
-            ui(i,JstrP-1,lsnew)=ui(i,JstrP-1,lsnew)*                    &
-     &                          GRID(ng)%pmask(i,JstrP-1)
-            vi(i,JstrP,lsnew)=vi(i,JstrP,lsnew)*                        &
-     &                        GRID(ng)%pmask(i,JstrP)
-            vi(i,JstrP-1,lsnew)=vi(i,JstrP-1,lsnew)*                    &
-     &                          GRID(ng)%pmask(i,JstrP-1)
-# endif
-          END DO
+        IF (DOMAIN(ng)%Southern_Edge(tile)) THEN
 !
-        ELSE IF (LBC(isouth,ibISF(isIuis),ng)%mixed) THEN
-          DO i=IstrP,IendP
-            IF (vi(i,JstrP,lsnew).ge.0.0_r8) THEN
-              vi(i,JstrP,lsnew)=ISF_LOBC(isIvis,ng)%isf_south(i)
-            ELSE
-              vi(i,JstrP,lsnew)=vi(i,JstrP+1,lsnew)
-            END IF
-            IF (ui(i,JstrP,lsnew).ge.0.0_r8) THEN
-              ui(i,JstrP,lsnew)=ISF_LOBC(isIuis,ng)%isf_south(i)
-            ELSE
-              ui(i,JstrP,lsnew)=ui(i,JstrP+1,lsnew)
-            END IF
-            ui(i,JstrP-1,lsnew)=ui(i,JstrP,lsnew)
-            vi(i,JstrP-1,lsnew)=vi(i,JstrP,lsnew)
+          IF (LBC(isouth,ibISF(isIuis),ng)%clamped) THEN
+            DO i=IstrP,IendP
+              ui(i,JstrP)=ISF_LOBC(isIuis,ng)%isf_south(i)
 # ifdef MASKING
-            ui(i,JstrP,lsnew)=ui(i,JstrP,lsnew)*                        &
-     &                        GRID(ng)%pmask(i,JstrP)
-            ui(i,JstrP-1,lsnew)=ui(i,JstrP-1,lsnew)*                    &
-     &                          GRID(ng)%pmask(i,JstrP-1)
-            vi(i,JstrP,lsnew)=vi(i,JstrP,lsnew)*                        &
-     &                        GRID(ng)%pmask(i,JstrP)
-            vi(i,JstrP-1,lsnew)=vi(i,JstrP-1,lsnew)*                    &
-     &                          GRID(ng)%pmask(i,JstrP-1)
+              ui(i,JstrP)=ui(i,JstrP)*GRID(ng)%pumask_ist(i,JstrP)
 # endif
-          END DO
-!
-        ELSE IF (LBC(isouth,ibISF(isIuis),ng)%gradient) THEN
-          DO i=IstrP,IendP
-            ui(i,JstrP,lsnew)=ui(i,JstrP+1,lsnew)
-            ui(i,JstrP-1,lsnew)=ui(i,JstrP,lsnew)
-            vi(i,JstrP,lsnew)=vi(i,JstrP+1,lsnew)
-            vi(i,JstrP-1,lsnew)=vi(i,JstrP,lsnew)
+            END DO
+          ELSE IF (LBC(isouth,ibISF(isIuis),ng)%gradient) THEN
+            DO i=IstrP,IendP
+              ui(i,JstrP)=ui(i,JstrP+1)
 # ifdef MASKING
-            ui(i,JstrP,lsnew)=ui(i,JstrP,lsnew)*                        &
-     &                        GRID(ng)%pmask(i,JstrP)
-            ui(i,JstrP-1,lsnew)=ui(i,JstrP-1,lsnew)*                    &
-     &                          GRID(ng)%pmask(i,JstrP-1)
-            vi(i,JstrP,lsnew)=vi(i,JstrP,lsnew)*                        &
-     &                        GRID(ng)%pmask(i,JstrP)
-            vi(i,JstrP-1,lsnew)=vi(i,JstrP-1,lsnew)*                    &
-     &                          GRID(ng)%pmask(i,JstrP-1)
+              ui(i,JstrP)=ui(i,JstrP)*GRID(ng)%pumask_ist(i,JstrP)
 # endif
-          END DO
+            END DO
+          ELSE IF (LBC(isouth,ibISF(isIuis),ng)%closed) THEN
+            DO i=IstrP,IendP
+              ui(i,JstrP)=0.0_r8
+            END DO
+          END IF
 !
-        ELSE IF (LBC(isouth,ibISF(isIuis),ng)%closed) THEN
-          DO i=IstrP,IendP
-            ui(i,JstrP  ,lsnew)=0.0_r8
-            ui(i,JstrP-1,lsnew)=0.0_r8
-            vi(i,JstrP  ,lsnew)=0.0_r8
-            vi(i,JstrP-1,lsnew)=0.0_r8
-          END DO
+          IF (LBC(isouth,ibISF(isIvis),ng)%clamped) THEN
+            DO i=IstrP,IendP
+              vi(i,JstrP)=ISF_LOBC(isIvis,ng)%isf_south(i)
+# ifdef MASKING
+              vi(i,JstrP)=vi(i,JstrP)*GRID(ng)%pvmask_ist(i,JstrP)
+# endif
+            END DO
+          ELSE IF (LBC(isouth,ibISF(isIvis),ng)%gradient) THEN
+            DO i=IstrP,IendP
+              vi(i,JstrP)=vi(i,JstrP+1)
+# ifdef MASKING
+              vi(i,JstrP)=vi(i,JstrP)*GRID(ng)%pvmask_ist(i,JstrP)
+# endif
+            END DO
+          ELSE IF (LBC(isouth,ibISF(isIvis),ng)%closed) THEN
+            DO i=IstrP,IendP
+              vi(i,JstrP)=0.0_r8
+            END DO
+          END IF
         END IF
-      END IF
 !
 !-----------------------------------------------------------------------
 !  Lateral boundary conditions at the northern edge.
 !-----------------------------------------------------------------------
 !
-      IF (DOMAIN(ng)%Northern_Edge(tile)) THEN
-        IF (LBC(inorth,ibISF(isIuis),ng)%clamped) THEN
-          DO i=IstrP,IendP
-            ui(i,JendP  ,lsnew)=ISF_LOBC(isIuis,ng)%isf_north(i)
-            ui(i,JendP+1,lsnew)=ui(i,JendP,lsnew)
-            vi(i,JendP  ,lsnew)=ISF_LOBC(isIvis,ng)%isf_north(i)
-            vi(i,JendP+1,lsnew)=vi(i,JendP,lsnew)
+        IF (DOMAIN(ng)%Northern_Edge(tile)) THEN
+!
+          IF (LBC(inorth,ibISF(isIuis),ng)%clamped) THEN
+            DO i=IstrP,IendP
+              ui(i,JendP)=ISF_LOBC(isIuis,ng)%isf_north(i)
 # ifdef MASKING
-            ui(i,JendP,lsnew)=ui(i,JendP,lsnew)*                        &
-     &                        GRID(ng)%pmask(i,JendP)
-            ui(i,JendP+1,lsnew)=ui(i,JendP+1,lsnew)*                    &
-     &                          GRID(ng)%pmask(i,JendP+1)
-            vi(i,JendP,lsnew)=vi(i,JendP,lsnew)*                        &
-     &                        GRID(ng)%pmask(i,JendP)
-            vi(i,JendP+1,lsnew)=vi(i,JendP+1,lsnew)*                    &
-     &                          GRID(ng)%pmask(i,JendP+1)
+              ui(i,JendP)=ui(i,JendP)*GRID(ng)%pumask_ist(i,JendP)
 # endif
-          END DO
-!
-        ELSE IF (LBC(inorth,ibISF(isIuis),ng)%mixed) THEN
-          DO i=IstrP,IendP
-            IF (vi(i,JendP+1,lsnew).le.0.0_r8) THEN
-              vi(i,JendP+1,lsnew)=ISF_LOBC(isIvis,ng)%isf_north(i)
-            ELSE
-              vi(i,JendP+1,lsnew)=vi(i,JendP,lsnew)
-            END IF
-            IF (ui(i,JendP+1,lsnew).le.0.0_r8) THEN
-              ui(i,JendP+1,lsnew)=ISF_LOBC(isIuis,ng)%isf_north(i)
-            ELSE
-              ui(i,JendP+1,lsnew)=ui(i,JendP,lsnew)
-            END IF
-            ui(i,JendP  ,lsnew)=ui(i,JendP+1,lsnew)
-            vi(i,JendP  ,lsnew)=vi(i,JendP+1,lsnew)
+            END DO
+          ELSE IF (LBC(inorth,ibISF(isIuis),ng)%gradient) THEN
+            DO i=IstrP,IendP
+              ui(i,JendP)=ui(i,JendP-1)
 # ifdef MASKING
-            ui(i,JendP,lsnew)=ui(i,JendP,lsnew)*                        &
-     &                        GRID(ng)%pmask(i,JendP)
-            ui(i,JendP+1,lsnew)=ui(i,JendP+1,lsnew)*                    &
-     &                          GRID(ng)%pmask(i,JendP+1)
-            vi(i,JendP,lsnew)=vi(i,JendP,lsnew)*                        &
-     &                        GRID(ng)%pmask(i,JendP)
-            vi(i,JendP+1,lsnew)=vi(i,JendP+1,lsnew)*                    &
-     &                          GRID(ng)%pmask(i,JendP+1)
+              ui(i,JendP)=ui(i,JendP)*GRID(ng)%pumask_ist(i,JendP)
 # endif
-          END DO
+            END DO
+          ELSE IF (LBC(inorth,ibISF(isIuis),ng)%closed) THEN
+            DO i=IstrP,IendP
+              ui(i,JendP)=0.0_r8
+            END DO
+          END IF
 !
-        ELSE IF (LBC(inorth,ibISF(isIuis),ng)%gradient) THEN
-          DO i=IstrP,IendP
-            ui(i,JendP+1,lsnew)=ui(i,JendP,lsnew)
-            ui(i,JendP  ,lsnew)=ui(i,JendP+1,lsnew)
-            vi(i,JendP+1,lsnew)=vi(i,JendP,lsnew)
-            vi(i,JendP  ,lsnew)=vi(i,JendP+1,lsnew)
+          IF (LBC(inorth,ibISF(isIvis),ng)%clamped) THEN
+            DO i=IstrP,IendP
+              vi(i,JendP)=ISF_LOBC(isIvis,ng)%isf_north(i)
 # ifdef MASKING
-            ui(i,JendP,lsnew)=ui(i,JendP,lsnew)*                        &
-     &                        GRID(ng)%pmask(i,JendP)
-            ui(i,JendP+1,lsnew)=ui(i,JendP+1,lsnew)*                    &
-     &                          GRID(ng)%pmask(i,JendP+1)
-            vi(i,JendP,lsnew)=vi(i,JendP,lsnew)*                        &
-     &                        GRID(ng)%pmask(i,JendP)
-            vi(i,JendP+1,lsnew)=vi(i,JendP+1,lsnew)*                    &
-     &                          GRID(ng)%pmask(i,JendP+1)
+              vi(i,JendP)=vi(i,JendP)*GRID(ng)%pvmask_ist(i,JendP)
 # endif
-          END DO
-!
-        ELSE IF (LBC(inorth,ibISF(isIuis),ng)%closed) THEN
-          DO i=IstrP,IendP
-            ui(i,JendP  ,lsnew)=0.0_r8
-            ui(i,JendP+1,lsnew)=0.0_r8
-            vi(i,JendP  ,lsnew)=0.0_r8
-            vi(i,JendP+1,lsnew)=0.0_r8
-          END DO
-        END IF
-      END IF
-!
-!-----------------------------------------------------------------------
-!  Boundary corners (only where the SSA assembly reads them).
-!-----------------------------------------------------------------------
-!
-      IF (.not.(EWperiodic(ng).or.NSperiodic(ng))) THEN
-        IF (DOMAIN(ng)%SouthWest_Corner(tile)) THEN
-          ui(IstrP,JstrP-1,lsnew)=0.5_r8*                                &
-     &                            (ui(IstrP  ,JstrP,lsnew)+              &
-     &                             ui(IstrP+1,JstrP-1,lsnew))
-          vi(IstrP,JstrP-1,lsnew)=0.5_r8*                                &
-     &                            (vi(IstrP  ,JstrP,lsnew)+              &
-     &                             vi(IstrP+1,JstrP-1,lsnew))
-        END IF
-        IF (DOMAIN(ng)%SouthEast_Corner(tile)) THEN
-          ui(IendP+1,JstrP-1,lsnew)=0.5_r8*                              &
-     &                              (ui(IendP+1,JstrP,lsnew)+            &
-     &                               ui(IendP  ,JstrP-1,lsnew))
-          vi(IendP+1,JstrP-1,lsnew)=0.5_r8*                              &
-     &                              (vi(IendP+1,JstrP,lsnew)+            &
-     &                               vi(IendP  ,JstrP-1,lsnew))
-        END IF
-        IF (DOMAIN(ng)%NorthWest_Corner(tile)) THEN
-          ui(IstrP,JendP+1,lsnew)=0.5_r8*                                &
-     &                            (ui(IstrP  ,JendP,lsnew)+              &
-     &                             ui(IstrP+1,JendP+1,lsnew))
-          vi(IstrP,JendP+1,lsnew)=0.5_r8*                                &
-     &                            (vi(IstrP  ,JendP,lsnew)+              &
-     &                             vi(IstrP+1,JendP+1,lsnew))
-        END IF
-        IF (DOMAIN(ng)%NorthEast_Corner(tile)) THEN
-          ui(IendP+1,JendP+1,lsnew)=0.5_r8*                              &
-     &                              (ui(IendP+1,JendP,lsnew)+            &
-     &                               ui(IendP  ,JendP+1,lsnew))
-          vi(IendP+1,JendP+1,lsnew)=0.5_r8*                              &
-     &                              (vi(IendP+1,JendP,lsnew)+            &
-     &                               vi(IendP  ,JendP+1,lsnew))
+            END DO
+          ELSE IF (LBC(inorth,ibISF(isIvis),ng)%gradient) THEN
+            DO i=IstrP,IendP
+              vi(i,JendP)=vi(i,JendP-1)
+# ifdef MASKING
+              vi(i,JendP)=vi(i,JendP)*GRID(ng)%pvmask_ist(i,JendP)
+# endif
+            END DO
+          ELSE IF (LBC(inorth,ibISF(isIvis),ng)%closed) THEN
+            DO i=IstrP,IendP
+              vi(i,JendP)=0.0_r8
+            END DO
+          END IF
         END IF
       END IF
 !
@@ -461,10 +307,12 @@
 !-----------------------------------------------------------------------
 !
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-        CALL exchange_p2d_tile (ng, tile, LBi, UBi, LBj, UBj,            &
-     &                          ui(:,:,lsnew))
-        CALL exchange_p2d_tile (ng, tile, LBi, UBi, LBj, UBj,            &
-     &                          vi(:,:,lsnew))
+        CALL exchange_p2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          ui)
+        CALL exchange_p2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          vi)
       END IF
 !
       RETURN

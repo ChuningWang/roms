@@ -54,8 +54,8 @@
 !    Cla        Clamped                              |     4     |
 !    Clo        Closed                               |           |
 !    Gra        Gradient                           1 W           E 3
-!    Mix        Mixed                                |           |
-!    Per        Periodic                             |_____S_____|
+!    Per        Periodic                             |           |
+!                                                    |_____S_____|
 !                                                          2          j=1
 !                                                   i=1         i=Lm
 !
@@ -385,15 +385,14 @@ Sout(idIamb) == T     ! Ai(...,itrc)       iceshelf ambient dye concentration
 ! combination is usually used in active/passive radiation conditions.
 !
 !   Keyword    Lateral Boundary Condition Type
-!
-!   Clo        Closed                                 _____N_____     j=Mm
-!   Clo        Clamped                               |     4     |
-!   Gra        Gradient                              |           |
-!   Rad        Radiation                           1 W           E 3
-!   RadNud     Radiation Nudging                     |           |
-!   Mix        Mixed (clamped/gradient)              |_____S_____|
-!   Per        Periodic                                    2          j=1
-!   Nes        Nested (refinement, not avail yet)   i=1         i=Lm
+!                                                     _____N_____     j=Mm
+!    Cla        Clamped                              |     4     |
+!    Clo        Closed                               |           |
+!    Gra        Gradient                           1 W           E 3
+!    Per        Periodic                             |           |
+!                                                    |_____S_____|
+!                                                          2          j=1
+!                                                   i=1         i=Lm
 !
 !------------------------------------------------------------------------------
 !  Iceshelf model parameters.

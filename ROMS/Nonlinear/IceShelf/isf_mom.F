@@ -564,22 +564,17 @@
 !-----------------------------------------------------------------------
 !
 !  Determine the LBC-aware lateral boundary flags used by the solver.
+!  Mixed is not a supported ice-sheet boundary type (Cla/Clo/Gra only).
 !
       Lu_west_fix   = LBC(iwest ,ibISF(isIuis),ng)%closed .or.          &
-     &                LBC(iwest ,ibISF(isIuis),ng)%clamped .or.         &
-     &                LBC(iwest ,ibISF(isIuis),ng)%mixed
-      Lu_west_clamp = LBC(iwest ,ibISF(isIuis),ng)%clamped .or.         &
-     &                LBC(iwest ,ibISF(isIuis),ng)%mixed
+     &                LBC(iwest ,ibISF(isIuis),ng)%clamped
+      Lu_west_clamp = LBC(iwest ,ibISF(isIuis),ng)%clamped
       Lv_south_fix  = LBC(isouth,ibISF(isIvis),ng)%closed .or.          &
-     &                LBC(isouth,ibISF(isIvis),ng)%clamped .or.         &
-     &                LBC(isouth,ibISF(isIvis),ng)%mixed
-      Lv_south_clamp= LBC(isouth,ibISF(isIvis),ng)%clamped .or.         &
-     &                LBC(isouth,ibISF(isIvis),ng)%mixed
+     &                LBC(isouth,ibISF(isIvis),ng)%clamped
+      Lv_south_clamp= LBC(isouth,ibISF(isIvis),ng)%clamped
       Lv_north_fix  = LBC(inorth,ibISF(isIvis),ng)%closed .or.          &
-     &                LBC(inorth,ibISF(isIvis),ng)%clamped .or.         &
-     &                LBC(inorth,ibISF(isIvis),ng)%mixed
-      Lv_north_clamp= LBC(inorth,ibISF(isIvis),ng)%clamped .or.         &
-     &                LBC(inorth,ibISF(isIvis),ng)%mixed
+     &                LBC(inorth,ibISF(isIvis),ng)%clamped
+      Lv_north_clamp= LBC(inorth,ibISF(isIvis),ng)%clamped
 !
 #  ifdef ICESHEET_SSA
 !  NOTE: the halo exchange of the ksa_new velocity estimate happens
