@@ -119,6 +119,69 @@
             END IF
           END IF
         END DO
+!
+!  Read the ice temperature (is_temp) from the initial conditions
+!  file and derive the ice enthalpy state variable, E = h*T.  IC
+!  files carry the ice temperature instead of the enthalpy; restart
+!  files carry the enthalpy state directly (nrrec.ne.0).
+!
+        IF (get_var(idItis).and.(nrrec(ng).eq.0)) THEN
+          foundit=find_string(var_name, n_var, TRIM(Vname(1,idItis)),   &
+     &                        varid)
+          IF (foundit) THEN
+            gtype=var_flag(varid)*r2dvar
+            status=nf_fread2d(ng, IDmod, ncname, ncINPid,               &
+     &                        Vname(1,idItis), varid,                   &
+     &                        InpRec, gtype, Vsize,                     &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Fscl, Fmin, Fmax,                         &
+#    ifdef MASKING
+     &                        GRID(ng) % rmask,                         &
+#    endif
+#    ifdef CHECKSUM
+     &                        ISF(ng) % Fi(:,:,icItis),                 &
+     &                        checksum = Fhash)
+#    else
+     &                        ISF(ng) % Fi(:,:,icItis))
+#    endif
+!
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+              IF (Master) THEN
+                WRITE (stdout,60) string, TRIM(Vname(1,idItis)),        &
+     &                            InpRec, TRIM(ncname)
+              END IF
+              exit_flag=2
+              ioerror=status
+              RETURN
+            ELSE
+              IF (Master) THEN
+#    ifdef CHECKSUM
+                WRITE (stdout,70) TRIM(Vname(2,idItis)), Fmin, Fmax,    &
+     &                            Fhash
+#    else
+                WRITE (stdout,70) TRIM(Vname(2,idItis)), Fmin, Fmax
+#    endif
+              END IF
+!
+!  Convert temperature to enthalpy (E = h*T) on the loaded time
+!  level; isf_ini_fields copies it to the other time level.
+!
+              ISF(ng) % Si(:,:,Tindex,isIeis) =                         &
+     &            ISF(ng) % Si(:,:,Tindex,isIhis) *                     &
+     &            ISF(ng) % Fi(:,:,icItis)
+            END IF
+          ELSE
+            IF (Master) THEN
+              WRITE (stdout,80) string, TRIM(Vname(1,idItis)),          &
+     &                          TRIM(ncname)
+            END IF
+            exit_flag=4
+            IF (FoundError(exit_flag, nf90_noerr,                       &
+     &                     __LINE__, MyFile)) THEN
+              RETURN
+            END IF
+          END IF
+        END IF
 #   endif
 !
 !  Read iceshelf model state variables.

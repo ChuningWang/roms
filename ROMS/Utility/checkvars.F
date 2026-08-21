@@ -281,7 +281,23 @@
 # ifdef ICESHELF_DYNAM
         DO i=1,nIsfS
           IF (iSisf(i).gt.0) THEN
+#  ifdef ICESHEET
+            IF ((i.eq.isIeis).and.(nrrec(ng).eq.0)) THEN
+!
+!  Initial conditions files carry the ice TEMPERATURE, not the
+!  enthalpy; the enthalpy state is derived as E = h*T in
+!  isf_get_state after thickness and temperature are read.  Restart
+!  files keep the enthalpy state variable.
+!
+              IF (idItis.gt.0) THEN
+                get_var(idItis)=.TRUE.
+              END IF
+            ELSE
+              get_var(iSisf(i))=.TRUE.
+            END IF
+#  else
             get_var(iSisf(i))=.TRUE.
+#  endif
           END IF
         END DO
         IF (Lisftrc(ng)) THEN
