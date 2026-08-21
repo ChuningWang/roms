@@ -51,6 +51,10 @@
      &                   GRID(ng) % pmask,                              &
      &                   GRID(ng) % rmask,                              &
 #endif
+#if defined MASKING && defined ICESHEET
+     &                   GRID(ng) % pumask_ist,                         &
+     &                   GRID(ng) % pvmask_ist,                         &
+#endif
      &                   GRID(ng) % angler,                             &
      &                   GRID(ng) % CosAngler,                          &
      &                   GRID(ng) % SinAngler,                          &
@@ -106,6 +110,9 @@
      &                         f, h, pm, pn,                            &
 #ifdef MASKING
      &                         pmask, rmask,                            &
+#endif
+#if defined MASKING && defined ICESHEET
+     &                         pumask_ist, pvmask_ist,                  &
 #endif
      &                         angler, CosAngler, SinAngler,            &
 #if defined TIDE_GENERATING_FORCES
@@ -178,6 +185,10 @@
       real(r8), intent(inout) :: pmask(LBi:,LBj:)
       real(r8), intent(inout) :: rmask(LBi:,LBj:)
 # endif
+# if defined MASKING && defined ICESHEET
+      real(r8), intent(out) :: pumask_ist(LBi:,LBj:)
+      real(r8), intent(out) :: pvmask_ist(LBi:,LBj:)
+# endif
       real(r8), intent(inout) :: angler(LBi:,LBj:)
 # ifdef SOLVE3D
 #  ifdef ICESHELF
@@ -234,6 +245,10 @@
 # ifdef MASKING
       real(r8), intent(inout) :: pmask(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: rmask(LBi:UBi,LBj:UBj)
+# endif
+# if defined MASKING && defined ICESHEET
+      real(r8), intent(out) :: pumask_ist(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: pvmask_ist(LBi:UBi,LBj:UBj)
 # endif
       real(r8), intent(inout) :: angler(LBi:UBi,LBj:UBj)
 # ifdef SOLVE3D
@@ -596,6 +611,53 @@
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
      &                    pmask)
+# endif
+# ifdef ICESHEET
+!
+      DO j=JstrP,JendP
+        DO i=IstrP,IendP
+!
+! Set ice sheet umask at PSI-points.
+!
+          IF (((rmask(i  ,j  ).lt.0.5_r8) .and.                         &
+     &         (rmask(i  ,j-1).lt.0.5_r8)) .or.                         &
+     &        ((rmask(i-1,j  ).lt.0.5_r8) .and.                         &
+     &         (rmask(i-1,j-1).lt.0.5_r8))) THEN
+            pumask_ist(i,j)=0.0_r8
+          ELSE
+            pumask_ist(i,j)=1.0_r8
+          END IF
+!
+! Set ice sheet vmask at PSI-points.
+!
+          IF (((rmask(i  ,j  ).lt.0.5_r8) .and.                         &
+     &         (rmask(i-1,j  ).lt.0.5_r8)) .or.                         &
+     &        ((rmask(i  ,j-1).lt.0.5_r8) .and.                         &
+     &         (rmask(i-1,j-1).lt.0.5_r8))) THEN
+            pvmask_ist(i,j)=0.0_r8
+          ELSE
+            pvmask_ist(i,j)=1.0_r8
+          END IF
+        END DO
+      END DO
+!
+!  Exchange boundary information.
+!
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+        CALL exchange_p2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          pumask_ist)
+        CALL exchange_p2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          pvmask_ist)
+      END IF
+
+#  ifdef DISTRIBUTE
+      CALL mp_exchange2d (ng, tile, model, 2,                           &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
+     &                    pumask_ist, pvmask_ist)
+#  endif
 # endif
 #endif
 !

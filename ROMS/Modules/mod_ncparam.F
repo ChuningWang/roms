@@ -271,7 +271,6 @@
       integer  :: idPbar        ! streamfunction
       integer  :: idPVzs        ! potential vorticity depth slices
       integer  :: idPwet        ! wet/dry mask on PSI-points
-      integer  :: idPist        ! ice sheet mask on PSI-points
       integer  :: idpmdx        ! inverse grid x-spacing
       integer  :: idpndy        ! inverse grid y-spacing
       integer  :: idpthR        ! depths of RHO-points
@@ -1779,8 +1778,6 @@
             idUwet=varid
           CASE ('idVwet')
             idVwet=varid
-          CASE ('idPist')
-            idPist=varid
           CASE ('idRist')
             idRist=varid
           CASE ('idUist')

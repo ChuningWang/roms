@@ -797,17 +797,6 @@ metadata:
   ###  Ice sheet masks  ###
   #########################
 
-  - variable:       ist_mask_psi                                     # Input/Output
-    standard_name:  ice_sheet_mask_at_cell_corners
-    long_name:      ice sheet mask on PSI-points
-    units:          nondimensional
-    field:          ice sheet psi-mask
-    time:           ocean_time
-    index_code:     idPist
-    type:           p2dvar
-    add_offset:     0.0d0
-    scale:          1.0d0
-
   - variable:       ist_mask_rho                                     # Input/Output
     standard_name:  ice_sheet_mask_at_cell_center
     long_name:      ice sheet mask on RHO-points

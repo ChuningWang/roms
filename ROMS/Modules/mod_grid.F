@@ -107,11 +107,14 @@
 !  vmask_wet  Wet/Dry mask at   V-points (0=dry, 1,2=wet).             !
 #endif
 #ifdef ICESHELF
-# ifdef WET_DRY
-!  pmask_ist  ice sheet mask at PSI-points (0=dry, 1=wet, 2=no-slip).  !
+# ifdef ICESHEET
 !  rmask_ist  ice sheet mask at RHO-points (0=dry, 1=wet).             !
-!  umask_ist  ice sheet mask at   U-points (0=dry, 1,2=wet).           !
-!  vmask_ist  ice sheet mask at   V-points (0=dry, 1,2=wet).           !
+!  umask_ist  ice sheet mask at   U-points (0=dry, -1,1,2=wet).        !
+!  vmask_ist  ice sheet mask at   V-points (0=dry, -1,1,2=wet).        !
+#  ifdef MASKING
+!  pumask_ist ice sheet mask at PSI-points (0=non-glacial, 1=glacial). !
+!  pvmask_ist ice sheet mask at PSI-points (0=non-glacial, 1=glacial). !
+#  endif
 # endif
 !  rmask_isf  ice shelf mask at RHO-points (0=dry, 1=wet).             !
 #endif
@@ -246,9 +249,13 @@
           real(r8), pointer :: rdrag2(:,:)
 #endif
 #ifdef ICESHELF
-          real(r8), pointer :: rdrag_isf(:,:)
-          real(r8), pointer :: rdrag2_isf(:,:)
+# if defined ICESHELF_LOGDRAG
           real(r8), pointer :: ZoSur_isf(:,:)
+# elif defined ICESHELF_QDRAG
+          real(r8), pointer :: rdrag2_isf(:,:)
+# elif defined ICESHELF_LDRAG
+          real(r8), pointer :: rdrag_isf(:,:)
+# endif
 #endif
           real(r8), pointer :: xp(:,:)
           real(r8), pointer :: xr(:,:)
@@ -313,11 +320,14 @@
 # endif
 #endif
 #ifdef ICESHELF
-# ifdef WET_DRY
-          real(r8), pointer :: pmask_ist(:,:)
+# ifdef ICESHEET
           real(r8), pointer :: rmask_ist(:,:)
           real(r8), pointer :: umask_ist(:,:)
           real(r8), pointer :: vmask_ist(:,:)
+#  ifdef MASKING
+          real(r8), pointer :: pumask_ist(:,:)
+          real(r8), pointer :: pvmask_ist(:,:)
+#  endif
 # endif
           real(r8), pointer :: rmask_isf(:,:)
 #endif
@@ -574,12 +584,16 @@
 #endif
 
 #ifdef ICESHELF
-      allocate ( GRID(ng) % rdrag_isf(LBi:UBi,LBj:UBj) )
-      Dmem(ng)=Dmem(ng)+size2d
-      allocate ( GRID(ng) % rdrag2_isf(LBi:UBi,LBj:UBj) )
-      Dmem(ng)=Dmem(ng)+size2d
+# if defined ICESHELF_LOGDRAG
       allocate ( GRID(ng) % ZoSur_isf(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
+# elif defined ICESHELF_QDRAG
+      allocate ( GRID(ng) % rdrag2_isf(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
+# elif defined ICESHELF_LDRAG
+      allocate ( GRID(ng) % rdrag_isf(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
+# endif
 #endif
 
       allocate ( GRID(ng) % xp(LBi:UBi,LBj:UBj) )
@@ -721,10 +735,7 @@
 #endif
 
 #ifdef ICESHELF
-# ifdef WET_DRY
-      allocate ( GRID(ng) % pmask_ist(LBi:UBi,LBj:UBj) )
-      Dmem(ng)=Dmem(ng)+size2d
-
+# ifdef ICESHEET
       allocate ( GRID(ng) % rmask_ist(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
 
@@ -733,6 +744,13 @@
 
       allocate ( GRID(ng) % vmask_ist(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
+#  ifdef MASKING
+      allocate ( GRID(ng) % pumask_ist(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
+
+      allocate ( GRID(ng) % pvmask_ist(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
+#  endif
 # endif
       allocate ( GRID(ng) % rmask_isf(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
@@ -1068,12 +1086,16 @@
 # endif
 
 # ifdef ICESHELF
-      IF (.not.destroy(ng, GRID(ng)%rdrag_isf, MyFile,                  &
-     &                 __LINE__, 'GRID(ng)%rdrag_isf')) RETURN
-      IF (.not.destroy(ng, GRID(ng)%rdrag2_isf, MyFile,                 &
-     &                 __LINE__, 'GRID(ng)%rdrag2_isf')) RETURN
+#  if defined ICESHELF_LOGDRAG
       IF (.not.destroy(ng, GRID(ng)%ZoSur_isf, MyFile,                  &
      &                 __LINE__, 'GRID(ng)%ZoSur_isf')) RETURN
+#  elif defined ICESHELF_QDRAG
+      IF (.not.destroy(ng, GRID(ng)%rdrag2_isf, MyFile,                 &
+     &                 __LINE__, 'GRID(ng)%rdrag2_isf')) RETURN
+#  elif defined ICESHELF_LDRAG
+      IF (.not.destroy(ng, GRID(ng)%rdrag_isf, MyFile,                  &
+     &                 __LINE__, 'GRID(ng)%rdrag_isf')) RETURN
+#  endif
 # endif
 
       IF (.not.destroy(ng, GRID(ng)%xp, MyFile,                         &
@@ -1218,11 +1240,8 @@
 #  endif
 # endif
 
-#ifdef ICESHELF
-# ifdef WET_DRY
-      IF (.not.destroy(ng, GRID(ng)%pmask_ist, MyFile,                  &
-     &                 __LINE__, 'GRID(ng)%pmask_ist')) RETURN
-
+# ifdef ICESHELF
+#  ifdef ICESHEET
       IF (.not.destroy(ng, GRID(ng)%rmask_ist, MyFile,                  &
      &                 __LINE__, 'GRID(ng)%rmask_ist')) RETURN
 
@@ -1232,10 +1251,18 @@
       IF (.not.destroy(ng, GRID(ng)%vmask_ist, MyFile,                  &
      &                 __LINE__, 'GRID(ng)%vmask_ist')) RETURN
 
-# endif
+#   ifdef MASKING
+      IF (.not.destroy(ng, GRID(ng)%pumask_ist, MyFile,                 &
+     &                 __LINE__, 'GRID(ng)%pumask_ist')) RETURN
+
+      IF (.not.destroy(ng, GRID(ng)%pvmask_ist, MyFile,                 &
+     &                 __LINE__, 'GRID(ng)%pvmask_ist')) RETURN
+
+#   endif
+#  endif
       IF (.not.destroy(ng, GRID(ng)%rmask_isf, MyFile,                  &
      &                 __LINE__, 'GRID(ng)%rmask_isf')) RETURN
-#endif
+# endif
 
 # if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
      defined OPT_OBSERVATIONS || defined SENSITIVITY_4DVAR      || \
@@ -1472,9 +1499,13 @@
             GRID(ng) % rdrag2(i,j) = rdrg2(ng)
 #endif
 #ifdef ICESHELF
-            GRID(ng) % rdrag_isf(i,j) = rdrg_isf(ng)
-            GRID(ng) % rdrag2_isf(i,j) = rdrg2_isf(ng)
+# if defined ICESHELF_LOGDRAG
             GRID(ng) % ZoSur_isf(i,j) = ZoSr_isf(ng)
+# elif defined ICESHELF_QDRAG
+            GRID(ng) % rdrag2_isf(i,j) = rdrg2_isf(ng)
+# elif defined ICESHELF_LDRAG
+            GRID(ng) % rdrag_isf(i,j) = rdrg_isf(ng)
+# endif
 #endif
             GRID(ng) % xp(i,j) = IniVal
             GRID(ng) % xr(i,j) = IniMetricVal
@@ -1530,11 +1561,14 @@
 #endif
 
 #ifdef ICESHELF
-# ifdef WET_DRY
-            GRID(ng) % pmask_ist(i,j) = IniVal
+# ifdef ICESHEET
             GRID(ng) % rmask_ist(i,j) = IniVal
             GRID(ng) % umask_ist(i,j) = IniVal
             GRID(ng) % vmask_ist(i,j) = IniVal
+#  ifdef MASKING
+            GRID(ng) % pumask_ist(i,j) = IniVal
+            GRID(ng) % pvmask_ist(i,j) = IniVal
+#  endif
 # endif
             GRID(ng) % rmask_isf(i,j) = IniVal
 #endif

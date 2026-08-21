@@ -358,28 +358,6 @@
       END IF
 # ifdef ICESHELF
 !
-!  Write out ice sheet mask at PSI-points.
-!
-      scale=1.0_dp
-      gtype=gfactor*p2dvar
-      status=nf_fwrite2d(ng, model, HIS(ng)%ncid, idPist,               &
-     &                   HIS(ng)%Vid(idPist),                           &
-     &                   HIS(ng)%Rindex, gtype,                         &
-     &                   LBi, UBi, LBj, UBj, scale,                     &
-# ifdef MASKING
-     &                   GRID(ng) % pmask,                              &
-# endif
-     &                   GRID(ng) % pmask_ist,                          &
-     &                   SetFillVal = .FALSE.)
-      IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
-        IF (Master) THEN
-          WRITE (stdout,20) TRIM(Vname(1,idPist)), HIS(ng)%Rindex
-        END IF
-        exit_flag=3
-        ioerror=status
-        RETURN
-      END IF
-!
 !  Write out ice sheet mask at RHO-points.
 !
       scale=1.0_dp
@@ -2709,33 +2687,6 @@
         RETURN
       END IF
 #  ifdef ICESHELF
-!
-!  Write out ice sheet mask at PSI-points.
-!
-      scale=1.0_dp
-      IF (HIS(ng)%pioVar(idPist)%dkind.eq.PIO_double) THEN
-        ioDesc => ioDesc_dp_p2dvar(ng)
-      ELSE
-        ioDesc => ioDesc_sp_p2dvar(ng)
-      END IF
-      status=nf_fwrite2d(ng, model, HIS(ng)%pioFile, idPist,            &
-     &                   HIS(ng)%pioVar(idPist),                        &
-     &                   HIS(ng)%Rindex,                                &
-     &                   ioDesc,                                        &
-     &                   LBi, UBi, LBj, UBj, scale,                     &
-#  ifdef MASKING
-     &                   GRID(ng) % pmask,                              &
-#  endif
-     &                   GRID(ng) % pmask_ist,                          &
-     &                   SetFillVal = .FALSE.)
-      IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
-        IF (Master) THEN
-          WRITE (stdout,20) TRIM(Vname(1,idPist)), HIS(ng)%Rindex
-        END IF
-        exit_flag=3
-        ioerror=status
-        RETURN
-      END IF
 !
 !  Write out ice sheet mask at RHO-points.
 !

@@ -656,23 +656,6 @@
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 # ifdef ICESHELF
 !
-!  Define ice sheet mask on PSI-points.
-!
-        Vinfo( 1)=Vname(1,idPist)
-        Vinfo( 2)=Vname(2,idPist)
-        Vinfo( 3)=Vname(3,idPist)
-        Vinfo( 9)='ice_sheet'
-        Vinfo(10)='water'
-        Vinfo(14)=Vname(4,idPist)
-        Vinfo(16)=Vname(1,idtime)
-        Vinfo(21)=Vname(6,idPist)
-        Vinfo(22)='coordinates'
-        Aval(5)=REAL(Iinfo(1,idPist,ng),r8)
-        status=def_var(ng, model, HIS(ng)%ncid, HIS(ng)%Vid(idPist),    &
-     &                 NF_FOUT, nvd3, p2dgrd, Aval, Vinfo, ncname,      &
-     &                 SetFillVal = .FALSE.)
-        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
-!
 !  Define ice sheet mask on RHO-points.
 !
         Vinfo( 1)=Vname(1,idRist)
@@ -2359,9 +2342,6 @@
             got_var(idVwet)=.TRUE.
             HIS(ng)%Vid(idVwet)=var_id(i)
 # ifdef ICESHELF
-          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idPist))) THEN
-            got_var(idPist)=.TRUE.
-            HIS(ng)%Vid(idPist)=var_id(i)
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idRist))) THEN
             got_var(idRist)=.TRUE.
             HIS(ng)%Vid(idRist)=var_id(i)
@@ -2683,12 +2663,6 @@
           RETURN
         END IF
 # ifdef ICESHELF
-        IF (.not.got_var(idPist)) THEN
-          IF (Master) WRITE (stdout,70) TRIM(Vname(1,idPist)),          &
-     &                                  TRIM(ncname)
-          exit_flag=3
-          RETURN
-        END IF
         IF (.not.got_var(idRist)) THEN
           IF (Master) WRITE (stdout,70) TRIM(Vname(1,idRist)),          &
      &                                  TRIM(ncname)
@@ -3836,27 +3810,6 @@
      &                 SetFillVal = .FALSE.)
         IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 #  ifdef ICESHELF
-!
-!  Define ice sheet mask on PSI-points.
-!
-        Vinfo( 1)=Vname(1,idPist)
-        Vinfo( 2)=Vname(2,idPist)
-        Vinfo( 3)=Vname(3,idPist)
-        Vinfo( 9)='ice_sheet'
-        Vinfo(10)='water'
-        Vinfo(14)=Vname(4,idPist)
-        Vinfo(16)=Vname(1,idtime)
-        Vinfo(21)=Vname(6,idPist)
-        Vinfo(22)='coordinates'
-        Aval(5)=REAL(Iinfo(1,idPist,ng),r8)
-        HIS(ng)%pioVar(idPist)%dkind=PIO_FOUT
-        HIS(ng)%pioVar(idPist)%gtype=p2dvar
-!
-        status=def_var(ng, model, HIS(ng)%pioFile,                      &
-     &                 HIS(ng)%pioVar(idPist)%vd,                       &
-     &                 PIO_FOUT, nvd3, p2dgrd, Aval, Vinfo, ncname,     &
-     &                 SetFillVal = .FALSE.)
-        IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
 !  Define ice sheet mask on RHO-points.
 !
@@ -5858,11 +5811,6 @@
             HIS(ng)%pioVar(idVwet)%dkind=PIO_FOUT
             HIS(ng)%pioVar(idVwet)%gtype=v2dvar
 #  ifdef ICESHELF
-          ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idPist))) THEN
-            got_var(idPist)=.TRUE.
-            HIS(ng)%pioVar(idPist)%vd=var_desc(i)
-            HIS(ng)%pioVar(idPist)%dkind=PIO_FOUT
-            HIS(ng)%pioVar(idPist)%gtype=p2dvar
           ELSE IF (TRIM(var_name(i)).eq.TRIM(Vname(1,idRist))) THEN
             got_var(idRist)=.TRUE.
             HIS(ng)%pioVar(idRist)%vd=var_desc(i)
@@ -6332,12 +6280,6 @@
           RETURN
         END IF
 #  ifdef ICESHELF
-        IF (.not.got_var(idPist)) THEN
-          IF (Master) WRITE (stdout,70) TRIM(Vname(1,idPist)),          &
-     &                                  TRIM(ncname)
-          exit_flag=3
-          RETURN
-        END IF
         IF (.not.got_var(idRist)) THEN
           IF (Master) WRITE (stdout,70) TRIM(Vname(1,idRist)),          &
      &                                  TRIM(ncname)

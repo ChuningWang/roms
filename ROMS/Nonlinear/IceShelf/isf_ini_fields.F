@@ -63,8 +63,9 @@
      &                          IminS, ImaxS, JminS, JmaxS,             &
      &                          lsold(ng),                              &
 # ifdef MASKING
-     &                          GRID(ng) % pmask,                       &
      &                          GRID(ng) % rmask,                       &
+     &                          GRID(ng) % pumask_ist,                  &
+     &                          GRID(ng) % pvmask_ist,                  &
 # endif
      &                          ISF(ng) % Si,                           &
      &                          ISF(ng) % Fi)
@@ -81,7 +82,7 @@
      &                                IminS, ImaxS, JminS, JmaxS,       &
      &                                lsold,                            &
 # ifdef MASKING
-     &                                pmask, rmask,                     &
+     &                                rmask, pumask_ist, pvmask_ist,    &
 # endif
      &                                Si, Fi)
 !***********************************************************************
@@ -93,8 +94,9 @@
       integer, intent(in) :: IminS, ImaxS, JminS, JmaxS
       integer, intent(in) :: lsold
 # ifdef MASKING
-      real(r8), intent(in) :: pmask(LBi:,LBj:)
       real(r8), intent(in) :: rmask(LBi:,LBj:)
+      real(r8), intent(in) :: pumask_ist(LBi:,LBj:)
+      real(r8), intent(in) :: pvmask_ist(LBi:,LBj:)
 # endif
       real(r8), intent(inout) :: Si(LBi:UBi,LBj:UBj,2,nIsfS)
       real(r8), intent(inout) :: Fi(LBi:UBi,LBj:UBj,nIsfF)
@@ -131,10 +133,10 @@
             Si(i,j,lsnew,isIuis)=Si(i,j,lsold,isIuis)
             Si(i,j,lsnew,isIvis)=Si(i,j,lsold,isIvis)
 # ifdef MASKING
-            Si(i,j,lsold,isIuis)=Si(i,j,lsold,isIuis)*pmask(i,j)
-            Si(i,j,lsnew,isIuis)=Si(i,j,lsnew,isIuis)*pmask(i,j)
-            Si(i,j,lsold,isIvis)=Si(i,j,lsold,isIvis)*pmask(i,j)
-            Si(i,j,lsnew,isIvis)=Si(i,j,lsnew,isIvis)*pmask(i,j)
+            Si(i,j,lsold,isIuis)=Si(i,j,lsold,isIuis)*pumask_ist(i,j)
+            Si(i,j,lsnew,isIuis)=Si(i,j,lsnew,isIuis)*pumask_ist(i,j)
+            Si(i,j,lsold,isIvis)=Si(i,j,lsold,isIvis)*pvmask_ist(i,j)
+            Si(i,j,lsnew,isIvis)=Si(i,j,lsnew,isIvis)*pvmask_ist(i,j)
 # endif
           END DO
         END DO
@@ -148,16 +150,14 @@
       CALL isf_pibc_tile (ng, tile, model,                              &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    IminS, ImaxS, JminS, JmaxS,                   &
-     &                    lsold, lsold,                                 &
-     &                    Si(:,:,:,isIuis),                             &
-     &                    Si(:,:,:,isIvis))
+     &                    Si(:,:,lsold,isIuis),                         &
+     &                    Si(:,:,lsold,isIvis))
 !
       CALL isf_pibc_tile (ng, tile, model,                              &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    IminS, ImaxS, JminS, JmaxS,                   &
-     &                    lsold, lsnew,                                 &
-     &                    Si(:,:,:,isIuis),                             &
-     &                    Si(:,:,:,isIvis))
+     &                    Si(:,:,lsnew,isIuis),                         &
+     &                    Si(:,:,lsnew,isIvis))
 !
 !  Thickness must be set before enthalpy: isf_tibc_tile computes the
 !  enthalpy boundary value as h*T and divides by the boundary thickness.
@@ -165,36 +165,24 @@
       CALL isf_bc2d_tile (ng, tile, model,                              &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    IminS, ImaxS, JminS, JmaxS,                   &
-     &                    lsold, lsold,                                 &
-     &                    Si(:,:,:,isIuis),                             &
-     &                    Si(:,:,:,isIvis),                             &
-     &                    Si(:,:,:,isIhis))
+     &                    Si(:,:,lsold,isIhis))
 !
       CALL isf_bc2d_tile (ng, tile, model,                              &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    IminS, ImaxS, JminS, JmaxS,                   &
-     &                    lsold, lsnew,                                 &
-     &                    Si(:,:,:,isIuis),                             &
-     &                    Si(:,:,:,isIvis),                             &
-     &                    Si(:,:,:,isIhis))
+     &                    Si(:,:,lsnew,isIhis))
 !
       CALL isf_tibc_tile (ng, tile, model,                              &
      &                    LBi, UBi, LBj, UBj,                           &
-     &                    lsold, lsold,                                 &
-     &                    Si(:,:,:,isIuis),                             &
-     &                    Si(:,:,:,isIvis),                             &
-     &                    Si(:,:,:,isIhis),                             &
-     &                    Si(:,:,:,isIeis),                             &
-     &                    Fi)
+     &                    Si(:,:,lsold,isIhis),                         &
+     &                    Si(:,:,lsold,isIeis),                         &
+     &                    Fi(:,:,icItis))
 !
       CALL isf_tibc_tile (ng, tile, model,                              &
      &                    LBi, UBi, LBj, UBj,                           &
-     &                    lsold, lsnew,                                 &
-     &                    Si(:,:,:,isIuis),                             &
-     &                    Si(:,:,:,isIvis),                             &
-     &                    Si(:,:,:,isIhis),                             &
-     &                    Si(:,:,:,isIeis),                             &
-     &                    Fi)
+     &                    Si(:,:,lsnew,isIhis),                         &
+     &                    Si(:,:,lsnew,isIeis),                         &
+     &                    Fi(:,:,icItis))
 !
 !-----------------------------------------------------------------------
 !  Exchange halo data in the periodic or distributed-memory case.
