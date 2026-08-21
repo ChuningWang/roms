@@ -81,12 +81,10 @@
      &                       GRID(ng) % ZoSur_isf,                      &
      &                       GRID(ng) % z_r,                            &
      &                       GRID(ng) % z_w,                            &
-# endif
-# if defined ICESHELF_LDRAG
-     &                       GRID(ng) % rdrag_isf,                      &
-# endif
-# if defined ICESHELF_QDRAG
+# elif defined ICESHELF_QDRAG
      &                       GRID(ng) % rdrag2_isf,                     &
+# elif defined ICESHELF_LDRAG
+     &                       GRID(ng) % rdrag_isf,                      &
 # endif
      &                       OCEAN(ng) % u,                             &
      &                       OCEAN(ng) % v,                             &
@@ -113,12 +111,10 @@
      &                             rmask_isf,                           &
 # if defined ICESHELF_LOGDRAG
      &                             ZoSur_isf, z_r, z_w,                 &
-# endif
-# if defined ICESHELF_LDRAG
-     &                             rdrag_isf,                           &
-# endif
-# if defined ICESHELF_QDRAG
+# elif defined ICESHELF_QDRAG
      &                             rdrag2_isf,                          &
+# elif defined ICESHELF_LDRAG
+     &                             rdrag_isf,                           &
 # endif
      &                             u, v,                                &
      &                             Si, Fi,                              &
@@ -151,12 +147,10 @@
       real(r8), intent(in) :: ZoSur_isf(LBi:,LBj:)
       real(r8), intent(in) :: z_r(LBi:,LBj:,:)
       real(r8), intent(in) :: z_w(LBi:,LBj:,:)
-#  endif
-#  if defined ICESHELF_LDRAG
-      real(r8), intent(in) :: rdrag_isf(LBi:,LBj:)
-#  endif
-#  if defined ICESHELF_QDRAG
+#  elif defined ICESHELF_QDRAG
       real(r8), intent(in) :: rdrag2_isf(LBi:,LBj:)
+#  elif defined ICESHELF_LDRAG
+      real(r8), intent(in) :: rdrag_isf(LBi:,LBj:)
 #  endif
       real(r8), intent(in) :: u(LBi:,LBj:,:,:)
       real(r8), intent(in) :: v(LBi:,LBj:,:,:)
@@ -174,12 +168,10 @@
       real(r8), intent(in) :: ZoSur_isf(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: z_r(LBi:UBi,LBj:UBj,N(ng))
       real(r8), intent(in) :: z_w(LBi:UBi,LBj:UBj,0:N(ng))
-#  endif
-#  if defined ICESHELF_LDRAG
-      real(r8), intent(in) :: rdrag_isf(LBi:UBi,LBj:UBj)
-#  endif
-#  if defined ICESHELF_QDRAG
+#  elif defined ICESHELF_QDRAG
       real(r8), intent(in) :: rdrag2_isf(LBi:UBi,LBj:UBj)
+#  elif defined ICESHELF_LDRAG
+      real(r8), intent(in) :: rdrag_isf(LBi:UBi,LBj:UBj)
 #  endif
       real(r8), intent(in) :: u(LBi:UBi,LBj:UBj,N(ng),2)
       real(r8), intent(in) :: v(LBi:UBi,LBj:UBj,N(ng),2)
@@ -285,11 +277,11 @@
 !
 # if defined ICESHELF_LOGDRAG
             sustr(i,j)=0.5_r8*(wrk(i-1,j)+wrk(i,j))*du*spd
-# elif defined ICESHELF_LDRAG
-            sustr(i,j)=0.5_r8*(rdrag_isf(i-1,j)+rdrag_isf(i,j))*du
-# else
+# elif defined ICESHELF_QDRAG
             sustr(i,j)=0.5_r8*(rdrag2_isf(i-1,j)+rdrag2_isf(i,j))*      &
      &                 spd*du
+# elif defined ICESHELF_LDRAG
+            sustr(i,j)=0.5_r8*(rdrag_isf(i-1,j)+rdrag_isf(i,j))*du
 # endif
           ELSE
 !  Outside ice shelf cavity: zero stress so migrating grounding lines
@@ -337,11 +329,11 @@
 !
 # if defined ICESHELF_LOGDRAG
             svstr(i,j)=0.5_r8*(wrk(i,j-1)+wrk(i,j))*dv*spd
-# elif defined ICESHELF_LDRAG
-            svstr(i,j)=0.5_r8*(rdrag_isf(i,j-1)+rdrag_isf(i,j))*dv
-# else
+# elif defined ICESHELF_QDRAG
             svstr(i,j)=0.5_r8*(rdrag2_isf(i,j-1)+rdrag2_isf(i,j))*      &
      &                 spd*dv
+# elif defined ICESHELF_LDRAG
+            svstr(i,j)=0.5_r8*(rdrag_isf(i,j-1)+rdrag_isf(i,j))*dv
 # endif
           ELSE
             svstr(i,j)=0.0_r8

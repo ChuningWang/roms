@@ -850,18 +850,31 @@
 ** ZoSur_isf) defaulted to the scalar RDRG_ISF/RDRG2_ISF/ZOSUR_ISF from
 ** the ISF input script (isf.in), and overridden by the grid file under
 ** ICESHELF_DRAG_GRID.
+**
+** Exactly one scheme must be active.  The priority below
+** (LOGDRAG > QDRAG > LDRAG) matches the #if/#elif chains in
+** mod_grid.F, get_grid.F, and isf_stress.F: if several schemes are
+** defined simultaneously, only the highest-priority one is kept.
+*/
+#if defined ICESHELF_LOGDRAG
+# undef ICESHELF_QDRAG
+# undef ICESHELF_LDRAG
+#elif defined ICESHELF_QDRAG
+# undef ICESHELF_LDRAG
+#endif
+/*
 ** If ICESHELF is active but no ice-shelf drag scheme is specified,
-** default to the same scheme as the bottom drag (UV_*).
+** default to the same scheme as the bottom drag (UV_*), same priority.
 */
 #if defined ICESHELF && \
     !defined ICESHELF_LOGDRAG && !defined ICESHELF_QDRAG && \
     !defined ICESHELF_LDRAG
 # if defined UV_LOGDRAG
 #  define ICESHELF_LOGDRAG
-# elif defined UV_LDRAG
-#  define ICESHELF_LDRAG
 # elif defined UV_QDRAG
 #  define ICESHELF_QDRAG
+# elif defined UV_LDRAG
+#  define ICESHELF_LDRAG
 # else
 #  define ICESHELF_QDRAG
 # endif

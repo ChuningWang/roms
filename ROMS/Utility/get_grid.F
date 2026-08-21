@@ -121,10 +121,7 @@
       integer :: varid_dragL, varid_dragQ, varid_ZoBL
 # endif
 # if defined ICESHELF_DRAG_GRID
-      integer :: varid_isfL, varid_isfQ
-#  ifdef ICESHELF_LOGDRAG
-      integer :: varid_isfZ
-#  endif
+      integer :: varid_isfL, varid_isfQ, varid_isfZ
 # endif
 #if defined UV_WAVEDRAG
       integer :: varid_dragW
@@ -339,16 +336,15 @@
 #  endif
 # endif
 # if defined ICESHELF_DRAG_GRID
-#  ifdef ICESHELF_LDRAG
-      IF (.not.find_string(var_name,n_var,TRIM(Vname(1,idisfL)),        &
-     &                     varid_isfL)) THEN
-        IF (Master) WRITE (stdout,20) TRIM(Vname(1,idisfL)),            &
+#  if defined ICESHELF_LOGDRAG
+      IF (.not.find_string(var_name,n_var,TRIM(Vname(1,idisfZ)),        &
+     &                     varid_isfZ)) THEN
+        IF (Master) WRITE (stdout,20) TRIM(Vname(1,idisfZ)),            &
      &                                TRIM(ncname)
         exit_flag=2
         RETURN
       END IF
-#  endif
-#  ifdef ICESHELF_QDRAG
+#  elif defined ICESHELF_QDRAG
       IF (.not.find_string(var_name,n_var,TRIM(Vname(1,idisfQ)),        &
      &                     varid_isfQ)) THEN
         IF (Master) WRITE (stdout,20) TRIM(Vname(1,idisfQ)),            &
@@ -356,11 +352,10 @@
         exit_flag=2
         RETURN
       END IF
-#  endif
-#  ifdef ICESHELF_LOGDRAG
-      IF (.not.find_string(var_name,n_var,TRIM(Vname(1,idisfZ)),        &
-     &                     varid_isfZ)) THEN
-        IF (Master) WRITE (stdout,20) TRIM(Vname(1,idisfZ)),            &
+#  elif defined ICESHELF_LDRAG
+      IF (.not.find_string(var_name,n_var,TRIM(Vname(1,idisfL)),        &
+     &                     varid_isfL)) THEN
+        IF (Master) WRITE (stdout,20) TRIM(Vname(1,idisfL)),            &
      &                                TRIM(ncname)
         exit_flag=2
         RETURN
@@ -2328,13 +2323,13 @@
 #  endif
 # endif
 # if defined ICESHELF_DRAG_GRID
-#  ifdef ICESHELF_LDRAG
+#  if defined ICESHELF_LOGDRAG
 !
-!  Read in spacially varying ice shelf linear drag coefficients (m/s).
+!  Read in spacially varying ice shelf surface roughness length (m).
 !
       gtype=r2dvar
       status=nf_fread2d(ng, model, ncname, GRD(ng)%ncid,                &
-     &                  Vname(1,idisfL), varid_isfL,                    &
+     &                  Vname(1,idisfZ), varid_isfZ,                    &
      &                  0, gtype, Vsize,                                &
      &                  LBi, UBi, LBj, UBj,                             &
      &                  Fscl, Fmin, Fmax,                               &
@@ -2342,21 +2337,21 @@
      &                  GRID(ng) % rmask,                               &
 #   endif
 #   ifdef CHECKSUM
-     &                  GRID(ng) % rdrag_isf,                           &
+     &                  GRID(ng) % ZoSur_isf,                           &
      &                  checksum = Fhash)
 #   else
-     &                  GRID(ng) % rdrag_isf)
+     &                  GRID(ng) % ZoSur_isf)
 #   endif
       IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
-        IF (Master) WRITE (stdout,40) TRIM(Vname(1,idisfL)),            &
+        IF (Master) WRITE (stdout,40) TRIM(Vname(1,idisfZ)),            &
      &                                TRIM(ncname)
         exit_flag=2
         ioerror=status
         RETURN
       ELSE
         IF (Master) THEN
-          WRITE (stdout,30) 'ice shelf linear drag '//                  &
-     &                      'coefficient: rdrag_isf',                   &
+          WRITE (stdout,30) 'ice shelf surface roughness '//            &
+     &                      'length: ZoSur_isf',                        &
      &                      ng, TRIM(ncname), Fmin, Fmax
 #   ifdef CHECKSUM
           WRITE (stdout,60) Fhash
@@ -2366,17 +2361,16 @@
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
-     &                          GRID(ng) % rdrag_isf)
+     &                          GRID(ng) % ZoSur_isf)
       END IF
 #   ifdef DISTRIBUTE
       CALL mp_exchange2d (ng, tile, model, 1,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    GRID(ng) % rdrag_isf)
+     &                    GRID(ng) % ZoSur_isf)
 #   endif
-#  endif
-#  ifdef ICESHELF_QDRAG
+#  elif defined ICESHELF_QDRAG
 !
 !  Read in spacially varying ice shelf quadratic drag coefficients.
 !
@@ -2423,14 +2417,13 @@
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    GRID(ng) % rdrag2_isf)
 #   endif
-#  endif
-#  ifdef ICESHELF_LOGDRAG
+#  elif defined ICESHELF_LDRAG
 !
-!  Read in spacially varying ice shelf surface roughness length (m).
+!  Read in spacially varying ice shelf linear drag coefficients (m/s).
 !
       gtype=r2dvar
       status=nf_fread2d(ng, model, ncname, GRD(ng)%ncid,                &
-     &                  Vname(1,idisfZ), varid_isfZ,                    &
+     &                  Vname(1,idisfL), varid_isfL,                    &
      &                  0, gtype, Vsize,                                &
      &                  LBi, UBi, LBj, UBj,                             &
      &                  Fscl, Fmin, Fmax,                               &
@@ -2438,21 +2431,21 @@
      &                  GRID(ng) % rmask,                               &
 #   endif
 #   ifdef CHECKSUM
-     &                  GRID(ng) % ZoSur_isf,                           &
+     &                  GRID(ng) % rdrag_isf,                           &
      &                  checksum = Fhash)
 #   else
-     &                  GRID(ng) % ZoSur_isf)
+     &                  GRID(ng) % rdrag_isf)
 #   endif
       IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
-        IF (Master) WRITE (stdout,40) TRIM(Vname(1,idisfZ)),            &
+        IF (Master) WRITE (stdout,40) TRIM(Vname(1,idisfL)),            &
      &                                TRIM(ncname)
         exit_flag=2
         ioerror=status
         RETURN
       ELSE
         IF (Master) THEN
-          WRITE (stdout,30) 'ice shelf surface roughness '//            &
-     &                      'length: ZoSur_isf',                        &
+          WRITE (stdout,30) 'ice shelf linear drag '//                  &
+     &                      'coefficient: rdrag_isf',                   &
      &                      ng, TRIM(ncname), Fmin, Fmax
 #   ifdef CHECKSUM
           WRITE (stdout,60) Fhash
@@ -2462,14 +2455,14 @@
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
-     &                          GRID(ng) % ZoSur_isf)
+     &                          GRID(ng) % rdrag_isf)
       END IF
 #   ifdef DISTRIBUTE
       CALL mp_exchange2d (ng, tile, model, 1,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    GRID(ng) % ZoSur_isf)
+     &                    GRID(ng) % rdrag_isf)
 #   endif
 #  endif
 # endif
