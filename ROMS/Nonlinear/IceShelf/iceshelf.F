@@ -34,7 +34,7 @@
       USE isf_mom_mod,      ONLY : isf_mom
 # endif
 # ifdef ICESHEET
-      USE isf_thickness_adv_mod, ONLY : isf_thickness_adv
+      USE isf_advection_mod, ONLY : isf_advection
 # endif
 # ifdef ICESHEET
       USE isf_bc2d_mod,     ONLY : isf_bc2d
@@ -179,12 +179,12 @@
 # ifdef ICESHEET
 !
 !-----------------------------------------------------------------------
-!  Compute ice thickness advection (mass conservation).
+!  Advect ice thickness and enthalpy (mass and heat conservation).
 !  Executed every N_ssa*N_thick ocean timesteps.
 !
-!  Currently disabled: isf_thickness_adv updates Si(isIhis) but does
-!  not update zice, causing hwater=h+zice inconsistency in set_depth.
-!  Re-enable after zice synchronization is implemented.
+!  Currently disabled: isf_advection updates Si(isIhis/isIeis) but
+!  does not update zice, causing hwater=h+zice inconsistency in
+!  set_depth.  Re-enable after zice synchronization is implemented.
 !-----------------------------------------------------------------------
 !
 !        DO ig=1,GridsInLayer(nl)
@@ -192,7 +192,7 @@
 !          IF (MOD(iic(ng)-1,N_ssa(ng)*N_thick(ng)).eq.0 .and.
 !     &        iic(ng).gt.ntstart(ng)) THEN
 !            DO tile=first_tile(ng),last_tile(ng),+1
-!              CALL isf_thickness_adv (ng, tile, model)
+!              CALL isf_advection (ng, tile, model)
 !            END DO
 ! !$OMP BARRIER
 !          END IF
