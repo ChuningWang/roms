@@ -153,12 +153,12 @@
           END IF
         END DO
 !
-!  Read the ice temperature (is_temp) from the initial conditions
-!  file and derive the ice enthalpy state variable, E = h*T.  IC
-!  files carry the ice temperature instead of the enthalpy; restart
-!  files carry the enthalpy state directly (nrrec.ne.0).
+!  Read the ice temperature (is_temp) from the initial conditions or
+!  restart file and derive the ice enthalpy state variable, E = h*T.
+!  Both IC and restart files carry the ice temperature instead of the
+!  enthalpy (the restart write side derives T = E/h in isf_output).
 !
-        IF (get_var(idItis).and.(nrrec(ng).eq.0)) THEN
+        IF (get_var(idItis)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idItis)),   &
      &                        vindex)
           IF (foundit) THEN
@@ -204,12 +204,21 @@
 #     endif
               END IF
 !
-!  Convert temperature to enthalpy (E = h*T) on the loaded time
-!  level; isf_ini_fields copies it to the other time level.
+!  Convert temperature to enthalpy (E = h*T): both time levels on
+!  perfect restart, else the loaded time level only (isf_ini_fields
+!  copies it to the other level).
 !
-              ISF(ng) % Si(:,:,Tindex,isIeis) =                         &
-     &            ISF(ng) % Si(:,:,Tindex,isIhis) *                     &
-     &            ISF(ng) % Fi(:,:,icItis)
+              IF (Perfect2D) THEN
+                DO i=1,2
+                  ISF(ng) % Si(:,:,i,isIeis) =                         &
+     &                ISF(ng) % Si(:,:,i,isIhis) *                     &
+     &                ISF(ng) % Fi(:,:,icItis)
+                END DO
+              ELSE
+                ISF(ng) % Si(:,:,Tindex,isIeis) =                       &
+     &              ISF(ng) % Si(:,:,Tindex,isIhis) *                   &
+     &              ISF(ng) % Fi(:,:,icItis)
+              END IF
             END IF
           ELSE
             IF (Master) THEN
@@ -228,7 +237,11 @@
 !  Read sea ice model state variables.
 !
         DO i=1,nIsfF
+#   ifdef ICESHEET
+          IF (iFisf(i).gt.0 .and. i.ne.icItis) THEN
+#   else
           IF (iFisf(i).gt.0) THEN
+#   endif
             ifield=iFisf(i)
             IF (get_var(ifield).and.Perfect2D) THEN
               foundit=find_string(var_name, n_var,                      &

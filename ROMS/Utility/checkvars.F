@@ -282,12 +282,11 @@
         DO i=1,nIsfS
           IF (iSisf(i).gt.0) THEN
 #  ifdef ICESHEET
-            IF ((i.eq.isIeis).and.(nrrec(ng).eq.0)) THEN
+            IF (i.eq.isIeis) THEN
 !
-!  Initial conditions files carry the ice TEMPERATURE, not the
-!  enthalpy; the enthalpy state is derived as E = h*T in
-!  isf_get_state after thickness and temperature are read.  Restart
-!  files keep the enthalpy state variable.
+!  Initial conditions and restart files carry the ice TEMPERATURE,
+!  not the enthalpy; the enthalpy state is derived as E = h*T in
+!  isf_get_state after thickness and temperature are read.
 !
               IF (idItis.gt.0) THEN
                 get_var(idItis)=.TRUE.
