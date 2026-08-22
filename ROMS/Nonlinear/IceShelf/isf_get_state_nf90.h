@@ -120,10 +120,11 @@
           END IF
         END DO
 !
-!  Read the ice temperature (is_temp) from the initial conditions or
-!  restart file and derive the ice enthalpy state variable, E = h*T.
-!  Both IC and restart files carry the ice temperature instead of the
-!  enthalpy (the restart write side derives T = E/h in isf_output).
+!  Read the ice temperature (is_temp).  Initial conditions files
+!  carry the temperature only, so the enthalpy state is derived as
+!  E = h*T; restart files carry BOTH the exact enthalpy state (read
+!  by the state loop above) and its diagnostic temperature, which
+!  only fills Fi(:,:,icItis) here.
 !
         IF (get_var(idItis)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idItis)),   &
@@ -163,17 +164,12 @@
 #    endif
               END IF
 !
-!  Convert temperature to enthalpy (E = h*T): both time levels on
-!  perfect restart, else the loaded time level only (isf_ini_fields
-!  copies it to the other level).
+!  Derive the enthalpy from the temperature on a cold start only
+!  (initial conditions carry the temperature, not the enthalpy); on
+!  restart the exact enthalpy state was read by the state loop and
+!  the temperature is only the diagnostic.
 !
-              IF (Perfect2D) THEN
-                DO i=1,2
-                  ISF(ng) % Si(:,:,i,isIeis) =                         &
-     &                ISF(ng) % Si(:,:,i,isIhis) *                     &
-     &                ISF(ng) % Fi(:,:,icItis)
-                END DO
-              ELSE
+              IF (nrrec(ng).eq.0) THEN
                 ISF(ng) % Si(:,:,Tindex,isIeis) =                       &
      &              ISF(ng) % Si(:,:,Tindex,isIhis) *                   &
      &              ISF(ng) % Fi(:,:,icItis)
