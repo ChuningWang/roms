@@ -153,11 +153,11 @@
           END IF
         END DO
 !
-!  Read the ice temperature (is_temp).  Initial conditions files
-!  carry the temperature only, so the enthalpy state is derived as
-!  E = h*T; restart files carry BOTH the exact enthalpy state (read
-!  by the state loop above) and its diagnostic temperature, which
-!  only fills Fi(:,:,icItis) here.
+!  Read the ice temperature (is_temp).  It is only flagged by
+!  checkvars when the file does NOT carry the ice enthalpy
+!  (temperature-only IC files), so the enthalpy state is always
+!  derived here as E = h*T; files that carry the enthalpy read it
+!  in the state loop above and never reach this block.
 !
         IF (get_var(idItis)) THEN
           foundit=find_string(var_name, n_var, TRIM(Vname(1,idItis)),   &
@@ -205,12 +205,17 @@
 #     endif
               END IF
 !
-!  Derive the enthalpy from the temperature on a cold start only
-!  (initial conditions carry the temperature, not the enthalpy); on
-!  restart the exact enthalpy state was read by the state loop and
-!  the temperature is only the diagnostic.
+!  Convert temperature to enthalpy (E = h*T): both time levels on
+!  perfect restart, else the loaded time level only (isf_ini_fields
+!  copies it to the other level).
 !
-              IF (nrrec(ng).eq.0) THEN
+              IF (Perfect2D) THEN
+                DO i=1,2
+                  ISF(ng) % Si(:,:,i,isIeis) =                         &
+     &                ISF(ng) % Si(:,:,i,isIhis) *                     &
+     &                ISF(ng) % Fi(:,:,icItis)
+                END DO
+              ELSE
                 ISF(ng) % Si(:,:,Tindex,isIeis) =                       &
      &              ISF(ng) % Si(:,:,Tindex,isIhis) *                   &
      &              ISF(ng) % Fi(:,:,icItis)

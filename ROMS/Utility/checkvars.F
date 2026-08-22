@@ -284,15 +284,15 @@
 #  ifdef ICESHEET
             IF (i.eq.isIeis) THEN
 !
-!  Initial conditions files carry the ice TEMPERATURE only: the
-!  enthalpy state is derived as E = h*T in isf_get_state.  Restart
-!  files carry BOTH the exact enthalpy state and its diagnostic
-!  temperature, and both are read back.
+!  Content-driven thermal initial field: if the file carries the
+!  ice enthalpy (model restart files do; any IC file may), read it
+!  exactly; otherwise fall back to the ice temperature and derive
+!  the enthalpy as E = h*T in isf_get_state.  This lets restart
+!  files also serve as initial-condition files for new experiments.
 !
-              IF (nrrec(ng).ne.0) THEN
+              IF (ANY(var_name(1:n_var).eq.TRIM(Vname(1,idIeis)))) THEN
                 get_var(iSisf(i))=.TRUE.
-              END IF
-              IF (idItis.gt.0) THEN
+              ELSE IF (idItis.gt.0) THEN
                 get_var(idItis)=.TRUE.
               END IF
             ELSE

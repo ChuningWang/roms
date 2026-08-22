@@ -236,43 +236,6 @@
           END IF
         END DO
 !
-!
-!-----------------------------------------------------------------------
-!  Define the ice temperature in restart files.  Restart files carry
-!  BOTH the exact enthalpy state (above) and its diagnostic
-!  temperature (T = E/h, single 2D record): a restart restores the
-!  prognostic enthalpy exactly and the temperature consistently.
-!-----------------------------------------------------------------------
-!
-        IF ((S(ng)%ncid.eq.RST(ng)%ncid).and.(idItis.gt.0)) THEN
-          DO i=1,Natt
-            DO j=1,LEN(Vinfo(1))
-              Vinfo(i)(j:j)=' '
-            END DO
-          END DO
-          Aval(6)=0.0_r8
-          Vinfo( 1)=Vname(1,idItis)
-          Vinfo( 2)=Vname(2,idItis)
-          Vinfo( 3)=Vname(3,idItis)
-          Vinfo(14)=Vname(4,idItis)
-          Vinfo(16)=Vname(1,idtime)
-          Vinfo(21)=Vname(6,idItis)
-          Vinfo(22)='coordinates'
-          Aval(5)=REAL(Iinfo(1,idItis,ng),r8)
-#  if defined WRITE_WATER && defined MASKING
-          Vinfo(20)='mask_rho'
-#  endif
-#  ifdef PERFECT_RESTART
-          isfgrd => sr2dgrd
-#  else
-          isfgrd => t2dgrd
-#  endif
-          status=def_var(ng, model, S(ng)%ncid,                       &
-     &                   S(ng)%Vid(idItis),                           &
-     &                   vtype, nvd3, isfgrd, Aval, Vinfo, ncname)
-          IF (FoundError(exit_flag, NoError,                          &
-     &                   __LINE__, MyFile)) RETURN
-        END IF
         IF (S(ng)%ncid.ne.RST(ng)%ncid) THEN
 !
 !  Reset isfgrid dimension info.
@@ -337,16 +300,6 @@
         DO nf=1,nIsfF
           IF (iFisf(nf).gt.0) THEN
             ifield=iFisf(nf)
-!
-!  The ice temperature in restart files is defined by the dedicated
-!  block above; skip it here to avoid a duplicate variable.
-!
-#  ifdef ICESHEET
-            IF ((nf.eq.icItis).and.                                     &
-     &          (S(ng)%ncid.eq.RST(ng)%ncid)) THEN
-              CYCLE
-            END IF
-#  endif
             IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
 #  ifdef PERFECT_RESTART
               LdefVar=.TRUE.
@@ -607,16 +560,6 @@
         DO nf=1,nIsfF
           IF (iFisf(nf).gt.0) THEN
             ifield=iFisf(nf)
-!
-!  The ice temperature in restart files is defined by the dedicated
-!  block above; skip it here to avoid a duplicate variable.
-!
-#  ifdef ICESHEET
-            IF ((nf.eq.icItis).and.                                     &
-     &          (S(ng)%ncid.eq.RST(ng)%ncid)) THEN
-              CYCLE
-            END IF
-#  endif
             IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
 #  ifdef PERFECT_RESTART
               LdefVar=.TRUE.
@@ -693,7 +636,6 @@
 !
       real(r8), allocatable :: Ur2d(:,:)
       real(r8), allocatable :: Vr2d(:,:)
-      real(r8), allocatable, target :: Tmp2d(:,:)
 !
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__//", isf_wrt_nf90"
@@ -844,44 +786,6 @@
           END IF
         END IF
       END DO
-!
-!
-!-----------------------------------------------------------------------
-!  Write out the ice temperature (T = E/h) into restart files so a
-!  restart restores both the exact enthalpy state (above) and its
-!  diagnostic temperature.  Masked by the STATIC land/sea mask, like
-!  the state fields above.
-!-----------------------------------------------------------------------
-!
-        IF ((S(ng)%ncid.eq.RST(ng)%ncid).and.(idItis.gt.0)) THEN
-          IF (.not.allocated(Tmp2d)) THEN
-            allocate (Tmp2d(LBi:UBi,LBj:UBj))
-          END IF
-          WHERE (ISF(ng)%Si(LBi:UBi,LBj:UBj,lsnew(ng),isIhis)         &
-     &           .gt.0.0_r8)
-            Tmp2d=ISF(ng)%Si(LBi:UBi,LBj:UBj,lsnew(ng),isIeis)/       &
-     &            ISF(ng)%Si(LBi:UBi,LBj:UBj,lsnew(ng),isIhis)
-          ELSEWHERE
-            Tmp2d=0.0_r8
-          END WHERE
-          scale=1.0_dp
-          status=nf_fwrite2d(ng, model, S(ng)%ncid, idItis,           &
-     &                       S(ng)%Vid(idItis),                       &
-     &                       S(ng)%Rindex, gfactor*r2dvar,            &
-     &                       LBi, UBi, LBj, UBj, scale,               &
-#  ifdef MASKING
-     &                       GRID(ng) % rmask,                        &
-#  endif
-     &                       Tmp2d)
-          IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
-            IF (Master) WRITE (stdout,10) TRIM(Vname(1,idItis)),      &
-     &                                    S(ng)%Rindex,               &
-     &                                    TRIM(S(ng)%name)
-            exit_flag=3
-            ioerror=status
-            RETURN
-          END IF
-        END IF
 !  Write isf EASTward and NORTHward velocity component (m/s) at
 !  RHO-points.
 !
@@ -951,16 +855,6 @@
       DO ifld=1,nIsfF
         IF (iFisf(ifld).gt.0) THEN
           ifield=iFisf(ifld)
-!
-!  The ice temperature in restart files is written by the dedicated
-!  block above; skip it here to avoid a duplicate write.
-!
-#  ifdef ICESHEET
-          IF ((ifld.eq.icItis).and.                                     &
-     &        (S(ng)%ncid.eq.RST(ng)%ncid)) THEN
-            CYCLE
-          END IF
-#  endif
           IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
 #  ifdef PERFECT_RESTART
             LwrtVar=.TRUE.
@@ -2026,45 +1920,6 @@
           END IF
         END DO
 !
-!
-!-----------------------------------------------------------------------
-!  Define the ice temperature in restart files (see the NetCDF branch
-!  for the rationale): single 2D record, T = E/h.
-!-----------------------------------------------------------------------
-!
-        IF ((FileH.eq.ABS(RST(ng)%pioFile%fh)).and.                    &
-     &      (idItis.gt.0)) THEN
-          DO i=1,Natt
-            DO j=1,LEN(Vinfo(1))
-              Vinfo(i)(j:j)=' '
-            END DO
-          END DO
-          Aval(6)=0.0_r8
-          Vinfo( 1)=Vname(1,idItis)
-          Vinfo( 2)=Vname(2,idItis)
-          Vinfo( 3)=Vname(3,idItis)
-          Vinfo(14)=Vname(4,idItis)
-          Vinfo(16)=Vname(1,idtime)
-          Vinfo(21)=Vname(6,idItis)
-          Vinfo(22)='coordinates'
-          Aval(5)=REAL(Iinfo(1,idItis,ng),r8)
-          S(ng)%pioVar(idItis)%dkind=PIO_FOUT
-          S(ng)%pioVar(idItis)%gtype=r2dvar
-#  if defined WRITE_WATER && defined MASKING
-          Vinfo(20)='mask_rho'
-#  endif
-#   ifdef PERFECT_RESTART
-          isfgrd => sr2dgrd
-#   else
-          isfgrd => t2dgrd
-#   endif
-!
-          status=def_var(ng, model, S(ng)%pioFile,                     &
-     &                   S(ng)%pioVar(idItis)%vd,                      &
-     &                   vtype, nvd3, isfgrd, Aval, Vinfo, ncname)
-          IF (FoundError(exit_flag, NoError,                          &
-     &                   __LINE__, MyFile)) RETURN
-        END IF
         IF (FileH.ne.ABS(RST(ng)%pioFile%fh)) THEN
 !
 !  Reset isfgrid dimension info.
@@ -2135,16 +1990,6 @@
         DO nf=1,nIsfF
           IF (iFisf(nf).gt.0) THEN
             ifield=iFisf(nf)
-!
-!  The ice temperature in restart files is defined by the dedicated
-!  block above; skip it here to avoid a duplicate variable.
-!
-#  ifdef ICESHEET
-            IF ((nf.eq.icItis).and.                                     &
-     &          (FileH.eq.ABS(RST(ng)%pioFile%fh))) THEN
-              CYCLE
-            END IF
-#  endif
             IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
 #   ifdef PERFECT_RESTART
               LdefVar=.TRUE.
@@ -2443,16 +2288,6 @@
         DO nf=1,nIsfF
           IF (iFisf(nf).gt.0) THEN
             ifield=iFisf(nf)
-!
-!  The ice temperature in restart files is defined by the dedicated
-!  block above; skip it here to avoid a duplicate variable.
-!
-#  ifdef ICESHEET
-            IF ((nf.eq.icItis).and.                                     &
-     &          (FileH.eq.ABS(RST(ng)%pioFile%fh))) THEN
-              CYCLE
-            END IF
-#  endif
             IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
 #   ifdef PERFECT_RESTART
               LdefVar=.TRUE.
@@ -2530,7 +2365,6 @@
 !
       real(r8), allocatable :: Ur2d(:,:)
       real(r8), allocatable :: Vr2d(:,:)
-      real(r8), allocatable, target :: Tmp2d(:,:)
 !
       character (len=*), parameter :: MyFile =                          &
      &  __FILE__//", isf_wrt_pio"
@@ -2719,49 +2553,6 @@
           END IF
         END IF
       END DO
-!
-!
-!-----------------------------------------------------------------------
-!  Write out the ice temperature (T = E/h) into restart files so a
-!  restart restores both the exact enthalpy state (above) and its
-!  diagnostic temperature (see the NetCDF branch).
-!-----------------------------------------------------------------------
-!
-        IF ((FileH.eq.ABS(RST(ng)%pioFile%fh)).and.                    &
-     &      (idItis.gt.0)) THEN
-          IF (.not.allocated(Tmp2d)) THEN
-            allocate (Tmp2d(LBi:UBi,LBj:UBj))
-          END IF
-          WHERE (ISF(ng)%Si(LBi:UBi,LBj:UBj,lsnew(ng),isIhis)         &
-     &           .gt.0.0_r8)
-            Tmp2d=ISF(ng)%Si(LBi:UBi,LBj:UBj,lsnew(ng),isIeis)/       &
-     &            ISF(ng)%Si(LBi:UBi,LBj:UBj,lsnew(ng),isIhis)
-          ELSEWHERE
-            Tmp2d=0.0_r8
-          END WHERE
-          IF (S(ng)%pioVar(idItis)%dkind.eq.PIO_double) THEN
-            ioDesc => ioDesc_dp_r2dvar(ng)
-          ELSE
-            ioDesc => ioDesc_sp_r2dvar(ng)
-          END IF
-          scale=1.0_dp
-          status=nf_fwrite2d(ng, model, S(ng)%pioFile, idItis,        &
-     &                       S(ng)%pioVar(idItis), S(ng)%Rindex,      &
-     &                       ioDesc,                                  &
-     &                       LBi, UBi, LBj, UBj, scale,               &
-#   ifdef MASKING
-     &                       GRID(ng) % rmask,                        &
-#   endif
-     &                       Tmp2d)
-          IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
-            IF (Master) WRITE (stdout,10) TRIM(Vname(1,idItis)),      &
-     &                                    S(ng)%Rindex,               &
-     &                                    TRIM(S(ng)%name)
-            exit_flag=3
-            ioerror=status
-            RETURN
-          END IF
-        END IF
 !  Write isf EASTward and NORTHward velocity component (m/s) at
 !  RHO-points.
 !
@@ -2840,16 +2631,6 @@
       DO ifld=1,nIsfF
         IF (iFisf(ifld).gt.0) THEN
           ifield=iFisf(ifld)
-!
-!  The ice temperature in restart files is written by the dedicated
-!  block above; skip it here to avoid a duplicate write.
-!
-#  ifdef ICESHEET
-          IF ((ifld.eq.icItis).and.                                     &
-     &        (FileH.eq.ABS(RST(ng)%pioFile%fh))) THEN
-            CYCLE
-          END IF
-#  endif
           IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
 #   ifdef PERFECT_RESTART
             LwrtVar=.TRUE.
