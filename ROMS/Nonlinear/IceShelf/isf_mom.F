@@ -27,12 +27,6 @@
       PRIVATE
       PUBLIC  :: isf_mom
 !
-!  CG global dot product shared variables (for OMP critical reduction).
-!
-      integer :: isf_tile_count
-      real(r8) :: isf_dot_prod
-!$OMP THREADPRIVATE (isf_tile_count, isf_dot_prod)
-!
       CONTAINS
 !
 !***********************************************************************

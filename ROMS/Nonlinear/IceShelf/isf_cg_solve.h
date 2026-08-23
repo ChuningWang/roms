@@ -482,11 +482,8 @@
 !  Global reduction for initial residual norm.
 !
 # ifdef DISTRIBUTE
-        isf_tile_count=0
-        isf_dot_prod=dot_zr
         op_handle='SUM'
-        CALL mp_reduce(ng,iNLM,1,isf_dot_prod,op_handle)
-        dot_zr=isf_dot_prod
+        CALL mp_reduce(ng,iNLM,1,dot_zr,op_handle)
 # endif
         resid_0=SQRT(ABS(dot_zr))
         resid=resid_0
@@ -608,13 +605,9 @@
           END DO
 !
 # ifdef DISTRIBUTE
-          isf_dot_prod=dot_dad
           op_handle='SUM'
-          CALL mp_reduce(ng,iNLM,1,isf_dot_prod,op_handle)
-          dot_dad=isf_dot_prod
-          isf_dot_prod=dot_zr_old
-          CALL mp_reduce(ng,iNLM,1,isf_dot_prod,op_handle)
-          dot_zr_old=isf_dot_prod
+          CALL mp_reduce(ng,iNLM,1,dot_dad,op_handle)
+          CALL mp_reduce(ng,iNLM,1,dot_zr_old,op_handle)
 # endif
 !
           IF (ABS(dot_dad).lt.eps) EXIT
@@ -666,10 +659,8 @@
           END DO
 !
 # ifdef DISTRIBUTE
-          isf_dot_prod=dot_zr
           op_handle='SUM'
-          CALL mp_reduce(ng,iNLM,1,isf_dot_prod,op_handle)
-          dot_zr=isf_dot_prod
+          CALL mp_reduce(ng,iNLM,1,dot_zr,op_handle)
 # endif
 !
 !  beta = (z_new,r_new) / (z_old,r_old)
@@ -889,22 +880,11 @@
           END DO
         END DO
 # ifdef DISTRIBUTE
-        isf_dot_prod=vel_change
         op_handle='SUM'
-        CALL mp_reduce(ng,iNLM,1,isf_dot_prod,op_handle)
-        vel_change=isf_dot_prod
-        isf_dot_prod=vel_norm
-        op_handle='SUM'
-        CALL mp_reduce(ng,iNLM,1,isf_dot_prod,op_handle)
-        vel_norm=isf_dot_prod
-        isf_dot_prod=resid_norm
-        op_handle='SUM'
-        CALL mp_reduce(ng,iNLM,1,isf_dot_prod,op_handle)
-        resid_norm=isf_dot_prod
-        isf_dot_prod=rhs_norm
-        op_handle='SUM'
-        CALL mp_reduce(ng,iNLM,1,isf_dot_prod,op_handle)
-        rhs_norm=isf_dot_prod
+        CALL mp_reduce(ng,iNLM,1,vel_change,op_handle)
+        CALL mp_reduce(ng,iNLM,1,vel_norm,op_handle)
+        CALL mp_reduce(ng,iNLM,1,resid_norm,op_handle)
+        CALL mp_reduce(ng,iNLM,1,rhs_norm,op_handle)
 # endif
         IF (vel_norm.gt.eps) THEN
           nl_resid=SQRT(vel_change/vel_norm)
