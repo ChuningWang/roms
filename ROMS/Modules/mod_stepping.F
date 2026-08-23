@@ -305,6 +305,20 @@
 
       IF (allocated(nfm1))  deallocate ( nfm1 )
 #endif
+
+#ifdef ICE_MODEL
+      IF (allocated(linew)) deallocate ( linew )
+
+      IF (allocated(liold)) deallocate ( liold )
+
+      IF (allocated(liunw)) deallocate ( liunw )
+
+      IF (allocated(liuol)) deallocate ( liuol )
+
+      IF (allocated(lienw)) deallocate ( lienw )
+
+      IF (allocated(lieol)) deallocate ( lieol )
+#endif
 !$OMP END PARALLEL
 
 #ifdef ADJUST_BOUNDARY
