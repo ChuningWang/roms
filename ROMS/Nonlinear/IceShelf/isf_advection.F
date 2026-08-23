@@ -34,7 +34,7 @@
 !                                                                      !
 !=======================================================================
 !
-      USE mod_kinds
+      USE mod_param
 !
       implicit none
 !
@@ -52,12 +52,8 @@
       SUBROUTINE isf_advection (ng, tile, model)
 !***********************************************************************
 !
-      USE mod_param
       USE mod_grid
-      USE mod_forces
-      USE mod_ocean
-      USE mod_stepping
-      USE mod_isf, ONLY : ISF
+      USE mod_isf, ONLY : lsold, lsnew, ISF
 !
 !  Imported variable declarations.
 !
@@ -125,17 +121,13 @@
 !  Reference: STREAMICE streamice_advect_thickness.F,
 !             PISM mass transport (upwind FD)
 !
-      USE mod_kinds
-      USE mod_param
       USE mod_scalars
       USE mod_parallel
-      USE mod_stepping
       USE mod_iounits
       USE mod_isf
 !
-      USE bc_2d_mod
 # ifdef DISTRIBUTE
-      USE distribute_mod, ONLY : mp_reduce
+      USE distribute_mod,  ONLY : mp_reduce
 # endif
       USE mp_exchange_mod, ONLY : mp_exchange2d
       USE exchange_2d_mod
