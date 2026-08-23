@@ -43,6 +43,9 @@
 !  nstp      Baroclinic (slow) time-step index to which the current    !
 !              changes are added to compute new 3D primitive equation  !
 !              variables.                                              !
+!                                                                      !
+!  lsnew     Iceshelf state new time level index.                      !
+!  lsold     Iceshelf state previous time level index.                 !
 #if defined SSH_TIDES || defined UV_TIDES
 !                                                                      !
 !  NTC       Number of tidal components to consider.                   !
@@ -90,6 +93,13 @@
         integer, allocatable :: lienw(:)
         integer, allocatable :: lieol(:)
 !$OMP THREADPRIVATE (linew, liold, liunw, liuol, lienw, lieol)
+#endif
+
+#ifdef ICESHELF_DYNAM
+!
+        integer, allocatable :: lsnew(:)
+        integer, allocatable :: lsold(:)
+!$OMP THREADPRIVATE (lsnew, lsold)
 #endif
 !
 #ifdef ADJUST_BOUNDARY
@@ -220,6 +230,19 @@
       END IF
       lieol(1:Ngrids) = 1
 #endif
+
+#ifdef ICESHELF_DYNAM
+!
+      IF (.not.allocated(lsnew)) THEN
+        allocate ( lsnew(Ngrids) )
+      END IF
+      lsnew(1:Ngrids) = 1
+
+      IF (.not.allocated(lsold)) THEN
+        allocate ( lsold(Ngrids) )
+      END IF
+      lsold(1:Ngrids) = 1
+#endif
 !$OMP END PARALLEL
 
 #ifdef ADJUST_BOUNDARY
@@ -318,6 +341,12 @@
       IF (allocated(lienw)) deallocate ( lienw )
 
       IF (allocated(lieol)) deallocate ( lieol )
+#endif
+
+#ifdef ICESHELF_DYNAM
+      IF (allocated(lsnew)) deallocate ( lsnew )
+
+      IF (allocated(lsold)) deallocate ( lsold )
 #endif
 !$OMP END PARALLEL
 

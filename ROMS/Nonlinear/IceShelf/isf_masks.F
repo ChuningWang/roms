@@ -35,9 +35,9 @@
       USE mod_param
       USE mod_grid
 # ifdef ICESHEET
-      USE mod_stepping, ONLY : knew
+      USE mod_stepping, ONLY : knew, lsnew
       USE mod_ocean
-      USE mod_isf,      ONLY : lsnew, isIhis, ISF
+      USE mod_isf,      ONLY : isIhis, ISF
 # endif
 !
 !  Imported variable declarations.

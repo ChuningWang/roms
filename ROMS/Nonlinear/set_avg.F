@@ -46,7 +46,6 @@
       USE ice_set_avg_mod, ONLY : ice_set_avg_tile
 # endif
 # if defined ICESHELF_DYNAM && defined SOLVE3D
-      USE mod_isf,         ONLY : lsnew
       USE isf_set_avg_mod, ONLY : isf_set_avg_tile
 # endif
 # ifdef WET_DRY

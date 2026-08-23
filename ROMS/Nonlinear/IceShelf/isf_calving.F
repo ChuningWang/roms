@@ -39,7 +39,8 @@
 !
       USE mod_param
       USE mod_grid
-      USE mod_isf, ONLY : ISF, lsnew
+      USE mod_stepping, ONLY : lsnew
+      USE mod_isf, ONLY : ISF
 !
 !  Imported variable declarations.
 !

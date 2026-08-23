@@ -127,6 +127,7 @@
 !
       USE mod_param
       USE mod_scalars
+      USE mod_stepping, ONLY : lsnew
       USE mod_isf
 !
       USE bc_2d_mod

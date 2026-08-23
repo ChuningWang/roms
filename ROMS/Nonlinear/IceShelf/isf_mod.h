@@ -193,10 +193,6 @@
 #endif
 !-----------------------------------------------------------------------
 !
-      integer, allocatable :: lsnew(:)
-      integer, allocatable :: lsold(:)
-!
-!$OMP THREADPRIVATE (lsnew, lsold)
 #ifdef AVERAGES
 !
 !  Switches to process time-averaged iceshelf model state and internal
@@ -423,18 +419,6 @@
           allocate ( idIamb(MT) )
           Dmem(1)=Dmem(1)+REAL(MT,r8)
           idIamb(1:MT)=0
-        END IF
-
-        IF (.not.allocated(lsnew)) THEN
-          allocate ( lsnew(Ngrids) )
-          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          lsnew(1:Ngrids)=1
-        END IF
-
-        IF (.not.allocated(lsold)) THEN
-          allocate ( lsold(Ngrids) )
-          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          lsold(1:Ngrids)=1
         END IF
 
 #ifdef AVERAGES

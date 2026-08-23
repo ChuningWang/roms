@@ -53,7 +53,8 @@
 !***********************************************************************
 !
       USE mod_grid
-      USE mod_isf, ONLY : lsold, lsnew, ISF
+      USE mod_stepping, ONLY : lsold, lsnew
+      USE mod_isf, ONLY : ISF
 !
 !  Imported variable declarations.
 !
@@ -123,6 +124,7 @@
 !
       USE mod_scalars
       USE mod_parallel
+      USE mod_stepping
       USE mod_iounits
       USE mod_isf
 !
