@@ -274,7 +274,6 @@
 !  Multi-timescale parameters
 !
       integer, allocatable :: N_ssa(:)          ! SSA solve freq.
-      integer, allocatable :: N_thick(:)        ! Thickness update freq.
       integer, allocatable :: N_gl(:)           ! GL update freq.
 !
 !  Surface mass balance parameters
@@ -639,11 +638,6 @@
           allocate ( N_ssa(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
           N_ssa(1:Ngrids)=0
-        END IF
-        IF (.not.allocated(N_thick)) THEN
-          allocate ( N_thick(Ngrids) )
-          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          N_thick(1:Ngrids)=0
         END IF
         IF (.not.allocated(N_gl)) THEN
           allocate ( N_gl(Ngrids) )
@@ -1010,7 +1004,6 @@
       IF (allocated(cfl_factor))     deallocate ( cfl_factor )
       IF (allocated(H_calve))        deallocate ( H_calve )
       IF (allocated(N_ssa))          deallocate ( N_ssa )
-      IF (allocated(N_thick))        deallocate ( N_thick )
       IF (allocated(N_gl))           deallocate ( N_gl )
       IF (allocated(smb_rate))       deallocate ( smb_rate )
       IF (allocated(max_thickness))   deallocate ( max_thickness )

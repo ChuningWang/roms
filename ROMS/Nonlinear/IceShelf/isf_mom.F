@@ -268,9 +268,9 @@
 !
 !  2. ksa_new must be carried forward from ksa_old so that any
 !     component NOT updated every SSA call (thickness advection
-!     skipped at cold start, or N_thick > 1) does not leave the new
-!     layer at zero.  When thickness advection runs it overwrites
-!     ksa_new afterwards, so this copy does not disturb the coupling.
+!     skipped at cold start) does not leave the new layer at zero.
+!     When thickness advection runs it overwrites ksa_new afterwards,
+!     so this copy does not disturb the coupling.
 !-----------------------------------------------------------------------
 !
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN

@@ -172,52 +172,35 @@
               CALL isf_tibc (ng, tile, model)
             END DO
 !$OMP BARRIER
-          END IF
-        END DO
-# endif
-
-# ifdef ICESHEET
 !
-!-----------------------------------------------------------------------
-!  Advect ice thickness and enthalpy (mass and heat conservation).
-!  Executed every N_ssa*N_thick ocean timesteps.
+!  Advect ice thickness and enthalpy (mass and heat conservation),
+!  synchronously with every SSA solve.
 !
 !  Currently disabled: isf_advection updates Si(isIhis/isIeis) but
 !  does not update zice, causing hwater=h+zice inconsistency in
 !  set_depth.  Re-enable after zice synchronization is implemented.
-!-----------------------------------------------------------------------
 !
-!        DO ig=1,GridsInLayer(nl)
-!          ng=GridNumber(ig,nl)
-!          IF (MOD(iic(ng)-1,N_ssa(ng)*N_thick(ng)).eq.0 .and.
-!     &        iic(ng).gt.ntstart(ng)) THEN
-!            DO tile=first_tile(ng),last_tile(ng),+1
-!              CALL isf_advection (ng, tile, model)
-!            END DO
+!            IF (iic(ng).gt.ntstart(ng)) THEN
+!              DO tile=first_tile(ng),last_tile(ng),+1
+!                CALL isf_advection (ng, tile, model)
+!              END DO
 ! !$OMP BARRIER
-!          END IF
-!        END DO
-# endif
-
+!            END IF
 # ifdef ICESHEET_CALVING
 !
-!-----------------------------------------------------------------------
-!  Apply calving (thickness threshold).
-!  Executed together with thickness advection.
+!  Apply calving (thickness threshold), after thickness advection.
 !
 !  Currently disabled (same reason as thickness advection above).
-!-----------------------------------------------------------------------
 !
-!        DO ig=1,GridsInLayer(nl)
-!          ng=GridNumber(ig,nl)
-!          IF (MOD(iic(ng)-1,N_ssa(ng)*N_thick(ng)).eq.0 .and.
-!     &        iic(ng).gt.ntstart(ng)) THEN
-!            DO tile=first_tile(ng),last_tile(ng),+1
-!              CALL isf_calving (ng, tile, model)
-!            END DO
+!            IF (iic(ng).gt.ntstart(ng)) THEN
+!              DO tile=first_tile(ng),last_tile(ng),+1
+!                CALL isf_calving (ng, tile, model)
+!              END DO
 ! !$OMP BARRIER
-!          END IF
-!        END DO
+!            END IF
+# endif
+          END IF
+        END DO
 # endif
 
 #if defined WET_DRY || defined ICESHEET

@@ -185,13 +185,12 @@
           H_calve == 100.0d0
 
 ! Multi-timescale coupling parameters.
-! N_ssa:   SSA momentum is solved every N_ssa ocean timesteps.
-! N_thick: Ice thickness is advected every N_thick SSA solves.
-! N_gl:    Grounding line position is updated every N_gl SSA solves.
+! N_ssa: SSA momentum is solved (and ice thickness/enthalpy advected)
+!        every N_ssa ocean timesteps.
+! N_gl:  Grounding line position is updated every N_gl SSA solves.
 ! Default = 1 (every step) for tight coupling; increase for efficiency.
 
             N_ssa == 10
-          N_thick == 1
              N_gl == 1
 
 ! Surface mass balance rate [m/s ice equivalent, positive = accumulation].
