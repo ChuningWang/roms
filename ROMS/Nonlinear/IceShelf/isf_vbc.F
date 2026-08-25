@@ -321,6 +321,20 @@
           ELSE
             Fi(i,j,icImel) = 0.0_r8
           END IF
+# ifdef ICESHEET
+!
+!  Accumulate the instantaneous melt rate into the SSA coupling
+!  window sum Fi(:,:,icImea): the ice sheet mass balance runs at
+!  the SSA cadence, so isf_advection uses this window sum (dt times
+!  the sum equals the window-total basal melt in meters) instead of
+!  the instantaneous rate, and resets it after each use.  Under
+!  PERFECT_RESTART the partial window sum is part of the restart
+!  state (written/read as is_mea), so a restart may begin in the
+!  middle of a coupling window; without PERFECT_RESTART it starts
+!  from zero after a restart.
+!
+          Fi(i,j,icImea)=Fi(i,j,icImea)+Fi(i,j,icImel)
+# endif
         END DO
       END DO
 !

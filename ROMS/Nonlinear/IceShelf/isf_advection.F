@@ -173,8 +173,8 @@
 !  Add surface and bottom fluxes from surface mass balance and
 !  ocean-driven melting.
 !
-!  H_new = H_old - dtisf*melt_rate   + dtisf*SMB
-!  E_new = E_old - dtisf*melt_rate*T + dtisf*SMB*T
+!  H_new = H_old - dt*melt_win   + dtisf*SMB
+!  E_new = E_old - dt*melt_win*T + dtisf*SMB*T
 !
       dtisf = dt(ng)*REAL(N_ssa(ng),r8)
 !
@@ -182,15 +182,25 @@
         DO i=Istr,Iend
           IF (rmask_ist(i,j).gt.0.5_r8) THEN
             Si(i,j,lsold,isIhis)=Si(i,j,lsold,isIhis)                   &
-# ifdef ICESHELF_THERMO
-     &                           -dtisf*Fi(i,j,icImel)                  &
-# endif
      &                           +dtisf*smb_rate(ng)
             Si(i,j,lsold,isIeis)=Si(i,j,lsold,isIeis)                   &
-# ifdef ICESHELF_THERMO
-     &                           -dtisf*Fi(i,j,icImel)*Fi(i,j,icItis)   &
-# endif
      &                           +dtisf*smb_rate(ng)*Fi(i,j,icItis)
+# ifdef ICESHELF_THERMO
+!
+!  where melt_win = Fi(:,:,icImea) is the melt rate accumulated over
+!  the current SSA coupling window (running sum of the instantaneous
+!  rate in isf_vbc), so dt*melt_win is the window-total basal melt
+!  in meters.  The accumulator is reset after use.
+!
+            Si(i,j,lsold,isIhis)=Si(i,j,lsold,isIhis)                   &
+     &                           -dt(ng)*Fi(i,j,icImea)
+            Si(i,j,lsold,isIeis)=Si(i,j,lsold,isIeis)                   &
+     &                           -dt(ng)*Fi(i,j,icImea)*Fi(i,j,icItis)
+!
+!  Reset the SSA coupling window melt accumulator.
+!
+            Fi(i,j,icImea)=0.0_r8
+# endif
           END IF
         END DO
       END DO

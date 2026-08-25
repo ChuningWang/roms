@@ -303,6 +303,23 @@
 #  endif
           END IF
         END DO
+#  if defined ICESHEET && defined ICESHELF_THERMO
+!
+!  Flag the SSA coupling window melt accumulator (is_mea) for reading
+!  only when the input file carries it (model restart files do; older
+!  restarts and IC files do not): the generic internal-field read in
+!  isf_get_state then restores it, so a restart may begin in the
+!  middle of a coupling window without losing the accumulated basal
+!  melt.  The variable is restart-only: it is written by the
+!  internal-field loop under PERFECT_RESTART and has no output
+!  switches for HIS/AVG/STA files.
+!
+        IF (idImea.gt.0) THEN
+          IF (ANY(var_name(1:n_var).eq.TRIM(Vname(1,idImea)))) THEN
+            get_var(idImea)=.TRUE.
+          END IF
+        END IF
+#  endif
         IF (Lisftrc(ng)) THEN
           get_var(idIvol)=.TRUE.
           DO itrc=NAT+1,NT(ng)

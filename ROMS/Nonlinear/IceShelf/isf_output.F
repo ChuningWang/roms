@@ -301,8 +301,11 @@
           IF (iFisf(nf).gt.0) THEN
             ifield=iFisf(nf)
             IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
-#  ifdef PERFECT_RESTART
-              LdefVar=.TRUE.
+!  The restart carries only the Fi fields that are genuine coupling
+!  state (icImea); every other Fi field is recomputed from the
+!  restored state before its first use and is never read back.
+#  if defined PERFECT_RESTART && defined ICESHEET && defined ICESHELF_THERMO
+              LdefVar=(nf.eq.icImea)
 #  else
               LdefVar=.FALSE.
 #  endif
@@ -561,8 +564,8 @@
           IF (iFisf(nf).gt.0) THEN
             ifield=iFisf(nf)
             IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
-#  ifdef PERFECT_RESTART
-              LdefVar=.TRUE.
+#  if defined PERFECT_RESTART && defined ICESHEET && defined ICESHELF_THERMO
+              LdefVar=(nf.eq.icImea)
 #  else
               LdefVar=.FALSE.
 #  endif
@@ -856,8 +859,8 @@
         IF (iFisf(ifld).gt.0) THEN
           ifield=iFisf(ifld)
           IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
-#  ifdef PERFECT_RESTART
-            LwrtVar=.TRUE.
+#  if defined PERFECT_RESTART && defined ICESHEET && defined ICESHELF_THERMO
+            LwrtVar=(ifld.eq.icImea)
 #  else
             LwrtVar=.FALSE.
 #  endif
@@ -1991,8 +1994,11 @@
           IF (iFisf(nf).gt.0) THEN
             ifield=iFisf(nf)
             IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
-#   ifdef PERFECT_RESTART
-              LdefVar=.TRUE.
+!  The restart carries only the Fi fields that are genuine coupling
+!  state (icImea); every other Fi field is recomputed from the
+!  restored state before its first use and is never read back.
+#   if defined PERFECT_RESTART && defined ICESHEET && defined ICESHELF_THERMO
+              LdefVar=(nf.eq.icImea)
 #   else
               LdefVar=.FALSE.
 #   endif
@@ -2289,8 +2295,8 @@
           IF (iFisf(nf).gt.0) THEN
             ifield=iFisf(nf)
             IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
-#   ifdef PERFECT_RESTART
-              LdefVar=.TRUE.
+#   if defined PERFECT_RESTART && defined ICESHEET && defined ICESHELF_THERMO
+              LdefVar=(nf.eq.icImea)
 #   else
               LdefVar=.FALSE.
 #   endif
@@ -2632,8 +2638,8 @@
         IF (iFisf(ifld).gt.0) THEN
           ifield=iFisf(ifld)
           IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
-#   ifdef PERFECT_RESTART
-            LwrtVar=.TRUE.
+#   if defined PERFECT_RESTART && defined ICESHEET && defined ICESHELF_THERMO
+            LwrtVar=(ifld.eq.icImea)
 #   else
             LwrtVar=.FALSE.
 #   endif

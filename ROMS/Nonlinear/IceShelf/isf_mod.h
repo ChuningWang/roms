@@ -19,7 +19,7 @@
 !  The iceshelf model prognostic 'state' variable are declares in      !
 !  compact form in the derived-type structure as:                      !
 !                                                                      !
-!    ISF(ng) % state(:,:,TimeLevel,StateIndex)                         !
+!    ISF(ng) % Si(:,:,TimeLevel,StateIndex)                            !
 !                                                                      !
 !  where the 'StateIndex' are as follows:                              !
 !                                                                      !
@@ -33,7 +33,7 @@
 !  The iceshelf model internal 'field' arrays are declares in compact  !
 !  form in the derived-type structure as:                              !
 !                                                                      !
-!    ISF(ng) % field(:,:,FieldIndex)                                   !
+!    ISF(ng) % Fi(:,:,FieldIndex)                                      !
 !                                                                      !
 !  where the 'FieldIndex' are as follows:                              !
 !                                                                      !
@@ -44,11 +44,33 @@
 !    icIust    friction velocity in ice/water boundary layer [m s-1]   !
 !    icItbo    temperature in laminar boundary layer [degC]            !
 !    icIsbo    salinity in laminar boundary layer [PSU]                !
+!    icItba    ambient temperature in boundary layer [degC]            !
+!    icIsba    ambient salinity in boundary layer [PSU]                !
 !                                                                      !
 !  The iceshelf model refreezed volume and tracer concentration:       !
 !                                                                      !
 !    Vi        iceshelf freeezed volume (m)                            !
 !    Ti        tracer concentration in refreezed volume (m TU)         !
+#endif
+#ifdef ICESHEET
+!                                                                      !
+!  The icesheet SSA diagnostic fields also live in Fi: with            !
+!  ICESHELF_THERMO their indices continue the thermo numbering         !
+!  (10-17); without it they start at 1 (1-7):                          !
+!                                                                      !
+!    icItis    icesheet temperature [degC]                             !
+!    icIzsf    ice sheet surface elevation [m]                         !
+!    icIzbd    ice sheet bed elevation [m]                             !
+!    icInuh    depth-integrated effective viscosity [Pa s m]           !
+!    icItdx    driving stress x-component [Pa]                         !
+!    icItdy    driving stress y-component [Pa]                         !
+!    icIbta    basal drag coefficient                                  !
+#ifdef ICESHELF_THERMO
+!    icImea    basal melt rate accumulated over the SSA coupling       !
+!              window [m s-1]; running sum of instantaneous rates,     !
+!              part of the restart state under PERFECT_RESTART         !
+#endif
+!                                                                      !
 #endif
 !                                                                      !
 !=======================================================================
@@ -141,10 +163,11 @@
       integer :: idItdx       ! Driving stress x-component
       integer :: idItdy       ! Driving stress y-component
       integer :: idIbta       ! Basal drag coefficient
-!
-      integer, parameter :: nIsfF_ssa = 7    ! SSA diag field variables
-!
+      integer :: idImea       ! Melt rate accumulated over SSA window
 # ifdef ICESHELF_THERMO
+!
+      integer, parameter :: nIsfF_ssa = 8    ! SSA diag field variables
+!
       integer, parameter :: icItis = 10  ! Iceshelf temperature
       integer, parameter :: icIzsf = 11  ! Ice sheet surface elevation
       integer, parameter :: icIzbd = 12  ! Ice sheet bed elevation
@@ -152,7 +175,11 @@
       integer, parameter :: icItdx = 14  ! Driving stress x-component
       integer, parameter :: icItdy = 15  ! Driving stress y-component
       integer, parameter :: icIbta = 16  ! Basal drag coefficient
+      integer, parameter :: icImea = 17  ! Melt accumulated over SSA window
 # else
+!
+      integer, parameter :: nIsfF_ssa = 7    ! SSA diag field variables
+!
       integer, parameter :: icItis =  1  ! Iceshelf temperature
       integer, parameter :: icIzsf =  2  ! Ice sheet surface elevation
       integer, parameter :: icIzbd =  3  ! Ice sheet bed elevation
