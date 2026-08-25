@@ -290,10 +290,6 @@
 !
       real(r8), allocatable :: picard_alpha(:)  ! Picard relax. factor
 !
-!  Thickness advection parameters
-!
-      real(r8), allocatable :: cfl_factor(:)    ! CFL safety factor
-!
 !  Calving parameters
 !
       real(r8), allocatable :: H_calve(:)       ! Thick. thre. calv. [m]
@@ -650,11 +646,6 @@
           allocate ( picard_alpha(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
           picard_alpha(1:Ngrids)=IniVal
-        END IF
-        IF (.not.allocated(cfl_factor)) THEN
-          allocate ( cfl_factor(Ngrids) )
-          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          cfl_factor(1:Ngrids)=IniVal
         END IF
         IF (.not.allocated(H_calve)) THEN
           allocate ( H_calve(Ngrids) )
@@ -1028,7 +1019,6 @@
       IF (allocated(n_smooth))       deallocate ( n_smooth )
       IF (allocated(n_taper))        deallocate ( n_taper )
       IF (allocated(picard_alpha))   deallocate ( picard_alpha )
-      IF (allocated(cfl_factor))     deallocate ( cfl_factor )
       IF (allocated(H_calve))        deallocate ( H_calve )
       IF (allocated(N_ssa))          deallocate ( N_ssa )
       IF (allocated(N_gl))           deallocate ( N_gl )

@@ -221,11 +221,6 @@
             CASE ('picard_alpha')
               Npts=load_r(Nval, Rval, Ngrids, picard_alpha)
 !
-!  Thickness advection parameters
-!
-            CASE ('cfl_factor')
-              Npts=load_r(Nval, Rval, Ngrids, cfl_factor)
-!
 !  Calving parameters
 !
             CASE ('H_calve')
@@ -869,8 +864,6 @@
      &          'Ice margin taper width [cells].'
           WRITE (out,60) picard_alpha(ng), 'picard_alpha',              &
      &          'Picard relaxation factor (0 < alpha <= 1).'
-          WRITE (out,60) cfl_factor(ng), 'cfl_factor',                  &
-     &          'Thickness advection CFL safety factor [-].'
           WRITE (out,60) H_calve(ng), 'H_calve',                        &
      &          'Calving thickness threshold [m].'
           WRITE (out,50) N_ssa(ng), 'N_ssa',                            &

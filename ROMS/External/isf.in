@@ -172,12 +172,6 @@
 
      picard_alpha == 0.7d0
 
-! Thickness advection CFL safety factor [-].
-! Controls sub-stepping: dt_sub = cfl_factor / max(|u|/dx + |v|/dy).
-! Recommended range: 0.25 - 0.9. Lower = more stable, higher = faster.
-
-       cfl_factor == 0.5d0
-
 ! Calving thickness threshold [m].
 ! Ice at the calving front thinner than H_calve is removed.
 ! MISOMIP1 protocol: H_calve = 100 m (Asay-Davis et al., 2016).
