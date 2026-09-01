@@ -257,6 +257,57 @@
           END IF
         END DO
 !
+!  Read ice-ocean coupling (Ci) accumulators from restart file.
+!
+#  ifdef ICESHEET
+        DO nc=1,nIsfC
+          IF (iCisf(nc).gt.0) THEN
+            ifield=iCisf(nc)
+            IF (get_var(ifield).and.Perfect2D) THEN
+              foundit=find_string(var_name, n_var,                      &
+     &                            TRIM(Vname(1,ifield)), varid)
+              IF (foundit) THEN
+                gtype=var_flag(varid)*r2dvar
+                status=nf_fread2d(ng, IDmod, ncname, ncINPid,           &
+     &                            Vname(1,ifield), varid,               &
+     &                            InpRec, gtype, Vsize,                 &
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            Fscl, Fmin, Fmax,                     &
+#   ifdef MASKING
+     &                            GRID(ng) % rmask,                     &
+#   endif
+#   ifdef CHECKSUM
+     &                            ISF(ng) % Ci(:,:,nc),                 &
+     &                            checksum = Fhash)
+#   else
+     &                            ISF(ng) % Ci(:,:,nc))
+#   endif
+!
+                IF (FoundError(status, nf90_noerr, __LINE__,            &
+     &              MyFile)) THEN
+                  IF (Master) THEN
+                    WRITE (stdout,60) string, TRIM(Vname(1,ifield)),    &
+     &                                InpRec, TRIM(ncname)
+                  END IF
+                  exit_flag=2
+                  ioerror=status
+                  RETURN
+                ELSE
+                  IF (Master) THEN
+#   ifdef CHECKSUM
+                    WRITE (stdout,70) TRIM(Vname(2,ifield)),            &
+     &                                Fmin, Fmax, Fhash
+#   else
+                    WRITE (stdout,70) TRIM(Vname(2,ifield)), Fmin, Fmax
+#   endif
+                  END IF
+                END IF
+              END IF
+            END IF
+          END IF
+        END DO
+#  endif
+!
 !  Read SBL weights (Oi) from restart file (PERFECT_RESTART only).
 !
 #  if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL

@@ -85,6 +85,7 @@
      &                   ISF(ng) % Vi,                                  &
      &                   ISF(ng) % Ti,                                  &
      &                   ISF(ng) % Fi,                                  &
+     &                   ISF(ng) % Ci,                                  &
      &                   ISF(ng) % Oi,                                  &
      &                   ISF(ng) % Ai,                                  &
      &                   FORCES(ng) % stflx)
@@ -103,7 +104,7 @@
      &                         rmask_isf,                               &
      &                         t,                                       &
      &                         Vi, Ti,                                  &
-     &                         Fi,                                      &
+     &                         Fi, Ci,                                  &
      &                         Oi, Ai,                                  &
      &                         stflx)
 !***********************************************************************
@@ -134,6 +135,7 @@
       real(r8), intent(inout) :: Vi(LBi:,LBj:,:)
       real(r8), intent(inout) :: Ti(LBi:,LBj:,:,:)
       real(r8), intent(out) :: Fi(LBi:,LBj:,:)
+      real(r8), intent(inout) :: Ci(LBi:,LBj:,:)
       real(r8), intent(in) :: Oi(LBi:,LBj:,:,:)
       real(r8), intent(out) :: Ai(LBi:,LBj:,:)
       real(r8), intent(out) :: stflx(LBi:,LBj:,:)
@@ -146,6 +148,7 @@
       real(r8), intent(inout) :: Vi(LBi:UBi,LBj:UBj,2)
       real(r8), intent(inout) :: Ti(LBi:UBi,LBj:UBj,2,NTISF(ng))
       real(r8), intent(out) :: Fi(LBi:UBi,LBj:UBj,nIsfF)
+      real(r8), intent(inout) :: Ci(LBi:UBi,LBj:UBj,nIsfC)
       real(r8), intent(in) :: Oi(LBi:UBi,LBj:UBj,N(ng),nIsfO)
       real(r8), intent(out) :: Ai(LBi:UBi,LBj:UBj,NTISF(ng))
       real(r8), intent(out) :: stflx(LBi:UBi,LBj:UBj,NT(ng))
@@ -324,7 +327,7 @@
 # ifdef ICESHEET
 !
 !  Accumulate the instantaneous melt rate into the SSA coupling
-!  window sum Fi(:,:,icImea): the ice sheet mass balance runs at
+!  window sum Ci(:,:,icCmea): the ice sheet mass balance runs at
 !  the SSA cadence, so isf_advection uses this window sum (dt times
 !  the sum equals the window-total basal melt in meters) instead of
 !  the instantaneous rate, and resets it after each use.  Under
@@ -333,7 +336,7 @@
 !  middle of a coupling window; without PERFECT_RESTART it starts
 !  from zero after a restart.
 !
-          Fi(i,j,icImea)=Fi(i,j,icImea)+Fi(i,j,icImel)
+          Ci(i,j,icCmea)=Ci(i,j,icCmea)+Fi(i,j,icImel)
 # endif
         END DO
       END DO

@@ -32,10 +32,24 @@
 !    3. Friction velocity update (ICESHELF_THERMO only): computes u* = !
 !       gamU*|tau|^(1/2) at RHO points for use by the 3EQN             !
 !       thermodynamics (isf_vbc).                                      !
+!    4. Ice sheet basal drag coefficient (ICESHEET only): computes the  !
+!       SSA bottom drag beta at RHO points from the ocean state         !
+!       averaged over the N_ssa coupling window and stores it in       !
+!       Fi(:,:,icIbta) for the SSA momentum solve (isf_mom).  Two      !
+!       sliding laws, CPP-selected with Weertman as the default:        !
+!         default                   Weertman power law                 !
+!                                       beta = C^2 |u|^(m-1)           !
+!         ICESHEET_COULOMB  regularized Coulomb (Tsai et al.     !
+!                                       2015) with effective pressure  !
+!                                       from hydraulic connectivity.   !
+!       The float state follows the isf_masks.F flotation criterion     !
+!       evaluated with the window-averaged free surface.               !
 !                                                                      !
 !  References:                                                         !
 !    Holland & Jenkins (1999), J. Phys. Oceanogr. 29, 1787-1800.       !
 !    McPhee (1987), J. Geophys. Res. 92, 7017-7032.                    !
+!    Weertman (1957), J. Glaciol. 3, 33-38.                            !
+!    Tsai et al. (2015), J. Glaciol. 61, 649-655.                      !
 !                                                                      !
 !=======================================================================
 !
@@ -86,10 +100,15 @@
 # elif defined ICESHELF_LDRAG
      &                       GRID(ng) % rdrag_isf,                      &
 # endif
+# ifdef ICESHEET
+     &                       GRID(ng) % h,                              &
+     &                       OCEAN(ng) % zeta(:,:,knew(ng)),            &
+# endif
      &                       OCEAN(ng) % u,                             &
      &                       OCEAN(ng) % v,                             &
      &                       ISF(ng) % Si,                              &
      &                       ISF(ng) % Fi,                              &
+     &                       ISF(ng) % Ci,                              &
      &                       FORCES(ng) % stflx,                        &
 # ifdef SHORTWAVE
      &                       FORCES(ng) % srflx,                        &
@@ -116,8 +135,11 @@
 # elif defined ICESHELF_LDRAG
      &                             rdrag_isf,                           &
 # endif
+# ifdef ICESHEET
+     &                             h, zeta,                             &
+# endif
      &                             u, v,                                &
-     &                             Si, Fi,                              &
+     &                             Si, Fi, Ci,                          &
      &                             stflx,                               &
 # ifdef SHORTWAVE
      &                             srflx,                               &
@@ -153,10 +175,15 @@
 #  elif defined ICESHELF_LDRAG
       real(r8), intent(in) :: rdrag_isf(LBi:,LBj:)
 #  endif
+#  ifdef ICESHEET
+      real(r8), intent(in) :: h(LBi:,LBj:)
+      real(r8), intent(in) :: zeta(LBi:,LBj:)
+#  endif
       real(r8), intent(in) :: u(LBi:,LBj:,:,:)
       real(r8), intent(in) :: v(LBi:,LBj:,:,:)
       real(r8), intent(in) :: Si(LBi:,LBj:,:,:)
       real(r8), intent(inout) :: Fi(LBi:,LBj:,:)
+      real(r8), intent(inout) :: Ci(LBi:,LBj:,:)
       real(r8), intent(inout) :: stflx(LBi:,LBj:,:)
 #  ifdef SHORTWAVE
       real(r8), intent(inout) :: srflx(LBi:,LBj:)
@@ -174,10 +201,15 @@
 #  elif defined ICESHELF_LDRAG
       real(r8), intent(in) :: rdrag_isf(LBi:UBi,LBj:UBj)
 #  endif
+#  ifdef ICESHEET
+      real(r8), intent(in) :: h(LBi:UBi,LBj:UBj)
+      real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj)
+#  endif
       real(r8), intent(in) :: u(LBi:UBi,LBj:UBj,N(ng),2)
       real(r8), intent(in) :: v(LBi:UBi,LBj:UBj,N(ng),2)
       real(r8), intent(in) :: Si(LBi:UBi,LBj:UBj,2,nIsfS)
       real(r8), intent(inout) :: Fi(LBi:UBi,LBj:UBj,nIsfF)
+      real(r8), intent(inout) :: Ci(LBi:UBi,LBj:UBj,nIsfC)
       real(r8), intent(inout) :: stflx(LBi:UBi,LBj:UBj,NT(ng))
 #  ifdef SHORTWAVE
       real(r8), intent(inout) :: srflx(LBi:UBi,LBj:UBj)
@@ -195,6 +227,18 @@
       real(r8) :: cff1, cff2
 # if defined ICESHELF_LOGDRAG
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: wrk
+# endif
+# ifdef ICESHEET
+      real(r8) :: H_rho, u_mid, v_mid, u_slide
+      real(r8) :: C_sq, zeta_avg, D_avg
+#  ifdef ICESHEET_COULOMB
+      real(r8) :: N_eff
+#  endif
+!
+!  Float criterion tolerance, same value as the local eps in
+!  isf_masks.F (cannot shadow the USE-associated mod_isf eps here).
+!
+      real(r8), parameter :: eps_float = 1.0E-10_r8
 # endif
 !
 # include "set_bounds.h"
@@ -406,6 +450,130 @@
           ELSE
             Fi(i,j,icIust)=0.0_r8
           END IF
+        END DO
+      END DO
+# endif
+!
+# ifdef ICESHEET
+!=======================================================================
+!  Step 4: Ice sheet basal drag coefficient (SSA coupling window).
+!
+!  The SSA momentum equation is solved every N_ssa ocean timesteps
+!  (iceshelf.F), so the basal drag it needs is evaluated from the
+!  ocean state averaged over the coupling window: every ocean step
+!  accumulates the free surface zeta into Ci(:,:,icCzta), and at SSA
+!  steps (MOD(iic-1,N_ssa)=0, the same cadence as the solver call)
+!  the window average is finalized, beta is computed into
+!  Fi(:,:,icIbta), and the accumulator is reset before the current
+!  sample seeds the next window.  This routine runs before the
+!  lsold/lsnew swap and the isf_mom call in iceshelf.F, so know=lsnew
+!  is the previous SSA solution: sliding velocity and thickness come
+!  from that time level, matching the solver's frozen-coefficient
+!  (Picard) linearization of the drag term.
+!
+!  Float state follows the isf_masks.F flotation criterion evaluated
+!  with the window-averaged free surface:
+!    grounded:  rho_i * H  >  rho0 * (zeta_avg + h - Dcrit - eps)
+!    floating:  rho_i * H <=  rho0 * (zeta_avg + h - Dcrit - eps)
+!  so the drag, the effective pressure (Coulomb law) and the float
+!  state all see the same averaged ocean state.  The accumulator
+!  holds exactly N_ssa samples at every SSA step (restart files
+!  carry partial windows across); the cold-start first step is still
+!  empty and falls back to the instantaneous free surface.
+!
+!  Sliding laws (CPP-selected, Weertman is the default):
+!    default            Weertman power law
+!                              beta = C^2 |u|^(m-1),  grounded only
+!    ICESHEET_COULOMB   regularized Coulomb (Tsai et al. 2015):
+!                              N = rho_i*g*H - rho0*g*D_avg   [Pa],
+!                              beta = C^2 |u|^(m-1) * f_c*N /
+!                                (C^(2/m)|u| + (f_c*N)^(1/m))^m
+!  with C=C_basal, m=n_basal, |u| the 4-corner PSI-average sliding
+!  speed regularized by eps_u_min, and f_c=f_coulomb.  The Coulomb
+!  form reduces to Weertman as |u|->0 and saturates at the Coulomb
+!  limit tau_b = f_c*N as |u|->infinity; N=0 over floating and
+!  ice-free cells zeroes the drag automatically (the pressure test
+!  is the same inequality as the flotation criterion above).
+!=======================================================================
+!
+      IF (MOD(iic(ng)-1,N_ssa(ng)).eq.0) THEN
+!
+        C_sq=C_basal(ng)*C_basal(ng)
+        cff1=1.0_r8/REAL(N_ssa(ng),r8)
+!
+!  Compute beta at RHO points from the window-averaged ocean state.
+!  Interior loop only: the 4-corner velocity stencil needs the
+!  i+1/j+1 neighbors.
+!
+        DO j=Jstr,Jend
+          DO i=Istr,Iend
+            IF (iic(ng).eq.1) THEN
+              zeta_avg=zeta(i,j)
+            ELSE
+              zeta_avg=Ci(i,j,icCzta)*cff1
+            END IF
+            D_avg=zeta_avg+h(i,j)-Dcrit(ng)-eps_float
+!
+            Fi(i,j,icIbta)=0.0_r8
+            H_rho=Si(i,j,know,isIhis)
+            IF (H_rho.gt.0.0_r8) THEN
+!
+!  Sliding speed at the RHO point from the previous SSA solution
+!  (4-corner PSI average, same stencil as isf_viscosity.h).
+!
+              u_mid=0.25_r8*(Si(i  ,j  ,know,isIuis)+                   &
+     &                       Si(i+1,j  ,know,isIuis)+                   &
+     &                       Si(i  ,j+1,know,isIuis)+                   &
+     &                       Si(i+1,j+1,know,isIuis))
+              v_mid=0.25_r8*(Si(i  ,j  ,know,isIvis)+                   &
+     &                       Si(i+1,j  ,know,isIvis)+                   &
+     &                       Si(i  ,j+1,know,isIvis)+                   &
+     &                       Si(i+1,j+1,know,isIvis))
+              u_slide=SQRT(u_mid*u_mid+v_mid*v_mid+                     &
+     &                     eps_u_min(ng)*eps_u_min(ng))
+!
+#  ifdef ICESHEET_COULOMB
+!
+!  Effective pressure from full hydraulic connectivity to the ocean.
+!  N_eff > 0 holds exactly over grounded cells, so no separate float
+!  mask is needed.
+!
+              N_eff=rho_i*g*H_rho-rho0*g*D_avg
+              IF (N_eff.gt.0.0_r8) THEN
+                cff2=f_coulomb(ng)*N_eff
+                Fi(i,j,icIbta)=C_sq*                                    &
+     &               u_slide**(n_basal(ng)-1.0_r8)*cff2/                &
+     &               ((C_sq**(1.0_r8/n_basal(ng)))*u_slide+             &
+     &                cff2**(1.0_r8/n_basal(ng)))**n_basal(ng)
+              END IF
+#  else
+!
+!  Weertman power law, zero over floating ice.
+!
+              IF (rho_i*H_rho.gt.rho0*D_avg) THEN
+                Fi(i,j,icIbta)=C_sq*u_slide**(n_basal(ng)-1.0_r8)
+              END IF
+#  endif
+!
+            END IF
+          END DO
+        END DO
+!
+!  Reset the coupling window accumulator (the current sample is
+!  added below and seeds the next window).
+!
+        DO j=JstrR,JendR
+          DO i=IstrR,IendR
+            Ci(i,j,icCzta)=0.0_r8
+          END DO
+        END DO
+      END IF
+!
+!  Accumulate the free-surface sample of the current ocean step.
+!
+      DO j=JstrR,JendR
+        DO i=IstrR,IendR
+          Ci(i,j,icCzta)=Ci(i,j,icCzta)+zeta(i,j)
         END DO
       END DO
 # endif

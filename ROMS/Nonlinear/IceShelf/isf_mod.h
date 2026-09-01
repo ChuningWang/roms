@@ -56,7 +56,7 @@
 !                                                                      !
 !  The icesheet SSA diagnostic fields also live in Fi: with            !
 !  ICESHELF_THERMO their indices continue the thermo numbering         !
-!  (10-17); without it they start at 1 (1-7):                          !
+!  (10-16); without it they start at 1 (1-7):                          !
 !                                                                      !
 !    icItis    icesheet temperature [degC]                             !
 !    icIzsf    ice sheet surface elevation [m]                         !
@@ -65,11 +65,17 @@
 !    icItdx    driving stress x-component [Pa]                         !
 !    icItdy    driving stress y-component [Pa]                         !
 !    icIbta    basal drag coefficient                                  !
-#ifdef ICESHELF_THERMO
-!    icImea    basal melt rate accumulated over the SSA coupling       !
-!              window [m s-1]; running sum of instantaneous rates,     !
-!              part of the restart state under PERFECT_RESTART         !
-#endif
+!                                                                      !
+!  The ice-ocean coupling accumulators live in the separate Ci array   !
+!  (running sums over the SSA coupling window, part of the restart     !
+!  state under PERFECT_RESTART, no HIS/AVG/STA output switches):       !
+!                                                                      !
+!    ISF(ng) % Ci(:,:,CouplingIndex)                                   !
+!                                                                      !
+!    icCmea    basal melt rate accumulated over the SSA coupling       !
+!              window [m s-1] (filled under ICESHELF_THERMO only)      !
+!    icCzta    free surface accumulated over the SSA coupling          !
+!              window [m]                                              !
 !                                                                      !
 #endif
 !                                                                      !
@@ -163,10 +169,11 @@
       integer :: idItdx       ! Driving stress x-component
       integer :: idItdy       ! Driving stress y-component
       integer :: idIbta       ! Basal drag coefficient
-      integer :: idImea       ! Melt rate accumulated over SSA window
+      integer :: idCmea       ! Melt rate accumulated over SSA window
+      integer :: idCzta       ! Free surface accum. over SSA window
 # ifdef ICESHELF_THERMO
 !
-      integer, parameter :: nIsfF_ssa = 8    ! SSA diag field variables
+      integer, parameter :: nIsfF_ssa = 7    ! SSA diag field variables
 !
       integer, parameter :: icItis = 10  ! Iceshelf temperature
       integer, parameter :: icIzsf = 11  ! Ice sheet surface elevation
@@ -175,7 +182,6 @@
       integer, parameter :: icItdx = 14  ! Driving stress x-component
       integer, parameter :: icItdy = 15  ! Driving stress y-component
       integer, parameter :: icIbta = 16  ! Basal drag coefficient
-      integer, parameter :: icImea = 17  ! Melt accumulated over SSA window
 # else
 !
       integer, parameter :: nIsfF_ssa = 7    ! SSA diag field variables
@@ -188,14 +194,26 @@
       integer, parameter :: icItdy =  6  ! Driving stress y-component
       integer, parameter :: icIbta =  7  ! Basal drag coefficient
 # endif
+!
+!  Coupling (Ci) field variables: SSA-window accumulators that carry
+!  ice-ocean coupling state between solves (restart-only output).
+!  icCmea is only filled under ICESHELF_THERMO (3EQN melt).
+!
+      integer, parameter :: nIsfC = 2    ! coupling field variables
+!
+      integer, parameter :: icCmea =  1  ! Melt accumulated over SSA
+      integer, parameter :: icCzta =  2  ! Zeta accumulated over SSA
 #else
 !
       integer, parameter :: nIsfF_ssa = 0    ! SSA diag field variables
+!
+      integer, parameter :: nIsfC = 0    ! coupling field variables
 #endif
 !
       integer, parameter :: nIsfF = nIsfF_thermo + nIsfF_ssa
 !
       integer :: iFisf(nIsfF)            ! internal fields I/O indices
+      integer :: iCisf(nIsfC)            ! coupling fields I/O indices
 !
       integer :: iOisf(nIsfO)            ! ocean variables I/O indices
 !
@@ -241,7 +259,6 @@
 !
 !  Ice-ocean coupling parameters
 !
-      real(r8), allocatable :: tau_melt(:)      ! MR EMA filter TS [s]
 #ifdef ICESHELF
       real(r8), allocatable :: rdrg_isf(:)      ! linear drag coeff. [m/s]
       real(r8), allocatable :: rdrg2_isf(:)     ! quadratic drag coeff. [-]
@@ -269,12 +286,14 @@
       real(r8), allocatable :: C_basal(:)       ! basal drag coefficient
       real(r8), allocatable :: n_basal(:)       ! basal sliding exponent
       real(r8), allocatable :: eps_u_min(:)     ! minimum sliding vel.
+# ifdef ICESHEET_COULOMB
+      real(r8), allocatable :: f_coulomb(:)     ! Coulomb friction coeff.
+# endif
 !
 !  SSA solver parameters
 !
       integer, allocatable :: nl_max_iter(:)    ! max Picard iterations
       real(r8), allocatable :: nl_tol(:)        ! Picard relative tol.
-      real(r8), allocatable :: nl_tol_fp(:)     ! Picard vel. tol.
       integer, allocatable :: cg_max_iter(:)    ! max CG iterations
       real(r8), allocatable :: cg_tol(:)        ! CG relative tolerance
       real(r8), allocatable :: nuH_reg(:)       ! nuH regularization
@@ -337,6 +356,7 @@
       TYPE T_ISF
 
         real(r8), pointer :: Fi(:,:,:)    ! [i, j,         1:nIsfF]
+        real(r8), pointer :: Ci(:,:,:)    ! [i, j,         1:nIsfC]
         real(r8), pointer :: Si(:,:,:,:)  ! [i, j,    1:2, 1:nIsfS]
         real(r8), pointer :: Vi(:,:,:)    ! [i, j,    1:2         ]
         real(r8), pointer :: Ti(:,:,:,:)  ! [i, j,    1:2, 1:NTISF]
@@ -499,11 +519,6 @@
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
           isf_Hsbl(1:Ngrids)=IniVal
         END IF
-        IF (.not.allocated(tau_melt)) THEN
-          allocate ( tau_melt(Ngrids) )
-          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          tau_melt(1:Ngrids)=IniVal
-        END IF
 #ifdef ICESHELF
         IF (.not.allocated(rdrg_isf)) THEN
           allocate ( rdrg_isf(Ngrids) )
@@ -592,6 +607,13 @@
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
           eps_u_min(1:Ngrids)=IniVal
         END IF
+# ifdef ICESHEET_COULOMB
+        IF (.not.allocated(f_coulomb)) THEN
+          allocate ( f_coulomb(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          f_coulomb(1:Ngrids)=IniVal
+        END IF
+# endif
         IF (.not.allocated(nl_max_iter)) THEN
           allocate ( nl_max_iter(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
@@ -601,11 +623,6 @@
           allocate ( nl_tol(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
           nl_tol(1:Ngrids)=IniVal
-        END IF
-        IF (.not.allocated(nl_tol_fp)) THEN
-          allocate ( nl_tol_fp(Ngrids) )
-          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          nl_tol_fp(1:Ngrids)=IniVal
         END IF
         IF (.not.allocated(cg_max_iter)) THEN
           allocate ( cg_max_iter(Ngrids) )
@@ -698,6 +715,9 @@
 !
         allocate ( ISF(ng) % Fi(LBi:UBi,LBj:UBj,nIsfF) )
         Dmem(ng)=Dmem(ng)+REAL(nIsfF,r8)*size2d
+!
+        allocate ( ISF(ng) % Ci(LBi:UBi,LBj:UBj,nIsfC) )
+        Dmem(ng)=Dmem(ng)+REAL(nIsfC,r8)*size2d
 !
         allocate ( ISF(ng) % Oi(LBi:UBi,LBj:UBj,N(ng),nIsfO) )
         Dmem(ng)=Dmem(ng)+REAL(N(ng)*nIsfO,r8)*size2d
@@ -875,6 +895,9 @@
       IF (.not.destroy(ng, ISF(ng)%Fi, MyFile,                          &
      &                 __LINE__, 'ISF(ng)%Fi')) RETURN
 !
+      IF (.not.destroy(ng, ISF(ng)%Ci, MyFile,                          &
+     &                 __LINE__, 'ISF(ng)%Ci')) RETURN
+!
       IF (.not.destroy(ng, ISF(ng)%Oi, MyFile,                          &
      &                 __LINE__, 'ISF(ng)%Oi')) RETURN
 !
@@ -994,7 +1017,6 @@
 #endif
 !
       IF (allocated(isf_Hsbl))  deallocate ( isf_Hsbl )
-      IF (allocated(tau_melt))  deallocate ( tau_melt )
 #ifdef ICESHELF
       IF (allocated(rdrg_isf))  deallocate ( rdrg_isf )
       IF (allocated(rdrg2_isf)) deallocate ( rdrg2_isf )
@@ -1008,9 +1030,11 @@
       IF (allocated(C_basal))        deallocate ( C_basal )
       IF (allocated(n_basal))        deallocate ( n_basal )
       IF (allocated(eps_u_min))      deallocate ( eps_u_min )
+# ifdef ICESHEET_COULOMB
+      IF (allocated(f_coulomb))      deallocate ( f_coulomb )
+# endif
       IF (allocated(nl_max_iter))    deallocate ( nl_max_iter )
       IF (allocated(nl_tol))         deallocate ( nl_tol )
-      IF (allocated(nl_tol_fp))      deallocate ( nl_tol_fp )
       IF (allocated(cg_max_iter))    deallocate ( cg_max_iter )
       IF (allocated(cg_tol))         deallocate ( cg_tol )
       IF (allocated(nuH_reg))        deallocate ( nuH_reg )
@@ -1101,6 +1125,10 @@
 !
           DO nf=1,nIsfF
             ISF(ng) % Fi(i,j,nf) = IniVal
+          END DO
+!
+          DO nf=1,nIsfC
+            ISF(ng) % Ci(i,j,nf) = IniVal
           END DO
 !
           DO no=1,nIsfO

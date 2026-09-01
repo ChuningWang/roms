@@ -194,7 +194,8 @@
 #endif
       logical, dimension(NV) :: get_var, have_var
 !
-      integer :: IDmod, InpRec, gtype, i, ifield, itrc, lstr, lend, no
+      integer :: IDmod, InpRec, gtype, i, ifield, itrc, lstr, lend,     &
+     &         no, nc
       integer :: Nrec, mySize, ncINPid, nvatts, nvdim, status, varid
       integer :: Vsize(4), start(4), total(4)
       integer(i8b) :: Fhash
@@ -7868,7 +7869,7 @@
 # endif
       logical, dimension(NV) :: get_var, have_var
 !
-      integer :: IDmod, InpRec, i, ifield, itrc, lstr, lend, no
+      integer :: IDmod, InpRec, i, ifield, itrc, lstr, lend, no, nc
       integer :: Nrec, mySize, nvatts, nvdim, status, vindex
       integer :: Vsize(4), start(4), total(4)
       integer(i8b) :: Fhash

@@ -8011,7 +8011,18 @@ metadata:
     units:          meter second-1
     field:          ice shelf basal melt rate (SSA window accumulated)
     time:           ocean_time
-    index_code:     idImea
+    index_code:     idCmea
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
+  - variable:       is_zta
+    standard_name:  iceshelf_free_surface_ssa_window_accumulated
+    long_name:      running sum of sea surface height over the SSA coupling window (divide by N_ssa for the window-average free surface used by the basal drag)
+    units:          meter
+    field:          sea surface height (SSA window accumulated)
+    time:           ocean_time
+    index_code:     idCzta
     type:           r2dvar
     add_offset:     0.0d0
     scale:          1.0d0

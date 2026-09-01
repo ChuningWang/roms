@@ -127,8 +127,6 @@
               Npts=load_r(Nval, Rval, Ngrids, min_ustar)
             CASE ('isf_Hsbl')
               Npts=load_r(Nval, Rval, Ngrids, isf_Hsbl)
-            CASE ('tau_melt')
-              Npts=load_r(Nval, Rval, Ngrids, tau_melt)
 # ifdef T_PASSIVE
             CASE ('LtracerIsf')
               Npts=load_l(Nval, Cval, NPT, Ngrids, Linert)
@@ -189,6 +187,10 @@
               Npts=load_r(Nval, Rval, Ngrids, n_basal)
             CASE ('eps_u_min')
               Npts=load_r(Nval, Rval, Ngrids, eps_u_min)
+# ifdef ICESHEET_COULOMB
+            CASE ('f_coulomb')
+              Npts=load_r(Nval, Rval, Ngrids, f_coulomb)
+# endif
 !
 !  SSA solver parameters
 !
@@ -196,8 +198,6 @@
               Npts=load_i(Nval, Rval, Ngrids, nl_max_iter)
             CASE ('nl_tol')
               Npts=load_r(Nval, Rval, Ngrids, nl_tol)
-            CASE ('nl_tol_fp')
-              Npts=load_r(Nval, Rval, Ngrids, nl_tol_fp)
             CASE ('cg_max_iter')
               Npts=load_i(Nval, Rval, Ngrids, cg_max_iter)
             CASE ('cg_tol')
@@ -812,8 +812,6 @@
      &          'Iceshelf minimum Ustar value.'
           WRITE (out,60) isf_Hsbl(ng), 'isf_Hsbl',                      &
      &          'Iceshelf sub-boundary layer thickness [m].'
-          WRITE (out,60) tau_melt(ng), 'tau_melt',                      &
-     &          'Melt rate EMA filter timescale [s].'
 # ifdef T_PASSIVE
           DO i=1,NPT
             itrc=inert(i)
@@ -842,12 +840,14 @@
      &          'SSA basal sliding exponent.'
           WRITE (out,60) eps_u_min(ng), 'eps_u_min',                    &
      &          'SSA minimum sliding velocity [m/s].'
+# ifdef ICESHEET_COULOMB
+          WRITE (out,60) f_coulomb(ng), 'f_coulomb',                    &
+     &          'Coulomb friction coefficient [-].'
+# endif
           WRITE (out,50) nl_max_iter(ng), 'nl_max_iter',                &
      &          'SSA max Picard iterations.'
           WRITE (out,60) nl_tol(ng), 'nl_tol',                          &
      &          'SSA Picard relative tolerance.'
-          WRITE (out,60) nl_tol_fp(ng), 'nl_tol_fp',                    &
-     &          'SSA Picard absolute velocity tolerance [m/s].'
           WRITE (out,50) cg_max_iter(ng), 'cg_max_iter',                &
      &          'SSA max CG iterations.'
           WRITE (out,60) cg_tol(ng), 'cg_tol',                          &

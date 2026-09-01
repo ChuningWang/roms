@@ -96,10 +96,13 @@
             idIbta=varid
             iFisf(icIbta)=idIbta
 # ifdef ICESHELF_THERMO
-          CASE ('idImea')
-            idImea=varid
-            iFisf(icImea)=idImea
+          CASE ('idCmea')
+            idCmea=varid
+            iCisf(icCmea)=idCmea
 # endif
+          CASE ('idCzta')
+            idCzta=varid
+            iCisf(icCzta)=idCzta
 #endif
 #ifdef ICESHELF_THERMO
           CASE ('idImel')

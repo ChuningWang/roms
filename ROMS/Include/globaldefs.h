@@ -826,6 +826,25 @@
 #endif
 
 /*
+** Ice sheet basal sliding law for the SSA bottom drag (isf_stress.F).
+** Two options:
+**   ICESHEET_WEERTMAN        power-law sliding (default)
+**   ICESHEET_COULOMB         regularized Coulomb with effective
+**                            pressure (Tsai et al. 2015)
+** Exactly one scheme must be active.  If both are defined
+** simultaneously, Weertman wins (undef Coulomb), mirroring the
+** priority-based mutual exclusion of the ICESHELF_*DRAG options
+** above.  If neither is specified, default to Weertman.
+*/
+#if defined ICESHEET_WEERTMAN
+# undef ICESHEET_COULOMB
+#endif
+#if defined ICESHEET && \
+    !defined ICESHEET_WEERTMAN && !defined ICESHEET_COULOMB
+# define ICESHEET_WEERTMAN
+#endif
+
+/*
 ** Check if dynamic/thermodynamic ice shelf model is activated.
 ** ICESHELF_THERMO is user-settable and enables 3-equation ice/ocean
 ** thermodynamics. ICESHEET enables ice sheet/shelf momentum.

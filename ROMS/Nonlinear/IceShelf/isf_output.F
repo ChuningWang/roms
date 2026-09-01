@@ -301,14 +301,10 @@
           IF (iFisf(nf).gt.0) THEN
             ifield=iFisf(nf)
             IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
-!  The restart carries only the Fi fields that are genuine coupling
-!  state (icImea); every other Fi field is recomputed from the
-!  restored state before its first use and is never read back.
-#  if defined PERFECT_RESTART && defined ICESHEET && defined ICESHELF_THERMO
-              LdefVar=(nf.eq.icImea)
-#  else
+!  The restart carries no Fi field: every Fi field is recomputed
+!  from the restored state before its first use and is never read
+!  back; the SSA-window coupling state lives in Ci (see below).
               LdefVar=.FALSE.
-#  endif
             ELSE
               LdefVar=VarOut(ifield,ng)
             END IF
@@ -340,6 +336,50 @@
             END IF
           END IF
         END DO
+!
+!-----------------------------------------------------------------------
+!  Define isf model coupling (Ci) variables.
+!-----------------------------------------------------------------------
+!
+!  The Ci fields are SSA-window accumulators (ice-ocean coupling
+!  state): they are written to the restart file under PERFECT_RESTART
+!  and have no output switches for HIS/AVG/STA files.
+!
+#  ifdef ICESHEET
+        DO nf=1,nIsfC
+          IF (iCisf(nf).gt.0) THEN
+            ifield=iCisf(nf)
+#   ifdef PERFECT_RESTART
+            IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+              LdefVar=.TRUE.
+            ELSE
+              LdefVar=.FALSE.
+            END IF
+#   else
+            LdefVar=.FALSE.
+#   endif
+            IF (LdefVar) THEN
+              Vinfo( 1)=Vname(1,ifield)
+              Vinfo( 2)=Vname(2,ifield)
+              Vinfo( 3)=Vname(3,ifield)
+              Vinfo(14)=Vname(4,ifield)
+              Vinfo(16)=Vname(1,idtime)
+#   if defined WRITE_WATER && defined MASKING
+              Vinfo(20)='mask_rho'
+#   endif
+              Vinfo(21)=Vname(6,ifield)
+              Vinfo(22)='coordinates'
+              Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
+!
+              status=def_var(ng, model, S(ng)%ncid,                     &
+     &                       S(ng)%Vid(ifield),                         &
+     &                       vtype, nvd, isfgrd, Aval, Vinfo, ncname)
+              IF (FoundError(exit_flag, NoError,                        &
+     &                       __LINE__, MyFile)) RETURN
+            END IF
+          END IF
+        END DO
+#  endif
 !
 !-----------------------------------------------------------------------
 !  Define isf tracer amounts.
@@ -564,11 +604,7 @@
           IF (iFisf(nf).gt.0) THEN
             ifield=iFisf(nf)
             IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
-#  if defined PERFECT_RESTART && defined ICESHEET && defined ICESHELF_THERMO
-              LdefVar=(nf.eq.icImea)
-#  else
               LdefVar=.FALSE.
-#  endif
             ELSE
               LdefVar=VarOut(ifield,ng)
             END IF
@@ -602,6 +638,26 @@
           END DO
         END IF
 # endif
+!
+!  Check that the restart-only coupling (Ci) variables are present.
+!
+#  ifdef ICESHEET
+#   ifdef PERFECT_RESTART
+        DO nf=1,nIsfC
+          IF (iCisf(nf).gt.0) THEN
+            ifield=iCisf(nf)
+            IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+              IF (.not.got_var(ifield)) THEN
+                IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),    &
+     &                                        TRIM(ncname)
+                exit_flag=3
+                RETURN
+              END IF
+            END IF
+          END IF
+        END DO
+#   endif
+#  endif
       END IF QUERY
 !
   10  FORMAT (/,' ISF_DEF_NF90 - unable to find variable: ',a,2x,       &
@@ -859,11 +915,7 @@
         IF (iFisf(ifld).gt.0) THEN
           ifield=iFisf(ifld)
           IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
-#  if defined PERFECT_RESTART && defined ICESHEET && defined ICESHELF_THERMO
-            LwrtVar=(ifld.eq.icImea)
-#  else
             LwrtVar=.FALSE.
-#  endif
           ELSE
             LwrtVar=VarOut(ifield,ng)
           END IF
@@ -901,6 +953,46 @@
           END IF
         END IF
       END DO
+#  ifdef ICESHEET
+#   ifdef PERFECT_RESTART
+!
+!-----------------------------------------------------------------------
+!  Write out isf model coupling (Ci) variables to restart file.
+!-----------------------------------------------------------------------
+!
+!  Use the STATIC rmask (not rmask_full): icCzta accumulates over
+!  grounded-ice cells where the wet/dry mask is zero (thin Dcrit
+!  film); masking with rmask_full would fill them with spval and
+!  zero the accumulator on read-back.
+!
+      IF (S(ng)%ncid.eq.RST(ng)%ncid) THEN
+        DO ifld=1,nIsfC
+          IF (iCisf(ifld).gt.0) THEN
+            ifield=iCisf(ifld)
+            isfField2d => ISF(ng) % Ci(LBi:UBi,LBj:UBj,ifld)
+            scale=1.0_dp
+            gtype=gfactor*r2dvar
+            status=nf_fwrite2d(ng, model, S(ng)%ncid, ifield,           &
+     &                         S(ng)%Vid(ifield),                       &
+     &                         S(ng)%Rindex, gtype,                     &
+     &                         LBi, UBi, LBj, UBj, scale,               &
+#    ifdef MASKING
+     &                         GRID(ng) % rmask,                        &
+#    endif
+     &                         isfField2d)
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+              IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),      &
+     &                                      S(ng)%Rindex,               &
+     &                                      TRIM(S(ng)%name)
+              exit_flag=3
+              ioerror=status
+              RETURN
+            END IF
+          END IF
+        END DO
+      END IF
+#   endif
+#  endif
 #  if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
 #   ifdef PERFECT_RESTART
 !
@@ -1994,14 +2086,10 @@
           IF (iFisf(nf).gt.0) THEN
             ifield=iFisf(nf)
             IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
-!  The restart carries only the Fi fields that are genuine coupling
-!  state (icImea); every other Fi field is recomputed from the
-!  restored state before its first use and is never read back.
-#   if defined PERFECT_RESTART && defined ICESHEET && defined ICESHELF_THERMO
-              LdefVar=(nf.eq.icImea)
-#   else
+!  The restart carries no Fi field: every Fi field is recomputed
+!  from the restored state before its first use and is never read
+!  back; the SSA-window coupling state lives in Ci (see below).
               LdefVar=.FALSE.
-#   endif
             ELSE
               LdefVar=VarOut(ifield,ng)
             END IF
@@ -2035,6 +2123,52 @@
             END IF
           END IF
         END DO
+!
+!-----------------------------------------------------------------------
+!  Define isf model coupling (Ci) variables.
+!-----------------------------------------------------------------------
+!
+!  The Ci fields are SSA-window accumulators (ice-ocean coupling
+!  state): they are written to the restart file under PERFECT_RESTART
+!  and have no output switches for HIS/AVG/STA files.
+!
+#  ifdef ICESHEET
+        DO nf=1,nIsfC
+          IF (iCisf(nf).gt.0) THEN
+            ifield=iCisf(nf)
+#   ifdef PERFECT_RESTART
+            IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
+              LdefVar=.TRUE.
+            ELSE
+              LdefVar=.FALSE.
+            END IF
+#   else
+            LdefVar=.FALSE.
+#   endif
+            IF (LdefVar) THEN
+              Vinfo( 1)=Vname(1,ifield)
+              Vinfo( 2)=Vname(2,ifield)
+              Vinfo( 3)=Vname(3,ifield)
+              Vinfo(14)=Vname(4,ifield)
+              Vinfo(16)=Vname(1,idtime)
+#   if defined WRITE_WATER && defined MASKING
+              Vinfo(20)='mask_rho'
+#   endif
+              Vinfo(21)=Vname(6,ifield)
+              Vinfo(22)='coordinates'
+              Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
+              S(ng)%pioVar(ifield)%dkind=vtype
+              S(ng)%pioVar(ifield)%gtype=r2dvar
+!
+              status=def_var(ng, model, S(ng)%pioFile,                  &
+     &                       S(ng)%pioVar(ifield)%vd,                   &
+     &                       vtype, nvd, isfgrd, Aval, Vinfo, ncname)
+              IF (FoundError(exit_flag, NoError,                        &
+     &                       __LINE__, MyFile)) RETURN
+            END IF
+          END IF
+        END DO
+#  endif
 !
 !-----------------------------------------------------------------------
 !  Define isf tracer amounts.
@@ -2295,11 +2429,7 @@
           IF (iFisf(nf).gt.0) THEN
             ifield=iFisf(nf)
             IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
-#   if defined PERFECT_RESTART && defined ICESHEET && defined ICESHELF_THERMO
-              LdefVar=(nf.eq.icImea)
-#   else
               LdefVar=.FALSE.
-#   endif
             ELSE
               LdefVar=VarOut(ifield,ng)
             END IF
@@ -2332,6 +2462,26 @@
             END IF
           END DO
         END IF
+#  endif
+!
+!  Check that the restart-only coupling (Ci) variables are present.
+!
+#  ifdef ICESHEET
+#   ifdef PERFECT_RESTART
+        DO nf=1,nIsfC
+          IF (iCisf(nf).gt.0) THEN
+            ifield=iCisf(nf)
+            IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
+              IF (.not.got_var(ifield)) THEN
+                IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),    &
+     &                                        TRIM(ncname)
+                exit_flag=3
+                RETURN
+              END IF
+            END IF
+          END IF
+        END DO
+#   endif
 #  endif
       END IF QUERY
 !
@@ -2638,11 +2788,7 @@
         IF (iFisf(ifld).gt.0) THEN
           ifield=iFisf(ifld)
           IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
-#   if defined PERFECT_RESTART && defined ICESHEET && defined ICESHELF_THERMO
-            LwrtVar=(ifld.eq.icImea)
-#   else
             LwrtVar=.FALSE.
-#   endif
           ELSE
             LwrtVar=VarOut(ifield,ng)
           END IF
@@ -2684,6 +2830,50 @@
           END IF
         END IF
       END DO
+#  ifdef ICESHEET
+#   ifdef PERFECT_RESTART
+!
+!-----------------------------------------------------------------------
+!  Write out isf model coupling (Ci) variables to restart file.
+!-----------------------------------------------------------------------
+!
+!  Use the STATIC rmask (not rmask_full): icCzta accumulates over
+!  grounded-ice cells where the wet/dry mask is zero (thin Dcrit
+!  film); masking with rmask_full would fill them with spval and
+!  zero the accumulator on read-back.
+!
+      IF (FileH.eq.ABS(RST(ng)%pioFile%fh)) THEN
+        DO ifld=1,nIsfC
+          IF (iCisf(ifld).gt.0) THEN
+            ifield=iCisf(ifld)
+            isfField2d => ISF(ng) % Ci(LBi:UBi,LBj:UBj,ifld)
+            scale=1.0_dp
+            IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
+              ioDesc => ioDesc_dp_r2dvar(ng)
+            ELSE
+              ioDesc => ioDesc_sp_r2dvar(ng)
+            END IF
+            status=nf_fwrite2d(ng, model, S(ng)%pioFile, ifield,        &
+     &                         S(ng)%pioVar(ifield), S(ng)%Rindex,      &
+     &                         ioDesc,                                  &
+     &                         LBi, UBi, LBj, UBj, scale,               &
+#    ifdef MASKING
+     &                         GRID(ng) % rmask,                        &
+#    endif
+     &                         isfField2d)
+            IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+              IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),      &
+     &                                      S(ng)%Rindex,               &
+     &                                      TRIM(S(ng)%name)
+              exit_flag=3
+              ioerror=status
+              RETURN
+            END IF
+          END IF
+        END DO
+      END IF
+#   endif
+#  endif
 #  if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
 #   ifdef PERFECT_RESTART
 !

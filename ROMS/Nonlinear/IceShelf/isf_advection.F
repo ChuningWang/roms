@@ -80,7 +80,8 @@
      &                         GRID(ng) % pn,                           &
      &                         GRID(ng) % rmask_ist,                    &
      &                         ISF(ng) % Si,                            &
-     &                         ISF(ng) % Fi)
+     &                         ISF(ng) % Fi,                            &
+     &                         ISF(ng) % Ci)
 # ifdef PROFILE
       CALL wclock_off (ng, model, 43, __LINE__, MyFile)
 # endif
@@ -94,7 +95,7 @@
      &                               lsold, lsnew,                      &
      &                               pm, pn,                            &
      &                               rmask_ist,                         &
-     &                               Si, Fi)
+     &                               Si, Fi, Ci)
 !***********************************************************************
 !
 !  Solves the ice thickness (mass) and enthalpy (heat content)
@@ -141,12 +142,14 @@
       real(r8), intent(in)    :: rmask_ist(LBi:,LBj:)
       real(r8), intent(inout) :: Si(LBi:,LBj:,:,:)
       real(r8), intent(inout) :: Fi(LBi:,LBj:,:)
+      real(r8), intent(inout) :: Ci(LBi:,LBj:,:)
 # else
       real(r8), intent(in)    :: pm(LBi:UBi,LBj:UBj)
       real(r8), intent(in)    :: pn(LBi:UBi,LBj:UBj)
       real(r8), intent(in)    :: rmask_ist(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: Si(LBi:UBi,LBj:UBj,2,nIsfS)
       real(r8), intent(inout) :: Fi(LBi:UBi,LBj:UBj,nIsfF)
+      real(r8), intent(inout) :: Ci(LBi:UBi,LBj:UBj,nIsfC)
 # endif
 !
 !  Local variable declarations.
@@ -187,19 +190,19 @@
      &                           +dtisf*smb_rate(ng)*Fi(i,j,icItis)
 # ifdef ICESHELF_THERMO
 !
-!  where melt_win = Fi(:,:,icImea) is the melt rate accumulated over
+!  where melt_win = Ci(:,:,icCmea) is the melt rate accumulated over
 !  the current SSA coupling window (running sum of the instantaneous
 !  rate in isf_vbc), so dt*melt_win is the window-total basal melt
 !  in meters.  The accumulator is reset after use.
 !
             Si(i,j,lsold,isIhis)=Si(i,j,lsold,isIhis)                   &
-     &                           -dt(ng)*Fi(i,j,icImea)
+     &                           -dt(ng)*Ci(i,j,icCmea)
             Si(i,j,lsold,isIeis)=Si(i,j,lsold,isIeis)                   &
-     &                           -dt(ng)*Fi(i,j,icImea)*Fi(i,j,icItis)
+     &                           -dt(ng)*Ci(i,j,icCmea)*Fi(i,j,icItis)
 !
 !  Reset the SSA coupling window melt accumulator.
 !
-            Fi(i,j,icImea)=0.0_r8
+            Ci(i,j,icCmea)=0.0_r8
 # endif
           END IF
         END DO

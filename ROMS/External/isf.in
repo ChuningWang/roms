@@ -138,12 +138,17 @@
 
         eps_u_min == 1.0d-9
 
-! SSA solver: max Picard iterations, relative tolerance,
-! absolute velocity tolerance [m/s].
+! Coulomb friction coefficient [-], ICESHEET_COULOMB only.
+! Upper bound of the basal shear stress in the regularized Coulomb
+! law: tau_b -> f_c * N_eff as |u| -> infinity (Tsai et al., 2015,
+! suggest f <= 0.6).
+
+        f_coulomb == 0.5d0
+
+! SSA solver: max Picard iterations, relative tolerance.
 
       nl_max_iter == 50
            nl_tol == 1.0d-6
-        nl_tol_fp == 1.0d-6
 
 ! SSA solver: max CG iterations, relative tolerance.
 
@@ -195,11 +200,6 @@
          smb_rate == 0.0d0
 
 ! Ice-ocean coupling parameters.
-! tau_melt: Exponential moving average (EMA) timescale for basal melt
-!           rate filtering [s].  Smooths high-frequency melt variability
-!           before feeding back to ice thickness evolution.
-!           Default = 86400 (1 day).  Set to 0 to disable filtering.
-!
 ! Ice shelf drag coefficients (read from this ISF input script, not
 ! from the ocean input script, for backward compatibility):
 !   RDRG_ISF:   linear drag coefficient [m/s]      (ICESHELF_LDRAG)
@@ -212,7 +212,6 @@
 !           values from initialization or numerical artifacts.
 !           Default = 5000 (allows real ice sheets up to ~4500 m).
 
-         tau_melt == 86400.0d0
          RDRG_ISF == 3.0d-4
         RDRG2_ISF == 3.0d-3
         ZOSUR_ISF == 0.01d0
