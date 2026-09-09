@@ -360,6 +360,9 @@
          real(r8), pointer :: h(:)         ! bathymetry
 # ifdef ICESHELF
          real(r8), pointer :: zice(:)      ! ice shelf draft
+#  ifdef ICESHEET_CALVING
+         real(r8), pointer :: calving_mask(:)  ! predefined calving mask
+#  endif
 # endif
          real(r8), pointer :: rmask(:)     ! land/sea RHO-mask
          real(r8), pointer :: umask(:)     ! land/sea U-mask
@@ -906,8 +909,14 @@
         IF (.not.destroy(ng, CONTACT_METRIC(cr)%h, MyFile,              &
      &                   __LINE__, 'CONTACT_METRIC(cr)%h')) RETURN
 
+#  ifdef ICESHELF
         IF (.not.destroy(ng, CONTACT_METRIC(cr)%zice, MyFile,           &
      &                   __LINE__, 'CONTACT_METRIC(cr)%zice')) RETURN
+#   ifdef ICESHEET_CALVING
+        IF (.not.destroy(ng, CONTACT_METRIC(cr)%calving_mask, MyFile,   &
+     &              __LINE__, 'CONTACT_METRIC(cr)%calving_mask')) RETURN
+#   endif
+#  endif
 
         IF (.not.destroy(ng, CONTACT_METRIC(cr)%rmask, MyFile,          &
      &                   __LINE__, 'CONTACT_METRIC(cr)%rmask')) RETURN

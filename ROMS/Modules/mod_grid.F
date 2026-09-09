@@ -111,12 +111,19 @@
 !  rmask_ist  ice sheet mask at RHO-points (0=dry, 1=wet).             !
 !  umask_ist  ice sheet mask at   U-points (0=dry, -1,1,2=wet).        !
 !  vmask_ist  ice sheet mask at   V-points (0=dry, -1,1,2=wet).        !
+!  pmask_ist  ice sheet mask at PSI-points (0=no full ice node,        !
+!             1=all 4 surrounding RHO cells have ice; dynamic,         !
+!             recomputed in isf_masks.F from rmask_ist).               !
 #  ifdef MASKING
 !  pumask_ist ice sheet mask at PSI-points (0=non-glacial, 1=glacial). !
 !  pvmask_ist ice sheet mask at PSI-points (0=non-glacial, 1=glacial). !
 #  endif
 # endif
 !  rmask_isf  ice shelf mask at RHO-points (0=dry, 1=wet).             !
+#endif
+#ifdef ICESHEET_CALVING
+!  calving_mask  Pre-defined calving mask at RHO-points (0=ice removed,!
+!                1=ice allowed); read from the grid NetCDF file.       !
 #endif
 #if defined UV_LOGDRAG || defined GLS_MIXING || \
     defined BBL_MODEL  || defined SEDIMENT
@@ -324,12 +331,16 @@
           real(r8), pointer :: rmask_ist(:,:)
           real(r8), pointer :: umask_ist(:,:)
           real(r8), pointer :: vmask_ist(:,:)
+          real(r8), pointer :: pmask_ist(:,:)
 #  ifdef MASKING
           real(r8), pointer :: pumask_ist(:,:)
           real(r8), pointer :: pvmask_ist(:,:)
 #  endif
 # endif
           real(r8), pointer :: rmask_isf(:,:)
+#endif
+#ifdef ICESHEET_CALVING
+          real(r8), pointer :: calving_mask(:,:)
 #endif
 #if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
     defined OPT_OBSERVATIONS || defined SENSITIVITY_4DVAR      || \
@@ -744,6 +755,9 @@
 
       allocate ( GRID(ng) % vmask_ist(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
+
+      allocate ( GRID(ng) % pmask_ist(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
 #  ifdef MASKING
       allocate ( GRID(ng) % pumask_ist(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
@@ -753,6 +767,11 @@
 #  endif
 # endif
       allocate ( GRID(ng) % rmask_isf(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
+#endif
+
+#ifdef ICESHEET_CALVING
+      allocate ( GRID(ng) % calving_mask(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
 #endif
 
@@ -1251,6 +1270,9 @@
       IF (.not.destroy(ng, GRID(ng)%vmask_ist, MyFile,                  &
      &                 __LINE__, 'GRID(ng)%vmask_ist')) RETURN
 
+      IF (.not.destroy(ng, GRID(ng)%pmask_ist, MyFile,                  &
+     &                 __LINE__, 'GRID(ng)%pmask_ist')) RETURN
+
 #   ifdef MASKING
       IF (.not.destroy(ng, GRID(ng)%pumask_ist, MyFile,                 &
      &                 __LINE__, 'GRID(ng)%pumask_ist')) RETURN
@@ -1262,6 +1284,11 @@
 #  endif
       IF (.not.destroy(ng, GRID(ng)%rmask_isf, MyFile,                  &
      &                 __LINE__, 'GRID(ng)%rmask_isf')) RETURN
+# endif
+
+# ifdef ICESHEET_CALVING
+      IF (.not.destroy(ng, GRID(ng)%calving_mask, MyFile,               &
+     &                 __LINE__, 'GRID(ng)%calving_mask')) RETURN
 # endif
 
 # if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \
@@ -1565,12 +1592,17 @@
             GRID(ng) % rmask_ist(i,j) = IniVal
             GRID(ng) % umask_ist(i,j) = IniVal
             GRID(ng) % vmask_ist(i,j) = IniVal
+            GRID(ng) % pmask_ist(i,j) = IniVal
 #  ifdef MASKING
             GRID(ng) % pumask_ist(i,j) = IniVal
             GRID(ng) % pvmask_ist(i,j) = IniVal
 #  endif
 # endif
             GRID(ng) % rmask_isf(i,j) = IniVal
+#endif
+
+#ifdef ICESHEET_CALVING
+            GRID(ng) % calving_mask(i,j) = IniVal
 #endif
 
 #if defined AD_SENSITIVITY   || defined I4DVAR_ANA_SENSITIVITY || \

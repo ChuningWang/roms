@@ -114,6 +114,12 @@
       real(r8), allocatable :: dmde(:), dndx(:)
       real(r8), allocatable :: f(:)
       real(r8), allocatable :: h(:)
+# ifdef ICESHELF
+      real(r8), allocatable :: zice(:)
+#  ifdef ICESHEET_CALVING
+      real(r8), allocatable :: calving_mask(:)
+#  endif
+# endif
       real(r8), allocatable :: mask(:)
       real(r8), allocatable :: pm(:), pn(:)
 !
@@ -531,6 +537,33 @@
      &                      ncid = NGCid)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
+!  Read in contact point ice shelf draft at RHO-points, 1:NCdatum.
+!
+# ifdef ICESHELF
+      IF (.not.allocated(zice)) THEN
+        allocate ( zice(NCdatum) )
+        Dmem(ng)=Dmem(ng)+REAL(NCdatum,r8)
+      END IF
+      CALL netcdf_get_fvar (ng, model, NGCname,                         &
+     &                      'zice', zice,                               &
+     &                      ncid = NGCid)
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#  ifdef ICESHEET_CALVING
+!
+!  Read in contact point pre-defined calving mask at RHO-points,
+!  1:NCdatum.
+!
+      IF (.not.allocated(calving_mask)) THEN
+        allocate ( calving_mask(NCdatum) )
+        Dmem(ng)=Dmem(ng)+REAL(NCdatum,r8)
+      END IF
+      CALL netcdf_get_fvar (ng, model, NGCname,                         &
+     &                      'calving_mask', calving_mask,               &
+     &                      ncid = NGCid)
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#  endif
+# endif
+!
 !  Read in contact point Coriolis parameter at RHO-points, 1:NCdatum.
 !
       IF (.not.allocated(f)) THEN
@@ -906,6 +939,9 @@
         allocate ( CONTACT_METRIC(cr) % h     (NpointsR(cr)) )
 # ifdef ICESHELF
         allocate ( CONTACT_METRIC(cr) % zice  (NpointsR(cr)) )
+#  ifdef ICESHEET_CALVING
+        allocate ( CONTACT_METRIC(cr) % calving_mask (NpointsR(cr)) )
+#  endif
 # endif
         allocate ( CONTACT_METRIC(cr) % rmask (NpointsR(cr)) )
         allocate ( CONTACT_METRIC(cr) % umask (NpointsU(cr)) )
@@ -936,6 +972,9 @@
           CONTACT_METRIC(cr) % h     (m) = h    (ip)
 # ifdef ICESHELF
           CONTACT_METRIC(cr) % zice  (m) = zice (ip)
+#  ifdef ICESHEET_CALVING
+          CONTACT_METRIC(cr) % calving_mask (m) = calving_mask (ip)
+#  endif
 # endif
           CONTACT_METRIC(cr) % rmask (m) = mask (ip)
           CONTACT_METRIC(cr) % pm    (m) = pm   (ip)
@@ -1377,6 +1416,12 @@
       real(r8), allocatable :: dmde(:), dndx(:)
       real(r8), allocatable :: f(:)
       real(r8), allocatable :: h(:)
+#  ifdef ICESHELF
+      real(r8), allocatable :: zice(:)
+#   ifdef ICESHEET_CALVING
+      real(r8), allocatable :: calving_mask(:)
+#   endif
+#  endif
       real(r8), allocatable :: mask(:)
       real(r8), allocatable :: pm(:), pn(:)
 !
@@ -1798,6 +1843,33 @@
      &                          pioFile = NGCpioFile)
       IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
 !
+!  Read in contact point ice shelf draft at RHO-points, 1:NCdatum.
+!
+#  ifdef ICESHELF
+      IF (.not.allocated(zice)) THEN
+        allocate ( zice(NCdatum) )
+        Dmem(ng)=Dmem(ng)+REAL(NCdatum,r8)
+      END IF
+      CALL pio_netcdf_get_fvar (ng, model, NGCname,                     &
+     &                          'zice', zice,                           &
+     &                          pioFile = NGCpioFile)
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#   ifdef ICESHEET_CALVING
+!
+!  Read in contact point pre-defined calving mask at RHO-points,
+!  1:NCdatum.
+!
+      IF (.not.allocated(calving_mask)) THEN
+        allocate ( calving_mask(NCdatum) )
+        Dmem(ng)=Dmem(ng)+REAL(NCdatum,r8)
+      END IF
+      CALL pio_netcdf_get_fvar (ng, model, NGCname,                     &
+     &                          'calving_mask', calving_mask,           &
+     &                          pioFile = NGCpioFile)
+      IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#   endif
+#  endif
+!
 !  Read in contact point Coriolis parameter at RHO-points, 1:NCdatum.
 !
       IF (.not.allocated(f)) THEN
@@ -2173,6 +2245,9 @@
         allocate ( CONTACT_METRIC(cr) % h     (NpointsR(cr)) )
 #  ifdef ICESHELF
         allocate ( CONTACT_METRIC(cr) % zice  (NpointsR(cr)) )
+#   ifdef ICESHEET_CALVING
+        allocate ( CONTACT_METRIC(cr) % calving_mask (NpointsR(cr)) )
+#   endif
 #  endif
         allocate ( CONTACT_METRIC(cr) % rmask (NpointsR(cr)) )
         allocate ( CONTACT_METRIC(cr) % umask (NpointsU(cr)) )
@@ -2203,6 +2278,9 @@
           CONTACT_METRIC(cr) % h     (m) = h    (ip)
 #  ifdef ICESHELF
           CONTACT_METRIC(cr) % zice  (m) = zice (ip)
+#   ifdef ICESHEET_CALVING
+          CONTACT_METRIC(cr) % calving_mask (m) = calving_mask (ip)
+#   endif
 #  endif
           CONTACT_METRIC(cr) % rmask (m) = mask (ip)
           CONTACT_METRIC(cr) % pm    (m) = pm   (ip)

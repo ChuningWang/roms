@@ -57,7 +57,7 @@
       DO j=LBj,UBj
         DO i=LBi,UBi
           IF (Si(i,j,ksa_old,isIhis).gt.0.0_r8) THEN
-            zs_smooth(i,j)=Fi(i,j,icIzsf)
+            zs_smooth(i,j)=Fi(i,j,ifIzsf)
           ELSE
             zs_smooth(i,j)=0.0_r8
           END IF
@@ -223,7 +223,7 @@
 !
       DO j=JstrT,JendT
         DO i=IstrT,IendT
-          Fi(i,j,icItdx)=taudx_psi(i,j)
-          Fi(i,j,icItdy)=taudy_psi(i,j)
+          Fi(i,j,ifItdx)=taudx_psi(i,j)
+          Fi(i,j,ifItdy)=taudy_psi(i,j)
         END DO
       END DO

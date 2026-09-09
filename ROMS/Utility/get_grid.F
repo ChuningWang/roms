@@ -216,6 +216,13 @@
         RETURN
       END IF
 # endif
+# ifdef ICESHEET_CALVING
+      IF (.not.find_string(var_name,n_var,'calving_mask',vindex)) THEN
+        IF (Master) WRITE (stdout,20) 'calving_mask', TRIM(ncname)
+        exit_flag=2
+        RETURN
+      END IF
+# endif
 # ifdef ICE_FASTCOEF
       IF (.not.find_string(var_name,n_var,'fastcoef',vindex)) THEN
         IF (Master) WRITE (stdout,20) 'fastcoef', TRIM(ncname)
@@ -723,6 +730,61 @@
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
      &                          GRID(ng) % zice)
+#  endif
+# endif
+# ifdef ICESHEET_CALVING
+!
+!  Read in pre-defined calving mask.
+!
+          CASE ('calving_mask')
+            gtype=r2dvar
+            status=nf_fread2d(ng, model, ncname, GRD(ng)%ncid,          &
+     &                        var_name(i), var_id(i),                   &
+     &                        0, gtype, Vsize,                          &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Fscl, Fmin, Fmax,                         &
+#  ifdef MASKING
+     &                        GRID(ng) % rmask,                         &
+#  endif
+#  ifdef CHECKSUM
+     &                        GRID(ng) % calving_mask,                  &
+     &                        checksum = Fhash)
+#  else
+     &                        GRID(ng) % calving_mask)
+#  endif
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+              exit_flag=2
+              ioerror=status
+              EXIT
+            ELSE
+              IF (Master) THEN
+                WRITE (stdout,30) 'calving mask: calving_mask',         &
+     &                            ng, TRIM(ncname), Fmin, Fmax
+#  ifdef CHECKSUM
+                WRITE (stdout,60) Fhash
+#  endif
+              END IF
+            END IF
+#  ifdef NESTING
+            CALL fill_contact(ng, model, tile,                          &
+     &                        cr, Rcontact(cr)%Npoints, Rcontact,       &
+     &                        r2dvar, var_name(i), spval_check,         &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        CONTACT_METRIC(cr) % calving_mask,        &
+     &                        GRID(ng) % calving_mask)
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#  endif
+            IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+              CALL exchange_r2d_tile (ng, tile,                         &
+     &                                LBi, UBi, LBj, UBj,               &
+     &                                GRID(ng) % calving_mask)
+            END IF
+#  ifdef DISTRIBUTE
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          GRID(ng) % calving_mask)
 #  endif
 # endif
 # ifdef ICE_FASTCOEF
@@ -2856,6 +2918,13 @@
         RETURN
       END IF
 #  endif
+#  ifdef ICESHEET_CALVING
+      IF (.not.find_string(var_name,n_var,'calving_mask',vindex)) THEN
+        IF (Master) WRITE (stdout,20) 'calving_mask', TRIM(ncname)
+        exit_flag=2
+        RETURN
+      END IF
+#  endif
 #  ifdef ICE_FASTCOEF
       IF (.not.find_string(var_name,n_var,'fastcoef',vindex)) THEN
         IF (Master) WRITE (stdout,20) 'fastcoef', TRIM(ncname)
@@ -3393,6 +3462,70 @@
      &                          NghostPoints,                           &
      &                          EWperiodic(ng), NSperiodic(ng),         &
      &                          GRID(ng) % zice)
+#   endif
+#  endif
+#  ifdef ICESHEET_CALVING
+!
+!  Read in pre-defined calving mask.
+!
+          CASE ('calving_mask')
+            pioVar%vd=var_desc(i)
+            pioVar%gtype=r2dvar
+            IF (KIND(GRID(ng)%calving_mask).eq.8) THEN
+              pioVar%dkind=PIO_double
+              ioDesc => ioDesc_dp_r2dvar(ng)
+            ELSE
+              pioVar%dkind=PIO_real
+              ioDesc => ioDesc_sp_r2dvar(ng)
+            END IF
+!
+            status=nf_fread2d(ng, model, ncname, GRD(ng)%pioFile,       &
+     &                        var_name(i), pioVar,                      &
+     &                        0, ioDesc, Vsize,                         &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Fscl, Fmin, Fmax,                         &
+#   ifdef MASKING
+     &                        GRID(ng) % rmask,                         &
+#   endif
+#   ifdef CHECKSUM
+     &                        GRID(ng) % calving_mask,                  &
+     &                        checksum = Fhash)
+#   else
+     &                        GRID(ng) % calving_mask)
+#   endif
+            IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
+              exit_flag=2
+              ioerror=status
+              EXIT
+            ELSE
+              IF (Master) THEN
+                WRITE (stdout,30) 'calving mask: calving_mask',         &
+     &                            ng, TRIM(ncname), Fmin, Fmax
+#   ifdef CHECKSUM
+                WRITE (stdout,60) Fhash
+#   endif
+              END IF
+            END IF
+#   ifdef NESTING
+            CALL fill_contact(ng, model, tile,                          &
+     &                        cr, Rcontact(cr)%Npoints, Rcontact,       &
+     &                        r2dvar, var_name(i), spval_check,         &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        CONTACT_METRIC(cr) % calving_mask,        &
+     &                        GRID(ng) % calving_mask)
+            IF (FoundError(exit_flag, NoError, __LINE__, MyFile)) RETURN
+#   endif
+            IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+              CALL exchange_r2d_tile (ng, tile,                         &
+     &                                LBi, UBi, LBj, UBj,               &
+     &                                GRID(ng) % calving_mask)
+            END IF
+#   ifdef DISTRIBUTE
+            CALL mp_exchange2d (ng, tile, model, 1,                     &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          NghostPoints,                           &
+     &                          EWperiodic(ng), NSperiodic(ng),         &
+     &                          GRID(ng) % calving_mask)
 #   endif
 #  endif
 #  ifdef ICE_FASTCOEF

@@ -19,14 +19,23 @@
 !  where u is the depth-averaged ice velocity from the SSA solver      !
 !  (PSI points) interpolated to RHO cell faces, H is ice thickness,    !
 !  E = H*T is the ice enthalpy, and T is the ice temperature           !
-!  (diagnostic, Fi(:,:,icItis)).  The melt and SMB enthalpy source     !
+!  (diagnostic, Fi(:,:,ifItis)).  The melt and SMB enthalpy source     !
 !  terms act at the column temperature T = E/H so that mass and heat   !
 !  sources do not alter the ice temperature.                           !
+!                                                                      !
+!  Cadence: called from iceshelf.F every ocean timestep, decoupled     !
+!  from the SSA solve (every N_ssa steps).  The velocity field is      !
+!  the latest SSA solution, held constant between solves; on non-      !
+!  SSA steps it is carried into the new time level below.              !
+!  Integrating transport at the ocean dt (instead of lumping it at     !
+!  the SSA cadence) removes the O(N_ssa) staircase in the ice          !
+!  thickness seen by the ocean-side coupling, so thermodynamics and    !
+!  mass-exchange feedbacks vary smoothly in time.                      !
 !                                                                      !
 !  Numerical scheme (first-order upwind, flux form):                   !
 !    - PSI velocity interpolated to RHO cell faces (2-point average)   !
 !    - First-order upwind flux for monotonicity                        !
-!    - Single explicit step (stable for ice-flow CFL << 1)             !
+!    - Single explicit step at the ocean dt (ice-flow CFL << 1)        !
 !    - Source terms added at the old time level before advection       !
 !                                                                      !
 !  Reference: STREAMICE streamice_advect_thickness.F                   !
@@ -37,10 +46,10 @@
       USE mod_grid
       USE mod_isf
       USE mod_param
-      USE mod_parallel
       USE mod_scalars
+      USE mod_stepping
 !
-      USE exchange_2d_mod, ONLY : exchange_r2d_tile
+      USE exchange_2d_mod, ONLY : exchange_r2d_tile, exchange_p2d_tile
 # ifdef DISTRIBUTE
       USE mp_exchange_mod, ONLY : mp_exchange2d
 # endif
@@ -55,8 +64,6 @@
 !***********************************************************************
       SUBROUTINE isf_advection (ng, tile, model)
 !***********************************************************************
-!
-      USE mod_stepping
 !
 !  Imported variable declarations.
 !
@@ -80,8 +87,7 @@
      &                         GRID(ng) % pn,                           &
      &                         GRID(ng) % rmask_ist,                    &
      &                         ISF(ng) % Si,                            &
-     &                         ISF(ng) % Fi,                            &
-     &                         ISF(ng) % Ci)
+     &                         ISF(ng) % Fi)
 # ifdef PROFILE
       CALL wclock_off (ng, model, 43, __LINE__, MyFile)
 # endif
@@ -95,7 +101,7 @@
      &                               lsold, lsnew,                      &
      &                               pm, pn,                            &
      &                               rmask_ist,                         &
-     &                               Si, Fi, Ci)
+     &                               Si, Fi)
 !***********************************************************************
 !
 !  Solves the ice thickness (mass) and enthalpy (heat content)
@@ -112,8 +118,13 @@
 !  Numerical scheme:
 !    - PSI velocity interpolated to RHO cell faces (2-point average)
 !    - First-order upwind flux for monotonicity
-!    - Single explicit step (stable for ice-flow CFL << 1)
+!    - Single explicit step at the ocean dt (ice-flow CFL << 1)
 !    - Source terms (basal melt, SMB) added at the old time level
+!
+!  Cadence: called every ocean timestep (see module header).  On non-
+!  SSA steps the velocity of the new time level is first carried
+!  forward from the old level (the latest SSA solution); on SSA steps
+!  isf_mom has just written the fresh solution into the new level.
 !
 !  The enthalpy fluxes take the upwind state from the same cell as
 !  the thickness fluxes so that the advected temperature T = E/H is
@@ -142,21 +153,18 @@
       real(r8), intent(in)    :: rmask_ist(LBi:,LBj:)
       real(r8), intent(inout) :: Si(LBi:,LBj:,:,:)
       real(r8), intent(inout) :: Fi(LBi:,LBj:,:)
-      real(r8), intent(inout) :: Ci(LBi:,LBj:,:)
 # else
       real(r8), intent(in)    :: pm(LBi:UBi,LBj:UBj)
       real(r8), intent(in)    :: pn(LBi:UBi,LBj:UBj)
       real(r8), intent(in)    :: rmask_ist(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: Si(LBi:UBi,LBj:UBj,2,nIsfS)
       real(r8), intent(inout) :: Fi(LBi:UBi,LBj:UBj,nIsfF)
-      real(r8), intent(inout) :: Ci(LBi:UBi,LBj:UBj,nIsfC)
 # endif
 !
 !  Local variable declarations.
 !
       integer :: i, j
 !
-      real(r8) :: dtisf
       real(r8) :: Fx, Fe
 !
 !  Work arrays.
@@ -176,34 +184,23 @@
 !  Add surface and bottom fluxes from surface mass balance and
 !  ocean-driven melting.
 !
-!  H_new = H_old - dt*melt_win   + dtisf*SMB
-!  E_new = E_old - dt*melt_win*T + dtisf*SMB*T
+!  H_new = H_old - dt*melt   + dt*SMB
+!  E_new = E_old - dt*melt*T + dt*SMB*T
 !
-      dtisf = dt(ng)*REAL(N_ssa(ng),r8)
 !
       DO j=Jstr,Jend
         DO i=Istr,Iend
           IF (rmask_ist(i,j).gt.0.5_r8) THEN
             Si(i,j,lsold,isIhis)=Si(i,j,lsold,isIhis)                   &
-     &                           +dtisf*smb_rate(ng)
-            Si(i,j,lsold,isIeis)=Si(i,j,lsold,isIeis)                   &
-     &                           +dtisf*smb_rate(ng)*Fi(i,j,icItis)
 # ifdef ICESHELF_THERMO
-!
-!  where melt_win = Ci(:,:,icCmea) is the melt rate accumulated over
-!  the current SSA coupling window (running sum of the instantaneous
-!  rate in isf_vbc), so dt*melt_win is the window-total basal melt
-!  in meters.  The accumulator is reset after use.
-!
-            Si(i,j,lsold,isIhis)=Si(i,j,lsold,isIhis)                   &
-     &                           -dt(ng)*Ci(i,j,icCmea)
-            Si(i,j,lsold,isIeis)=Si(i,j,lsold,isIeis)                   &
-     &                           -dt(ng)*Ci(i,j,icCmea)*Fi(i,j,icItis)
-!
-!  Reset the SSA coupling window melt accumulator.
-!
-            Ci(i,j,icCmea)=0.0_r8
+     &                           -dt(ng)*Fi(i,j,ifImel)                 &
 # endif
+     &                           +dt(ng)*smb_rate(ng)
+            Si(i,j,lsold,isIeis)=Si(i,j,lsold,isIeis)                   &
+# ifdef ICESHELF_THERMO
+     &                           -dt(ng)*Fi(i,j,ifImel)*Fi(i,j,ifItis)  &
+# endif
+     &                           +dt(ng)*smb_rate(ng)*Fi(i,j,ifItis)
           END IF
         END DO
       END DO
@@ -260,7 +257,7 @@
      &       (MAX(ve(i,j+1),0.0_r8)*Si(i,j  ,lsold,isIhis)+             &
      &        MIN(ve(i,j+1),0.0_r8)*Si(i,j+1,lsold,isIhis))
           Si(i,j,lsnew,isIhis)=Si(i,j,lsold,isIhis) +                   &
-     &                         dtisf*(Fx*pm(i,j)+Fe*pn(i,j))
+     &                         dt(ng)*(Fx*pm(i,j)+Fe*pn(i,j))
 !
 !  Xi and Eta direction upwind enthalpy fluxes.
 !  Left   Xi-face  (i  ): between RHO(i-1,j  ) and RHO(i  ,j  ).
@@ -277,14 +274,14 @@
      &       (MAX(ve(i,j+1),0.0_r8)*Si(i,j  ,lsold,isIeis)+             &
      &        MIN(ve(i,j+1),0.0_r8)*Si(i,j+1,lsold,isIeis))
           Si(i,j,lsnew,isIeis)=Si(i,j,lsold,isIeis) +                   &
-     &                         dtisf*(Fx*pm(i,j)+Fe*pn(i,j))
+     &                         dt(ng)*(Fx*pm(i,j)+Fe*pn(i,j))
 !
 !  Update ice sheet temperature T=E/H.
 !
           IF (Si(i,j,lsnew,isIhis).gt.0.0_r8) THEN
-            Fi(i,j,icItis)=Si(i,j,lsnew,isIeis)/Si(i,j,lsnew,isIhis)
+            Fi(i,j,ifItis)=Si(i,j,lsnew,isIeis)/Si(i,j,lsnew,isIhis)
           ELSE
-            Fi(i,j,icItis)=0.0_r8
+            Fi(i,j,ifItis)=0.0_r8
           END IF
         END DO
       END DO
@@ -300,7 +297,7 @@
      &                         Si(:,:,lsnew,isIeis))
         CALL exchange_r2d_tile(ng,tile,                                 &
      &                         LBi,UBi,LBj,UBj,                         &
-     &                         Fi(:,:,icItis))
+     &                         Fi(:,:,ifItis))
       END IF
 # ifdef DISTRIBUTE
       CALL mp_exchange2d(ng,tile,model,3,                               &
@@ -309,7 +306,7 @@
      &                   NSperiodic(ng),                                &
      &                   Si(:,:,lsnew,isIhis),                          &
      &                   Si(:,:,lsnew,isIeis),                          &
-     &                   Fi(:,:,icItis))
+     &                   Fi(:,:,ifItis))
 # endif
 !
       RETURN

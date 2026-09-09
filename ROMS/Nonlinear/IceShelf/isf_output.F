@@ -960,7 +960,7 @@
 !  Write out isf model coupling (Ci) variables to restart file.
 !-----------------------------------------------------------------------
 !
-!  Use the STATIC rmask (not rmask_full): icCzta accumulates over
+!  Use the STATIC rmask (not rmask_full): icIzta accumulates over
 !  grounded-ice cells where the wet/dry mask is zero (thin Dcrit
 !  film); masking with rmask_full would fill them with spval and
 !  zero the accumulator on read-back.
@@ -2837,7 +2837,7 @@
 !  Write out isf model coupling (Ci) variables to restart file.
 !-----------------------------------------------------------------------
 !
-!  Use the STATIC rmask (not rmask_full): icCzta accumulates over
+!  Use the STATIC rmask (not rmask_full): icIzta accumulates over
 !  grounded-ice cells where the wet/dry mask is zero (thin Dcrit
 !  film); masking with rmask_full would fill them with spval and
 !  zero the accumulator on read-back.

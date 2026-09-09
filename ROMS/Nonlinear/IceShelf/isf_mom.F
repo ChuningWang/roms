@@ -214,7 +214,7 @@
       integer :: nq, k_node, iq, jq, n_ice
       integer :: i1, i2, j1, j2
 !  Extended cell-assembly bounds (Istr..Iend + one halo-cell ring).
-      integer :: iCstr, iCend, jCstr, jCend
+      integer :: IstrC, IendC, JstrC, JendC
 !  MMS debug dump file name (per tile).
       character (len=24) :: dump_fname
 !  Smoothing scratch for driving stress regularization.
@@ -476,7 +476,7 @@
      &                   float_frac)
 # endif
 !
-!  Compute ice surface elevation (icIzsf) and bed elevation (icIzbd)
+!  Compute ice surface elevation (ifIzsf) and bed elevation (ifIzbd)
 !  at RHO points.
 !
 !    grounded: S = -h + H,  B = -h
@@ -487,18 +487,18 @@
         DO i=IstrT,IendT
           H_rho=Si(i,j,ksa_old,isIhis)
           IF (H_rho.gt.0.0_r8) THEN
-            Fi(i,j,icItis)=Si(i,j,ksa_old,isIeis)/H_rho
+            Fi(i,j,ifItis)=Si(i,j,ksa_old,isIeis)/H_rho
             IF (rmask_ist_scr(i,j).eq.1.0_r8) THEN
-              Fi(i,j,icIzsf)=-h(i,j)+H_rho
-              Fi(i,j,icIzbd)=-h(i,j)
+              Fi(i,j,ifIzsf)=-h(i,j)+H_rho
+              Fi(i,j,ifIzbd)=-h(i,j)
             ELSE
-              Fi(i,j,icIzsf)=(1.0_r8-rho_i/rho_w_local)*H_rho
-              Fi(i,j,icIzbd)=-(rho_i/rho_w_local)*H_rho
+              Fi(i,j,ifIzsf)=(1.0_r8-rho_i/rho_w_local)*H_rho
+              Fi(i,j,ifIzbd)=-(rho_i/rho_w_local)*H_rho
             END IF
           ELSE
-            Fi(i,j,icItis)=0.0_r8
-            Fi(i,j,icIzsf)=0.0_r8
-            Fi(i,j,icIzbd)=-h(i,j)
+            Fi(i,j,ifItis)=0.0_r8
+            Fi(i,j,ifIzsf)=0.0_r8
+            Fi(i,j,ifIzbd)=-h(i,j)
           END IF
         END DO
       END DO

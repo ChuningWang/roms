@@ -35,7 +35,7 @@
 !    4. Ice sheet basal drag coefficient (ICESHEET only): computes the  !
 !       SSA bottom drag beta at RHO points from the ocean state         !
 !       averaged over the N_ssa coupling window and stores it in       !
-!       Fi(:,:,icIbta) for the SSA momentum solve (isf_mom).  Two      !
+!       Fi(:,:,ifIbta) for the SSA momentum solve (isf_mom).  Two      !
 !       sliding laws, CPP-selected with Weertman as the default:        !
 !         default                   Weertman power law                 !
 !                                       beta = C^2 |u|^(m-1)           !
@@ -86,7 +86,7 @@
 # ifdef PROFILE
       CALL wclock_on (ng, model, 42, __LINE__, MyFile)
 # endif
-      CALL isf_stress_tile (ng, tile, model,                           &
+      CALL isf_stress_tile (ng, tile, model,                            &
      &                       LBi, UBi, LBj, UBj,                        &
      &                       IminS, ImaxS, JminS, JmaxS,                &
      &                       nrhs(ng),                                  &
@@ -123,7 +123,7 @@
       END SUBROUTINE isf_stress
 !
 !***********************************************************************
-      SUBROUTINE isf_stress_tile (ng, tile, model,                     &
+      SUBROUTINE isf_stress_tile (ng, tile, model,                      &
      &                             LBi, UBi, LBj, UBj,                  &
      &                             IminS, ImaxS, JminS, JmaxS,          &
      &                             nrhs,                                &
@@ -446,25 +446,25 @@
             cff1=0.5_r8*(sustr(i,j)+sustr(i+1,j))
             cff2=0.5_r8*(svstr(i,j)+svstr(i,j+1))
             ustar_rho=gamU(ng)*SQRT(SQRT(cff1*cff1+cff2*cff2))
-            Fi(i,j,icIust)=MAX(min_ustar(ng), ustar_rho)
+            Fi(i,j,ifIust)=MAX(min_ustar(ng), ustar_rho)
           ELSE
-            Fi(i,j,icIust)=0.0_r8
+            Fi(i,j,ifIust)=0.0_r8
           END IF
         END DO
       END DO
 # endif
-!
 # ifdef ICESHEET
+!
 !=======================================================================
 !  Step 4: Ice sheet basal drag coefficient (SSA coupling window).
 !
 !  The SSA momentum equation is solved every N_ssa ocean timesteps
 !  (iceshelf.F), so the basal drag it needs is evaluated from the
 !  ocean state averaged over the coupling window: every ocean step
-!  accumulates the free surface zeta into Ci(:,:,icCzta), and at SSA
+!  accumulates the free surface zeta into Ci(:,:,icIzta), and at SSA
 !  steps (MOD(iic-1,N_ssa)=0, the same cadence as the solver call)
 !  the window average is finalized, beta is computed into
-!  Fi(:,:,icIbta), and the accumulator is reset before the current
+!  Fi(:,:,ifIbta), and the accumulator is reset before the current
 !  sample seeds the next window.  This routine runs before the
 !  lsold/lsnew swap and the isf_mom call in iceshelf.F, so know=lsnew
 !  is the previous SSA solution: sliding velocity and thickness come
@@ -510,11 +510,11 @@
             IF (iic(ng).eq.1) THEN
               zeta_avg=zeta(i,j)
             ELSE
-              zeta_avg=Ci(i,j,icCzta)*cff1
+              zeta_avg=Ci(i,j,icIzta)*cff1
             END IF
             D_avg=zeta_avg+h(i,j)-Dcrit(ng)-eps_float
 !
-            Fi(i,j,icIbta)=0.0_r8
+            Fi(i,j,ifIbta)=0.0_r8
             H_rho=Si(i,j,know,isIhis)
             IF (H_rho.gt.0.0_r8) THEN
 !
@@ -541,7 +541,7 @@
               N_eff=rho_i*g*H_rho-rho0*g*D_avg
               IF (N_eff.gt.0.0_r8) THEN
                 cff2=f_coulomb(ng)*N_eff
-                Fi(i,j,icIbta)=C_sq*                                    &
+                Fi(i,j,ifIbta)=C_sq*                                    &
      &               u_slide**(n_basal(ng)-1.0_r8)*cff2/                &
      &               ((C_sq**(1.0_r8/n_basal(ng)))*u_slide+             &
      &                cff2**(1.0_r8/n_basal(ng)))**n_basal(ng)
@@ -551,7 +551,7 @@
 !  Weertman power law, zero over floating ice.
 !
               IF (rho_i*H_rho.gt.rho0*D_avg) THEN
-                Fi(i,j,icIbta)=C_sq*u_slide**(n_basal(ng)-1.0_r8)
+                Fi(i,j,ifIbta)=C_sq*u_slide**(n_basal(ng)-1.0_r8)
               END IF
 #  endif
 !
@@ -564,7 +564,7 @@
 !
         DO j=JstrR,JendR
           DO i=IstrR,IendR
-            Ci(i,j,icCzta)=0.0_r8
+            Ci(i,j,icIzta)=0.0_r8
           END DO
         END DO
       END IF
@@ -573,10 +573,22 @@
 !
       DO j=JstrR,JendR
         DO i=IstrR,IendR
-          Ci(i,j,icCzta)=Ci(i,j,icCzta)+zeta(i,j)
+          Ci(i,j,icIzta)=Ci(i,j,icIzta)+zeta(i,j)
         END DO
       END DO
+!
+      CALL bc_r2d_tile (ng, tile,                                       &
+     &                  LBi, UBi, LBj, UBj,                             &
+     &                  Fi(:,:,ifIbta))
+!
+#  ifdef DISTRIBUTE
+      CALL mp_exchange2d (ng, tile, model, 1,                           &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints, EWperiodic(ng), NSperiodic(ng), &
+     &                    Fi(:,:,ifIbta))
+#  endif
 # endif
+!
       RETURN
       END SUBROUTINE isf_stress_tile
 !

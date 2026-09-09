@@ -12,7 +12,7 @@
 !================================================== Hernan G. Arango ===
 !                                                                      !
 !  Sets lateral boundary conditions for any 2D ice field with array    !
-!  index, ifld.
+!  index, ifld.                                                        !
 !                                                                      !
 !=======================================================================
 !

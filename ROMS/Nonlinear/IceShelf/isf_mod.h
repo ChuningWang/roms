@@ -37,15 +37,15 @@
 !                                                                      !
 !  where the 'FieldIndex' are as follows:                              !
 !                                                                      !
-!    icImel    iceshelf basal melt rate [m s-1]                        !
-!    icIgat    heat turbulent exchange coefficient [m s-1]             !
-!    icIgas    salt turbulent exchange coefficient [m s-1]             !
-!    icItst    temperature diff between ambient/boundary layer [degC]  !
-!    icIust    friction velocity in ice/water boundary layer [m s-1]   !
-!    icItbo    temperature in laminar boundary layer [degC]            !
-!    icIsbo    salinity in laminar boundary layer [PSU]                !
-!    icItba    ambient temperature in boundary layer [degC]            !
-!    icIsba    ambient salinity in boundary layer [PSU]                !
+!    ifImel    iceshelf basal melt rate [m s-1]                        !
+!    ifIgat    heat turbulent exchange coefficient [m s-1]             !
+!    ifIgas    salt turbulent exchange coefficient [m s-1]             !
+!    ifItst    temperature diff between ambient/boundary layer [degC]  !
+!    ifIust    friction velocity in ice/water boundary layer [m s-1]   !
+!    ifItbo    temperature in laminar boundary layer [degC]            !
+!    ifIsbo    salinity in laminar boundary layer [PSU]                !
+!    ifItba    ambient temperature in boundary layer [degC]            !
+!    ifIsba    ambient salinity in boundary layer [PSU]                !
 !                                                                      !
 !  The iceshelf model refreezed volume and tracer concentration:       !
 !                                                                      !
@@ -58,13 +58,13 @@
 !  ICESHELF_THERMO their indices continue the thermo numbering         !
 !  (10-16); without it they start at 1 (1-7):                          !
 !                                                                      !
-!    icItis    icesheet temperature [degC]                             !
-!    icIzsf    ice sheet surface elevation [m]                         !
-!    icIzbd    ice sheet bed elevation [m]                             !
-!    icInuh    depth-integrated effective viscosity [Pa s m]           !
-!    icItdx    driving stress x-component [Pa]                         !
-!    icItdy    driving stress y-component [Pa]                         !
-!    icIbta    basal drag coefficient                                  !
+!    ifItis    icesheet temperature [degC]                             !
+!    ifIzsf    ice sheet surface elevation [m]                         !
+!    ifIzbd    ice sheet bed elevation [m]                             !
+!    ifInuh    depth-integrated effective viscosity [Pa s m]           !
+!    ifItdx    driving stress x-component [Pa]                         !
+!    ifItdy    driving stress y-component [Pa]                         !
+!    ifIbta    basal drag coefficient                                  !
 !                                                                      !
 !  The ice-ocean coupling accumulators live in the separate Ci array   !
 !  (running sums over the SSA coupling window, part of the restart     !
@@ -72,10 +72,12 @@
 !                                                                      !
 !    ISF(ng) % Ci(:,:,CouplingIndex)                                   !
 !                                                                      !
-!    icCmea    basal melt rate accumulated over the SSA coupling       !
-!              window [m s-1] (filled under ICESHELF_THERMO only)      !
-!    icCzta    free surface accumulated over the SSA coupling          !
+!    icIzta    free surface accumulated over the SSA coupling          !
 !              window [m]                                              !
+!                                                                      !
+!  The former melt accumulator icCmea (is_mea) was removed: the ice    !
+!  thickness advection runs every ocean timestep and consumes the      !
+!  instantaneous melt rate Fi(:,:,ifImel) directly.                    !
 !                                                                      !
 #endif
 !                                                                      !
@@ -135,15 +137,15 @@
 !
       integer, parameter :: nIsfF_thermo = 9  ! thermo field variables
 !
-      integer, parameter :: icImel =  1  ! Iceshelf melt rate
-      integer, parameter :: icIgat =  2  ! gammaT
-      integer, parameter :: icIgas =  3  ! gammaS
-      integer, parameter :: icItst =  4  ! T*
-      integer, parameter :: icIust =  5  ! U*
-      integer, parameter :: icItbo =  6  ! Boundary layer temperature
-      integer, parameter :: icIsbo =  7  ! Boundary layer salinity
-      integer, parameter :: icItba =  8  ! Ambient T in boundary layer
-      integer, parameter :: icIsba =  9  ! Ambient S in boundary layer
+      integer, parameter :: ifImel =  1  ! Iceshelf melt rate
+      integer, parameter :: ifIgat =  2  ! gammaT
+      integer, parameter :: ifIgas =  3  ! gammaS
+      integer, parameter :: ifItst =  4  ! T*
+      integer, parameter :: ifIust =  5  ! U*
+      integer, parameter :: ifItbo =  6  ! Boundary layer temperature
+      integer, parameter :: ifIsbo =  7  ! Boundary layer salinity
+      integer, parameter :: ifItba =  8  ! Ambient T in boundary layer
+      integer, parameter :: ifIsba =  9  ! Ambient S in boundary layer
 !
 !  Iceshelf model ocean variable indices (SBL vertical weights).
 !  Oi(i,j,k,ioHsbl) stores the fraction of ice shelf basal flux
@@ -169,40 +171,39 @@
       integer :: idItdx       ! Driving stress x-component
       integer :: idItdy       ! Driving stress y-component
       integer :: idIbta       ! Basal drag coefficient
-      integer :: idCmea       ! Melt rate accumulated over SSA window
       integer :: idCzta       ! Free surface accum. over SSA window
 # ifdef ICESHELF_THERMO
 !
       integer, parameter :: nIsfF_ssa = 7    ! SSA diag field variables
 !
-      integer, parameter :: icItis = 10  ! Iceshelf temperature
-      integer, parameter :: icIzsf = 11  ! Ice sheet surface elevation
-      integer, parameter :: icIzbd = 12  ! Ice sheet bed elevation
-      integer, parameter :: icInuh = 13  ! Depth-inte. eff. viscosity
-      integer, parameter :: icItdx = 14  ! Driving stress x-component
-      integer, parameter :: icItdy = 15  ! Driving stress y-component
-      integer, parameter :: icIbta = 16  ! Basal drag coefficient
+      integer, parameter :: ifItis = 10  ! Iceshelf temperature
+      integer, parameter :: ifIzsf = 11  ! Ice sheet surface elevation
+      integer, parameter :: ifIzbd = 12  ! Ice sheet bed elevation
+      integer, parameter :: ifInuh = 13  ! Depth-inte. eff. viscosity
+      integer, parameter :: ifItdx = 14  ! Driving stress x-component
+      integer, parameter :: ifItdy = 15  ! Driving stress y-component
+      integer, parameter :: ifIbta = 16  ! Basal drag coefficient
 # else
 !
       integer, parameter :: nIsfF_ssa = 7    ! SSA diag field variables
 !
-      integer, parameter :: icItis =  1  ! Iceshelf temperature
-      integer, parameter :: icIzsf =  2  ! Ice sheet surface elevation
-      integer, parameter :: icIzbd =  3  ! Ice sheet bed elevation
-      integer, parameter :: icInuh =  4  ! Depth-inte. eff. viscosity
-      integer, parameter :: icItdx =  5  ! Driving stress x-component
-      integer, parameter :: icItdy =  6  ! Driving stress y-component
-      integer, parameter :: icIbta =  7  ! Basal drag coefficient
+      integer, parameter :: ifItis =  1  ! Iceshelf temperature
+      integer, parameter :: ifIzsf =  2  ! Ice sheet surface elevation
+      integer, parameter :: ifIzbd =  3  ! Ice sheet bed elevation
+      integer, parameter :: ifInuh =  4  ! Depth-inte. eff. viscosity
+      integer, parameter :: ifItdx =  5  ! Driving stress x-component
+      integer, parameter :: ifItdy =  6  ! Driving stress y-component
+      integer, parameter :: ifIbta =  7  ! Basal drag coefficient
 # endif
 !
 !  Coupling (Ci) field variables: SSA-window accumulators that carry
 !  ice-ocean coupling state between solves (restart-only output).
-!  icCmea is only filled under ICESHELF_THERMO (3EQN melt).
+!  The melt accumulator icCmea was removed: isf_advection runs every
+!  ocean timestep and reads the instantaneous melt Fi(:,:,ifImel).
 !
-      integer, parameter :: nIsfC = 2    ! coupling field variables
+      integer, parameter :: nIsfC = 1    ! coupling field variables
 !
-      integer, parameter :: icCmea =  1  ! Melt accumulated over SSA
-      integer, parameter :: icCzta =  2  ! Zeta accumulated over SSA
+      integer, parameter :: icIzta = 1  ! Zeta accumulated over SSA
 #else
 !
       integer, parameter :: nIsfF_ssa = 0    ! SSA diag field variables
@@ -330,23 +331,29 @@
 !
 !  Other constant parameters
 !
-      real(r8), parameter :: min_his = 10.0_r8
-      real(r8), parameter :: a       = -0.057_r8
-      real(r8), parameter :: b       = 0.0939_r8
-      real(r8), parameter :: c       = -7.61e-4_r8
-      real(r8), parameter :: L       = 3.33e5_r8
-      real(r8), parameter :: rho_i   = 916.7_r8
+      real(r8), parameter :: a          = -0.057_r8
+      real(r8), parameter :: b          = 0.0939_r8
+      real(r8), parameter :: c          = -7.61e-4_r8
+      real(r8), parameter :: L          = 3.33e5_r8
+      real(r8), parameter :: rho_i      = 916.7_r8
 #ifdef ICESHELF_THERMO
-      real(r8), parameter :: Pr      = 13.8_r8
-      real(r8), parameter :: Sc      = 2432.2_r8
-      real(r8), parameter :: Cd      = 5.0e-3_r8
-      real(r8), parameter :: visc    = 1.95e-6_r8
-!     real(r8), parameter :: small   = 1.0e-3_r8 ! Diffusion + tidal
-      real(r8), parameter :: small   = 8.0e-6_r8 ! Diffusion only
-      real(r8), parameter :: Tis     = -20.0_r8
-      real(r8), parameter :: Sis     = 0.0_r8
+      real(r8), parameter :: Pr         = 13.8_r8
+      real(r8), parameter :: Sc         = 2432.2_r8
+      real(r8), parameter :: Cd         = 5.0e-3_r8
+      real(r8), parameter :: visc       = 1.95e-6_r8
+!     real(r8), parameter :: small      = 1.0e-3_r8  ! Tidal
+      real(r8), parameter :: small      = 8.0e-6_r8  ! Diffusion
+      real(r8), parameter :: Tis        = -20.0_r8
+      real(r8), parameter :: Sis        = 0.0_r8
 #endif
-      real(r8), parameter :: eps     = 1.0E-14_r8
+      real(r8), parameter :: eps        = 1.0E-14_r8
+#ifdef ICESHEET
+!
+!  Warm-start threshold:  below this speed the basal-drag balance
+!  inversion replaces the initial guess (Stage 3).
+!
+      real(r8), parameter :: u_warm_min = 1.0E-5_r8
+#endif
 !
 !-----------------------------------------------------------------------
 !  Define derived-type structure iceshelf model state and internal
@@ -1009,44 +1016,44 @@
 !-----------------------------------------------------------------------
 !
 #ifdef AVERAGES
-      IF (allocated(LisfFavg)) deallocate ( LisfFavg )
-      IF (allocated(LisfSavg)) deallocate ( LisfSavg )
-      IF (allocated(LisfVavg)) deallocate ( LisfVavg )
-      IF (allocated(LisfTavg)) deallocate ( LisfTavg )
-      IF (allocated(LisfAavg)) deallocate ( LisfAavg )
+      IF (allocated(LisfFavg))        deallocate ( LisfFavg )
+      IF (allocated(LisfSavg))        deallocate ( LisfSavg )
+      IF (allocated(LisfVavg))        deallocate ( LisfVavg )
+      IF (allocated(LisfTavg))        deallocate ( LisfTavg )
+      IF (allocated(LisfAavg))        deallocate ( LisfAavg )
 #endif
 !
-      IF (allocated(isf_Hsbl))  deallocate ( isf_Hsbl )
+      IF (allocated(isf_Hsbl))        deallocate ( isf_Hsbl )
 #ifdef ICESHELF
-      IF (allocated(rdrg_isf))  deallocate ( rdrg_isf )
-      IF (allocated(rdrg2_isf)) deallocate ( rdrg2_isf )
-      IF (allocated(ZoSr_isf)) deallocate ( ZoSr_isf )
+      IF (allocated(rdrg_isf))        deallocate ( rdrg_isf )
+      IF (allocated(rdrg2_isf))       deallocate ( rdrg2_isf )
+      IF (allocated(ZoSr_isf))        deallocate ( ZoSr_isf )
 #endif
 !
 #ifdef ICESHEET
-      IF (allocated(n_glen))         deallocate ( n_glen )
-      IF (allocated(A_glen))         deallocate ( A_glen )
-      IF (allocated(eps_glen_min))   deallocate ( eps_glen_min )
-      IF (allocated(C_basal))        deallocate ( C_basal )
-      IF (allocated(n_basal))        deallocate ( n_basal )
-      IF (allocated(eps_u_min))      deallocate ( eps_u_min )
+      IF (allocated(n_glen))          deallocate ( n_glen )
+      IF (allocated(A_glen))          deallocate ( A_glen )
+      IF (allocated(eps_glen_min))    deallocate ( eps_glen_min )
+      IF (allocated(C_basal))         deallocate ( C_basal )
+      IF (allocated(n_basal))         deallocate ( n_basal )
+      IF (allocated(eps_u_min))       deallocate ( eps_u_min )
 # ifdef ICESHEET_COULOMB
-      IF (allocated(f_coulomb))      deallocate ( f_coulomb )
+      IF (allocated(f_coulomb))       deallocate ( f_coulomb )
 # endif
-      IF (allocated(nl_max_iter))    deallocate ( nl_max_iter )
-      IF (allocated(nl_tol))         deallocate ( nl_tol )
-      IF (allocated(cg_max_iter))    deallocate ( cg_max_iter )
-      IF (allocated(cg_tol))         deallocate ( cg_tol )
-      IF (allocated(nuH_reg))        deallocate ( nuH_reg )
-      IF (allocated(min_thickness))  deallocate ( min_thickness )
-      IF (allocated(ssa_max_speed))  deallocate ( ssa_max_speed )
-      IF (allocated(n_smooth))       deallocate ( n_smooth )
-      IF (allocated(n_taper))        deallocate ( n_taper )
-      IF (allocated(picard_alpha))   deallocate ( picard_alpha )
-      IF (allocated(H_calve))        deallocate ( H_calve )
-      IF (allocated(N_ssa))          deallocate ( N_ssa )
-      IF (allocated(N_gl))           deallocate ( N_gl )
-      IF (allocated(smb_rate))       deallocate ( smb_rate )
+      IF (allocated(nl_max_iter))     deallocate ( nl_max_iter )
+      IF (allocated(nl_tol))          deallocate ( nl_tol )
+      IF (allocated(cg_max_iter))     deallocate ( cg_max_iter )
+      IF (allocated(cg_tol))          deallocate ( cg_tol )
+      IF (allocated(nuH_reg))         deallocate ( nuH_reg )
+      IF (allocated(min_thickness))   deallocate ( min_thickness )
+      IF (allocated(ssa_max_speed))   deallocate ( ssa_max_speed )
+      IF (allocated(n_smooth))        deallocate ( n_smooth )
+      IF (allocated(n_taper))         deallocate ( n_taper )
+      IF (allocated(picard_alpha))    deallocate ( picard_alpha )
+      IF (allocated(H_calve))         deallocate ( H_calve )
+      IF (allocated(N_ssa))           deallocate ( N_ssa )
+      IF (allocated(N_gl))            deallocate ( N_gl )
+      IF (allocated(smb_rate))        deallocate ( smb_rate )
       IF (allocated(max_thickness))   deallocate ( max_thickness )
       IF (allocated(gl_float_width))  deallocate ( gl_float_width )
 #endif

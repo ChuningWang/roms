@@ -52,7 +52,7 @@
             IF (A_glen(ng).gt.0.0_r8) THEN
               B_hardness=A_glen(ng)**(-1.0_r8/n_glen(ng))
             ELSE
-              T_star=Fi(i,j,icItis)+273.15_r8+                          &
+              T_star=Fi(i,j,ifItis)+273.15_r8+                          &
      &               8.66E-4_r8*0.5_r8*H_rho
               RT_star=8.314_r8*T_star
               IF (T_star.le.263.15_r8) THEN
@@ -129,7 +129,7 @@
 !
       DO j=JstrT,JendT
         DO i=IstrT,IendT
-          Fi(i,j,icInuh)=nuH_rho(i,j)
-          Fi(i,j,icIbta)=beta_rho(i,j)
+          Fi(i,j,ifInuh)=nuH_rho(i,j)
+          Fi(i,j,ifIbta)=beta_rho(i,j)
         END DO
       END DO

@@ -26,6 +26,9 @@
       USE isf_bc2d_mod,     ONLY : isf_bc2d_tile
       USE isf_pibc_mod,     ONLY : isf_pibc_tile
       USE isf_tibc_mod,     ONLY : isf_tibc_tile
+# ifdef ICESHEET_CALVING
+      USE isf_calving_mod,  ONLY : isf_calving_mask_tile
+# endif
 !
       USE exchange_2d_mod,  ONLY : exchange_r2d_tile, exchange_p2d_tile
 # ifdef DISTRIBUTE
@@ -67,6 +70,9 @@
      &                          GRID(ng) % pumask_ist,                  &
      &                          GRID(ng) % pvmask_ist,                  &
 # endif
+# ifdef ICESHEET_CALVING
+     &                          GRID(ng) % calving_mask,                &
+# endif
      &                          ISF(ng) % Si,                           &
      &                          ISF(ng) % Fi)
 # ifdef PROFILE
@@ -84,6 +90,9 @@
 # ifdef MASKING
      &                                rmask, pumask_ist, pvmask_ist,    &
 # endif
+# ifdef ICESHEET_CALVING
+     &                                calving_mask,                     &
+# endif
      &                                Si, Fi)
 !***********************************************************************
 !
@@ -97,6 +106,9 @@
       real(r8), intent(in) :: rmask(LBi:,LBj:)
       real(r8), intent(in) :: pumask_ist(LBi:,LBj:)
       real(r8), intent(in) :: pvmask_ist(LBi:,LBj:)
+# endif
+# ifdef ICESHEET_CALVING
+      real(r8), intent(in) :: calving_mask(LBi:,LBj:)
 # endif
       real(r8), intent(inout) :: Si(LBi:UBi,LBj:UBj,2,nIsfS)
       real(r8), intent(inout) :: Fi(LBi:UBi,LBj:UBj,nIsfF)
@@ -176,13 +188,40 @@
      &                    LBi, UBi, LBj, UBj,                           &
      &                    Si(:,:,lsold,isIhis),                         &
      &                    Si(:,:,lsold,isIeis),                         &
-     &                    Fi(:,:,icItis))
+     &                    Fi(:,:,ifItis))
 !
       CALL isf_tibc_tile (ng, tile, model,                              &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    Si(:,:,lsnew,isIhis),                         &
      &                    Si(:,:,lsnew,isIeis),                         &
-     &                    Fi(:,:,icItis))
+     &                    Fi(:,:,ifItis))
+!
+# ifdef ICESHEET_CALVING
+!-----------------------------------------------------------------------
+!  Enforce the pre-defined calving mask on both time levels: initial
+!  and boundary data outside the allowed region are removed (ghost
+!  points included).  Skipped for perfect restarts (state already
+!  respects the mask).
+!-----------------------------------------------------------------------
+!
+      IF (.not.PerfectRST(ng)) THEN
+        CALL isf_calving_mask_tile (ng, tile, model,                   &
+     &                              LBi, UBi, LBj, UBj,                &
+     &                              IminS, ImaxS, JminS, JmaxS,        &
+     &                              calving_mask,                      &
+     &                              Si(:,:,lsold,isIhis),              &
+     &                              Si(:,:,lsold,isIeis),              &
+     &                              Fi(:,:,ifItis))
+!
+        CALL isf_calving_mask_tile (ng, tile, model,                   &
+     &                              LBi, UBi, LBj, UBj,                &
+     &                              IminS, ImaxS, JminS, JmaxS,        &
+     &                              calving_mask,                      &
+     &                              Si(:,:,lsnew,isIhis),              &
+     &                              Si(:,:,lsnew,isIeis),              &
+     &                              Fi(:,:,ifItis))
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Exchange halo data in the periodic or distributed-memory case.

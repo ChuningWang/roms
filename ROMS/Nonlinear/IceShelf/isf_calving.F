@@ -4,23 +4,37 @@
 !
 !git $Id$
 !====================================================== Chuning Wang ===
-!  Copyright (c) 2002-2025 The ROMS Group                              !
+!  Copyright (c) 2002-2026 The ROMS Group                              !
 !    Licensed under a MIT/X style license                              !
 !    See License_ROMS.md                                               !
 !=======================================================================
 !                                                                      !
-!  This module implements thickness threshold calving for the ice      !
-!  sheet/shelf model. Ice at the calving front that is thinner than    !
-!  a critical threshold H_calve is removed.                            !
+!  This module implements pre-defined mask calving for the ice         !
+!  sheet/shelf model.  A static mask (GRID%calving_mask, read from     !
+!  the grid NetCDF file) defines the region where ice is allowed       !
+!  to exist.  The ice shelf flows outward normally, but any ice        !
+!  volume advected into a cell with mask = 0 calves immediately:       !
+!  thickness, enthalpy and temperature are set to zero there.          !
+!                                                                      !
+!  Semantics:                                                          !
+!    calving_mask = 0  ->  H = 0, E = 0, T = 0 (ice removed)           !
+!    calving_mask != 0 ->  no action                                   !
+!                                                                      !
+!  The calving front is therefore pinned at the mask boundary.         !
+!  Velocity is NOT touched: the next SSA solve relaxes it to the       !
+!  (vanishing) driving stress.  Cavity geometry (zice, rmask_isf)      !
+!  is NOT touched here: isf_masks recomputes it from the flotation     !
+!  criterion and handles the H = 0 (ice-free) branch afterwards.       !
+!                                                                      !
+!  This is the first-stage deterministic scheme.  Future, more         !
+!  physical parameterizations (stress/strain-rate or ocean-forced      !
+!  calving) can be added as sibling routines selected by CPP flags.    !
+!  The previous thickness-threshold scheme (H_calve) is archived in    !
+!  .agents/attic/isf_calving_threshold.F.                              !
 !                                                                      !
 !  Reference:                                                          !
-!    PISM CalvingAtThickness.cc                                        !
-!    MISOMIP1 protocol: H_calve = 100 m (Asay-Davis et al., 2016)      !
-!                                                                      !
-!  Algorithm:                                                          !
-!    1. Detect ice front cells: H > 0 but at least one neighbor H = 0  !
-!    2. If H < H_calve at ice front, remove ice (set H = 0)            !
-!    3. Update masks and zice accordingly                              !
+!    MISOMIP2 protocol (De Rydt et al., 2024): fixed calving front     !
+!    via pre-defined mask is a standard coupled-experiment setup.      !
 !                                                                      !
 !=======================================================================
 !
@@ -29,18 +43,19 @@
       implicit none
 !
       PRIVATE
-      PUBLIC :: isf_calving
+      PUBLIC :: isf_calving_mask
+      PUBLIC :: isf_calving_mask_tile
 !
       CONTAINS
 !
 !***********************************************************************
-      SUBROUTINE isf_calving (ng, tile, model)
+      SUBROUTINE isf_calving_mask (ng, tile, model)
 !***********************************************************************
 !
       USE mod_param
       USE mod_grid
       USE mod_stepping, ONLY : lsnew
-      USE mod_isf, ONLY : ISF
+      USE mod_isf,      ONLY : ISF, isIhis, isIeis, ifItis
 !
 !  Imported variable declarations.
 !
@@ -56,142 +71,112 @@
 # ifdef PROFILE
       CALL wclock_on (ng, model, 44, __LINE__, MyFile)
 # endif
-      CALL isf_calving_tile (ng, tile, model,                           &
-     &                       LBi, UBi, LBj, UBj,                        &
-     &                       IminS, ImaxS, JminS, JmaxS,                &
-     &                       GRID(ng) % pm,                             &
-     &                       GRID(ng) % pn,                             &
-     &                       GRID(ng) % h,                              &
-     &                       GRID(ng) % zice,                           &
-     &                       GRID(ng) % rmask_isf,                      &
-     &                       ISF(ng) % Si(:,:,lsnew(ng),1))
+      CALL isf_calving_mask_tile (ng, tile, model,                      &
+     &                           LBi, UBi, LBj, UBj,                    &
+     &                           IminS, ImaxS, JminS, JmaxS,            &
+     &                           GRID(ng) % calving_mask,               &
+     &                           ISF(ng) % Si(:,:,lsnew(ng),isIhis),    &
+     &                           ISF(ng) % Si(:,:,lsnew(ng),isIeis),    &
+     &                           ISF(ng) % Fi(:,:,ifItis))
 # ifdef PROFILE
       CALL wclock_off (ng, model, 44, __LINE__, MyFile)
 # endif
 !
       RETURN
-      END SUBROUTINE isf_calving
+      END SUBROUTINE isf_calving_mask
 !
 !***********************************************************************
-      SUBROUTINE isf_calving_tile (ng, tile, model,                     &
-     &                             LBi, UBi, LBj, UBj,                  &
-     &                             IminS, ImaxS, JminS, JmaxS,          &
-     &                             pm, pn, h, zice, rmask_isf, H_ice)
+      SUBROUTINE isf_calving_mask_tile (ng, tile, model,                &
+     &                                 LBi, UBi, LBj, UBj,              &
+     &                                 IminS, ImaxS, JminS, JmaxS,      &
+     &                                 calving_mask,                    &
+     &                                 h_ice, e_ice, t_ice)
 !***********************************************************************
+!
+!  Applies the pre-defined calving mask to the current time level
+!  (lsnew) of the ice state.  Called from iceshelf.F after thickness
+!  advection, every SSA coupling cycle:
+!
+!    calving_mask = 0  ->  h_ice = 0, e_ice = 0, t_ice = 0
+!    calving_mask != 0 ->  no action
+!
+!  Zeroing enthalpy and temperature together with thickness keeps the
+!  E = H*T state consistent (a stale E would pollute T = E/H when ice
+!  re-advects into the cell).
+!
+!  Imported variable declarations.
 !
       USE mod_param
       USE mod_scalars
-      USE mod_isf, ONLY : H_calve
 !
       USE exchange_2d_mod
 # ifdef DISTRIBUTE
       USE mp_exchange_mod, ONLY : mp_exchange2d
 # endif
 !
-!  Imported variable declarations.
-!
       integer, intent(in) :: ng, tile, model
       integer, intent(in) :: LBi, UBi, LBj, UBj
       integer, intent(in) :: IminS, ImaxS, JminS, JmaxS
 !
 # ifdef ASSUMED_SHAPE
-      real(r8), intent(in) :: pm(LBi:,LBj:)
-      real(r8), intent(in) :: pn(LBi:,LBj:)
-      real(r8), intent(in) :: h(LBi:,LBj:)
-      real(r8), intent(inout) :: zice(LBi:,LBj:)
-      real(r8), intent(inout) :: rmask_isf(LBi:,LBj:)
-      real(r8), intent(inout) :: H_ice(LBi:,LBj:)
+      real(r8), intent(in) :: calving_mask(LBi:,LBj:)
+      real(r8), intent(inout) :: h_ice(LBi:,LBj:)
+      real(r8), intent(inout) :: e_ice(LBi:,LBj:)
+      real(r8), intent(inout) :: t_ice(LBi:,LBj:)
 # else
-      real(r8), intent(in) :: pm(LBi:UBi,LBj:UBj)
-      real(r8), intent(in) :: pn(LBi:UBi,LBj:UBj)
-      real(r8), intent(in) :: h(LBi:UBi,LBj:UBj)
-      real(r8), intent(inout) :: zice(LBi:UBi,LBj:UBj)
-      real(r8), intent(inout) :: rmask_isf(LBi:UBi,LBj:UBj)
-      real(r8), intent(inout) :: H_ice(LBi:UBi,LBj:UBj)
+      real(r8), intent(in) :: calving_mask(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: h_ice(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: e_ice(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: t_ice(LBi:UBi,LBj:UBj)
 # endif
 !
 !  Local variable declarations.
 !
       integer :: i, j
-      logical :: is_front
 !
 # include "set_bounds.h"
 !
 !-----------------------------------------------------------------------
-!  Thickness threshold calving.
+!  Remove ice where the pre-defined calving mask forbids it.
 !-----------------------------------------------------------------------
 !
-!  Remove ice at the calving front that is thinner than H_calve.
-!  Ice front detection: H > 0 but at least one neighbor has H = 0.
-!
-!  First, exchange halo for H_ice so neighbor checks work correctly.
-!
-      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          H_ice)
-      END IF
-# ifdef DISTRIBUTE
-      CALL mp_exchange2d (ng, tile, model, 1,                           &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    NghostPoints,                                 &
-     &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    H_ice)
-# endif
+!  The loop covers IstrT:IendT, JstrT:JendT (interior + ghost points)
+!  so boundary ghost cells are masked as well; halo exchange below
+!  restores inter-tile consistency.  The 0.5 tolerance accepts integer
+!  or scaled 0/1 input read from the grid file.
 !
       DO j=JstrT,JendT
         DO i=IstrT,IendT
-          IF (H_ice(i,j).gt.0.0_r8) THEN
-!  Check if this is an ice front cell (has at least one ice-free neighbor).
-            is_front=.FALSE.
-            IF (H_ice(i-1,j).le.0.0_r8) is_front=.TRUE.
-            IF (H_ice(i+1,j).le.0.0_r8) is_front=.TRUE.
-            IF (H_ice(i,j-1).le.0.0_r8) is_front=.TRUE.
-            IF (H_ice(i,j+1).le.0.0_r8) is_front=.TRUE.
-!
-!  Apply calving if at front and thickness below threshold.
-!  Only remove ice thickness here.  The mask and zice update is
-!  handled by isf_masks (requires WET_DRY) to ensure a consistent
-!  transition of the ocean vertical coordinate system.
-!
-            IF (is_front.and.H_ice(i,j).lt.H_calve(ng)) THEN
-              H_ice(i,j)=0.0_r8
-!
-!  Update masks and zice so the ocean (set_depth.F, isf_vbc.F) stops
-!  seeing a phantom cavity where ice has calved away.  No WET_DRY guard:
-!  under ICESHEET_SSA the masks are recomputed from the flotation
-!  criterion anyway (isf_masks), and without it this keeps the ocean
-!  geometry consistent with the dynamic ice sheet.
-!
-              rmask_isf(i,j)=0.0_r8
-              zice(i,j)=-h(i,j)
-            END IF
+          IF (calving_mask(i,j).lt.0.5_r8) THEN
+            h_ice(i,j)=0.0_r8
+            e_ice(i,j)=0.0_r8
+            t_ice(i,j)=0.0_r8
           END IF
         END DO
       END DO
 !
-!  Exchange halo for modified fields.
+!  Exchange boundary data.
 !
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
-     &                          H_ice)
+     &                          h_ice)
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
-     &                          rmask_isf)
+     &                          e_ice)
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
-     &                          zice)
+     &                          t_ice)
       END IF
 # ifdef DISTRIBUTE
       CALL mp_exchange2d (ng, tile, model, 3,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    H_ice, rmask_isf, zice)
+     &                    h_ice, e_ice, t_ice)
 # endif
 !
       RETURN
-      END SUBROUTINE isf_calving_tile
+      END SUBROUTINE isf_calving_mask_tile
 #endif
       END MODULE isf_calving_mod

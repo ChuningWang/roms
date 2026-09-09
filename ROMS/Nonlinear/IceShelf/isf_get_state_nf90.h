@@ -140,10 +140,10 @@
      &                        GRID(ng) % rmask,                         &
 #    endif
 #    ifdef CHECKSUM
-     &                        ISF(ng) % Fi(:,:,icItis),                 &
+     &                        ISF(ng) % Fi(:,:,ifItis),                 &
      &                        checksum = Fhash)
 #    else
-     &                        ISF(ng) % Fi(:,:,icItis))
+     &                        ISF(ng) % Fi(:,:,ifItis))
 #    endif
 !
             IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
@@ -172,12 +172,12 @@
                 DO i=1,2
                   ISF(ng) % Si(:,:,i,isIeis) =                         &
      &                ISF(ng) % Si(:,:,i,isIhis) *                     &
-     &                ISF(ng) % Fi(:,:,icItis)
+     &                ISF(ng) % Fi(:,:,ifItis)
                 END DO
               ELSE
                 ISF(ng) % Si(:,:,Tindex,isIeis) =                       &
      &              ISF(ng) % Si(:,:,Tindex,isIhis) *                   &
-     &              ISF(ng) % Fi(:,:,icItis)
+     &              ISF(ng) % Fi(:,:,ifItis)
               END IF
             END IF
           ELSE
@@ -198,7 +198,7 @@
 !
         DO i=1,nIsfF
 #   ifdef ICESHEET
-          IF (iFisf(i).gt.0 .and. i.ne.icItis) THEN
+          IF (iFisf(i).gt.0 .and. i.ne.ifItis) THEN
 #   else
           IF (iFisf(i).gt.0) THEN
 #   endif

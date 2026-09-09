@@ -190,8 +190,8 @@
         END DO
       END DO
 !
-!  NOTE: Q1 shape functions (DPhi, phi_val, Xquad, jacq) are precomputed
-!  in isf_mom.F before this include file.
+!  NOTE: Q1 shape functions (DPhi, phi_val) and the Gauss weights
+!  (jacq) are compile-time parameters declared in isf_mom.F.
 !
 !  Extended cell-assembly bounds: PSI tile ranges do NOT overlap
 !  (get_bounds.F: IstrP=my_Istr everywhere; IendP=my_Iend except on
@@ -204,10 +204,10 @@
 !  seam nodes miss the contributions from the neighbour's cells and
 !  the MPI solution departs from the single-tile solution.
 !
-      iCstr=Istr
-      iCend=Iend
-      jCstr=Jstr
-      jCend=Jend
+      IstrC=Istr
+      IendC=Iend
+      JstrC=Jstr
+      JendC=Jend
 !
 !=======================================================================
 !  Picard iteration loop.
@@ -226,7 +226,7 @@
 #   include <isf_viscosity.h>
 !
 !  Exchange nuH/beta halos: the assembly loops below integrate one
-!  ring of halo cells beyond Istr..Iend (see iCstr..iCend), and need
+!  ring of halo cells beyond Istr..Iend (see IstrC..IendC), and need
 !  the viscosity/basal drag of those cells as computed on the
 !  neighbouring tile.  Halo cells outside the physical ice cover keep
 !  nuH=beta=0 from the initialization above and contribute nothing.
@@ -252,8 +252,8 @@
           END DO
         END DO
 !
-        DO j=jCstr,jCend
-          DO i=iCstr,iCend
+        DO j=JstrC,JendC
+          DO i=IstrC,IendC
             IF (nuH_rho(i,j).gt.0.0_r8) THEN
               dx_rho=1.0_r8/pm(i,j)
               dy_rho=1.0_r8/pn(i,j)
@@ -332,8 +332,8 @@
           END DO
         END DO
 !
-        DO j=jCstr,jCend
-          DO i=iCstr,iCend
+        DO j=JstrC,JendC
+          DO i=IstrC,IendC
             IF (nuH_rho(i,j).gt.0.0_r8) THEN
               dx_rho=1.0_r8/pm(i,j)
               dy_rho=1.0_r8/pn(i,j)
@@ -517,8 +517,8 @@
             END DO
           END DO
 !
-          DO j=jCstr,jCend
-            DO i=iCstr,iCend
+          DO j=JstrC,JendC
+            DO i=IstrC,IendC
               IF (nuH_rho(i,j).gt.0.0_r8) THEN
                 dx_rho=1.0_r8/pm(i,j)
                 dy_rho=1.0_r8/pn(i,j)

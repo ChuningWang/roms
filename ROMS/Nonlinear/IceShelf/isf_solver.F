@@ -24,7 +24,7 @@
 !  Jacobi (diagonal) preconditioner.                                   !
 !                                                                      !
 !  The basal drag coefficient beta is an INPUT:  it is taken from      !
-!  Fi(:,:,icIbta), computed by isf_stress from the ocean state         !
+!  Fi(:,:,ifIbta), computed by isf_stress from the ocean state         !
 !  averaged over the SSA coupling window (Weertman or regularized      !
 !  Coulomb sliding law).  Freezing beta at the coupling-window value   !
 !  is the intended frozen-coefficient (Picard) linearization of the    !
@@ -32,25 +32,29 @@
 !                                                                      !
 !  Input contract (caller must fill before calling isf_ssa):           !
 !                                                                      !
-!    Si(:,:,ksa_old,isIhis)        ice thickness [m], halo exchanged   !
-!    Si(:,:,ksa_old,isIuis/isIvis) velocity initial guess [m s-1]      !
-!    Fi(:,:,icItis)                ice temperature [degC]              !
-!    Fi(:,:,icIzsf)                ice surface elevation [m]           !
-!    Fi(:,:,icIbta)                basal drag coefficient (isf_stress) !
+!    Si(:,:,lsold,isIhis)          ice thickness [m], halo exchanged   !
+!    Si(:,:,lsold,isIuis/isIvis)   velocity initial guess [m s-1]      !
+!    Fi(:,:,ifItis)                ice temperature [degC]              !
+!    Fi(:,:,ifIzsf)                ice surface elevation [m]           !
+!    Fi(:,:,ifIbta)                basal drag coefficient (isf_stress) !
 !                                                                      !
 !  Output:                                                             !
 !                                                                      !
-!    Si(:,:,ksa_new,isIuis/isIvis) solved SSA velocity [m s-1],        !
+!    Si(:,:,lsnew,isIuis/isIvis)   solved SSA velocity [m s-1],        !
 !                                  halo exchanged                      !
-!    Fi(:,:,icInuh)                depth-integrated viscosity          !
-!    Fi(:,:,icItdx/icItdy)         driving stress diagnostics          !
+!    Fi(:,:,ifInuh)                depth-integrated viscosity          !
+!    Fi(:,:,ifItdx/ifItdy)         driving stress diagnostics          !
 !                                                                      !
-!  Lateral boundaries are LBC-aware:  closed edges impose zero         !
-!  velocity, clamped edges fix the velocity to ISF_LOBC data,          !
-!  gradient edges are free.  Dirichlet enforcement acts on the         !
-!  normal component of each edge (u on west, v on south/north);        !
-!  the eastern (calving front) edge is always left free.  The          !
-!  ice-front pressure boundary term is future work.                    !
+!  Lateral boundaries are fully LBC-configurable per edge and per      !
+!  velocity component (Cla / Clo / Gra, same flags as the ice state    !
+!  LBC):  closed edges impose zero velocity, clamped edges fix the     !
+!  velocity to ISF_LOBC data, gradient edges are free.  Dirichlet      !
+!  enforcement (isf_pibc_tile for values, ssa_lbc_zero for the CG      !
+!  residual/search directions) acts on every edge/component flagged    !
+!  closed or clamped -- which edges carry which condition is an        !
+!  application choice (e.g. MISOMIP uses a clamped western inflow      !
+!  and a free eastern calving front, but other setups may differ).     !
+!  The ice-front pressure boundary term is future work.                !
 !                                                                      !
 !  MPI notes:  PSI tile ranges do not overlap (get_bounds.F:           !
 !  IstrP=my_Istr everywhere, IendP=my_Iend except on the eastern       !
@@ -58,7 +62,7 @@
 !  while the RHO cells feeding its FE stencil lie on both sides of     !
 !  the seam.  The element assembly therefore integrates one extra      !
 !  ring of halo cells along the western/southern tile seams (bounds    !
-!  iCstr/jCstr below; the legacy isf_cg_solve.h documents this         !
+!  IstrC/JstrC below; the legacy isf_cg_solve.h documents this         !
 !  strategy but assembles Istr..Iend only, leaving seam node rows      !
 !  incomplete under multi-tile MPI) and scatters only to owned PSI     !
 !  nodes (ownership filter at every scatter).  mp_exchange2d fills     !
@@ -72,7 +76,7 @@
 !                                                                      !
 !  References:                                                         !
 !                                                                      !
-!    MacAyeal (1989), J. Geophys. Res. 94, 4071-4087.         (SSA)    !
+!    MacAyeal (1989), J. Geophys. Res. 94, 4071-4087.                  !
 !    Goldberg (2011), J. Comput. Phys. 230, 6513-6525.                 !
 !    Bueler & Brown (2009), J. Glaciol. 55, 2511-2529.                 !
 !      (Paterson temperature-dependent Glen rate factor)               !
@@ -83,26 +87,31 @@
 !                                                                      !
 !=======================================================================
 !
-      USE mod_kinds
+      USE mod_grid
+      USE mod_iounits
+      USE mod_isf
+      USE mod_parallel
+      USE mod_param
+      USE mod_scalars
+      USE mod_stepping
+      USE isf_pibc_mod,    ONLY : isf_pibc_tile
+!
+      USE exchange_2d_mod, ONLY : exchange_p2d_tile, exchange_r2d_tile
+# ifdef DISTRIBUTE
+      USE mp_exchange_mod, ONLY : mp_exchange2d
+      USE distribute_mod,  ONLY : mp_reduce
+# endif
 !
       implicit none
 !
-      PRIVATE
       PUBLIC  :: isf_ssa
+      PRIVATE
 !
       CONTAINS
 !
 !***********************************************************************
       SUBROUTINE isf_ssa (ng, tile, model)
 !***********************************************************************
-!
-!  Outer interface of the SSA solver.  Sets tile bounds and calls
-!  the tile computational routine.
-!
-      USE mod_param
-      USE mod_grid
-      USE mod_stepping
-      USE mod_isf, ONLY : ISF
 !
       implicit none
 !
@@ -126,6 +135,8 @@
      &                   lsold(ng), lsnew(ng),                          &
      &                   GRID(ng) % pm,                                 &
      &                   GRID(ng) % pn,                                 &
+     &                   GRID(ng) % rmask_ist,                          &
+     &                   GRID(ng) % pmask_ist,                          &
      &                   ISF(ng) % Si,                                  &
      &                   ISF(ng) % Fi)
 # ifdef PROFILE
@@ -139,46 +150,38 @@
       SUBROUTINE isf_ssa_tile (ng, tile, model,                         &
      &                         LBi, UBi, LBj, UBj,                      &
      &                         IminS, ImaxS, JminS, JmaxS,              &
-     &                         ksa_old, ksa_new,                        &
+     &                         lsold, lsnew,                            &
      &                         pm, pn,                                  &
+     &                         rmask_ist, pmask_ist,                    &
      &                         Si, Fi)
 !***********************************************************************
 !
-!  Tile-level SSA solve.  Orchestrates:  active-node mask, initial
+!  Tile-level SSA solver.  Orchestrates:  active-node mask, initial
 !  guess (copy + basal-drag warm start), driving stress RHS, and the
-!  Picard/PCG iteration.  All kernels (viscosity, matrix action,
-!  Jacobi diagonal, driving stress, LBC enforcement) live in the
-!  private subroutines below;  this routine owns halo exchanges,
-!  global reductions and convergence control.
-!
-      USE mod_kinds
-      USE mod_param
-      USE mod_scalars
-      USE mod_parallel
-      USE mod_iounits
-      USE mod_isf
-!
-      USE exchange_2d_mod, ONLY : exchange_p2d_tile, exchange_r2d_tile
-# ifdef DISTRIBUTE
-      USE distribute_mod, ONLY : mp_reduce
-# endif
-      USE mp_exchange_mod, ONLY : mp_exchange2d
+!  Picard/PCG iteration.  All kernels (viscosity, matrix action, Jacobi
+!  diagonal, driving stress, LBC enforcement) live in the private
+!  subroutines below;  this routine owns halo exchanges, global
+!  reductions and convergence control.
 !
 !  Imported variable declarations.
 !
       integer, intent(in) :: ng, tile, model
       integer, intent(in) :: LBi, UBi, LBj, UBj
       integer, intent(in) :: IminS, ImaxS, JminS, JmaxS
-      integer, intent(in) :: ksa_old, ksa_new
+      integer, intent(in) :: lsold, lsnew
 !
 # ifdef ASSUMED_SHAPE
       real(r8), intent(in)    :: pm(LBi:,LBj:)
       real(r8), intent(in)    :: pn(LBi:,LBj:)
+      real(r8), intent(in)    :: pmask_ist(LBi:,LBj:)
+      real(r8), intent(in)    :: rmask_ist(LBi:,LBj:)
       real(r8), intent(inout) :: Si(LBi:,LBj:,:,:)
       real(r8), intent(inout) :: Fi(LBi:,LBj:,:)
 # else
       real(r8), intent(in)    :: pm(LBi:UBi,LBj:UBj)
       real(r8), intent(in)    :: pn(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)    :: pmask_ist(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)    :: rmask_ist(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: Si(LBi:UBi,LBj:UBj,2,nIsfS)
       real(r8), intent(inout) :: Fi(LBi:UBi,LBj:UBj,nIsfF)
 # endif
@@ -187,20 +190,22 @@
 !
       integer :: i, j, cg_iter, nl_iter
 !
-!  LBC-aware lateral boundary flags:  *_fix marks a Dirichlet
-!  constrained edge (closed or clamped);  *_clamp marks an edge with
-!  a prescribed boundary value from ISF_LOBC (clamped).  Gradient
-!  edges are free.  See ssa_lbc_velocity / ssa_lbc_zero.
-!
-      logical :: Lu_west_fix, Lu_west_clamp
-      logical :: Lv_south_fix, Lv_south_clamp
-      logical :: Lv_north_fix, Lv_north_clamp
       logical :: converged
 !
-      real(r8) :: cff, u_slide, beta_avg, jac_avg
-# ifdef ISF_DEBUG
-      real(r8) :: cff1
-# endif
+      real(r8) :: cff, cff1, u_slide, beta_avg, jac_avg
+!
+!  Glen hardness field B = A^(-1/n) at RHO points, computed once
+!  per solve by ssa_hardness (Stage 4):  it depends only on the ice
+!  temperature and the lsold thickness, both frozen during the
+!  Picard iteration, so the Paterson exponentials are not
+!  re-evaluated by every ssa_viscosity call.
+!
+      real(r8), dimension(LBi:UBi,LBj:UBj) :: B_hard
+!
+!  Global-reduction buffer (batched mp_reduce).
+!
+      real(r8), dimension(4) :: norms
+      character (len=3), dimension(4) :: op_norms
 !
 !  CG scalar variables.
 !
@@ -212,347 +217,192 @@
 !
 !  FE shape function tables (Q1 bilinear, 2x2 Gauss quadrature).
 !  Node numbering:  1=(i,j), 2=(i+1,j), 3=(i,j+1), 4=(i+1,j+1).
-!  Reference element [0,1]x[0,1];  physical derivatives carry the
-!  metric factor 2/dx (2/dy) and jac = dx*dy = 1/(pm*pn).
+!  phi_tab holds the shape function VALUES at the [0,1] Gauss
+!  abscissae gxa/gxb;  DPhi holds the shape function derivatives on
+!  the reference element in a [-1,1]-convention scaling, so the
+!  physical derivative is dphi/dx = DPhi*2/dx (and likewise in y),
+!  as used by the assembly routines below.
 !
-      real(r8), dimension(4,4,2) :: DPhi
-      real(r8), dimension(4,4)   :: phi_tab
-      real(r8), dimension(4)     :: Xquad
       real(r8), parameter :: sqrt3_inv = 1.0_r8/SQRT(3.0_r8)
-      integer :: iq, jq
+      real(r8), parameter :: gxa = 0.5_r8*(1.0_r8-sqrt3_inv)
+      real(r8), parameter :: gxb = 0.5_r8*(1.0_r8+sqrt3_inv)
+      real(r8), parameter :: phi_tab(4,4) = RESHAPE((/                  &
+     &    (1.0_r8-gxa)*(1.0_r8-gxa), gxa*(1.0_r8-gxa),                  &
+     &    (1.0_r8-gxa)*gxa,          gxa*gxa,                           &
+     &    (1.0_r8-gxb)*(1.0_r8-gxa), gxb*(1.0_r8-gxa),                  &
+     &    (1.0_r8-gxb)*gxa,          gxb*gxa,                           &
+     &    (1.0_r8-gxa)*(1.0_r8-gxb), gxa*(1.0_r8-gxb),                  &
+     &    (1.0_r8-gxa)*gxb,          gxa*gxb,                           &
+     &    (1.0_r8-gxb)*(1.0_r8-gxb), gxb*(1.0_r8-gxb),                  &
+     &    (1.0_r8-gxb)*gxb,          gxb*gxb                            &
+     &  /),(/4,4/))
+      real(r8), parameter :: DPhi(4,4,2) = RESHAPE((/                   &
+     &   -0.25_r8*(1.0_r8-gxa)*2.0_r8,  0.25_r8*(1.0_r8-gxa)*2.0_r8,    &
+     &   -0.25_r8*gxa*2.0_r8,           0.25_r8*gxa*2.0_r8,             &
+     &   -0.25_r8*(1.0_r8-gxa)*2.0_r8,  0.25_r8*(1.0_r8-gxa)*2.0_r8,    &
+     &   -0.25_r8*gxa*2.0_r8,           0.25_r8*gxa*2.0_r8,             &
+     &   -0.25_r8*(1.0_r8-gxb)*2.0_r8,  0.25_r8*(1.0_r8-gxb)*2.0_r8,    &
+     &   -0.25_r8*gxb*2.0_r8,           0.25_r8*gxb*2.0_r8,             &
+     &   -0.25_r8*(1.0_r8-gxb)*2.0_r8,  0.25_r8*(1.0_r8-gxb)*2.0_r8,    &
+     &   -0.25_r8*gxb*2.0_r8,           0.25_r8*gxb*2.0_r8,             &
+     &   -0.25_r8*(1.0_r8-gxa)*2.0_r8, -0.25_r8*gxa*2.0_r8,             &
+     &    0.25_r8*(1.0_r8-gxa)*2.0_r8,  0.25_r8*gxa*2.0_r8,             &
+     &   -0.25_r8*(1.0_r8-gxb)*2.0_r8, -0.25_r8*gxb*2.0_r8,             &
+     &    0.25_r8*(1.0_r8-gxb)*2.0_r8,  0.25_r8*gxb*2.0_r8,             &
+     &   -0.25_r8*(1.0_r8-gxa)*2.0_r8, -0.25_r8*gxa*2.0_r8,             &
+     &    0.25_r8*(1.0_r8-gxa)*2.0_r8,  0.25_r8*gxa*2.0_r8,             &
+     &   -0.25_r8*(1.0_r8-gxb)*2.0_r8, -0.25_r8*gxb*2.0_r8,             &
+     &    0.25_r8*(1.0_r8-gxb)*2.0_r8,  0.25_r8*gxb*2.0_r8              &
+     &  /),(/4,4,2/))
 !
-!  SSA solver fields.  Arrays passed to exchange / mp_exchange are
-!  declared on the GLOBAL bounds (LBi:UBi, LBj:UBj).  NOTE: Ru/Rv
-!  (and Zu/Zv) are also declared on the global bounds, matching the
-!  explicit-shape dummy declarations of ssa_lbc_zero:  the tile
-!  scratch bounds (IminS:ImaxS, JminS:JmaxS) differ from LBi:UBi by
-!  the ghost margin, and sequence association of an explicit-shape
-!  dummy with a narrower-width actual would map the fixed-node
-!  zeroing onto the wrong elements.
-!
-      real(r8), dimension(LBi:UBi,LBj:UBj) :: pmask_ssa
-      real(r8), dimension(LBi:UBi,LBj:UBj) :: taudx_psi
-      real(r8), dimension(LBi:UBi,LBj:UBj) :: taudy_psi
-      real(r8), dimension(LBi:UBi,LBj:UBj) :: nuH_rho
-      real(r8), dimension(LBi:UBi,LBj:UBj) :: beta_rho
+!  SSA solver fields.  All work arrays below are declared on the GLOBAL
+!  bounds (LBi:UBi, LBj:UBj) because they are passed to mp_exchange2d /
+!  exchange_p2d_tile, which index them on those bounds (the tile scratch
+!  bounds IminS:ImaxS, JminS:JmaxS are wider by the ghost margin).
 !
       real(r8), dimension(LBi:UBi,LBj:UBj) :: Ru, Rv
       real(r8), dimension(LBi:UBi,LBj:UBj) :: Zu, Zv
       real(r8), dimension(LBi:UBi,LBj:UBj) :: Du, Dv
       real(r8), dimension(LBi:UBi,LBj:UBj) :: Au, Av
       real(r8), dimension(LBi:UBi,LBj:UBj) :: diag_u, diag_v
-      real(r8), dimension(LBi:UBi,LBj:UBj) :: u_scr, v_scr
 !
-!  Extended cell-assembly bounds (see module header):  own RHO cells
-!  Istr..Iend plus the western/southern halo ring that feeds the
-!  seam PSI nodes owned by this tile.  The ring is skipped along
-!  physical (non-periodic) domain edges where the halo cells do not
-!  exist.
+!  Extended cell-assembly bounds (see module header):  own RHO
+!  cells Istr..Iend plus the western/southern halo ring that feeds
+!  the seam PSI nodes owned by this tile.  The ring is skipped
+!  along physical (non-periodic) domain edges, where the halo
+!  cells beyond the boundary do not exist.
 !
-      integer :: iCstr, iCend, jCstr, jCend
+      integer :: IstrC, IendC, JstrC, JendC
 !
 # ifdef DISTRIBUTE
       character (len=3) :: op_handle
 # endif
 !
-      character (len=*), parameter :: MyFile =                          &
-     &  __FILE__//", isf_ssa_tile"
-!
 # include "set_bounds.h"
-!
-      SourceFile=MyFile
-!
-!=======================================================================
-!  Stage 1:  SSA active-node mask (PSI points).
-!=======================================================================
-!
-!  Exchange the thickness halo first:  the mask stencil reads the 4
-!  RHO cells surrounding each PSI node, including halo cells at MPI
-!  tile seams (idempotent if the caller already exchanged it).
-!
-      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-        CALL exchange_r2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Si(:,:,ksa_old,isIhis))
-      END IF
-# ifdef DISTRIBUTE
-      CALL mp_exchange2d (ng, tile, model, 1,                           &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    NghostPoints,                                 &
-     &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    Si(:,:,ksa_old,isIhis))
-# endif
-!
-!  A PSI node is active if any of its 4 surrounding RHO cells has
-!  ice (H > 0).  Margin nodes whose minimum surrounding H is below
-!  min_thickness are deactivated:  their stress balance is poorly
-!  defined, and setting pmask_ssa=0 BEFORE the Picard solve makes
-!  them Dirichlet (u=v=0) throughout the iteration so that the
-!  solved problem is consistent with the returned solution.
-!
-      DO j=LBj,UBj
-        DO i=LBi,UBi
-          pmask_ssa(i,j)=0.0_r8
-        END DO
-      END DO
-!
-      DO j=JstrP,JendP
-        DO i=IstrP,IendP
-          IF (Si(i,j,ksa_old,isIhis).gt.0.0_r8 .or.                     &
-     &        Si(i-1,j,ksa_old,isIhis).gt.0.0_r8 .or.                   &
-     &        Si(i,j-1,ksa_old,isIhis).gt.0.0_r8 .or.                   &
-     &        Si(i-1,j-1,ksa_old,isIhis).gt.0.0_r8) THEN
-            pmask_ssa(i,j)=1.0_r8
-          END IF
-        END DO
-      END DO
-!
-      DO j=JstrP,JendP
-        DO i=IstrP,IendP
-          IF (pmask_ssa(i,j).eq.1.0_r8) THEN
-            IF (MIN(Si(i,j,ksa_old,isIhis),                             &
-     &              Si(i-1,j,ksa_old,isIhis),                           &
-     &              Si(i,j-1,ksa_old,isIhis),                           &
-     &              Si(i-1,j-1,ksa_old,isIhis)).lt.                     &
-     &            min_thickness(ng)) THEN
-              pmask_ssa(i,j)=0.0_r8
-            END IF
-          END IF
-        END DO
-      END DO
-!
-!  Exchange the mask halo:  the element assembly below tests
-!  pmask_ssa at every scatter target, and the CG boundary treatment
-!  requires consistent values at tile seams.
-!
-      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-        CALL exchange_p2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj, pmask_ssa)
-      END IF
-# ifdef DISTRIBUTE
-      CALL mp_exchange2d (ng, tile, model, 1,                           &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    NghostPoints,                                 &
-     &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    pmask_ssa)
-# endif
-!
-!=======================================================================
-!  Stage 2:  LBC-aware Dirichlet flags.
-!=======================================================================
-!
-!  Mixed is not a supported ice-sheet boundary type (Cla/Clo/Gra
-!  only).  The eastern (calving front) edge is always free.
-!
-      Lu_west_fix   = LBC(iwest ,ibISF(isIuis),ng)%closed .or.          &
-     &                LBC(iwest ,ibISF(isIuis),ng)%clamped
-      Lu_west_clamp = LBC(iwest ,ibISF(isIuis),ng)%clamped
-      Lv_south_fix  = LBC(isouth,ibISF(isIvis),ng)%closed .or.          &
-     &                LBC(isouth,ibISF(isIvis),ng)%clamped
-      Lv_south_clamp= LBC(isouth,ibISF(isIvis),ng)%clamped
-      Lv_north_fix  = LBC(inorth,ibISF(isIvis),ng)%closed .or.          &
-     &                LBC(inorth,ibISF(isIvis),ng)%clamped
-      Lv_north_clamp= LBC(inorth,ibISF(isIvis),ng)%clamped
-!
-!=======================================================================
-!  Stage 3:  basal drag coefficient (input from isf_stress).
-!=======================================================================
-!
-!  Copy beta from Fi(:,:,icIbta) into the local work array and
-!  exchange its halo:  the element assembly and the warm start read
-!  beta at the RHO cells surrounding PSI nodes, including halo ring
-!  cells.  The zero-initialization also protects halo corner cells
-!  that the exchanges may not fill.
-!
-      DO j=LBj,UBj
-        DO i=LBi,UBi
-          beta_rho(i,j)=0.0_r8
-          nuH_rho(i,j)=0.0_r8
-        END DO
-      END DO
-!
-      DO j=Jstr,Jend
-        DO i=Istr,Iend
-          beta_rho(i,j)=Fi(i,j,icIbta)
-        END DO
-      END DO
-!
-      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-        CALL exchange_p2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj, beta_rho)
-      END IF
-# ifdef DISTRIBUTE
-      CALL mp_exchange2d (ng, tile, model, 1,                           &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    NghostPoints,                                 &
-     &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    beta_rho)
-# endif
-!
-!=======================================================================
-!  Stage 4:  Q1 shape function tables at the 2x2 Gauss points.
-!=======================================================================
-!
-      Xquad(1)=0.5_r8*(1.0_r8-sqrt3_inv)
-      Xquad(2)=0.5_r8*(1.0_r8+sqrt3_inv)
-!
-      DO jq=1,2
-        DO iq=1,2
-!
-!  Node 1:  (xi=0, eta=0)
-!
-          DPhi(1,2*(jq-1)+iq,1)=-0.5_r8*(1.0_r8-Xquad(jq))
-          DPhi(1,2*(jq-1)+iq,2)=-0.5_r8*(1.0_r8-Xquad(iq))
-          phi_tab(1,2*(jq-1)+iq)=(1.0_r8-Xquad(iq))*(1.0_r8-Xquad(jq))
-!
-!  Node 2:  (xi=1, eta=0)
-!
-          DPhi(2,2*(jq-1)+iq,1)= 0.5_r8*(1.0_r8-Xquad(jq))
-          DPhi(2,2*(jq-1)+iq,2)=-0.5_r8*Xquad(iq)
-          phi_tab(2,2*(jq-1)+iq)=Xquad(iq)*(1.0_r8-Xquad(jq))
-!
-!  Node 3:  (xi=0, eta=1)
-!
-          DPhi(3,2*(jq-1)+iq,1)=-0.5_r8*Xquad(jq)
-          DPhi(3,2*(jq-1)+iq,2)= 0.5_r8*(1.0_r8-Xquad(iq))
-          phi_tab(3,2*(jq-1)+iq)=(1.0_r8-Xquad(iq))*Xquad(jq)
-!
-!  Node 4:  (xi=1, eta=1)
-!
-          DPhi(4,2*(jq-1)+iq,1)= 0.5_r8*Xquad(jq)
-          DPhi(4,2*(jq-1)+iq,2)= 0.5_r8*Xquad(iq)
-          phi_tab(4,2*(jq-1)+iq)=Xquad(iq)*Xquad(jq)
-        END DO
-      END DO
 !
 !  Extended cell-assembly bounds (see module header).
 !
-      iCstr=Istr
+      IstrC=Istr
       IF (.not.DOMAIN(ng)%Western_Edge(tile).or.EWperiodic(ng)) THEN
-        iCstr=Istr-1
+        IstrC=Istr-1
       END IF
-      jCstr=Jstr
+      JstrC=Jstr
       IF (.not.DOMAIN(ng)%Southern_Edge(tile).or.NSperiodic(ng)) THEN
-        jCstr=Jstr-1
+        JstrC=Jstr-1
       END IF
-      iCend=Iend
-      jCend=Jend
+      IendC=Iend
+      JendC=Jend
 !
 !=======================================================================
-!  Stage 5:  initial velocity guess.
+!  Stage 1:  initial velocity guess.
 !=======================================================================
 !
-!  Copy the previous SSA velocity (ksa_old) as the initial guess,
-!  zero the inactive nodes and enforce the Dirichlet lateral
-!  boundaries.
+!  Copy the previous SSA velocity (lsold) as the initial guess and
+!  zero the inactive nodes;  the Dirichlet lateral boundary values
+!  are enforced later by isf_pibc_tile (after the warm start).
 !
       DO j=JstrP,JendP
         DO i=IstrP,IendP
-          Si(i,j,ksa_new,isIuis)=Si(i,j,ksa_old,isIuis)
-          Si(i,j,ksa_new,isIvis)=Si(i,j,ksa_old,isIvis)
-          IF (pmask_ssa(i,j).eq.0.0_r8) THEN
-            Si(i,j,ksa_new,isIuis)=0.0_r8
-            Si(i,j,ksa_new,isIvis)=0.0_r8
+          IF (pmask_ist(i,j).eq.0.0_r8) THEN
+            Si(i,j,lsnew,isIuis)=0.0_r8
+            Si(i,j,lsnew,isIvis)=0.0_r8
+          ELSE
+            Si(i,j,lsnew,isIuis)=Si(i,j,lsold,isIuis)
+            Si(i,j,lsnew,isIvis)=Si(i,j,lsold,isIvis)
           END IF
         END DO
       END DO
 !
-      CALL ssa_lbc_velocity (ng, ksa_new,                               &
-     &                       LBi, UBi, LBj, UBj,                        &
-     &                       Istr, Jstr, Jend,                          &
-     &                       IstrP, IendP, JstrP, JendP,                &
-     &                       Lu_west_fix, Lu_west_clamp,                &
-     &                       Lv_south_fix, Lv_south_clamp,              &
-     &                       Lv_north_fix, Lv_north_clamp,              &
-     &                       Si)
-!
-!  Exchange the halo of the initial guess AFTER the copy and the
-!  Dirichlet enforcement:  the element assembly reads all 4 PSI
-!  corners of every integrated cell, including halo nodes.
-!
-      CALL ssa_exchange_uv (ng, tile, model,                            &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      IstrP, IendP, JstrP, JendP,                 &
-     &                      ksa_new, Si)
-!
 !=======================================================================
-!  Stage 6:  driving stress RHS (FE-consistent nodal forces).
+!  Stage 2:  driving stress RHS (FE-consistent nodal forces).
 !=======================================================================
 !
       CALL ssa_driving_stress (ng, tile, model,                         &
-     &                        LBi, UBi, LBj, UBj,                       &
-     &                        Istr, Iend, Jstr, Jend,                   &
-     &                        IstrP, IendP, JstrP, JendP,               &
-     &                        ksa_old,                                  &
-     &                        pm, pn, pmask_ssa,                        &
-     &                        Si, Fi,                                   &
-     &                        taudx_psi, taudy_psi)
-!
-      DO j=JstrT,JendT
-        DO i=IstrT,IendT
-          Fi(i,j,icItdx)=taudx_psi(i,j)
-          Fi(i,j,icItdy)=taudy_psi(i,j)
-        END DO
-      END DO
+     &                         LBi, UBi, LBj, UBj,                      &
+     &                         pm, pn,                                  &
+     &                         rmask_ist, pmask_ist,                    &
+     &                         Si(:,:,lsold,isIhis),                    &
+     &                         Fi(:,:,ifIzsf),                          &
+     &                         Fi(:,:,ifItdx),                          &
+     &                         Fi(:,:,ifItdy))
 !
 !=======================================================================
-!  Stage 7:  basal-drag warm start.
+!  Stage 3:  basal-drag warm start.
 !=======================================================================
 !
 !  If the initial velocity is near zero, invert the local basal drag
-!  balance (tau_d = beta * u) to provide a physically reasonable
-!  first guess.  This avoids the Picard "high-viscosity trap"
-!  (zero velocity -> eps_e = eps_glen_min -> huge nuH -> tiny
-!  velocity -> convergence to the wrong fixed point).  Because beta
-!  is the frozen coupling-window coefficient, the inversion is
-!  valid for any sliding exponent and for both the Weertman and
-!  Coulomb laws.  On floating ice (beta = 0) the warm start is
-!  skipped and the previous velocity field is kept.
+!  balance (tau_d = beta * u * A_node) to provide a first guess of
+!  physically reasonable magnitude.  This avoids the Picard
+!  "high-viscosity trap" (zero velocity -> eps_e = eps_glen_min ->
+!  huge nuH -> tiny velocity -> convergence to the wrong fixed
+!  point).  The inversion treats the frozen beta linearly, so for
+!  sliding exponents other than the linear law it is a heuristic
+!  initial estimate, not an exact balance.  On floating ice
+!  (beta = 0) the warm start is skipped and the previous velocity
+!  field is kept.  The node balance beta*A_node*u = b_k uses the
+!  same lumped nodal area A_node = jac_avg as the driving stress.
 !
       DO j=JstrP,JendP
         DO i=IstrP,IendP
-          IF (pmask_ssa(i,j).eq.1.0_r8) THEN
-            u_slide=SQRT(Si(i,j,ksa_new,isIuis)**2+                     &
-     &                   Si(i,j,ksa_new,isIvis)**2)
-            IF (u_slide.lt.1.0E-5_r8) THEN
-              beta_avg=0.25_r8*(beta_rho(i,j)+                          &
-     &                          beta_rho(i-1,j)+                        &
-     &                          beta_rho(i,j-1)+                        &
-     &                          beta_rho(i-1,j-1))
+          IF (pmask_ist(i,j).eq.1.0_r8) THEN
+            u_slide=SQRT(Si(i,j,lsnew,isIuis)**2+                       &
+     &                   Si(i,j,lsnew,isIvis)**2)
+            IF (u_slide.lt.u_warm_min) THEN
+              beta_avg=0.25_r8*(Fi(i  ,j  ,ifIbta)+                     &
+     &                          Fi(i-1,j  ,ifIbta)+                     &
+     &                          Fi(  i,j-1,ifIbta)+                     &
+     &                          Fi(i-1,j-1,ifIbta))
               IF (beta_avg.gt.1.0E-10_r8) THEN
                 jac_avg=0.25_r8*(                                       &
      &            1.0_r8/(pm(i-1,j-1)*pn(i-1,j-1))+                     &
      &            1.0_r8/(pm(i,  j-1)*pn(i,  j-1))+                     &
      &            1.0_r8/(pm(i-1,j  )*pn(i-1,j  ))+                     &
      &            1.0_r8/(pm(i,  j  )*pn(i,  j  )))
-                cff=1.0_r8/(beta_avg*jac_avg*0.25_r8)
-                Si(i,j,ksa_new,isIuis)=taudx_psi(i,j)*cff
-                Si(i,j,ksa_new,isIvis)=taudy_psi(i,j)*cff
+!  Node balance beta_eff * A_node * u = b_k with the same lumped
+!  nodal area A_node = jac_avg as the driving stress assembly.
+!
+                cff=1.0_r8/(beta_avg*jac_avg)
+                Si(i,j,lsnew,isIuis)=Fi(i,j,ifItdx)*cff
+                Si(i,j,lsnew,isIvis)=Fi(i,j,ifItdy)*cff
               END IF
             END IF
           END IF
         END DO
       END DO
 !
-!  Re-enforce the Dirichlet boundaries and refresh the velocity
-!  halo after the warm start (it modifies interior nodes only).
+      CALL isf_pibc_tile (ng, tile, model,                              &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    IminS, ImaxS, JminS, JmaxS,                   &
+     &                    Si(:,:,lsnew,isIuis),                         &
+     &                    Si(:,:,lsnew,isIvis))
 !
-      CALL ssa_lbc_velocity (ng, ksa_new,                               &
-     &                       LBi, UBi, LBj, UBj,                        &
-     &                       Istr, Jstr, Jend,                          &
-     &                       IstrP, IendP, JstrP, JendP,                &
-     &                       Lu_west_fix, Lu_west_clamp,                &
-     &                       Lv_south_fix, Lv_south_clamp,              &
-     &                       Lv_north_fix, Lv_north_clamp,              &
-     &                       Si)
-!
-      CALL ssa_exchange_uv (ng, tile, model,                            &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      IstrP, IendP, JstrP, JendP,                 &
-     &                      ksa_new, Si)
+# ifdef DISTRIBUTE
+      CALL mp_exchange2d (ng, tile, model, 2,                           &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+     &                    Si(:,:,lsnew,isIuis),                         &
+     &                    Si(:,:,lsnew,isIvis))
+# endif
 !
 !=======================================================================
-!  Stage 8:  initialize CG work arrays.
+!  Stage 4:  Glen hardness field (constant during the solve).
+!=======================================================================
+!
+!  B = A^(-1/n) depends only on the ice temperature (frozen at the
+!  coupling-window diagnostic) and the lsold thickness, so it is
+!  computed once per solve;  ssa_viscosity then only combines it
+!  with the current strain-rate invariant (ssa_hardness below).
+!
+      CALL ssa_hardness (ng, tile, model,                               &
+     &                   LBi, UBi, LBj, UBj,                            &
+     &                   Istr, Iend, Jstr, Jend,                        &
+     &                   Si(:,:,lsold,isIhis),                          &
+     &                   Fi(:,:,ifItis),                                &
+     &                   B_hard)
+!
+!=======================================================================
+!  Stage 5:  initialize CG work arrays.
 !=======================================================================
 !
       DO j=LBj,UBj
@@ -561,8 +411,6 @@
           Av(i,j)=0.0_r8
           diag_u(i,j)=0.0_r8
           diag_v(i,j)=0.0_r8
-          u_scr(i,j)=0.0_r8
-          v_scr(i,j)=0.0_r8
           Du(i,j)=0.0_r8
           Dv(i,j)=0.0_r8
           Ru(i,j)=0.0_r8
@@ -573,13 +421,14 @@
       END DO
 !
 !=======================================================================
-!  Stage 9:  Picard iteration.
+!  Stage 6:  Picard iteration.
 !=======================================================================
 !
 !  Each iteration freezes the viscosity at the current velocity,
 !  solves the linearized SSA with matrix-free PCG, applies the
 !  robustness measures (speed cap, relaxation) and checks the dual
-!  convergence criterion.
+!  convergence criterion;  a warning is printed if nl_max_iter is
+!  exhausted without either criterion being met.
 !
       cgtol=cg_tol(ng)
       converged=.FALSE.
@@ -587,87 +436,51 @@
       DO nl_iter=1,nl_max_iter(ng)
 !
 !  Effective viscosity at RHO points from the current velocity
-!  estimate (Glen law + Paterson rate factor + regularization).
+!  estimate (Glen law with the Stage-4 cached hardness field,
+!  thin-ice strength extension and additive regularization).
 !
-        CALL ssa_viscosity (ng,                                         &
+        CALL ssa_viscosity (ng, tile, model,                            &
      &                      LBi, UBi, LBj, UBj,                         &
      &                      Istr, Iend, Jstr, Jend,                     &
-     &                      ksa_old, ksa_new,                           &
      &                      pm, pn,                                     &
-     &                      Si, Fi,                                     &
-     &                      nuH_rho)
+     &                      Si(:,:,lsold,isIhis),                       &
+     &                      Si(:,:,lsnew,isIuis),                       &
+     &                      Si(:,:,lsnew,isIvis),                       &
+     &                      B_hard,                                     &
+     &                      Fi(:,:,ifInuh))
 !
-        DO j=JstrT,JendT
-          DO i=IstrT,IendT
-            Fi(i,j,icInuh)=nuH_rho(i,j)
-          END DO
-        END DO
+!  Jacobi preconditioner:  the diagonal of the assembled SSA
+!  operator at the active PSI nodes (ssa_jacobi_diag).
 !
-!  Exchange the nuH halo:  the assembly below integrates the halo
-!  ring cells (iCstr/jCstr), whose viscosity was computed on the
-!  neighbouring tile.
-!
-        IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-          CALL exchange_p2d_tile (ng, tile,                             &
-     &                            LBi, UBi, LBj, UBj, nuH_rho)
-        END IF
-# ifdef DISTRIBUTE
-        CALL mp_exchange2d (ng, tile, model, 1,                         &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      NghostPoints,                               &
-     &                      EWperiodic(ng), NSperiodic(ng),             &
-     &                      nuH_rho)
-# endif
-!
-!  Jacobi preconditioner:  diagonal of the assembled operator at
-!  the active PSI nodes.
-!
-        CALL ssa_jacobi_diag (ng,                                       &
+        CALL ssa_jacobi_diag (ng, tile, model,                          &
      &                        LBi, UBi, LBj, UBj,                       &
-     &                        iCstr, iCend, jCstr, jCend,               &
+     &                        IstrC, IendC, JstrC, JendC,               &
      &                        IstrP, IendP, JstrP, JendP,               &
-     &                        pm, pn, pmask_ssa,                        &
-     &                        nuH_rho, beta_rho,                        &
      &                        DPhi, phi_tab,                            &
+     &                        pm, pn,                                   &
+     &                        pmask_ist,                                &
+     &                        Fi(:,:,ifInuh),                           &
+     &                        Fi(:,:,ifIbta),                           &
      &                        diag_u, diag_v)
-!
-        IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-          CALL exchange_p2d_tile (ng, tile,                             &
-     &                            LBi, UBi, LBj, UBj, diag_u)
-          CALL exchange_p2d_tile (ng, tile,                             &
-     &                            LBi, UBi, LBj, UBj, diag_v)
-        END IF
-# ifdef DISTRIBUTE
-        CALL mp_exchange2d (ng, tile, model, 2,                         &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      NghostPoints,                               &
-     &                      EWperiodic(ng), NSperiodic(ng),             &
-     &                      diag_u, diag_v)
-# endif
-!
-!  Initial residual r = b - A*u for the current velocity estimate.
-!
-        DO j=LBj,UBj
-          DO i=LBi,UBi
-            u_scr(i,j)=Si(i,j,ksa_new,isIuis)
-            v_scr(i,j)=Si(i,j,ksa_new,isIvis)
-          END DO
-        END DO
 !
         CALL ssa_matvec (ng, tile, model,                               &
      &                   LBi, UBi, LBj, UBj,                            &
-     &                   iCstr, iCend, jCstr, jCend,                    &
+     &                   IstrC, IendC, JstrC, JendC,                    &
      &                   IstrP, IendP, JstrP, JendP,                    &
-     &                   pm, pn, pmask_ssa,                             &
-     &                   nuH_rho, beta_rho,                             &
      &                   DPhi, phi_tab,                                 &
-     &                   u_scr, v_scr, Au, Av)
+     &                   pm, pn,                                        &
+     &                   pmask_ist,                                     &
+     &                   Fi(:,:,ifInuh),                                &
+     &                   Fi(:,:,ifIbta),                                &
+     &                   Si(:,:,lsnew,isIuis),                          &
+     &                   Si(:,:,lsnew,isIvis),                          &
+     &                   Au, Av)
 !
         DO j=JstrP,JendP
           DO i=IstrP,IendP
-            IF (pmask_ssa(i,j).eq.1.0_r8) THEN
-              Ru(i,j)=taudx_psi(i,j)-Au(i,j)
-              Rv(i,j)=taudy_psi(i,j)-Av(i,j)
+            IF (pmask_ist(i,j).eq.1.0_r8) THEN
+              Ru(i,j)=Fi(i,j,ifItdx)-Au(i,j)
+              Rv(i,j)=Fi(i,j,ifItdy)-Av(i,j)
             ELSE
               Ru(i,j)=0.0_r8
               Rv(i,j)=0.0_r8
@@ -675,15 +488,13 @@
           END DO
         END DO
 !
-!  Zero the residual on Dirichlet-constrained components so CG
-!  never updates those nodes.
+!  Zero the residual on Dirichlet-constrained components (edges
+!  flagged closed or clamped in the ice-state LBC) so the CG
+!  update never touches those nodes.
 !
-        CALL ssa_lbc_zero (ng,                                          &
+        CALL ssa_lbc_zero (ng, tile, model,                             &
      &                     LBi, UBi, LBj, UBj,                          &
-     &                     Istr, Jstr, Jend,                            &
-     &                     IstrP, IendP, JstrP, JendP,                  &
-     &                     Lu_west_fix, Lv_south_fix,                   &
-     &                     Lv_north_fix,                                &
+     &                     IminS, ImaxS, JminS, JmaxS,                  &
      &                     Ru, Rv)
 !
 !  Preconditioned residual and initial search direction.
@@ -691,7 +502,7 @@
         dot_zr=0.0_r8
         DO j=JstrP,JendP
           DO i=IstrP,IendP
-            IF (pmask_ssa(i,j).eq.1.0_r8) THEN
+            IF (pmask_ist(i,j).eq.1.0_r8) THEN
               IF (diag_u(i,j).gt.eps) THEN
                 Zu(i,j)=Ru(i,j)/diag_u(i,j)
               ELSE
@@ -714,12 +525,9 @@
           END DO
         END DO
 !
-        CALL ssa_lbc_zero (ng,                                          &
+        CALL ssa_lbc_zero (ng, tile, model,                             &
      &                     LBi, UBi, LBj, UBj,                          &
-     &                     Istr, Jstr, Jend,                            &
-     &                     IstrP, IendP, JstrP, JendP,                  &
-     &                     Lu_west_fix, Lv_south_fix,                   &
-     &                     Lv_north_fix,                                &
+     &                     IminS, ImaxS, JminS, JmaxS,                  &
      &                     Du, Dv)
 !
 # ifdef DISTRIBUTE
@@ -736,27 +544,32 @@
         DO cg_iter=1,cg_max_iter(ng)
           IF (resid.le.cgtol*resid_0 .or. resid.lt.eps) EXIT
 !
-!  Matrix action on the search direction, A*d.
+!  Matrix action on the SEARCH DIRECTION, A*d.  (The action on the
+!  velocity itself is only needed for the initial and the
+!  true-residual evaluations, which use separate matvec calls.)
 !
           CALL ssa_matvec (ng, tile, model,                             &
      &                     LBi, UBi, LBj, UBj,                          &
-     &                     iCstr, iCend, jCstr, jCend,                  &
+     &                     IstrC, IendC, JstrC, JendC,                  &
      &                     IstrP, IendP, JstrP, JendP,                  &
-     &                     pm, pn, pmask_ssa,                           &
-     &                     nuH_rho, beta_rho,                           &
      &                     DPhi, phi_tab,                               &
-     &                     Du, Dv, Au, Av)
+     &                     pm, pn,                                      &
+     &                     pmask_ist,                                   &
+     &                     Fi(:,:,ifInuh),                              &
+     &                     Fi(:,:,ifIbta),                              &
+     &                     Du, Dv,                                      &
+     &                     Au, Av)
 !
-!  alpha = (z,r) / (d,A*d);  both inner products are reduced in a
-!  single pass over the active nodes.
+!  alpha = (z,r) / (d,A*d):  dot_zr is carried from the previous
+!  iteration (or the initial evaluation) instead of being recomputed,
+!  so only dot_dad needs the fused pass over the active nodes.
 !
           dot_dad=0.0_r8
-          dot_zr_old=0.0_r8
+          dot_zr_old=dot_zr
           DO j=JstrP,JendP
             DO i=IstrP,IendP
-              IF (pmask_ssa(i,j).eq.1.0_r8) THEN
+              IF (pmask_ist(i,j).eq.1.0_r8) THEN
                 dot_dad=dot_dad+Du(i,j)*Au(i,j)+Dv(i,j)*Av(i,j)
-                dot_zr_old=dot_zr_old+Zu(i,j)*Ru(i,j)+Zv(i,j)*Rv(i,j)
               END IF
             END DO
           END DO
@@ -764,7 +577,6 @@
 # ifdef DISTRIBUTE
           op_handle='SUM'
           CALL mp_reduce (ng, model, 1, dot_dad, op_handle)
-          CALL mp_reduce (ng, model, 1, dot_zr_old, op_handle)
 # endif
 !
           IF (ABS(dot_dad).lt.eps) EXIT
@@ -781,23 +593,18 @@
 !
           DO j=JstrP,JendP
             DO i=IstrP,IendP
-              IF (pmask_ssa(i,j).eq.1.0_r8) THEN
-                Si(i,j,ksa_new,isIuis)=Si(i,j,ksa_new,isIuis)+          &
-     &                                alpha*Du(i,j)
-                Si(i,j,ksa_new,isIvis)=Si(i,j,ksa_new,isIvis)+          &
-     &                                alpha*Dv(i,j)
+              IF (pmask_ist(i,j).eq.1.0_r8) THEN
+                Si(i,j,lsnew,isIuis)=Si(i,j,lsnew,isIuis)+alpha*Du(i,j)
+                Si(i,j,lsnew,isIvis)=Si(i,j,lsnew,isIvis)+alpha*Dv(i,j)
                 Ru(i,j)=Ru(i,j)-alpha*Au(i,j)
                 Rv(i,j)=Rv(i,j)-alpha*Av(i,j)
               END IF
             END DO
           END DO
 !
-          CALL ssa_lbc_zero (ng,                                        &
+          CALL ssa_lbc_zero (ng, tile, model,                           &
      &                       LBi, UBi, LBj, UBj,                        &
-     &                       Istr, Jstr, Jend,                          &
-     &                       IstrP, IendP, JstrP, JendP,                &
-     &                       Lu_west_fix, Lv_south_fix,                 &
-     &                       Lv_north_fix,                              &
+     &                       IminS, ImaxS, JminS, JmaxS,                &
      &                       Ru, Rv)
 !
 !  Preconditioned residual update and (z,r) accumulation
@@ -806,7 +613,7 @@
           dot_zr=0.0_r8
           DO j=JstrP,JendP
             DO i=IstrP,IendP
-              IF (pmask_ssa(i,j).eq.1.0_r8) THEN
+              IF (pmask_ist(i,j).eq.1.0_r8) THEN
                 IF (diag_u(i,j).gt.eps) THEN
                   Zu(i,j)=Ru(i,j)/diag_u(i,j)
                 ELSE
@@ -834,19 +641,16 @@
 !
           DO j=JstrP,JendP
             DO i=IstrP,IendP
-              IF (pmask_ssa(i,j).eq.1.0_r8) THEN
+              IF (pmask_ist(i,j).eq.1.0_r8) THEN
                 Du(i,j)=Zu(i,j)+beta_cg*Du(i,j)
                 Dv(i,j)=Zv(i,j)+beta_cg*Dv(i,j)
               END IF
             END DO
           END DO
 !
-          CALL ssa_lbc_zero (ng,                                        &
+          CALL ssa_lbc_zero (ng, tile, model,                           &
      &                       LBi, UBi, LBj, UBj,                        &
-     &                       Istr, Jstr, Jend,                          &
-     &                       IstrP, IendP, JstrP, JendP,                &
-     &                       Lu_west_fix, Lv_south_fix,                 &
-     &                       Lv_north_fix,                              &
+     &                       IminS, ImaxS, JminS, JmaxS,                &
      &                       Du, Dv)
 !
           resid=SQRT(ABS(dot_zr))
@@ -854,166 +658,137 @@
         END DO  ! cg_iter
 !
 !-----------------------------------------------------------------------
-!  Post-CG robustness measures:  halo refresh + Dirichlet BCs,
-!  speed cap, Picard relaxation.
+!  Post-CG robustness measures:  speed cap, Picard relaxation, then
+!  a single pibc + halo refresh (below) before the consistency
+!  viscosity and the true-residual matvec.  No exchange is needed
+!  between the CG loop and the cap:  the cap and the relaxation
+!  read and write interior nodes only, and CG never moves the
+!  Dirichlet nodes (ssa_lbc_zero keeps their search direction
+!  zero), so the boundary values are still in place.
 !-----------------------------------------------------------------------
-!
-        CALL ssa_exchange_uv (ng, tile, model,                          &
-     &                        LBi, UBi, LBj, UBj,                       &
-     &                        IstrP, IendP, JstrP, JendP,               &
-     &                        ksa_new, Si)
-!
-        CALL ssa_lbc_velocity (ng, ksa_new,                             &
-     &                         LBi, UBi, LBj, UBj,                      &
-     &                         Istr, Jstr, Jend,                        &
-     &                         IstrP, IendP, JstrP, JendP,              &
-     &                         Lu_west_fix, Lu_west_clamp,              &
-     &                         Lv_south_fix, Lv_south_clamp,            &
-     &                         Lv_north_fix, Lv_north_clamp,            &
-     &                         Si)
 !
 !  PISM-style velocity cap.
 !
         DO j=JstrP,JendP
           DO i=IstrP,IendP
-            IF (pmask_ssa(i,j).eq.1.0_r8) THEN
-              u_slide=SQRT(Si(i,j,ksa_new,isIuis)**2+                   &
-     &                     Si(i,j,ksa_new,isIvis)**2)
+            IF (pmask_ist(i,j).eq.1.0_r8) THEN
+              u_slide=SQRT(Si(i,j,lsnew,isIuis)**2+                     &
+     &                     Si(i,j,lsnew,isIvis)**2)
               IF (u_slide.gt.ssa_max_speed(ng)) THEN
                 cff=ssa_max_speed(ng)/u_slide
-                Si(i,j,ksa_new,isIuis)=Si(i,j,ksa_new,isIuis)*cff
-                Si(i,j,ksa_new,isIvis)=Si(i,j,ksa_new,isIvis)*cff
+                Si(i,j,lsnew,isIuis)=Si(i,j,lsnew,isIuis)*cff
+                Si(i,j,lsnew,isIvis)=Si(i,j,lsnew,isIvis)*cff
               END IF
             END IF
           END DO
         END DO
 !
 !  Picard relaxation u = alpha*u_new + (1-alpha)*u_old.  Prevents
-!  oscillation between high/low viscosity regimes.  Skipped on the
-!  first iteration, where ksa_old holds the (physical) initial
-!  guess rather than a Picard iterate.
+!  oscillation between high/low viscosity regimes.  Skipped on
+!  the first iteration, where lsold holds the (physical) initial
+!  guess rather than a Picard iterate; later iterations anchor
+!  to the previous iterate written back into lsold.
 !
         IF (nl_iter.gt.1) THEN
           DO j=JstrP,JendP
             DO i=IstrP,IendP
-              IF (pmask_ssa(i,j).eq.1.0_r8) THEN
-                Si(i,j,ksa_new,isIuis)=picard_alpha(ng)*                &
-     &            Si(i,j,ksa_new,isIuis)+                               &
-     &            (1.0_r8-picard_alpha(ng))*                            &
-     &            Si(i,j,ksa_old,isIuis)
-                Si(i,j,ksa_new,isIvis)=picard_alpha(ng)*                &
-     &            Si(i,j,ksa_new,isIvis)+                               &
-     &            (1.0_r8-picard_alpha(ng))*                            &
-     &            Si(i,j,ksa_old,isIvis)
+              IF (pmask_ist(i,j).eq.1.0_r8) THEN
+                Si(i,j,lsnew,isIuis)=                                   &
+     &                    picard_alpha(ng) *Si(i,j,lsnew,isIuis)+       &
+     &            (1.0_r8-picard_alpha(ng))*Si(i,j,lsold,isIuis)
+                Si(i,j,lsnew,isIvis)=                                   &
+     &                    picard_alpha(ng) *Si(i,j,lsnew,isIvis)+       &
+     &            (1.0_r8-picard_alpha(ng))*Si(i,j,lsold,isIvis)
               END IF
             END DO
           END DO
         END IF
+!
+        CALL isf_pibc_tile (ng, tile, model,                            &
+     &                      LBi, UBi, LBj, UBj,                         &
+     &                      IminS, ImaxS, JminS, JmaxS,                 &
+     &                      Si(:,:,lsnew,isIuis),                       &
+     &                      Si(:,:,lsnew,isIvis))
+!
+# ifdef DISTRIBUTE
+        CALL mp_exchange2d (ng, tile, model, 2,                         &
+     &                      LBi, UBi, LBj, UBj,                         &
+     &                      NghostPoints,                               &
+     &                      EWperiodic(ng), NSperiodic(ng),             &
+     &                      Si(:,:,lsnew,isIuis),                       &
+     &                      Si(:,:,lsnew,isIvis))
+# endif
 !
 !  Refresh the velocity halo and the Dirichlet BCs after the cap
 !  and relaxation, then recompute the viscosity so nuH is
 !  consistent with the relaxed velocity used in the next Picard
 !  iteration and in the convergence check below.
 !
-        CALL ssa_exchange_uv (ng, tile, model,                          &
-     &                        LBi, UBi, LBj, UBj,                       &
-     &                        IstrP, IendP, JstrP, JendP,               &
-     &                        ksa_new, Si)
-!
-        CALL ssa_lbc_velocity (ng, ksa_new,                             &
-     &                         LBi, UBi, LBj, UBj,                      &
-     &                         Istr, Jstr, Jend,                        &
-     &                         IstrP, IendP, JstrP, JendP,              &
-     &                         Lu_west_fix, Lu_west_clamp,              &
-     &                         Lv_south_fix, Lv_south_clamp,            &
-     &                         Lv_north_fix, Lv_north_clamp,            &
-     &                         Si)
-!
-        CALL ssa_viscosity (ng,                                         &
+        CALL ssa_viscosity (ng, tile, model,                            &
      &                      LBi, UBi, LBj, UBj,                         &
      &                      Istr, Iend, Jstr, Jend,                     &
-     &                      ksa_old, ksa_new,                           &
      &                      pm, pn,                                     &
-     &                      Si, Fi,                                     &
-     &                      nuH_rho)
-!
-        DO j=JstrT,JendT
-          DO i=IstrT,IendT
-            Fi(i,j,icInuh)=nuH_rho(i,j)
-          END DO
-        END DO
-!
-        IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-          CALL exchange_p2d_tile (ng, tile,                             &
-     &                            LBi, UBi, LBj, UBj, nuH_rho)
-        END IF
-# ifdef DISTRIBUTE
-        CALL mp_exchange2d (ng, tile, model, 1,                         &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      NghostPoints,                               &
-     &                      EWperiodic(ng), NSperiodic(ng),             &
-     &                      nuH_rho)
-# endif
+     &                      Si(:,:,lsold,isIhis),                       &
+     &                      Si(:,:,lsnew,isIuis),                       &
+     &                      Si(:,:,lsnew,isIvis),                       &
+     &                      B_hard,                                     &
+     &                      Fi(:,:,ifInuh))
 !
 !  True nonlinear residual ||A(u)u - b|| with the relaxed velocity
 !  and the updated viscosity (one extra matrix action per Picard
 !  iteration;  the legacy solver reused the last CG search
 !  direction action, which does not measure the SSA residual).
 !
-        DO j=LBj,UBj
-          DO i=LBi,UBi
-            u_scr(i,j)=Si(i,j,ksa_new,isIuis)
-            v_scr(i,j)=Si(i,j,ksa_new,isIvis)
-          END DO
-        END DO
-!
         CALL ssa_matvec (ng, tile, model,                               &
      &                   LBi, UBi, LBj, UBj,                            &
-     &                   iCstr, iCend, jCstr, jCend,                    &
+     &                   IstrC, IendC, JstrC, JendC,                    &
      &                   IstrP, IendP, JstrP, JendP,                    &
-     &                   pm, pn, pmask_ssa,                             &
-     &                   nuH_rho, beta_rho,                             &
      &                   DPhi, phi_tab,                                 &
-     &                   u_scr, v_scr, Au, Av)
+     &                   pm, pn,                                        &
+     &                   pmask_ist,                                     &
+     &                   Fi(:,:,ifInuh),                                &
+     &                   Fi(:,:,ifIbta),                                &
+     &                   Si(:,:,lsnew,isIuis),                          &
+     &                   Si(:,:,lsnew,isIvis),                          &
+     &                   Au, Av)
 !
 !-----------------------------------------------------------------------
 !  Picard convergence check:  dual criterion.
 !    1. Relative velocity change
 !           ||u_relaxed - u_old|| / ||u_relaxed||  <  nl_tol
 !    2. Relative residual norm
-!           ||A(u)u - b|| / ||b||                     <  nl_tol
+!                   ||A(u)u - b|| / ||b||          <  nl_tol
 !  Either criterion passing triggers convergence.  The residual
 !  criterion catches stagnation at a non-solution fixed point.
 !-----------------------------------------------------------------------
 !
-        vel_change=0.0_r8
-        vel_norm=0.0_r8
-        resid_norm=0.0_r8
-        rhs_norm=0.0_r8
+        norms(1)=0.0_r8
+        norms(2)=0.0_r8
+        norms(3)=0.0_r8
+        norms(4)=0.0_r8
         DO j=JstrP,JendP
           DO i=IstrP,IendP
-            IF (pmask_ssa(i,j).eq.1.0_r8) THEN
-              vel_change=vel_change+                                    &
-     &          (Si(i,j,ksa_new,isIuis)-Si(i,j,ksa_old,isIuis))**2+     &
-     &          (Si(i,j,ksa_new,isIvis)-Si(i,j,ksa_old,isIvis))**2
-              vel_norm=vel_norm+                                        &
-     &          Si(i,j,ksa_new,isIuis)**2+                              &
-     &          Si(i,j,ksa_new,isIvis)**2
-              resid_norm=resid_norm+                                    &
-     &          (Au(i,j)-taudx_psi(i,j))**2+                            &
-     &          (Av(i,j)-taudy_psi(i,j))**2
-              rhs_norm=rhs_norm+                                        &
-     &          taudx_psi(i,j)**2+taudy_psi(i,j)**2
+            IF (pmask_ist(i,j).eq.1.0_r8) THEN
+              norms(1)=norms(1)+                                        &
+     &          (Si(i,j,lsnew,isIuis)-Si(i,j,lsold,isIuis))**2+         &
+     &          (Si(i,j,lsnew,isIvis)-Si(i,j,lsold,isIvis))**2
+              norms(2)=norms(2)+                                        &
+     &          Si(i,j,lsnew,isIuis)**2+Si(i,j,lsnew,isIvis)**2
+              norms(3)=norms(3)+                                        &
+     &          (Au(i,j)-Fi(i,j,ifItdx))**2+(Av(i,j)-Fi(i,j,ifItdy))**2
+              norms(4)=norms(4)+                                        &
+     &          Fi(i,j,ifItdx)**2+Fi(i,j,ifItdy)**2
             END IF
           END DO
         END DO
 # ifdef DISTRIBUTE
-        op_handle='SUM'
-        CALL mp_reduce (ng, model, 1, vel_change, op_handle)
-        CALL mp_reduce (ng, model, 1, vel_norm, op_handle)
-        CALL mp_reduce (ng, model, 1, resid_norm, op_handle)
-        CALL mp_reduce (ng, model, 1, rhs_norm, op_handle)
+        op_norms='SUM'
+        CALL mp_reduce (ng, model, 4, norms, op_norms)
 # endif
+        vel_change=norms(1)
+        vel_norm=norms(2)
+        resid_norm=norms(3)
+        rhs_norm=norms(4)
 !
         IF (vel_norm.gt.eps) THEN
           nl_resid=SQRT(vel_change/vel_norm)
@@ -1030,20 +805,19 @@
             converged=.TRUE.
           END IF
         END IF
+# ifdef ISF_DEBUG
 !
 !  DEBUG:  Picard iteration diagnostics.  Entirely gated by
 !  ISF_DEBUG so production runs pay no output cost.
 !
-# ifdef ISF_DEBUG
-        IF (Master .and. tile.eq.0) THEN
-          IF (converged.or.nl_iter.eq.1.or.                             &
-     &        MOD(nl_iter,10).eq.0) THEN
+        IF (Master) THEN
+          IF (converged.or.(nl_iter.eq.1).or.MOD(nl_iter,10).eq.0) THEN
             u_slide=0.0_r8
             DO j=JstrP,JendP
               DO i=IstrP,IendP
-                IF (pmask_ssa(i,j).eq.1.0_r8) THEN
-                  cff1=SQRT(Si(i,j,ksa_new,isIuis)**2+                  &
-     &                     Si(i,j,ksa_new,isIvis)**2)
+                IF (pmask_ist(i,j).eq.1.0_r8) THEN
+                  cff1=SQRT(Si(i,j,lsnew,isIuis)**2+                    &
+     &                      Si(i,j,lsnew,isIvis)**2)
                   IF (cff1.gt.u_slide) u_slide=cff1
                 END IF
               END DO
@@ -1058,79 +832,100 @@
         IF (converged) EXIT
 !
 !  Use the current velocity as the initial guess of the next Picard
-!  iteration.
+!  iteration.  NOTE: this overwrites the lsold VELOCITY layer, so
+!  after the solve it holds the penultimate Picard iterate rather
+!  than the previous SSA solution.  That is safe here:  every
+!  downstream consumer reads the solved lsnew layer (advection
+!  carry-forward, isf_stress beta, output), and after the next
+!  time-level swap the overwritten layer is refreshed before any
+!  read;  under PERFECT_RESTART both layers are written, so even
+!  the Picard anchor chain is reproduced exactly after a restart.
 !
         DO j=JstrP,JendP
           DO i=IstrP,IendP
-            Si(i,j,ksa_old,isIuis)=Si(i,j,ksa_new,isIuis)
-            Si(i,j,ksa_old,isIvis)=Si(i,j,ksa_new,isIvis)
+            Si(i,j,lsold,isIuis)=Si(i,j,lsnew,isIuis)
+            Si(i,j,lsold,isIvis)=Si(i,j,lsnew,isIvis)
           END DO
         END DO
 !
+        CALL isf_pibc_tile (ng, tile, model,                            &
+     &                      LBi, UBi, LBj, UBj,                         &
+     &                      IminS, ImaxS, JminS, JmaxS,                 &
+     &                      Si(:,:,lsold,isIuis),                       &
+     &                      Si(:,:,lsold,isIvis))
+!
+# ifdef DISTRIBUTE
+        CALL mp_exchange2d (ng, tile, model, 2,                         &
+     &                      LBi, UBi, LBj, UBj,                         &
+     &                      NghostPoints,                               &
+     &                      EWperiodic(ng), NSperiodic(ng),             &
+     &                      Si(:,:,lsold,isIuis),                       &
+     &                      Si(:,:,lsold,isIvis))
+# endif
+!
       END DO  ! nl_iter (Picard)
 !
+!  Warn when the Picard iteration is exhausted without meeting
+!  either convergence criterion:  the (unconverged) last iterate
+!  is returned, and the ocean coupling must not treat it as a
+!  silently converged solution.
+!
+      IF (.not.converged .and. Master) THEN
+        WRITE(stdout,'(a,i4,a,es9.2)')                                  &
+     &    ' SSA WARNING: Picard not converged in ',nl_max_iter(ng),     &
+     &    ' iterations; last nl_resid=',nl_resid
+      END IF
+!
 !=======================================================================
-!  Stage 10:  NaN guard and final halo refresh.
+!  Stage 7:  NaN guard and final halo refresh.
 !=======================================================================
 !
       DO j=JstrP,JendP
         DO i=IstrP,IendP
-          IF (pmask_ssa(i,j).eq.1.0_r8) THEN
-            IF (Si(i,j,ksa_new,isIuis).ne.Si(i,j,ksa_new,isIuis).or.    &
-     &          Si(i,j,ksa_new,isIvis).ne.Si(i,j,ksa_new,isIvis)) THEN
-              IF (Master) WRITE(stdout,'(a,2i4)')                       &
-     &            ' SSA NaN at PSI node:',i,j
-              Si(i,j,ksa_new,isIuis)=0.0_r8
-              Si(i,j,ksa_new,isIvis)=0.0_r8
+          IF (pmask_ist(i,j).eq.1.0_r8) THEN
+            IF (Si(i,j,lsnew,isIuis).ne.Si(i,j,lsnew,isIuis).or.        &
+     &          Si(i,j,lsnew,isIvis).ne.Si(i,j,lsnew,isIvis)) THEN
+              WRITE(stdout,'(a,i3,a,2i4)')                              &
+     &            ' SSA NaN zeroed: rank=',MyRank,                      &
+     &            '  tile-local PSI node (i,j)=',i,j
+              Si(i,j,lsnew,isIuis)=0.0_r8
+              Si(i,j,lsnew,isIvis)=0.0_r8
             END IF
           END IF
         END DO
       END DO
 !
-!  Final velocity halo exchange so downstream routines (thickness
-!  advection, output) see consistent tile-boundary data.
+      CALL isf_pibc_tile (ng, tile, model,                              &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    IminS, ImaxS, JminS, JmaxS,                   &
+     &                    Si(:,:,lsnew,isIuis),                         &
+     &                    Si(:,:,lsnew,isIvis))
 !
-      CALL ssa_exchange_uv (ng, tile, model,                            &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      IstrP, IendP, JstrP, JendP,                 &
-     &                      ksa_new, Si)
-!
-      CALL ssa_lbc_velocity (ng, ksa_new,                               &
-     &                       LBi, UBi, LBj, UBj,                        &
-     &                       Istr, Jstr, Jend,                          &
-     &                       IstrP, IendP, JstrP, JendP,                &
-     &                       Lu_west_fix, Lu_west_clamp,                &
-     &                       Lv_south_fix, Lv_south_clamp,              &
-     &                       Lv_north_fix, Lv_north_clamp,              &
-     &                       Si)
+# ifdef DISTRIBUTE
+      CALL mp_exchange2d (ng, tile, model, 2,                           &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+     &                    Si(:,:,lsnew,isIuis),                         &
+     &                    Si(:,:,lsnew,isIvis))
+# endif
 !
       RETURN
       END SUBROUTINE isf_ssa_tile
 !
 !***********************************************************************
-      SUBROUTINE ssa_exchange_uv (ng, tile, model,                      &
-     &                           LBi, UBi, LBj, UBj,                    &
-     &                           IstrP, IendP, JstrP, JendP,            &
-     &                           ksa, Si)
+      SUBROUTINE ssa_lbc_zero (ng, tile, model,                         &
+     &                         LBi, UBi, LBj, UBj,                      &
+     &                         IminS, ImaxS, JminS, JmaxS,              &
+     &                         uf, vf)
 !***********************************************************************
 !
-!  Refresh the halo of the two PSI-point velocity components of
-!  the state array Si(:,:,ksa,isIuis/isIvis).  The components are
-!  staged through internal scratch arrays so the exchanges operate
-!  on contiguous arrays, and the FULL range (including halo) is
-!  copied back afterwards:  downstream kernels (ssa_viscosity,
-!  thickness advection) read the Si velocity halo cells at tile
-!  seams, so the state array halo must carry the exchanged values.
-!
-      USE mod_kinds
-      USE mod_param, ONLY : NghostPoints
-      USE mod_scalars
-      USE mod_parallel
-      USE exchange_2d_mod, ONLY : exchange_p2d_tile
-# ifdef DISTRIBUTE
-      USE mp_exchange_mod, ONLY : mp_exchange2d
-# endif
-      USE mod_isf, ONLY : nIsfS, isIuis, isIvis
+!  Zero the Dirichlet-constrained components of a general PSI-point
+!  field pair.  Used to keep the CG residual and search direction
+!  zero on fixed nodes so the iteration never updates them.  The
+!  initial guess already satisfies the boundary values (written
+!  by isf_pibc_tile); zero residual then keeps the solution at
+!  those values throughout the iteration.
 !
       implicit none
 !
@@ -1138,195 +933,97 @@
 !
       integer, intent(in) :: ng, tile, model
       integer, intent(in) :: LBi, UBi, LBj, UBj
-      integer, intent(in) :: IstrP, IendP, JstrP, JendP
-      integer, intent(in) :: ksa
+      integer, intent(in) :: IminS, ImaxS, JminS, JmaxS
 !
-      real(r8), intent(inout) :: Si(LBi:UBi,LBj:UBj,2,nIsfS)
-!
-!  Local variable declarations.
-!
-      integer :: i, j
-!
-      real(r8), dimension(LBi:UBi,LBj:UBj) :: u_scr, v_scr
-!
-!-----------------------------------------------------------------------
-!  Stage, exchange and copy back the velocity.  The copy-back covers
-!  the full declared range so the halo of Si is refreshed with the
-!  exchanged values (mp_exchange2d fills the scratch halo from the
-!  neighbouring tiles' interiors).
-!-----------------------------------------------------------------------
-!
-      DO j=LBj,UBj
-        DO i=LBi,UBi
-          u_scr(i,j)=Si(i,j,ksa,isIuis)
-          v_scr(i,j)=Si(i,j,ksa,isIvis)
-        END DO
-      END DO
-!
-      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-        CALL exchange_p2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj, u_scr)
-        CALL exchange_p2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj, v_scr)
-      END IF
-# ifdef DISTRIBUTE
-      CALL mp_exchange2d (ng, tile, model, 2,                           &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    NghostPoints,                                 &
-     &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    u_scr, v_scr)
-# endif
-!
-      DO j=LBj,UBj
-        DO i=LBi,UBi
-          Si(i,j,ksa,isIuis)=u_scr(i,j)
-          Si(i,j,ksa,isIvis)=v_scr(i,j)
-        END DO
-      END DO
-!
-      RETURN
-      END SUBROUTINE ssa_exchange_uv
-!
-!***********************************************************************
-      SUBROUTINE ssa_lbc_velocity (ng, ksa,                             &
-     &                             LBi, UBi, LBj, UBj,                  &
-     &                             Istr, Jstr, Jend,                    &
-     &                             IstrP, IendP, JstrP, JendP,          &
-     &                             Lu_west_fix, Lu_west_clamp,          &
-     &                             Lv_south_fix, Lv_south_clamp,        &
-     &                             Lv_north_fix, Lv_north_clamp,        &
-     &                             Si)
-!***********************************************************************
-!
-!  Enforce the Dirichlet lateral boundary conditions on the SSA
-!  velocity state:
-!
-!    closed   -> u = 0      (no-slip / ice divide)
-!    clamped  -> u = boundary data from ISF_LOBC
-!    gradient -> free (no enforcement)
-!
-!  Dirichlet enforcement acts on the normal component of each edge:
-!  u on the western edge, v on the southern/northern edges.  The
-!  eastern (calving front) edge is always left free.
-!
-      USE mod_kinds
-      USE mod_param, ONLY : Mm
-      USE mod_isf
-!
-      implicit none
-!
-!  Imported variable declarations.
-!
-      integer, intent(in) :: ng, ksa
-      integer, intent(in) :: LBi, UBi, LBj, UBj
-      integer, intent(in) :: Istr, Jstr, Jend
-      integer, intent(in) :: IstrP, IendP, JstrP, JendP
-      logical, intent(in) :: Lu_west_fix, Lu_west_clamp
-      logical, intent(in) :: Lv_south_fix, Lv_south_clamp
-      logical, intent(in) :: Lv_north_fix, Lv_north_clamp
-!
-      real(r8), intent(inout) :: Si(LBi:UBi,LBj:UBj,2,nIsfS)
-!
-!  Local variable declarations.
-!
-      integer :: i, j
-!
-!-----------------------------------------------------------------------
-!  Apply Dirichlet lateral boundary conditions.
-!-----------------------------------------------------------------------
-!
-      IF (Jstr.eq.1.and.Lv_south_fix) THEN
-        DO i=IstrP,IendP
-          IF (Lv_south_clamp) THEN
-            Si(i,JstrP,ksa,isIvis)=ISF_LOBC(isIvis,ng)%isf_south(i)
-          ELSE
-            Si(i,JstrP,ksa,isIvis)=0.0_r8
-          END IF
-        END DO
-      END IF
-!
-      IF (Jend.eq.Mm(ng).and.Lv_north_fix) THEN
-        DO i=IstrP,IendP
-          IF (Lv_north_clamp) THEN
-            Si(i,JendP,ksa,isIvis)=ISF_LOBC(isIvis,ng)%isf_north(i)
-          ELSE
-            Si(i,JendP,ksa,isIvis)=0.0_r8
-          END IF
-        END DO
-      END IF
-!
-      IF (Istr.eq.1.and.Lu_west_fix) THEN
-        DO j=JstrP,JendP
-          IF (Lu_west_clamp) THEN
-            Si(IstrP,j,ksa,isIuis)=ISF_LOBC(isIuis,ng)%isf_west(j)
-          ELSE
-            Si(IstrP,j,ksa,isIuis)=0.0_r8
-          END IF
-        END DO
-      END IF
-!
-      RETURN
-      END SUBROUTINE ssa_lbc_velocity
-!
-!***********************************************************************
-      SUBROUTINE ssa_lbc_zero (ng,                                      &
-     &                         LBi, UBi, LBj, UBj,                      &
-     &                         Istr, Jstr, Jend,                        &
-     &                         IstrP, IendP, JstrP, JendP,              &
-     &                         Lu_west_fix, Lv_south_fix,               &
-     &                         Lv_north_fix,                            &
-     &                         uf, vf)
-!***********************************************************************
-!
-!  Zero the Dirichlet-constrained components of a general PSI-point
-!  field pair.  Used to keep the CG residual and search direction
-!  zero on fixed nodes so the iteration never updates them.  The
-!  initial guess already satisfies the boundary values (enforced by
-!  ssa_lbc_velocity), hence zero residual means the solution keeps
-!  them unchanged.
-!
-      USE mod_kinds
-      USE mod_param, ONLY : Mm
-!
-      implicit none
-!
-!  Imported variable declarations.
-!
-      integer, intent(in) :: ng
-      integer, intent(in) :: LBi, UBi, LBj, UBj
-      integer, intent(in) :: Istr, Jstr, Jend
-      integer, intent(in) :: IstrP, IendP, JstrP, JendP
-      logical, intent(in) :: Lu_west_fix
-      logical, intent(in) :: Lv_south_fix
-      logical, intent(in) :: Lv_north_fix
-!
+# ifdef ASSUMED_SHAPE
+      real(r8), intent(inout) :: uf(LBi:,LBj:)
+      real(r8), intent(inout) :: vf(LBi:,LBj:)
+# else
       real(r8), intent(inout) :: uf(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: vf(LBi:UBi,LBj:UBj)
+# endif
 !
 !  Local variable declarations.
 !
       integer :: i, j
+#include "set_bounds.h"
 !
 !-----------------------------------------------------------------------
 !  Zero fixed components.
 !-----------------------------------------------------------------------
 !
-      IF (Jstr.eq.1.and.Lv_south_fix) THEN
-        DO i=IstrP,IendP
-          vf(i,JstrP)=0.0_r8
-        END DO
-      END IF
+      IF (.not.EWperiodic(ng)) THEN
 !
-      IF (Jend.eq.Mm(ng).and.Lv_north_fix) THEN
-        DO i=IstrP,IendP
-          vf(i,JendP)=0.0_r8
-        END DO
-      END IF
+        IF (DOMAIN(ng)%Western_Edge(tile)) THEN
 !
-      IF (Istr.eq.1.and.Lu_west_fix) THEN
-        DO j=JstrP,JendP
-          uf(IstrP,j)=0.0_r8
-        END DO
+          IF (LBC(iwest,ibISF(isIuis),ng)%clamped .or.                  &
+     &        LBC(iwest,ibISF(isIuis),ng)%closed) THEN
+            DO j=JstrP,JendP
+              uf(IstrP,j)=0.0_r8
+            END DO
+          END IF
+!
+          IF (LBC(iwest,ibISF(isIvis),ng)%clamped .or.                  &
+     &        LBC(iwest,ibISF(isIvis),ng)%closed) THEN
+            DO j=JstrP,JendP
+              vf(IstrP,j)=0.0_r8
+            END DO
+          END IF
+        END IF
+!
+        IF (DOMAIN(ng)%Eastern_Edge(tile)) THEN
+!
+          IF (LBC(ieast,ibISF(isIuis),ng)%clamped .or.                  &
+     &        LBC(ieast,ibISF(isIuis),ng)%closed) THEN
+            DO j=JstrP,JendP
+              uf(IendP,j)=0.0_r8
+            END DO
+          END IF
+!
+          IF (LBC(ieast,ibISF(isIvis),ng)%clamped .or.                  &
+      &       LBC(ieast,ibISF(isIvis),ng)%closed) THEN
+            DO j=JstrP,JendP
+              vf(IendP,j)=0.0_r8
+            END DO
+          END IF
+        END IF
+      END IF
+
+      IF (.not.NSperiodic(ng)) THEN
+!
+        IF (DOMAIN(ng)%Southern_Edge(tile)) THEN
+!
+          IF (LBC(isouth,ibISF(isIuis),ng)%clamped .or.                 &
+     &        LBC(isouth,ibISF(isIuis),ng)%closed) THEN
+            DO i=IstrP,IendP
+              uf(i,JstrP)=0.0_r8
+            END DO
+          END IF
+!
+          IF (LBC(isouth,ibISF(isIvis),ng)%clamped .or.                 &
+     &        LBC(isouth,ibISF(isIvis),ng)%closed) THEN
+            DO i=IstrP,IendP
+              vf(i,JstrP)=0.0_r8
+            END DO
+          END IF
+        END IF
+!
+        IF (DOMAIN(ng)%Northern_Edge(tile)) THEN
+!
+          IF (LBC(inorth,ibISF(isIuis),ng)%clamped .or.                 &
+     &        LBC(inorth,ibISF(isIuis),ng)%closed) THEN
+            DO i=IstrP,IendP
+              uf(i,JendP)=0.0_r8
+            END DO
+          END IF
+!
+          IF (LBC(inorth,ibISF(isIvis),ng)%clamped .or.                 &
+     &        LBC(inorth,ibISF(isIvis),ng)%closed) THEN
+            DO i=IstrP,IendP
+              vf(i,JendP)=0.0_r8
+            END DO
+          END IF
+        END IF
       END IF
 !
       RETURN
@@ -1335,12 +1032,10 @@
 !***********************************************************************
       SUBROUTINE ssa_driving_stress (ng, tile, model,                   &
      &                               LBi, UBi, LBj, UBj,                &
-     &                               Istr, Iend, Jstr, Jend,            &
-     &                               IstrP, IendP, JstrP, JendP,        &
-     &                               ksa_old,                           &
-     &                               pm, pn, pmask_ssa,                 &
-     &                               Si, Fi,                            &
-     &                               taudx, taudy)
+     &                               pm, pn,                            &
+     &                               rmask_ist, pmask_ist,              &
+     &                               hi, zs,                            &
+     &                               tdx, tdy)
 !***********************************************************************
 !
 !  Compute the driving stress RHS at PSI points:
@@ -1350,9 +1045,18 @@
 !  This is the mass-lumped Q1 nodal force vector:  a finite
 !  difference gradient of the smoothed surface elevation on the 4
 !  RHO cells surrounding each PSI node, multiplied by the lumped
-!  nodal area (jac/4;  4 elements share each Q1 node).
+!  nodal area jac_avg = (A_1+A_2+A_3+A_4)/4 = sum_e (A_e/4), the
+!  exact integral of the Q1 hat function over its 4-element
+!  support.  This matches the consistent-load convention of PISM
+!  SSAFEM (int phi_k tau_d dOmega by quadrature) and of the
+!  MITgcm STREAMICE driving stress.  NOTE: the legacy
+!  isf_driving_stress.h carries an extra 0.25 factor (a 4x too
+!  small nodal load); correcting it here makes the new solver's
+!  velocities larger than the legacy solver's by up to 4x -- an
+!  expected A/B difference until the legacy factor is corrected
+!  or the legacy path is retired.
 !
-!  The surface elevation S (Fi(:,:,icIzsf)) is smoothed with
+!  The surface elevation S (Fi(:,:,ifIzsf)) is smoothed with
 !  n_smooth iterations of a 5-point Laplacian filter before the
 !  gradient is taken.  This regularizes the grounding-line kink
 !  where S transitions between the grounded (S = -h + H) and
@@ -1360,23 +1064,13 @@
 !
 !  Ice margin taper:  the driving stress is linearly tapered to
 !  zero within n_taper cells of the ice margin (any of the 8
-!  neighbouring RHO cells ice-free).  The missing resistance is to
-!  be provided by an ice-front pressure boundary term (future
-!  work).  Margin PSI nodes with any ice-free surrounding cell are
-!  skipped entirely.
+!  neighbouring RHO cells ice-free).  The missing resistance is
+!  to be provided by an ice-front pressure boundary term (future
+!  work).  Margin PSI nodes with an ice-free surrounding cell are
+!  skipped entirely (pmask_ist = 0 under the AND convention).
 !
 !  Reference:  PISM compute_nuH_everywhere (slope regularization),
 !  MITgcm STREAMICE streamice_driving_stress.F.
-!
-      USE mod_kinds
-      USE mod_param, ONLY : NghostPoints
-      USE mod_scalars
-      USE mod_parallel
-      USE exchange_2d_mod, ONLY : exchange_p2d_tile
-# ifdef DISTRIBUTE
-      USE mp_exchange_mod, ONLY : mp_exchange2d
-# endif
-      USE mod_isf
 !
       implicit none
 !
@@ -1384,28 +1078,40 @@
 !
       integer, intent(in) :: ng, tile, model
       integer, intent(in) :: LBi, UBi, LBj, UBj
-      integer, intent(in) :: Istr, Iend, Jstr, Jend
-      integer, intent(in) :: IstrP, IendP, JstrP, JendP
-      integer, intent(in) :: ksa_old
 !
-      real(r8), intent(in)    :: pm(LBi:UBi,LBj:UBj)
-      real(r8), intent(in)    :: pn(LBi:UBi,LBj:UBj)
-      real(r8), intent(in)    :: pmask_ssa(LBi:UBi,LBj:UBj)
-      real(r8), intent(in)    :: Si(LBi:UBi,LBj:UBj,2,nIsfS)
-      real(r8), intent(in)    :: Fi(LBi:UBi,LBj:UBj,nIsfF)
-      real(r8), intent(inout) :: taudx(LBi:UBi,LBj:UBj)
-      real(r8), intent(inout) :: taudy(LBi:UBi,LBj:UBj)
+# ifdef ASSUMED_SHAPE
+      real(r8), intent(in)  :: pm(LBi:,LBj:)
+      real(r8), intent(in)  :: pn(LBi:,LBj:)
+      real(r8), intent(in)  :: rmask_ist(LBi:,LBj:)
+      real(r8), intent(in)  :: pmask_ist(LBi:,LBj:)
+      real(r8), intent(in)  :: hi(LBi:,LBj:)
+      real(r8), intent(in)  :: zs(LBi:,LBj:)
+      real(r8), intent(out) :: tdx(LBi:,LBj:)
+      real(r8), intent(out) :: tdy(LBi:,LBj:)
+# else
+      real(r8), intent(in)  :: pm(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: pn(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: rmask_ist(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: pmask_ist(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: hi(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: zs(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: tdx(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: tdy(LBi:UBi,LBj:UBj)
+# endif
 !
 !  Local variable declarations.
 !
       integer :: i, j, di, dj, is_iter, dist_margin
 !
-      real(r8) :: H11, H21, H12, H22, H_psi
+      real(r8) :: hi_psi
       real(r8) :: dSdx, dSdy, dx_rho, dy_rho, jac_avg
-      real(r8) :: zs_sum, taper_w, rhoi_g
-      real(r8), parameter :: gravity = 9.81_r8
+      real(r8) :: zs_sum, taper_w
+      real(r8) :: cff
 !
       real(r8), dimension(LBi:UBi,LBj:UBj) :: zs_smooth
+      real(r8), dimension(LBi:UBi,LBj:UBj) :: zs_smooth_temp
+!
+#include "set_bounds.h"
 !
 !-----------------------------------------------------------------------
 !  Initialize the nodal forces.
@@ -1413,12 +1119,10 @@
 !
       DO j=JstrP,JendP
         DO i=IstrP,IendP
-          taudx(i,j)=0.0_r8
-          taudy(i,j)=0.0_r8
+          tdx(i,j)=0.0_r8
+          tdy(i,j)=0.0_r8
         END DO
       END DO
-!
-      rhoi_g=rho_i*gravity
 !
 !-----------------------------------------------------------------------
 !  Smooth the surface elevation for the driving stress gradient.
@@ -1429,66 +1133,15 @@
 !  neighbouring tile interiors by the exchange at the top of each
 !  smoothing iteration.
 !
-      DO j=LBj,UBj
-        DO i=LBi,UBi
-          IF (Si(i,j,ksa_old,isIhis).gt.0.0_r8) THEN
-            zs_smooth(i,j)=Fi(i,j,icIzsf)
+      DO j=JstrR,JendR
+        DO i=IstrR,IendR
+          IF (rmask_ist(i,j).eq.1.0_r8) THEN
+            zs_smooth(i,j)=zs(i,j)
           ELSE
             zs_smooth(i,j)=0.0_r8
           END IF
         END DO
       END DO
-!
-!  Apply the 5-point Laplacian smoothing (n_smooth iterations).
-!  Only ice-covered cells are smoothed;  ice-free neighbours are
-!  replaced by the centre value (no-flux treatment at the margin).
-!  The interior-only loop keeps the writes inside the array bounds.
-!
-      DO is_iter=1,n_smooth(ng)
-# ifdef DISTRIBUTE
-        CALL mp_exchange2d (ng, tile, model, 1,                         &
-     &                      LBi, UBi, LBj, UBj,                         &
-     &                      NghostPoints,                               &
-     &                      EWperiodic(ng), NSperiodic(ng),             &
-     &                      zs_smooth)
-# endif
-        DO j=Jstr,Jend
-          DO i=Istr,Iend
-            IF (Si(i,j,ksa_old,isIhis).gt.0.0_r8) THEN
-              zs_sum=zs_smooth(i,j)
-              IF (Si(i+1,j,ksa_old,isIhis).gt.0.0_r8) THEN
-                zs_sum=zs_sum+zs_smooth(i+1,j)
-              ELSE
-                zs_sum=zs_sum+zs_smooth(i,j)
-              END IF
-              IF (Si(i-1,j,ksa_old,isIhis).gt.0.0_r8) THEN
-                zs_sum=zs_sum+zs_smooth(i-1,j)
-              ELSE
-                zs_sum=zs_sum+zs_smooth(i,j)
-              END IF
-              IF (Si(i,j+1,ksa_old,isIhis).gt.0.0_r8) THEN
-                zs_sum=zs_sum+zs_smooth(i,j+1)
-              ELSE
-                zs_sum=zs_sum+zs_smooth(i,j)
-              END IF
-              IF (Si(i,j-1,ksa_old,isIhis).gt.0.0_r8) THEN
-                zs_sum=zs_sum+zs_smooth(i,j-1)
-              ELSE
-                zs_sum=zs_sum+zs_smooth(i,j)
-              END IF
-              zs_smooth(i,j)=zs_sum/5.0_r8
-            END IF
-          END DO
-        END DO
-      END DO
-!
-!  Exchange the halo of the smoothed field (needed by the
-!  tile-boundary PSI stencils below).
-!
-      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-        CALL exchange_p2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj, zs_smooth)
-      END IF
 # ifdef DISTRIBUTE
       CALL mp_exchange2d (ng, tile, model, 1,                           &
      &                    LBi, UBi, LBj, UBj,                           &
@@ -1496,6 +1149,59 @@
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    zs_smooth)
 # endif
+!
+!  Apply the 5-point Laplacian smoothing (n_smooth iterations).
+!  Only ice-covered cells are smoothed;  ice-free neighbours are
+!  replaced by the centre value (no-flux treatment at the margin).
+!  The interior-only loop keeps the writes inside the array bounds.
+!
+      DO is_iter=1,n_smooth(ng)
+        DO j=JstrR,JendR
+          DO i=IstrR,IendR
+            IF (rmask_ist(i,j).eq.1.0_r8) THEN
+              zs_sum=zs_smooth(i,j)
+              IF (rmask_ist(i+1,j  ).eq.1.0_r8) THEN
+                zs_sum=zs_sum+zs_smooth(i+1,j  )
+              ELSE
+                zs_sum=zs_sum+zs_smooth(i  ,j  )
+              END IF
+              IF (rmask_ist(i-1,j  ).eq.1.0_r8) THEN
+                zs_sum=zs_sum+zs_smooth(i-1,j  )
+              ELSE
+                zs_sum=zs_sum+zs_smooth(i  ,j  )
+              END IF
+              IF (rmask_ist(i  ,j+1).eq.1.0_r8) THEN
+                zs_sum=zs_sum+zs_smooth(i  ,j+1)
+              ELSE
+                zs_sum=zs_sum+zs_smooth(i  ,j  )
+              END IF
+              IF (rmask_ist(i  ,j-1).eq.1.0_r8) THEN
+                zs_sum=zs_sum+zs_smooth(i  ,j-1)
+              ELSE
+                zs_sum=zs_sum+zs_smooth(i  ,j  )
+              END IF
+              zs_smooth_temp(i,j)=zs_sum/5.0_r8
+            ELSE
+              zs_smooth_temp(i,j)=0.0_r8
+            END IF
+          END DO
+        END DO
+!
+!  Reset zs_smooth
+!
+        DO j=JstrR,JendR
+          DO i=IstrR,IendR
+            zs_smooth(i,j)=zs_smooth_temp(i,j)
+          END DO
+        END DO
+# ifdef DISTRIBUTE
+        CALL mp_exchange2d (ng, tile, model, 1,                         &
+     &                      LBi, UBi, LBj, UBj,                         &
+     &                      NghostPoints,                               &
+     &                      EWperiodic(ng), NSperiodic(ng),             &
+     &                      zs_smooth)
+# endif
+      END DO
 !
 !-----------------------------------------------------------------------
 !  Assemble the driving stress at the active PSI nodes.
@@ -1509,145 +1215,207 @@
 !
       DO j=JstrP,JendP
         DO i=IstrP,IendP
-          IF (pmask_ssa(i,j).eq.1.0_r8) THEN
-!
-            H11=Si(i-1,j-1,ksa_old,isIhis)
-            H21=Si(i,  j-1,ksa_old,isIhis)
-            H12=Si(i-1,j,  ksa_old,isIhis)
-            H22=Si(i,  j,  ksa_old,isIhis)
-!
-!  Skip margin nodes with any ice-free surrounding cell.
-!
-            IF (H11.gt.0.0_r8.and.H21.gt.0.0_r8.and.                    &
-     &          H12.gt.0.0_r8.and.H22.gt.0.0_r8) THEN
+          IF (pmask_ist(i,j).eq.1.0_r8) THEN
 !
 !  Ice margin taper:  distance to the nearest ice-free cell among
 !  the 8 neighbours, normalized by n_taper and clamped to 1.
 !
-              dist_margin=n_taper(ng)
-              DO dj=-1,1
-                DO di=-1,1
-                  IF (di.ne.0.or.dj.ne.0) THEN
-                    IF (Si(i+di,j+dj,ksa_old,isIhis).le.0.0_r8) THEN
-                      dist_margin=MIN(dist_margin,                      &
-     &                    MAX(ABS(di),ABS(dj)))
-                    END IF
+            dist_margin=n_taper(ng)
+            DO dj=-1,1
+              DO di=-1,1
+                IF (di.ne.0.or.dj.ne.0) THEN
+                  IF (pmask_ist(i+di,j+dj).eq.0.0_r8) THEN
+                    dist_margin=MIN(dist_margin,MAX(ABS(di),ABS(dj)))
                   END IF
-                END DO
+                END IF
               END DO
-              taper_w=MIN(REAL(dist_margin,r8)/                         &
-     &                    REAL(n_taper(ng),r8),1.0_r8)
+            END DO
+            taper_w=MIN(REAL(dist_margin,r8)/REAL(n_taper(ng),r8),      &
+     &                  1.0_r8)
 !
 !  FD gradient of the smoothed surface at the PSI node.
 !
-              dx_rho=0.5_r8*(1.0_r8/pm(i-1,j)+1.0_r8/pm(i,j))
-              dy_rho=0.5_r8*(1.0_r8/pn(i,j-1)+1.0_r8/pn(i,j))
-              jac_avg=0.25_r8*(1.0_r8/(pm(i-1,j-1)*pn(i-1,j-1))+        &
-     &                         1.0_r8/(pm(i,  j-1)*pn(i,  j-1))+        &
-     &                         1.0_r8/(pm(i-1,j  )*pn(i-1,j  ))+        &
-     &                         1.0_r8/(pm(i,  j  )*pn(i,  j  )))
+            dx_rho=0.5_r8*(1.0_r8/pm(i-1,j  )+1.0_r8/pm(i  ,j  ))
+            dy_rho=0.5_r8*(1.0_r8/pn(i  ,j-1)+1.0_r8/pn(i  ,j  ))
+            jac_avg=0.25_r8*(1.0_r8/(pm(i-1,j-1)*pn(i-1,j-1))+          &
+     &                       1.0_r8/(pm(i,  j-1)*pn(i,  j-1))+          &
+     &                       1.0_r8/(pm(i-1,j  )*pn(i-1,j  ))+          &
+     &                       1.0_r8/(pm(i,  j  )*pn(i,  j  )))
 !
-              dSdx=((zs_smooth(i,j-1)+zs_smooth(i,j))-                  &
-     &              (zs_smooth(i-1,j-1)+zs_smooth(i-1,j)))/             &
-     &             (2.0_r8*dx_rho)
-              dSdy=((zs_smooth(i-1,j)+zs_smooth(i,j))-                  &
-     &              (zs_smooth(i-1,j-1)+zs_smooth(i,j-1)))/             &
-     &             (2.0_r8*dy_rho)
+            dSdx=((zs_smooth(i  ,j-1)+zs_smooth(i  ,j  ))-              &
+     &            (zs_smooth(i-1,j-1)+zs_smooth(i-1,j  )))/             &
+     &           (2.0_r8*dx_rho)
+            dSdy=((zs_smooth(i-1,j  )+zs_smooth(i  ,j  ))-              &
+     &            (zs_smooth(i-1,j-1)+zs_smooth(i  ,j-1)))/             &
+     &           (2.0_r8*dy_rho)
 !
-              H_psi=0.25_r8*(H11+H21+H12+H22)
+            hi_psi=0.25_r8*(hi(i-1,j-1)+hi(i,j-1)+hi(i-1,j)+hi(i,j))
 !
-!  FE-consistent nodal force (lumped nodal area = jac_avg/4).
+!  FE-consistent nodal force:  tau_d times the lumped nodal area
+!  jac_avg (= sum of the surrounding A_e/4;  see header).
 !
-              taudx(i,j)=-taper_w*rhoi_g*H_psi*dSdx*                    &
-     &                       jac_avg*0.25_r8
-              taudy(i,j)=-taper_w*rhoi_g*H_psi*dSdy*                    &
-     &                       jac_avg*0.25_r8
-            END IF
+            cff=-taper_w*rho_i*g*hi_psi*jac_avg
+            tdx(i,j)=cff*dSdx
+            tdy(i,j)=cff*dSdy
           END IF
         END DO
       END DO
 !
-!  Exchange the halo of the assembled RHS.
-!
-      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-        CALL exchange_p2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj, taudx)
-        CALL exchange_p2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj, taudy)
-      END IF
-# ifdef DISTRIBUTE
-      CALL mp_exchange2d (ng, tile, model, 2,                           &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    NghostPoints,                                 &
-     &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    taudx, taudy)
-# endif
+!  No halo exchange of the assembled RHS:  every consumer (warm
+!  start, CG residual, convergence norms) reads tdx/tdy at
+!  owned PSI nodes only.
 !
       RETURN
       END SUBROUTINE ssa_driving_stress
 !
 !***********************************************************************
-      SUBROUTINE ssa_viscosity (ng,                                     &
-     &                          LBi, UBi, LBj, UBj,                     &
-     &                          Istr, Iend, Jstr, Jend,                 &
-     &                          ksa_old, ksa_new,                       &
-     &                          pm, pn,                                 &
-     &                          Si, Fi,                                 &
-     &                          nuH)
+      SUBROUTINE ssa_hardness (ng, tile, model,                         &
+     &                         LBi, UBi, LBj, UBj,                      &
+     &                         Istr, Iend, Jstr, Jend,                  &
+     &                         hi, ti,                                  &
+     &                         B_hard)
 !***********************************************************************
 !
-!  Compute the depth-integrated effective viscosity at RHO points:
+!  Compute the Glen hardness field B = A^(-1/n) at RHO points.
+!  B depends only on the ice temperature and the ice thickness,
+!  both frozen during a solve (lsold values), so this routine is
+!  called once per solve (Stage 4) and ssa_viscosity only combines
+!  the cached field with the current strain-rate invariant.
 !
-!    gamma = eps_xx^2 + eps_yy^2 + eps_xx*eps_yy + eps_xy^2
-!           + eps_glen_min^2            (squared second invariant)
-!    nuH   = 0.5 * B * gamma^((1-n)/(2n)) * H
-!
-!  where B = A^(-1/n) is the Glen hardness.  The exponent (1-n)/(2n)
-!  acts on the SQUARED invariant gamma:  this is the PISM convention
-!  (FlowLaw::effective_viscosity, FlowLaw.cc) and is equivalent to
-!  the STREAMICE form  nuH = 0.5*B*eps_e^((1-n)/n)*H  with
-!  eps_e = sqrt(gamma)  (streamice_visc_beta.F);  both reduce to the
-!  MacAyeal (1989) Glen-law effective viscosity nu = 0.5*B*
-!  gamma^((1-n)/(2n)).  The Glen rate factor
-!  A is either the constant A_glen (isothermal override, used for
-!  ISOMIP-style tests) or the Paterson (1994) temperature-dependent
-!  formula with pressure-adjusted temperature
+!  The Glen rate factor A is either the constant A_glen
+!  (isothermal override, used for ISOMIP-style tests) or the
+!  Paterson (1994) temperature-dependent formula with
+!  pressure-adjusted temperature
 !  T* = T + 273.15 + 8.66e-4 * 0.5 * H  (Bueler & Brown 2009):
 !
 !    A = 3.61e-13 * exp(-60000/(R T*)),   T* <= 263.15 K
 !    A = 1.73e3   * exp(-139000/(R T*)),  T* >  263.15 K
 !
-!  Strain rates are centered differences of the 4 PSI-corner
-!  velocities of each RHO cell.  PISM robustness measures:
-!    - strength extension for thin ice (H < min_thickness)
-!    - additive nuH regularization (nuH += nuH_reg)
+!  Cells without ice get B = 0 (their viscosity is zeroed by
+!  ssa_viscosity anyway).  No halo exchange:  B_hard is consumed
+!  by ssa_viscosity over the same interior range only.
 !
-!  Reference:  Paterson (1994) Table 5.2, Bueler & Brown (2009),
-!  MITgcm STREAMICE streamice_visc_beta.F, PISM compute_nuH_everywhere.
-!
-      USE mod_kinds
-      USE mod_isf
+!  Reference:  Paterson (1994) Table 5.2, Bueler & Brown (2009).
 !
       implicit none
 !
 !  Imported variable declarations.
 !
-      integer, intent(in) :: ng
+      integer, intent(in) :: ng, tile, model
       integer, intent(in) :: LBi, UBi, LBj, UBj
       integer, intent(in) :: Istr, Iend, Jstr, Jend
-      integer, intent(in) :: ksa_old, ksa_new
 !
-      real(r8), intent(in)    :: pm(LBi:UBi,LBj:UBj)
-      real(r8), intent(in)    :: pn(LBi:UBi,LBj:UBj)
-      real(r8), intent(in)    :: Si(LBi:UBi,LBj:UBj,2,nIsfS)
-      real(r8), intent(in)    :: Fi(LBi:UBi,LBj:UBj,nIsfF)
-      real(r8), intent(inout) :: nuH(LBi:UBi,LBj:UBj)
+# ifdef ASSUMED_SHAPE
+      real(r8), intent(in)  :: hi(LBi:,LBj:)
+      real(r8), intent(in)  :: ti(LBi:,LBj:)
+      real(r8), intent(out) :: B_hard(LBi:,LBj:)
+# else
+      real(r8), intent(in)  :: hi(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: ti(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: B_hard(LBi:UBi,LBj:UBj)
+# endif
 !
 !  Local variable declarations.
 !
       integer :: i, j
 !
-      real(r8) :: H_rho, B_hardness, T_star, RT_star, A_pat
+      real(r8) :: T_star, RT_star, A_pat
+!
+!-----------------------------------------------------------------------
+!  Assemble the hardness field.
+!-----------------------------------------------------------------------
+!
+      DO j=Jstr,Jend
+        DO i=Istr,Iend
+          IF (hi(i,j).gt.0.0_r8) THEN
+            IF (A_glen(ng).gt.0.0_r8) THEN
+              B_hard(i,j)=A_glen(ng)**(-1.0_r8/n_glen(ng))
+            ELSE
+              T_star=ti(i,j)+273.15_r8+8.66E-4_r8*0.5_r8*hi(i,j)
+              RT_star=8.314_r8*T_star
+              IF (T_star.le.263.15_r8) THEN
+                A_pat=3.61E-13_r8*EXP(-6.0E4_r8/RT_star)
+              ELSE
+                A_pat=1.73E3_r8*EXP(-13.9E4_r8/RT_star)
+              END IF
+              B_hard(i,j)=A_pat**(-1.0_r8/n_glen(ng))
+            END IF
+          ELSE
+            B_hard(i,j)=0.0_r8
+          END IF
+        END DO
+      END DO
+!
+      RETURN
+      END SUBROUTINE ssa_hardness
+!
+!***********************************************************************
+      SUBROUTINE ssa_viscosity (ng, tile, model,                        &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Istr, Iend, Jstr, Jend,                 &
+     &                          pm, pn,                                 &
+     &                          hi, ui, vi, B_hard,                     &
+     &                          nuh)
+!***********************************************************************
+!
+!  Compute the depth-integrated effective viscosity at RHO points:
+!
+!    gamma = eps_xx^2 + eps_yy^2 + eps_xx*eps_yy + eps_xy^2 +
+!            eps_glen_min^2  (squared second invariant)
+!    nuH   = 0.5 * B * gamma^((1-n)/(2n)) * H
+!
+!  where B = A^(-1/n) is the Glen hardness, PRECOMPUTED by the
+!  ssa_hardness (isf_ssa_tile Stage 4):  B depends only on the ice
+!  temperature and the lsold thickness, both frozen during the
+!  Picard iteration, so the Paterson (1994) rate-factor evaluation
+!  runs once per solve instead of once per viscosity call.
+!
+!  The exponent (1-n)/(2n) acts on the SQUARED invariant gamma:
+!  this is the PISM convention (FlowLaw::effective_viscosity,
+!  FlowLaw.cc) and is equivalent to the STREAMICE form
+!  nuH = 0.5*B*eps_e^((1-n)/n)*H with eps_e = sqrt(gamma)
+!  (streamice_visc_beta.F);  both reduce to the MacAyeal (1989)
+!  Glen-law effective viscosity nu = 0.5*B*gamma^((1-n)/(2n)).
+!
+!  Strain rates are centered differences of the 4 PSI-corner
+!  velocities of each RHO cell.  PISM robustness measures:
+!    - strength extension for thin ice (H_eff = max(H, min_thick-
+!      ness)), so margin cells keep membrane stiffness
+!    - additive nuH regularization (nuH += nuH_reg)
+!
+!  Reference:  Paterson (1994) Table 5.2, Bueler & Brown (2009),
+!  MITgcm STREAMICE streamice_visc_beta.F, PISM compute_nuH_everywhere.
+!
+      implicit none
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: ng, tile, model
+      integer, intent(in) :: LBi, UBi, LBj, UBj
+      integer, intent(in) :: Istr, Iend, Jstr, Jend
+!
+# ifdef ASSUMED_SHAPE
+      real(r8), intent(in)  :: pm(LBi:,LBj:)
+      real(r8), intent(in)  :: pn(LBi:,LBj:)
+      real(r8), intent(in)  :: hi(LBi:,LBj:)
+      real(r8), intent(in)  :: ui(LBi:,LBj:)
+      real(r8), intent(in)  :: vi(LBi:,LBj:)
+      real(r8), intent(in)  :: B_hard(LBi:,LBj:)
+      real(r8), intent(out) :: nuh(LBi:,LBj:)
+# else
+      real(r8), intent(in)  :: pm(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: pn(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: hi(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: ui(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: vi(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: B_hard(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: nuh(LBi:UBi,LBj:UBj)
+# endif
+!
+!  Local variable declarations.
+!
+      integer :: i, j
+!
       real(r8) :: cff, eps_xx, eps_yy, eps_xy
 !
 !-----------------------------------------------------------------------
@@ -1657,80 +1425,65 @@
 !
       DO j=Jstr,Jend
         DO i=Istr,Iend
-          nuH(i,j)=0.0_r8
-          H_rho=Si(i,j,ksa_old,isIhis)
-          IF (H_rho.gt.0.0_r8) THEN
-!
-!  Glen rate factor:  constant (isothermal) or Paterson.
-!
-            IF (A_glen(ng).gt.0.0_r8) THEN
-              B_hardness=A_glen(ng)**(-1.0_r8/n_glen(ng))
-            ELSE
-              T_star=Fi(i,j,icItis)+273.15_r8+                          &
-     &               8.66E-4_r8*0.5_r8*H_rho
-              RT_star=8.314_r8*T_star
-              IF (T_star.le.263.15_r8) THEN
-                A_pat=3.61E-13_r8*EXP(-6.0E4_r8/RT_star)
-              ELSE
-                A_pat=1.73E3_r8*EXP(-13.9E4_r8/RT_star)
-              END IF
-              B_hardness=A_pat**(-1.0_r8/n_glen(ng))
-            END IF
+          nuh(i,j)=0.0_r8
+          IF (hi(i,j).gt.0.0_r8) THEN
 !
 !  Centered strain rates from the 4 PSI-corner velocities:
 !  nodes 1=(i,j), 2=(i+1,j), 3=(i,j+1), 4=(i+1,j+1).
 !
-            eps_xx=0.5_r8*((Si(i+1,j,  ksa_new,isIuis)-                 &
-     &                      Si(i,  j,  ksa_new,isIuis))+                &
-     &                     (Si(i+1,j+1,ksa_new,isIuis)-                 &
-     &                      Si(i,  j+1,ksa_new,isIuis)))*pm(i,j)
-            eps_yy=0.5_r8*((Si(i,  j+1,ksa_new,isIvis)-                 &
-     &                      Si(i,  j,  ksa_new,isIvis))+                &
-     &                     (Si(i+1,j+1,ksa_new,isIvis)-                 &
-     &                      Si(i+1,j,  ksa_new,isIvis)))*pn(i,j)
-            eps_xy=0.5_r8*(                                             &
-     &          0.5_r8*((Si(i+1,j,  ksa_new,isIvis)-                    &
-     &                   Si(i,  j,  ksa_new,isIvis))+                   &
-     &                  (Si(i+1,j+1,ksa_new,isIvis)-                    &
-     &                   Si(i,  j+1,ksa_new,isIvis)))*pm(i,j)+          &
-     &          0.5_r8*((Si(i,  j+1,ksa_new,isIuis)-                    &
-     &                   Si(i,  j,  ksa_new,isIuis))+                   &
-     &                  (Si(i+1,j+1,ksa_new,isIuis)-                    &
-     &                   Si(i+1,j,  ksa_new,isIuis)))*pn(i,j))
+            eps_xx=0.5_r8*((ui(i+1,j  )-ui(i,  j  ))+                   &
+     &                     (ui(i+1,j+1)-ui(i,  j+1)))*pm(i,j)
+            eps_yy=0.5_r8*((vi(i,  j+1)-vi(i,  j  ))+                   &
+     &                     (vi(i+1,j+1)-vi(i+1,j  )))*pn(i,j)
+            eps_xy=0.5_r8*(0.5_r8*((vi(i+1,j  )-vi(i,  j  ))+           &
+     &                             (vi(i+1,j+1)-vi(i,  j+1)))*pm(i,j)+  &
+     &                     0.5_r8*((ui(i,  j+1)-ui(i,  j  ))+           &
+     &                             (ui(i+1,j+1)-ui(i+1,j  )))*pn(i,j))
 !
 !  Glen-law effective viscosity from the squared second invariant,
 !  with strength extension for thin ice and additive regularization.
 !  The bracket is strictly positive through the eps_glen_min^2 term.
 !
-            cff=0.5_r8*B_hardness*                                      &
-     &          (eps_xx*eps_xx+eps_yy*eps_yy+eps_xx*eps_yy+             &
-     &           eps_xy*eps_xy+                                         &
-     &           eps_glen_min(ng)*eps_glen_min(ng))**                   &
+            cff=0.5_r8*B_hard(i,j)*                                     &
+     &          (eps_xx**2+eps_yy**2+eps_xx*eps_yy+eps_xy**2+           &
+     &           eps_glen_min(ng)**2)**                                 &
      &          ((1.0_r8-n_glen(ng))/(2.0_r8*n_glen(ng)))
 !
-            IF (H_rho.lt.min_thickness(ng)) THEN
-              nuH(i,j)=cff*min_thickness(ng)
-            ELSE
-              nuH(i,j)=cff*H_rho
-            END IF
+!  Strength extension (PISM):  thin ice is treated with the minimum
+!  thickness in the H factor so margin cells retain membrane
+!  stiffness (H < min_thickness would give nuH -> 0).
 !
-            nuH(i,j)=nuH(i,j)+nuH_reg(ng)
-!
+            nuh(i,j)=cff*MAX(hi(i,j),min_thickness(ng))
+            nuh(i,j)=nuh(i,j)+nuH_reg(ng)
           END IF
         END DO
       END DO
+!
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+        CALL exchange_p2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          nuh)
+      END IF
+# ifdef DISTRIBUTE
+      CALL mp_exchange2d (ng, tile, model, 1,                           &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+     &                    nuh)
+# endif
 !
       RETURN
       END SUBROUTINE ssa_viscosity
 !
 !***********************************************************************
-      SUBROUTINE ssa_jacobi_diag (ng,                                   &
+      SUBROUTINE ssa_jacobi_diag (ng, tile, model,                      &
      &                            LBi, UBi, LBj, UBj,                   &
-     &                            iCstr, iCend, jCstr, jCend,           &
+     &                            IstrC, IendC, JstrC, JendC,           &
      &                            IstrP, IendP, JstrP, JendP,           &
-     &                            pm, pn, pmask_ssa,                    &
-     &                            nuH, beta,                            &
      &                            DPhi, phi_tab,                        &
+     &                            pm, pn,                               &
+     &                            pmask_ist,                            &
+     &                            nuH, beta,                            &
      &                            diag_u, diag_v)
 !***********************************************************************
 !
@@ -1747,31 +1500,39 @@
 !  follows by symmetry).
 !
 !  The cell loop covers the own cells plus the western/southern
-!  halo ring (iCstr..iCend);  scatters land only on owned PSI
+!  halo ring (IstrC..IendC);  scatters land only on owned PSI
 !  nodes (ownership filter).
 !
 !  Reference:  MITgcm STREAMICE CG_ADIAG.
-!
-      USE mod_kinds
 !
       implicit none
 !
 !  Imported variable declarations.
 !
-      integer, intent(in) :: ng
+      integer, intent(in) :: ng, tile, model
       integer, intent(in) :: LBi, UBi, LBj, UBj
-      integer, intent(in) :: iCstr, iCend, jCstr, jCend
+      integer, intent(in) :: IstrC, IendC, JstrC, JendC
       integer, intent(in) :: IstrP, IendP, JstrP, JendP
 !
-      real(r8), intent(in)    :: pm(LBi:UBi,LBj:UBj)
-      real(r8), intent(in)    :: pn(LBi:UBi,LBj:UBj)
-      real(r8), intent(in)    :: pmask_ssa(LBi:UBi,LBj:UBj)
-      real(r8), intent(in)    :: nuH(LBi:UBi,LBj:UBj)
-      real(r8), intent(in)    :: beta(LBi:UBi,LBj:UBj)
-      real(r8), intent(in)    :: DPhi(4,4,2)
-      real(r8), intent(in)    :: phi_tab(4,4)
-      real(r8), intent(inout) :: diag_u(LBi:UBi,LBj:UBj)
-      real(r8), intent(inout) :: diag_v(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: DPhi(4,4,2)
+      real(r8), intent(in)  :: phi_tab(4,4)
+# ifdef ASSUMED_SHAPE
+      real(r8), intent(in)  :: pm(LBi:,LBj:)
+      real(r8), intent(in)  :: pn(LBi:,LBj:)
+      real(r8), intent(in)  :: pmask_ist(LBi:,LBj:)
+      real(r8), intent(in)  :: nuH(LBi:,LBj:)
+      real(r8), intent(in)  :: beta(LBi:,LBj:)
+      real(r8), intent(out) :: diag_u(LBi:,LBj:)
+      real(r8), intent(out) :: diag_v(LBi:,LBj:)
+# else
+      real(r8), intent(in)  :: pm(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: pn(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: pmask_ist(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: nuH(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: beta(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: diag_u(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: diag_v(LBi:UBi,LBj:UBj)
+# endif
 !
 !  Local variable declarations.
 !
@@ -1779,10 +1540,6 @@
 !
       real(r8) :: dx_rho, dy_rho, jac
       real(r8) :: dphi_x, dphi_y, phv
-!
-!  Quadrature weights (2x2 Gauss on the reference [0,1]x[0,1]).
-!
-      real(r8), parameter :: wquad(4) = 0.25_r8
 !
 !-----------------------------------------------------------------------
 !  Assemble the diagonal contributions.
@@ -1795,8 +1552,8 @@
         END DO
       END DO
 !
-      DO j=jCstr,jCend
-        DO i=iCstr,iCend
+      DO j=JstrC,JendC
+        DO i=IstrC,IendC
           IF (nuH(i,j).gt.0.0_r8) THEN
             dx_rho=1.0_r8/pm(i,j)
             dy_rho=1.0_r8/pn(i,j)
@@ -1805,13 +1562,17 @@
             DO nq=1,4
               DO k_node=1,4
                 IF (k_node.eq.1) THEN
-                  i1=i;   j1=j
+                  i1=i
+                  j1=j
                 ELSE IF (k_node.eq.2) THEN
-                  i1=i+1; j1=j
+                  i1=i+1
+                  j1=j
                 ELSE IF (k_node.eq.3) THEN
-                  i1=i;   j1=j+1
+                  i1=i
+                  j1=j+1
                 ELSE
-                  i1=i+1; j1=j+1
+                  i1=i+1
+                  j1=j+1
                 END IF
 !
 !  Ownership filter:  keep only contributions landing on PSI nodes
@@ -1819,7 +1580,7 @@
 !  integrated here, and by the own cells integrated on the
 !  neighbouring tile).
 !
-                IF (pmask_ssa(i1,j1).eq.1.0_r8.and.                     &
+                IF (pmask_ist(i1,j1).eq.1.0_r8.and.                     &
      &              i1.ge.IstrP.and.i1.le.IendP.and.                    &
      &              j1.ge.JstrP.and.j1.le.JendP) THEN
                   dphi_x=DPhi(k_node,nq,1)*2.0_r8/dx_rho
@@ -1827,14 +1588,13 @@
                   phv=phi_tab(k_node,nq)
 !
                   diag_u(i1,j1)=diag_u(i1,j1)+                          &
-     &              wquad(nq)*jac*nuH(i,j)*                             &
-     &              (4.0_r8*dphi_x*dphi_x+dphi_y*dphi_y)+               &
-     &              wquad(nq)*jac*beta(i,j)*phv*phv
-!
+     &                          0.25_r8*jac*nuH(i,j)*                   &
+     &                          (4.0_r8*dphi_x*dphi_x+dphi_y*dphi_y)+   &
+     &                          0.25_r8*jac*beta(i,j)*phv**2
                   diag_v(i1,j1)=diag_v(i1,j1)+                          &
-     &              wquad(nq)*jac*nuH(i,j)*                             &
-     &              (4.0_r8*dphi_y*dphi_y+dphi_x*dphi_x)+               &
-     &              wquad(nq)*jac*beta(i,j)*phv*phv
+     &                          0.25_r8*jac*nuH(i,j)*                   &
+     &                          (4.0_r8*dphi_y*dphi_y+dphi_x*dphi_x)+   &
+     &                          0.25_r8*jac*beta(i,j)*phv**2
                 END IF
               END DO
             END DO
@@ -1842,18 +1602,34 @@
         END DO
       END DO
 !
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+        CALL exchange_p2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj, diag_u)
+        CALL exchange_p2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj, diag_v)
+      END IF
+# ifdef DISTRIBUTE
+      CALL mp_exchange2d (ng, tile, model, 2,                           &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+     &                    diag_u, diag_v)
+# endif
+!
       RETURN
       END SUBROUTINE ssa_jacobi_diag
 !
 !***********************************************************************
       SUBROUTINE ssa_matvec (ng, tile, model,                           &
      &                       LBi, UBi, LBj, UBj,                        &
-     &                       iCstr, iCend, jCstr, jCend,                &
+     &                       IstrC, IendC, JstrC, JendC,                &
      &                       IstrP, IendP, JstrP, JendP,                &
-     &                       pm, pn, pmask_ssa,                         &
-     &                       nuH, beta,                                 &
      &                       DPhi, phi_tab,                             &
-     &                       xu, xv, Au, Av)
+     &                       pm, pn,                                    &
+     &                       pmask_ist,                                 &
+     &                       nuH, beta,                                 &
+     &                       xu, xv,                                    &
+     &                       Au, Av)
 !***********************************************************************
 !
 !  Matrix-free action of the SSA operator on a PSI-point field
@@ -1872,20 +1648,13 @@
 !  the depth-integrated membrane stresses of the incompressible
 !  SSA:  N_xx = 2 nuH (2 exx + eyy),  N_xy = 2 nuH exy.
 !
-!  Input/output halos are exchanged inside this routine:  the
-!  assembly reads the PSI corners of every integrated cell (halo
-!  included).
+!  The INPUT halos are exchanged inside this routine:  the ring
+!  cells' assembly reads PSI corners owned by the neighbouring
+!  tiles, so (xu,xv) carry their halo values on entry (hence the
+!  intent(inout) declaration).  No output exchange:  every
+!  consumer of (Au,Av) reads owned PSI nodes only.
 !
 !  Reference:  MITgcm STREAMICE streamice_cg_functions.F (CG_ACTION).
-!
-      USE mod_kinds
-      USE mod_param, ONLY : NghostPoints
-      USE mod_scalars
-      USE mod_parallel
-      USE exchange_2d_mod, ONLY : exchange_p2d_tile
-# ifdef DISTRIBUTE
-      USE mp_exchange_mod, ONLY : mp_exchange2d
-# endif
 !
       implicit none
 !
@@ -1893,20 +1662,32 @@
 !
       integer, intent(in) :: ng, tile, model
       integer, intent(in) :: LBi, UBi, LBj, UBj
-      integer, intent(in) :: iCstr, iCend, jCstr, jCend
+      integer, intent(in) :: IstrC, IendC, JstrC, JendC
       integer, intent(in) :: IstrP, IendP, JstrP, JendP
 !
-      real(r8), intent(in)    :: pm(LBi:UBi,LBj:UBj)
-      real(r8), intent(in)    :: pn(LBi:UBi,LBj:UBj)
-      real(r8), intent(in)    :: pmask_ssa(LBi:UBi,LBj:UBj)
-      real(r8), intent(in)    :: nuH(LBi:UBi,LBj:UBj)
-      real(r8), intent(in)    :: beta(LBi:UBi,LBj:UBj)
       real(r8), intent(in)    :: DPhi(4,4,2)
       real(r8), intent(in)    :: phi_tab(4,4)
+# ifdef ASSUMED_SHAPE
+      real(r8), intent(in)  :: pm(LBi:,LBj:)
+      real(r8), intent(in)  :: pn(LBi:,LBj:)
+      real(r8), intent(in)  :: pmask_ist(LBi:,LBj:)
+      real(r8), intent(in)  :: nuH(LBi:,LBj:)
+      real(r8), intent(in)  :: beta(LBi:,LBj:)
+      real(r8), intent(inout) :: xu(LBi:,LBj:)
+      real(r8), intent(inout) :: xv(LBi:,LBj:)
+      real(r8), intent(out) :: Au(LBi:,LBj:)
+      real(r8), intent(out) :: Av(LBi:,LBj:)
+# else
+      real(r8), intent(in)  :: pm(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: pn(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: pmask_ist(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: nuH(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: beta(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: xu(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: xv(LBi:UBi,LBj:UBj)
-      real(r8), intent(inout) :: Au(LBi:UBi,LBj:UBj)
-      real(r8), intent(inout) :: Av(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: Au(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: Av(LBi:UBi,LBj:UBj)
+# endif
 !
 !  Local variable declarations.
 !
@@ -1916,14 +1697,13 @@
       real(r8) :: dphi_x, dphi_y, phv
       real(r8) :: uq, vq, exx, eyy, exy
 !
-!  Quadrature weights (2x2 Gauss on the reference [0,1]x[0,1]).
-!
-      real(r8), parameter :: wquad(4) = 0.25_r8
-!
 !-----------------------------------------------------------------------
-!  Exchange the input halos:  the assembly reads all 4 PSI corners
-!  of every integrated cell, including halo nodes owned by the
-!  neighbouring tiles.
+!  Exchange the INPUT halos before assembly:  the ring cells
+!  (IstrC/JstrC) integrate elements whose PSI corners include nodes
+!  owned by the neighbouring tiles, so the quadrature-point
+!  interpolation must read the neighbours' current values of the
+!  input pair.  Only the halo points are written; the interior is
+!  returned unchanged (hence intent(inout) for xu/xv).
 !-----------------------------------------------------------------------
 !
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
@@ -1951,8 +1731,8 @@
         END DO
       END DO
 !
-      DO j=jCstr,jCend
-        DO i=iCstr,iCend
+      DO j=JstrC,JendC
+        DO i=IstrC,IendC
           IF (nuH(i,j).gt.0.0_r8) THEN
             dx_rho=1.0_r8/pm(i,j)
             dy_rho=1.0_r8/pn(i,j)
@@ -1970,13 +1750,17 @@
               exy=0.0_r8
               DO k_node=1,4
                 IF (k_node.eq.1) THEN
-                  i1=i;   j1=j
+                  i1=i
+                  j1=j
                 ELSE IF (k_node.eq.2) THEN
-                  i1=i+1; j1=j
+                  i1=i+1
+                  j1=j
                 ELSE IF (k_node.eq.3) THEN
-                  i1=i;   j1=j+1
+                  i1=i
+                  j1=j+1
                 ELSE
-                  i1=i+1; j1=j+1
+                  i1=i+1
+                  j1=j+1
                 END IF
                 phv=phi_tab(k_node,nq)
                 dphi_x=DPhi(k_node,nq,1)*2.0_r8/dx_rho
@@ -2000,7 +1784,7 @@
                 ELSE
                   i1=i+1; j1=j+1
                 END IF
-                IF (pmask_ssa(i1,j1).eq.1.0_r8.and.                     &
+                IF (pmask_ist(i1,j1).eq.1.0_r8.and.                     &
      &              i1.ge.IstrP.and.i1.le.IendP.and.                    &
      &              j1.ge.JstrP.and.j1.le.JendP) THEN
                   dphi_x=DPhi(k_node,nq,1)*2.0_r8/dx_rho
@@ -2008,16 +1792,16 @@
                   phv=phi_tab(k_node,nq)
 !
                   Au(i1,j1)=Au(i1,j1)+                                  &
-     &              wquad(nq)*jac*nuH(i,j)*                             &
+     &              0.25_r8*jac*nuH(i,j)*                               &
      &              (dphi_x*(4.0_r8*exx+2.0_r8*eyy)+                    &
      &               dphi_y*(2.0_r8*exy))+                              &
-     &              wquad(nq)*jac*beta(i,j)*phv*uq
+     &              0.25_r8*jac*beta(i,j)*phv*uq
 !
                   Av(i1,j1)=Av(i1,j1)+                                  &
-     &              wquad(nq)*jac*nuH(i,j)*                             &
+     &              0.25_r8*jac*nuH(i,j)*                               &
      &              (dphi_y*(4.0_r8*eyy+2.0_r8*exx)+                    &
      &               dphi_x*(2.0_r8*exy))+                              &
-     &              wquad(nq)*jac*beta(i,j)*phv*vq
+     &              0.25_r8*jac*beta(i,j)*phv*vq
                 END IF
               END DO
             END DO
@@ -2025,24 +1809,12 @@
         END DO
       END DO
 !
-!-----------------------------------------------------------------------
-!  Exchange the output halos:  shared seam PSI node values computed
-!  on the neighbouring tiles arrive through the halo refresh.
-!-----------------------------------------------------------------------
-!
-      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
-        CALL exchange_p2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj, Au)
-        CALL exchange_p2d_tile (ng, tile,                               &
-     &                          LBi, UBi, LBj, UBj, Av)
-      END IF
-# ifdef DISTRIBUTE
-      CALL mp_exchange2d (ng, tile, model, 2,                           &
-     &                    LBi, UBi, LBj, UBj,                           &
-     &                    NghostPoints,                                 &
-     &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    Au, Av)
-# endif
+!  No output exchange:  every consumer of (Au,Av) -- the CG inner
+!  products, the residual update and the convergence norms -- reads
+!  them at owned PSI nodes only, and each owned node receives the
+!  complete contribution of all its elements through the ring
+!  assembly above (seam elements are integrated by the tile that
+!  owns the node).
 !
       RETURN
       END SUBROUTINE ssa_matvec

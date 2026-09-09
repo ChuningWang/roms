@@ -184,9 +184,15 @@
           H_calve == 100.0d0
 
 ! Multi-timescale coupling parameters.
-! N_ssa: SSA momentum is solved (and ice thickness/enthalpy advected)
-!        every N_ssa ocean timesteps.
-! N_gl:  Grounding line position is updated every N_gl SSA solves.
+! N_ssa: SSA momentum is solved every N_ssa ocean timesteps; between
+!        solves the ice thickness/enthalpy advection (isf_advection)
+!        runs every ocean timestep with the latest SSA velocity held
+!        constant, so the ocean-side coupling sees the ice state
+!        evolve smoothly instead of staircasing at this cadence.
+! N_gl:  (unused, retained for compatibility) grounding line masks
+!        (isf_masks) are now updated every ocean timestep together
+!        with the advected ice thickness; formerly every N_gl SSA
+!        solves.
 ! Default = 1 (every step) for tight coupling; increase for efficiency.
 
             N_ssa == 10

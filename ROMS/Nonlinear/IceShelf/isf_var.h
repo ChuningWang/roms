@@ -76,62 +76,57 @@
             iSisf(isIeis)=idIeis
           CASE ('idItis')
             idItis=varid
-            iFisf(icItis)=idItis
+            iFisf(ifItis)=idItis
           CASE ('idIzsf')
             idIzsf=varid
-            iFisf(icIzsf)=idIzsf
+            iFisf(ifIzsf)=idIzsf
           CASE ('idIzbd')
             idIzbd=varid
-            iFisf(icIzbd)=idIzbd
+            iFisf(ifIzbd)=idIzbd
           CASE ('idInuh')
             idInuh=varid
-            iFisf(icInuh)=idInuh
+            iFisf(ifInuh)=idInuh
           CASE ('idItdx')
             idItdx=varid
-            iFisf(icItdx)=idItdx
+            iFisf(ifItdx)=idItdx
           CASE ('idItdy')
             idItdy=varid
-            iFisf(icItdy)=idItdy
+            iFisf(ifItdy)=idItdy
           CASE ('idIbta')
             idIbta=varid
-            iFisf(icIbta)=idIbta
-# ifdef ICESHELF_THERMO
-          CASE ('idCmea')
-            idCmea=varid
-            iCisf(icCmea)=idCmea
-# endif
+            iFisf(ifIbta)=idIbta
           CASE ('idCzta')
             idCzta=varid
-            iCisf(icCzta)=idCzta
+            iCisf(icIzta)=idCzta
 #endif
 #ifdef ICESHELF_THERMO
           CASE ('idImel')
             idImel=varid
-            iFisf(icImel)=idImel
+            iFisf(ifImel)=idImel
           CASE ('idIgat')
             idIgat=varid
-            iFisf(icIgat)=idIgat
+            iFisf(ifIgat)=idIgat
           CASE ('idIgas')
             idIgas=varid
-            iFisf(icIgas)=idIgas
+            iFisf(ifIgas)=idIgas
           CASE ('idItst')
             idItst=varid
-            iFisf(icItst)=idItst
+            iFisf(ifItst)=idItst
           CASE ('idIust')
             idIust=varid
-            iFisf(icIust)=idIust
+            iFisf(ifIust)=idIust
           CASE ('idItbo')
             idItbo=varid
-            iFisf(icItbo)=idItbo
+            iFisf(ifItbo)=idItbo
           CASE ('idIsbo')
             idIsbo=varid
-            iFisf(icIsbo)=idIsbo
+            iFisf(ifIsbo)=idIsbo
           CASE ('idItba')
             idItba=varid
-            iFisf(icItba)=idItba
+            iFisf(ifItba)=idItba
           CASE ('idIsba')
             idIsba=varid
-            iFisf(icIsba)=idIsba
+            iFisf(ifIsba)=idIsba
           CASE ('idIsbl')
             idIsbl=varid
             iOisf(ioHsbl)=idIsbl

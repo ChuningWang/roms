@@ -85,7 +85,6 @@
      &                   ISF(ng) % Vi,                                  &
      &                   ISF(ng) % Ti,                                  &
      &                   ISF(ng) % Fi,                                  &
-     &                   ISF(ng) % Ci,                                  &
      &                   ISF(ng) % Oi,                                  &
      &                   ISF(ng) % Ai,                                  &
      &                   FORCES(ng) % stflx)
@@ -104,7 +103,7 @@
      &                         rmask_isf,                               &
      &                         t,                                       &
      &                         Vi, Ti,                                  &
-     &                         Fi, Ci,                                  &
+     &                         Fi,                                      &
      &                         Oi, Ai,                                  &
      &                         stflx)
 !***********************************************************************
@@ -127,31 +126,29 @@
       integer, intent(in) :: IminS, ImaxS, JminS, JmaxS
       integer, intent(in) :: nrhs
 # ifdef ASSUMED_SHAPE
-      real(r8), intent(in) :: Hz(LBi:,LBj:,:)
-      real(r8), intent(in) :: zice(LBi:,LBj:)
-      real(r8), intent(in) :: f(LBi:,LBj:)
-      real(r8), intent(in) :: rmask_isf(LBi:,LBj:)
-      real(r8), intent(in) :: t(LBi:,LBj:,:,:,:)
+      real(r8), intent(in)    :: Hz(LBi:,LBj:,:)
+      real(r8), intent(in)    :: zice(LBi:,LBj:)
+      real(r8), intent(in)    :: f(LBi:,LBj:)
+      real(r8), intent(in)    :: rmask_isf(LBi:,LBj:)
+      real(r8), intent(in)    :: t(LBi:,LBj:,:,:,:)
       real(r8), intent(inout) :: Vi(LBi:,LBj:,:)
       real(r8), intent(inout) :: Ti(LBi:,LBj:,:,:)
-      real(r8), intent(out) :: Fi(LBi:,LBj:,:)
-      real(r8), intent(inout) :: Ci(LBi:,LBj:,:)
-      real(r8), intent(in) :: Oi(LBi:,LBj:,:,:)
-      real(r8), intent(out) :: Ai(LBi:,LBj:,:)
-      real(r8), intent(out) :: stflx(LBi:,LBj:,:)
+      real(r8), intent(out)   :: Fi(LBi:,LBj:,:)
+      real(r8), intent(in)    :: Oi(LBi:,LBj:,:,:)
+      real(r8), intent(out)   :: Ai(LBi:,LBj:,:)
+      real(r8), intent(out)   :: stflx(LBi:,LBj:,:)
 # else
-      real(r8), intent(in) :: Hz(LBi:UBi,LBj:UBj,N(ng))
-      real(r8), intent(in) :: zice(LBi:UBi,LBj:UBj)
-      real(r8), intent(in) :: f(LBi:UBi,LBj:UBj)
-      real(r8), intent(in) :: rmask_isf(LBi:UBi,LBj:UBj)
-      real(r8), intent(in) :: t(LBi:UBi,LBj:UBj,N(ng),3,NT(ng))
+      real(r8), intent(in)    :: Hz(LBi:UBi,LBj:UBj,N(ng))
+      real(r8), intent(in)    :: zice(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)    :: f(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)    :: rmask_isf(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)    :: t(LBi:UBi,LBj:UBj,N(ng),3,NT(ng))
       real(r8), intent(inout) :: Vi(LBi:UBi,LBj:UBj,2)
       real(r8), intent(inout) :: Ti(LBi:UBi,LBj:UBj,2,NTISF(ng))
-      real(r8), intent(out) :: Fi(LBi:UBi,LBj:UBj,nIsfF)
-      real(r8), intent(inout) :: Ci(LBi:UBi,LBj:UBj,nIsfC)
-      real(r8), intent(in) :: Oi(LBi:UBi,LBj:UBj,N(ng),nIsfO)
-      real(r8), intent(out) :: Ai(LBi:UBi,LBj:UBj,NTISF(ng))
-      real(r8), intent(out) :: stflx(LBi:UBi,LBj:UBj,NT(ng))
+      real(r8), intent(out)   :: Fi(LBi:UBi,LBj:UBj,nIsfF)
+      real(r8), intent(in)    :: Oi(LBi:UBi,LBj:UBj,N(ng),nIsfO)
+      real(r8), intent(out)   :: Ai(LBi:UBi,LBj:UBj,NTISF(ng))
+      real(r8), intent(out)   :: stflx(LBi:UBi,LBj:UBj,NT(ng))
 # endif
 !
 !  Local variable declarations.
@@ -192,7 +189,7 @@
 !  behavior.
 !
 !  Results are stored in:
-!    Fi(i,j,icItba/icIsba) - ambient in-situ T/S
+!    Fi(i,j,ifItba/ifIsba) - ambient in-situ T/S
 !
 # ifndef ICESHELF_NO_SBL
 !
@@ -229,8 +226,8 @@
      &                   Tm,i,j)
 #  endif
             END IF
-            Fi(i,j,icItba) = Tm
-            Fi(i,j,icIsba) = Sm
+            Fi(i,j,ifItba) = Tm
+            Fi(i,j,ifIsba) = Sm
 # else
 !
 !  Original: use topmost cell values
@@ -247,8 +244,8 @@
             CALL potit(Sm,t(i,j,N(ng),nrhs,itemp),-zice(i,j),0.0_r8,Tm, &
      &                 i,j)
 #  endif
-            Fi(i,j,icItba) = Tm
-            Fi(i,j,icIsba) = Sm
+            Fi(i,j,ifItba) = Tm
+            Fi(i,j,ifIsba) = Sm
 # endif
 !
 !  Calculate exchange coefficients. Note that this assumes log profile.
@@ -257,87 +254,73 @@
 !
 !  Use KY 1972 algorithm
 !
-            turb = 2.12_r8*LOG((Fi(i,j,icIust)*Hz(i,j,N(ng)))/visc)
-            Fi(i,j,icIgat) = Fi(i,j,icIust)/(turb + Pradj - 9.0_r8)
-            Fi(i,j,icIgas) = Fi(i,j,icIust)/(turb + Scadj - 9.0_r8)
+            turb = 2.12_r8*LOG((Fi(i,j,ifIust)*Hz(i,j,N(ng)))/visc)
+            Fi(i,j,ifIgat) = Fi(i,j,ifIust)/(turb + Pradj - 9.0_r8)
+            Fi(i,j,ifIgas) = Fi(i,j,ifIust)/(turb + Scadj - 9.0_r8)
 # elif defined ICESHELF_GAMMAS_MC1987
 !
 !  Use simplified version of McPhee 1987 algorithm
 !
-            IF (Fi(i,j,icIust).gt.min_ustar(ng).and.                    &
+            IF (Fi(i,j,ifIust).gt.min_ustar(ng).and.                    &
      &          ABS(f(i,j)).gt.1.0E-8) THEN
-              turb = 2.5_r8*LOG(5300.0_r8*Fi(i,j,icIust)**2 /           &
+              turb = 2.5_r8*LOG(5300.0_r8*Fi(i,j,ifIust)**2 /           &
      &                          ABS(f(i,j))) + 7.12_r8
             ELSE
               turb = 0.0_r8
             END IF
 !
-            Fi(i,j,icIgat) = Fi(i,j,icIust)/(turb + Pradj - 6.0_r8)
-            Fi(i,j,icIgas) = Fi(i,j,icIust)/(turb + Scadj - 6.0_r8)
+            Fi(i,j,ifIgat) = Fi(i,j,ifIust)/(turb + Pradj - 6.0_r8)
+            Fi(i,j,ifIgas) = Fi(i,j,ifIust)/(turb + Scadj - 6.0_r8)
 # else
 !
 !  Use constant exchange coefficients
 !
-            Fi(i,j,icIgat) = 1.00e-4_r8
-            Fi(i,j,icIgas) = 5.05e-7_r8
+            Fi(i,j,ifIgat) = 1.00e-4_r8
+            Fi(i,j,ifIgas) = 5.05e-7_r8
 # endif
 !
 !  Use 3-EQ formula
 !
-            cff1 = a*(Fi(i,j,icIgat)*Cp-Fi(i,j,icIgas)*cp_i)
-            cff2 = Fi(i,j,icIgas)*cp_i*(a*Sm-b+c*zice(i,j)+Tis -        &
+            cff1 = a*(Fi(i,j,ifIgat)*Cp-Fi(i,j,ifIgas)*cp_i)
+            cff2 = Fi(i,j,ifIgas)*cp_i*(a*Sm-b+c*zice(i,j)+Tis -        &
      &                                  (L/cp_i)) -                     &
-     &             Fi(i,j,icIgat)*Cp*(Tm-b+c*zice(i,j)+a*Sis)
-            cff3 = Fi(i,j,icIgas)*Sm*(cp_i*(b-c*zice(i,j)-Tis) + L) +   &
-     &             Fi(i,j,icIgat)*Sis*Cp*(Tm-b+c*zice(i,j))
+     &             Fi(i,j,ifIgat)*Cp*(Tm-b+c*zice(i,j)+a*Sis)
+            cff3 = Fi(i,j,ifIgas)*Sm*(cp_i*(b-c*zice(i,j)-Tis) + L) +   &
+     &             Fi(i,j,ifIgat)*Sis*Cp*(Tm-b+c*zice(i,j))
 !
-            Fi(i,j,icIsbo) = -(cff2 + SQRT(cff2**2-4.0*cff1*cff3)) /    &
+            Fi(i,j,ifIsbo) = -(cff2 + SQRT(cff2**2-4.0*cff1*cff3)) /    &
      &                       (2.0_r8*cff1)
-            Fi(i,j,icItbo) = a*Fi(i,j,icIsbo) + b - c*zice(i,j)
-            Fi(i,j,icImel) = Fi(i,j,icIgas)*(Sm-Fi(i,j,icIsbo)) /       &
-     &                       Fi(i,j,icIsbo)
+            Fi(i,j,ifItbo) = a*Fi(i,j,ifIsbo) + b - c*zice(i,j)
+            Fi(i,j,ifImel) = Fi(i,j,ifIgas)*(Sm-Fi(i,j,ifIsbo)) /       &
+     &                       Fi(i,j,ifIsbo)
 !
-            IF (Fi(i,j,icImel).lt.0.0_r8) THEN
+            IF (Fi(i,j,ifImel).lt.0.0_r8) THEN
 !
 !  Freezing, use boundary layer temperature to recalculate melt rates
 !
-              cff1 = a*Fi(i,j,icIgat)*Cp
-              cff2 = -Fi(i,j,icIgas)*L -                                &
-     &                Fi(i,j,icIgat)*Cp*(Tm-b+c*zice(i,j)+a*Sis)
-              cff3 = Fi(i,j,icIgas)*Sm*L +                              &
-     &               Fi(i,j,icIgat)*Cp*Sis*(Tm-b+c*zice(i,j))
+              cff1 = a*Fi(i,j,ifIgat)*Cp
+              cff2 = -Fi(i,j,ifIgas)*L -                                &
+     &                Fi(i,j,ifIgat)*Cp*(Tm-b+c*zice(i,j)+a*Sis)
+              cff3 = Fi(i,j,ifIgas)*Sm*L +                              &
+     &               Fi(i,j,ifIgat)*Cp*Sis*(Tm-b+c*zice(i,j))
 !
-              Fi(i,j,icIsbo) = -(cff2+SQRT(cff2*cff2-4.0*cff1*cff3)) /  &
+              Fi(i,j,ifIsbo) = -(cff2+SQRT(cff2*cff2-4.0*cff1*cff3)) /  &
      &                         (2.0_r8*cff1)
-              Fi(i,j,icItbo) = a*Fi(i,j,icIsbo) + b - c*zice(i,j)
-              Fi(i,j,icImel) = Fi(i,j,icIgas)*(Sm-Fi(i,j,icIsbo)) /     &
-     &                         Fi(i,j,icIsbo)
+              Fi(i,j,ifItbo) = a*Fi(i,j,ifIsbo) + b - c*zice(i,j)
+              Fi(i,j,ifImel) = Fi(i,j,ifIgas)*(Sm-Fi(i,j,ifIsbo)) /     &
+     &                         Fi(i,j,ifIsbo)
             END IF
 !
 !  Calculate fluxes
 !
-            Fi(i,j,icItst)   = Tm-Fi(i,j,icItbo)
-            stflx(i,j,itemp) = (Fi(i,j,icIgat)+Fi(i,j,icImel)) *        &
-     &                         (Fi(i,j,icItbo)-Tm)
-            stflx(i,j,isalt) = (Fi(i,j,icIgas)+Fi(i,j,icImel)) *        &
-     &                         (Fi(i,j,icIsbo)-Sm)
+            Fi(i,j,ifItst)   = Tm-Fi(i,j,ifItbo)
+            stflx(i,j,itemp) = (Fi(i,j,ifIgat)+Fi(i,j,ifImel)) *        &
+     &                         (Fi(i,j,ifItbo)-Tm)
+            stflx(i,j,isalt) = (Fi(i,j,ifIgas)+Fi(i,j,ifImel)) *        &
+     &                         (Fi(i,j,ifIsbo)-Sm)
           ELSE
-            Fi(i,j,icImel) = 0.0_r8
+            Fi(i,j,ifImel) = 0.0_r8
           END IF
-# ifdef ICESHEET
-!
-!  Accumulate the instantaneous melt rate into the SSA coupling
-!  window sum Ci(:,:,icCmea): the ice sheet mass balance runs at
-!  the SSA cadence, so isf_advection uses this window sum (dt times
-!  the sum equals the window-total basal melt in meters) instead of
-!  the instantaneous rate, and resets it after each use.  Under
-!  PERFECT_RESTART the partial window sum is part of the restart
-!  state (written/read as is_mea), so a restart may begin in the
-!  middle of a coupling window; without PERFECT_RESTART it starts
-!  from zero after a restart.
-!
-          Ci(i,j,icCmea)=Ci(i,j,icCmea)+Fi(i,j,icImel)
-# endif
         END DO
       END DO
 !
@@ -347,14 +330,14 @@
         DO j=Jstr,Jend
           DO i=Istr,Iend
             IF (rmask_isf(i,j).eq.1.0_r8) THEN
-              IF (Fi(i,j,icImel).gt.0.0_r8 .and.                        &
+              IF (Fi(i,j,ifImel).gt.0.0_r8 .and.                        &
      &            Vi(i,j,lsnew(ng)).gt.0.0_r8) THEN
-                cff=MIN(Fi(i,j,icImel)*dt(ng), Vi(i,j,lsnew(ng)))
-              ELSE IF (Fi(i,j,icImel).gt.0.0_r8 .and.                   &
+                cff=MIN(Fi(i,j,ifImel)*dt(ng), Vi(i,j,lsnew(ng)))
+              ELSE IF (Fi(i,j,ifImel).gt.0.0_r8 .and.                   &
      &                 Vi(i,j,lsnew(ng)).eq.0.0_r8) THEN
                 cff=0.0_r8
               ELSE
-                cff=Fi(i,j,icImel)*dt(ng)
+                cff=Fi(i,j,ifImel)*dt(ng)
               END IF
               ic=0
               DO itrc=NAT+1,NT(ng)
@@ -377,12 +360,12 @@
 # else
                   Ai(i,j,ic)=t(i,j,N(ng),nrhs,itrc)
 # endif
-                  IF (Fi(i,j,icImel).gt.0.0_r8 .and.                    &
+                  IF (Fi(i,j,ifImel).gt.0.0_r8 .and.                    &
      &                Vi(i,j,lsnew(ng)).gt.0.0_r8) THEN
                     cff1=Ti(i,j,lsnew(ng),ic)/Vi(i,j,lsnew(ng))
                     cff2=MIN(Ti(i,j,lsnew(ng),ic) /                     &
-     &                      (Fi(i,j,icImel)*dt(ng)), cff1)
-                  ELSE IF (Fi(i,j,icImel).gt.0.0_r8 .and.               &
+     &                      (Fi(i,j,ifImel)*dt(ng)), cff1)
+                  ELSE IF (Fi(i,j,ifImel).gt.0.0_r8 .and.               &
      &                     Vi(i,j,lsnew(ng)).eq.0.0_r8) THEN
                     cff1=0.0_r8
                     cff2=0.0_r8
@@ -391,7 +374,7 @@
                     cff2=cff1
                   END IF
                   stflx(i,j,itrc)=stflx(i,j,itrc)+                      &
-     &                            Fi(i,j,icImel)*                       &
+     &                            Fi(i,j,ifImel)*                       &
      &                            (cff2-Ai(i,j,ic))
                   Ti(i,j,lsnew(ng),ic)=Ti(i,j,lsnew(ng),ic)-cff1*cff
                   Ti(i,j,lsnew(ng),ic)=MAX(Ti(i,j,lsnew(ng),ic), 0.0_r8)
@@ -412,7 +395,7 @@
               DO i=Istr,Iend
                 IF (rmask_isf(i,j).eq.1.0_r8) THEN
                   stflx(i,j,itrc)=stflx(i,j,itrc)+                      &
-     &                            MAX(Fi(i,j,icImel), 0.0_r8)*          &
+     &                            MAX(Fi(i,j,ifImel), 0.0_r8)*          &
      &                            trcIsf(itrc,ng)
                 END IF
               END DO
@@ -426,16 +409,16 @@
 !
       IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
         DO itrc=1,NT(ng)
-          CALL exchange_r2d_tile (ng, tile, LBi, UBi, LBj, UBj,           &
+          CALL exchange_r2d_tile (ng, tile, LBi, UBi, LBj, UBj,         &
      &                            stflx(:,:,itrc))
         END DO
       END IF
 # ifdef DISTRIBUTE
       DO itrc=1,NT(ng)
         CALL mp_exchange2d (ng, tile, model, 1,                         &
-     &                      LBi, UBi, LBj, UBj,                           &
-     &                      NghostPoints,                                 &
-     &                      EWperiodic(ng), NSperiodic(ng),               &
+     &                      LBi, UBi, LBj, UBj,                         &
+     &                      NghostPoints,                               &
+     &                      EWperiodic(ng), NSperiodic(ng),             &
      &                      stflx(:,:,itrc))
       END DO
 # endif

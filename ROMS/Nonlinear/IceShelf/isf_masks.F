@@ -68,6 +68,7 @@
      &                     GRID(ng) % rmask_ist,                        &
      &                     GRID(ng) % umask_ist,                        &
      &                     GRID(ng) % vmask_ist,                        &
+     &                     GRID(ng) % pmask_ist,                        &
 # endif
      &                     GRID(ng) % rmask_isf)
 # ifdef PROFILE
@@ -87,7 +88,8 @@
 # endif
 # ifdef ICESHEET
      &                           zeta, hice,                            &
-     &                           rmask_ist, umask_ist, vmask_ist,       &
+     &                           rmask_ist, umask_ist,                  &
+     &                           vmask_ist, pmask_ist,                  &
 # endif
      &                           rmask_isf)
 !***********************************************************************
@@ -121,6 +123,7 @@
       real(r8), intent(out) :: rmask_ist(LBi:,LBj:)
       real(r8), intent(out) :: umask_ist(LBi:,LBj:)
       real(r8), intent(out) :: vmask_ist(LBi:,LBj:)
+      real(r8), intent(out) :: pmask_ist(LBi:,LBj:)
 #  else
       real(r8), intent(in) :: zice(LBi:,LBj:)
 #  endif
@@ -137,6 +140,7 @@
       real(r8), intent(out) :: rmask_ist(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: umask_ist(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: vmask_ist(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: pmask_ist(LBi:UBi,LBj:UBj)
 #  else
       real(r8), intent(in) :: zice(LBi:UBi,LBj:UBj)
 #  endif
@@ -205,24 +209,27 @@
         END DO
       END DO
 !
-!  ice sheet mask at U-points.
+!  ice sheet mask at PSI-points.
 !
-      DO j=JstrR,JendR
+      DO j=Jstr,JendR
         DO i=Istr,IendR
           umask_ist(i,j)=rmask_ist(i-1,j)+rmask_ist(i,j)
           IF (umask_ist(i,j).eq.1.0_r8) THEN
             umask_ist(i,j)=rmask_ist(i-1,j)-rmask_ist(i,j)
           END IF
-        END DO
-      END DO
 !
-!  ice sheet mask at V-points.
-!
-      DO j=Jstr,JendR
-        DO i=IstrR,IendR
           vmask_ist(i,j)=rmask_ist(i,j-1)+rmask_ist(i,j)
           IF (vmask_ist(i,j).eq.1.0_r8) THEN
             vmask_ist(i,j)=rmask_ist(i,j-1)-rmask_ist(i,j)
+          END IF
+!
+          IF ((rmask_ist(i-1,j-1).eq.1.0_r8).and.                       &
+     &        (rmask_ist(i  ,j-1).eq.1.0_r8).and.                       &
+     &        (rmask_ist(i-1,j  ).eq.1.0_r8).and.                       &
+     &        (rmask_ist(i  ,j  ).eq.1.0_r8)) THEN
+            pmask_ist(i,j)=1.0_r8
+          ELSE
+            pmask_ist(i,j)=0.0_r8
           END IF
         END DO
       END DO
@@ -262,6 +269,9 @@
         CALL exchange_v2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          vmask_ist)
+        CALL exchange_p2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          pmask_ist)
 # endif
       END IF
 
@@ -278,11 +288,11 @@
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    zice)
-      CALL mp_exchange2d (ng, tile, model, 3,                           &
+      CALL mp_exchange2d (ng, tile, model, 4,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    rmask_ist, umask_ist, vmask_ist)
+     &                    rmask_ist, umask_ist, vmask_ist, pmask_ist)
 #  endif
 # endif
 

@@ -303,30 +303,16 @@
 #  endif
           END IF
         END DO
-#  if defined ICESHEET && defined ICESHELF_THERMO
-!
-!  Flag the SSA coupling window melt accumulator (is_mea, Ci) for reading
-!  only when the input file carries it (model restart files do; older
-!  restarts and IC files do not): the generic internal-field read in
-!  isf_get_state then restores it, so a restart may begin in the
-!  middle of a coupling window without losing the accumulated basal
-!  melt.  The variable is restart-only: it is written by the
-!  internal-field loop under PERFECT_RESTART and has no output
-!  switches for HIS/AVG/STA files.
-!
-        IF (idCmea.gt.0) THEN
-          IF (ANY(var_name(1:n_var).eq.TRIM(Vname(1,idCmea)))) THEN
-            get_var(idCmea)=.TRUE.
-          END IF
-        END IF
-#  endif
 #  ifdef ICESHEET
 !
-!  Same optional-read treatment for the SSA coupling window free
+!  Optional-read treatment for the SSA coupling window free
 !  surface accumulator (is_zta, Ci): the window-mean free surface feeds
 !  the basal drag in isf_stress, so a mid-window restart restores
 !  the partial sum instead of restarting the average from zero.
-!  Like is_mea it is restart-only and has no output switches.
+!  It is restart-only: it is written by the internal-field loop
+!  under PERFECT_RESTART and has no output switches for HIS/AVG/STA
+!  files.  (The former melt accumulator is_mea was removed: the ice
+!  thickness advection reads the instantaneous melt rate directly.)
 !
         IF (idCzta.gt.0) THEN
           IF (ANY(var_name(1:n_var).eq.TRIM(Vname(1,idCzta)))) THEN

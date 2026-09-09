@@ -21,7 +21,7 @@
 !                                                                      !
 !  using the thickness boundary value (isIhis) and the temperature     !
 !  boundary value (isIeis).  The boundary temperature is also stored   !
-!  in the diagnostic field Fi(:,:,icItis) so that downstream physics   !
+!  in the diagnostic field Fi(:,:,ifItis) so that downstream physics   !
 !  (e.g. the Glen rate factor) sees a consistent ice temperature.      !
 !                                                                      !
 !  Supported boundary condition types (see isf.in):                    !
@@ -68,7 +68,7 @@
      &                    LBi, UBi, LBj, UBj,                           &
      &                    ISF(ng) % Si(:,:,lsnew(ng),isIhis),           &
      &                    ISF(ng) % Si(:,:,lsnew(ng),isIeis),           &
-     &                    ISF(ng) % Fi(:,:,icItis))
+     &                    ISF(ng) % Fi(:,:,ifItis))
 # ifdef PROFILE
       CALL wclock_off (ng, model, 42, __LINE__, MyFile)
 # endif
@@ -101,8 +101,6 @@
 !
       integer :: i, j
 !
-      real(r8), parameter :: eps=1.0E-6_r8
-
 #include "set_bounds.h"
       IF (.not.EWperiodic(ng)) THEN
 !
@@ -115,7 +113,7 @@
             DO j=Jstr,Jend
               ei(Istr-1,j)=ISF_LOBC(isIhis,ng)%isf_west(j)*             &
      &                     ISF_LOBC(isIeis,ng)%isf_west(j)
-              IF (hi(Istr-1,j).le.min_his) THEN
+              IF (hi(Istr-1,j).le.eps) THEN
                 ei(Istr-1,j)=0.0_r8
                 ti(Istr-1,j)=0.0_r8
               ELSE
@@ -130,7 +128,7 @@
      &             LBC(iwest,ibISF(isIeis),ng)%closed) THEN
             DO j=Jstr,Jend
               ei(Istr-1,j)=hi(Istr,j)*ti(Istr,j)
-              IF (hi(Istr-1,j).le.min_his) THEN
+              IF (hi(Istr-1,j).le.eps) THEN
                 ei(Istr-1,j)=0.0_r8
                 ti(Istr-1,j)=0.0_r8
               ELSE
@@ -153,7 +151,7 @@
             DO j=Jstr,Jend
               ei(Iend+1,j)=ISF_LOBC(isIhis,ng)%isf_east(j)*             &
      &                     ISF_LOBC(isIeis,ng)%isf_east(j)
-              IF (hi(Iend+1,j).le.min_his) THEN
+              IF (hi(Iend+1,j).le.eps) THEN
                 ei(Iend+1,j)=0.0_r8
                 ti(Iend+1,j)=0.0_r8
               ELSE
@@ -168,7 +166,7 @@
      &             LBC(ieast,ibISF(isIeis),ng)%closed) THEN
             DO j=Jstr,Jend
               ei(Iend+1,j)=hi(Iend,j)*ti(Iend,j)
-              IF (hi(Iend+1,j).le.min_his) THEN
+              IF (hi(Iend+1,j).le.eps) THEN
                 ei(Iend+1,j)=0.0_r8
                 ti(Iend+1,j)=0.0_r8
               ELSE
@@ -194,7 +192,7 @@
             DO i=Istr,Iend
               ei(i,Jstr-1)=ISF_LOBC(isIhis,ng)%isf_south(i)*            &
      &                     ISF_LOBC(isIeis,ng)%isf_south(i)
-              IF (hi(i,Jstr-1).le.min_his) THEN
+              IF (hi(i,Jstr-1).le.eps) THEN
                 ei(i,Jstr-1)=0.0_r8
                 ti(i,Jstr-1)=0.0_r8
               ELSE
@@ -209,7 +207,7 @@
      &             LBC(isouth,ibISF(isIeis),ng)%closed) THEN
             DO i=Istr,Iend
               ei(i,Jstr-1)=hi(i,Jstr)*ti(i,Jstr)
-              IF (hi(i,Jstr-1).le.min_his) THEN
+              IF (hi(i,Jstr-1).le.eps) THEN
                 ei(i,Jstr-1)=0.0_r8
                 ti(i,Jstr-1)=0.0_r8
               ELSE
@@ -232,7 +230,7 @@
             DO i=Istr,Iend
               ei(i,Jend+1)=ISF_LOBC(isIhis,ng)%isf_north(i)*            &
      &                     ISF_LOBC(isIeis,ng)%isf_north(i)
-              IF (hi(i,Jend+1).le.min_his) THEN
+              IF (hi(i,Jend+1).le.eps) THEN
                 ei(i,Jend+1)=0.0_r8
                 ti(i,Jend+1)=0.0_r8
               ELSE
@@ -247,7 +245,7 @@
      &             LBC(inorth,ibISF(isIeis),ng)%closed) THEN
             DO i=Istr,Iend
               ei(i,Jend+1)=hi(i,Jend)*ti(i,Jend)
-              IF (hi(i,Jend+1).le.min_his) THEN
+              IF (hi(i,Jend+1).le.eps) THEN
                 ei(i,Jend+1)=0.0_r8
                 ti(i,Jend+1)=0.0_r8
               ELSE
@@ -270,7 +268,7 @@
         IF (DOMAIN(ng)%SouthWest_Corner(tile)) THEN
           ei(Istr-1,Jstr-1)=0.5_r8*(hi(Istr,Jstr-1)*ti(Istr,Jstr-1) +   &
      &                              hi(Istr-1,Jstr)*ti(Istr-1,Jstr))
-          IF (hi(Istr-1,Jstr-1).le.min_his) THEN
+          IF (hi(Istr-1,Jstr-1).le.eps) THEN
             ei(Istr-1,Jstr-1)=0.0_r8
             ti(Istr-1,Jstr-1)=0.0_r8
           ELSE
@@ -281,7 +279,7 @@
         IF (DOMAIN(ng)%SouthEast_Corner(tile)) THEN
           ei(Iend+1,Jstr-1)=0.5_r8*(hi(Iend+1,Jstr)*ti(Iend+1,Jstr) +   &
      &                              hi(Iend,Jstr-1)*ti(Iend,Jstr-1))
-          IF (hi(Iend+1,Jstr-1).le.min_his) THEN
+          IF (hi(Iend+1,Jstr-1).le.eps) THEN
             ei(Iend+1,Jstr-1)=0.0_r8
             ti(Iend+1,Jstr-1)=0.0_r8
           ELSE
@@ -292,7 +290,7 @@
         IF (DOMAIN(ng)%NorthWest_Corner(tile)) THEN
           ei(Istr-1,Jend+1)=0.5_r8*(hi(Istr-1,Jend)*ti(Istr-1,Jend) +   &
      &                              hi(Istr,Jend+1)*ti(Istr,Jend+1))
-          IF (hi(Istr-1,Jend+1).le.min_his) THEN
+          IF (hi(Istr-1,Jend+1).le.eps) THEN
             ei(Istr-1,Jend+1)=0.0_r8
             ti(Istr-1,Jend+1)=0.0_r8
           ELSE
@@ -303,7 +301,7 @@
         IF (DOMAIN(ng)%NorthEast_Corner(tile)) THEN
           ei(Iend+1,Jend+1)=0.5_r8*(hi(Iend+1,Jend)*ti(Iend+1,Jend) +   &
      &                              hi(Iend,Jend+1)*ti(Iend,Jend+1))
-          IF (hi(Iend+1,Jend+1).le.min_his) THEN
+          IF (hi(Iend+1,Jend+1).le.eps) THEN
             ei(Iend+1,Jend+1)=0.0_r8
             ti(Iend+1,Jend+1)=0.0_r8
           ELSE
