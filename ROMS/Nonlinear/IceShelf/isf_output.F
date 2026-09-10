@@ -939,7 +939,17 @@
      &                         S(ng)%Rindex, gtype,                     &
      &                         LBi, UBi, LBj, UBj, scale,               &
 #  ifdef MASKING
+#   ifdef ICESHEET
+!
+!  Mask the ice internal fields by the ice-extent mask:  rmask_full
+!  is zero over grounded-ice cells (Dcrit thin film), which would
+!  hide the diagnostics exactly where the ice is (same pitfall as
+!  the Ci accumulator write below).
+!
+     &                         GRID(ng) % rmask_ist,                    &
+#   else
      &                         GRID(ng) % rmask_full,                   &
+#   endif
 #  endif
      &                         isfField2d)
             IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
@@ -2816,7 +2826,14 @@
      &                         ioDesc,                                  &
      &                         LBi, UBi, LBj, UBj, scale,               &
 #   ifdef MASKING
+#    ifdef ICESHEET
+!
+!  Mask by the ice-extent mask (see the nf90 Fi loop).
+!
+     &                         GRID(ng) % rmask_ist,                    &
+#    else
      &                         GRID(ng) % rmask_full,                   &
+#    endif
 #   endif
      &                         isfField2d)
             IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN

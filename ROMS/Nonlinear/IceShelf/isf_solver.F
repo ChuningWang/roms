@@ -297,6 +297,20 @@
 !  Stage 1:  initial velocity guess.
 !=======================================================================
 !
+!  Safety cap on the lsold ice thickness (robustness against garbage
+!  values from initialization or numerical artifacts feeding the
+!  geometry, the viscosity and the driving stress).  Configurable
+!  via max_thickness in isf.in (default 5000 m).  The capped value
+!  propagates to the new layer through the next advection step.
+!
+      DO j=JstrT,JendT
+        DO i=IstrT,IendT
+          IF (Si(i,j,lsold,isIhis).gt.max_thickness(ng)) THEN
+            Si(i,j,lsold,isIhis)=max_thickness(ng)
+          END IF
+        END DO
+      END DO
+!
 !  Copy the previous SSA velocity (lsold) as the initial guess and
 !  zero the inactive nodes;  the Dirichlet lateral boundary values
 !  are enforced later by isf_pibc_tile (after the warm start).

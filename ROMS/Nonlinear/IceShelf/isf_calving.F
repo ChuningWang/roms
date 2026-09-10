@@ -72,12 +72,12 @@
       CALL wclock_on (ng, model, 44, __LINE__, MyFile)
 # endif
       CALL isf_calving_mask_tile (ng, tile, model,                      &
-     &                           LBi, UBi, LBj, UBj,                    &
-     &                           IminS, ImaxS, JminS, JmaxS,            &
-     &                           GRID(ng) % calving_mask,               &
-     &                           ISF(ng) % Si(:,:,lsnew(ng),isIhis),    &
-     &                           ISF(ng) % Si(:,:,lsnew(ng),isIeis),    &
-     &                           ISF(ng) % Fi(:,:,ifItis))
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            IminS, ImaxS, JminS, JmaxS,           &
+     &                            GRID(ng) % calving_mask,              &
+     &                            ISF(ng) % Si(:,:,lsnew(ng),isIhis),   &
+     &                            ISF(ng) % Si(:,:,lsnew(ng),isIeis),   &
+     &                            ISF(ng) % Fi(:,:,ifItis))
 # ifdef PROFILE
       CALL wclock_off (ng, model, 44, __LINE__, MyFile)
 # endif
@@ -87,10 +87,10 @@
 !
 !***********************************************************************
       SUBROUTINE isf_calving_mask_tile (ng, tile, model,                &
-     &                                 LBi, UBi, LBj, UBj,              &
-     &                                 IminS, ImaxS, JminS, JmaxS,      &
-     &                                 calving_mask,                    &
-     &                                 h_ice, e_ice, t_ice)
+     &                                  LBi, UBi, LBj, UBj,             &
+     &                                  IminS, ImaxS, JminS, JmaxS,     &
+     &                                  calving_mask,                   &
+     &                                  h_ice, e_ice, t_ice)
 !***********************************************************************
 !
 !  Applies the pre-defined calving mask to the current time level

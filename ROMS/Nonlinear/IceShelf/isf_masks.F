@@ -37,7 +37,7 @@
 # ifdef ICESHEET
       USE mod_stepping, ONLY : knew, lsnew
       USE mod_ocean
-      USE mod_isf,      ONLY : isIhis, ISF
+      USE mod_isf,      ONLY : isIhis, ifIzsf, ifIzbd, ISF
 # endif
 !
 !  Imported variable declarations.
@@ -65,6 +65,8 @@
 # ifdef ICESHEET
      &                     OCEAN(ng) % zeta(:,:,knew(ng)),              &
      &                     ISF(ng) % Si(:,:,lsnew(ng),isIhis),          &
+     &                     ISF(ng) % Fi(:,:,ifIzsf),                    &
+     &                     ISF(ng) % Fi(:,:,ifIzbd),                    &
      &                     GRID(ng) % rmask_ist,                        &
      &                     GRID(ng) % umask_ist,                        &
      &                     GRID(ng) % vmask_ist,                        &
@@ -87,7 +89,7 @@
      &                           rmask,                                 &
 # endif
 # ifdef ICESHEET
-     &                           zeta, hice,                            &
+     &                           zeta, hice, zsf, zbd,                  &
      &                           rmask_ist, umask_ist,                  &
      &                           vmask_ist, pmask_ist,                  &
 # endif
@@ -120,6 +122,8 @@
       real(r8), intent(inout) :: zice(LBi:,LBj:)
       real(r8), intent(in) :: zeta(LBi:,LBj:)
       real(r8), intent(in) :: hice(LBi:,LBj:)
+      real(r8), intent(out) :: zsf(LBi:,LBj:)
+      real(r8), intent(out) :: zbd(LBi:,LBj:)
       real(r8), intent(out) :: rmask_ist(LBi:,LBj:)
       real(r8), intent(out) :: umask_ist(LBi:,LBj:)
       real(r8), intent(out) :: vmask_ist(LBi:,LBj:)
@@ -137,6 +141,8 @@
       real(r8), intent(inout) :: zice(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: zeta(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: hice(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: zsf(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: zbd(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: rmask_ist(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: umask_ist(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: vmask_ist(LBi:UBi,LBj:UBj)
@@ -183,15 +189,26 @@
               rmask_isf(i,j)=1.0_r8
               zice(i,j)=-(rho_i/rho0)*hice(i,j)
             END IF
+!
+!  Update ice sheet bed and surface elevation.
+!
+            zbd(i,j)=zice(i,j)
+            zsf(i,j)=zbd(i,j)+hice(i,j)
           ELSE
 !
 !  Ice-free.
 !
             rmask_isf(i,j)=0.0_r8
             zice(i,j)=0.0_r8
+            zbd(i,j)=0.0_r8
+            zsf(i,j)=0.0_r8
           END IF
 #  ifdef MASKING
+!
           rmask_isf(i,j)=rmask_isf(i,j)*rmask(i,j)
+          zice(i,j)=zice(i,j)*rmask(i,j)
+          zbd(i,j)=zbd(i,j)*rmask(i,j)
+          zsf(i,j)=zsf(i,j)*rmask(i,j)
 #  endif
         END DO
       END DO
@@ -262,6 +279,12 @@
      &                          zice)
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
+     &                          zsf)
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          zbd)
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
      &                          rmask_ist)
         CALL exchange_u2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
@@ -283,11 +306,11 @@
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    rmask_isf)
 #  ifdef ICESHEET
-      CALL mp_exchange2d (ng, tile, model, 1,                           &
+      CALL mp_exchange2d (ng, tile, model, 3,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    zice)
+     &                    zice, zsf, zbd)
       CALL mp_exchange2d (ng, tile, model, 4,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints,                                 &

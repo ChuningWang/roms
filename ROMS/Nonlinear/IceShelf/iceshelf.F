@@ -21,32 +21,27 @@
       USE mod_scalars
       USE mod_stepping
       USE mod_isf
-      USE isf_stress_mod,  ONLY : isf_stress
+      USE isf_stress_mod,    ONLY : isf_stress
 !
 # ifdef ICESHELF_THERMO
-      USE isf_vbc_mod,      ONLY : isf_vbc
+      USE isf_vbc_mod,       ONLY : isf_vbc
 # endif
 # if defined ICESHELF_THERMO && !defined ICESHELF_NO_SBL
-      USE isf_sbl_mod,      ONLY : isf_sbl
-# endif
-# ifdef ICESHEET
-      USE isf_mom_mod,      ONLY : isf_mom
+      USE isf_sbl_mod,       ONLY : isf_sbl
 # endif
 # ifdef ICESHEET
       USE isf_advection_mod, ONLY : isf_advection
-# endif
-# ifdef ICESHEET
-      USE isf_bc2d_mod,     ONLY : isf_bc2d
-      USE isf_pibc_mod,     ONLY : isf_pibc
-      USE isf_tibc_mod,     ONLY : isf_tibc
+      USE isf_solver_mod,    ONLY : isf_ssa
+      USE isf_bc2d_mod,      ONLY : isf_bc2d
+      USE isf_tibc_mod,      ONLY : isf_tibc
 # endif
 # ifdef ICESHEET_CALVING
-      USE isf_calving_mod,  ONLY : isf_calving_mask
+      USE isf_calving_mod,   ONLY : isf_calving_mask
 # endif
-      USE strings_mod,      ONLY : FoundError, uppercase
-# if defined WET_DRY
-      USE isf_masks_mod,    ONLY : isf_masks
+# ifdef WET_DRY
+      USE isf_masks_mod,     ONLY : isf_masks
 # endif
+      USE strings_mod,       ONLY : FoundError, uppercase
 !
       implicit none
 !
@@ -159,23 +154,8 @@
             lsold(ng)=lsnew(ng)
             lsnew(ng)=3-lsold(ng)
             DO tile=first_tile(ng),last_tile(ng),+1
-              CALL isf_mom (ng, tile, model)
+              CALL isf_ssa (ng, tile, model)
             END DO
-            DO tile=first_tile(ng),last_tile(ng),+1
-              CALL isf_pibc (ng, tile, model)
-            END DO
-!$OMP BARRIER
-          END IF
-!
-          IF (MOD(iic(ng)-1,N_ssa(ng)).eq.0) THEN
-!
-!  Apply the velocity lateral boundary conditions at the SSA cadence:
-!  the velocity only changes when the solver runs.  Order matters:
-!  the velocity boundary (isf_pibc) and the thickness boundary
-!  (isf_bc2d) must be applied before the enthalpy boundary
-!  (isf_tibc), which computes the boundary enthalpy as h*T and
-!  divides by the boundary thickness.
-!
 !$OMP BARRIER
           END IF
 !
