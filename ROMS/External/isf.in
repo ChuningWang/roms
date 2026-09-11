@@ -217,6 +217,12 @@
 ! max_thickness: Safety cap on ice thickness [m] to prevent garbage
 !           values from initialization or numerical artifacts.
 !           Default = 5000 (allows real ice sheets up to ~4500 m).
+! gl_float_width: Grounding line smoothing ramp width [m ice
+!           thickness] (ICESHEET_SMOOTH_GL).  The SSA basal drag
+!           beta is scaled by a cosine-ramped grounded fraction
+!           about the flotation thickness over +-W/2 (STREAMICE
+!           SMOOTH_FLOATATION); W = 0 degenerates to the binary
+!           flotation criterion.
 
          RDRG_ISF == 3.0d-4
         RDRG2_ISF == 3.0d-3
@@ -241,6 +247,7 @@ Hout(idInuh) == T     ! Fi(...,icInuh)     ice effective viscosity
 Hout(idItdx) == T     ! Fi(...,icItdx)     ice driving stress x
 Hout(idItdy) == T     ! Fi(...,icItdy)     ice driving stress y
 Hout(idIbta) == T     ! Fi(...,icIbta)     ice basal drag coefficient
+Hout(idIgrf) == T     ! Fi(...,icIgrf)     ice grounded fraction (SMOOTH_GL)
 
 Hout(idImel) == T     ! Fi(...,icImel)     iceshelf basal melt rate
 Hout(idIgat) == T     ! Fi(...,icItat)     iceshelf gammaT
@@ -273,6 +280,7 @@ Qout(idInuh) == T     ! Fi(...,icInuh)     ice effective viscosity
 Qout(idItdx) == T     ! Fi(...,icItdx)     ice driving stress x
 Qout(idItdy) == T     ! Fi(...,icItdy)     ice driving stress y
 Qout(idIbta) == T     ! Fi(...,icIbta)     ice basal drag coefficient
+Qout(idIgrf) == T     ! Fi(...,icIgrf)     ice grounded fraction (SMOOTH_GL)
 
 Qout(idImel) == T     ! Fi(...,icImel)     iceshelf basal melt rate
 Qout(idIgat) == T     ! Fi(...,icItat)     iceshelf gammaT
@@ -305,6 +313,7 @@ Aout(idInuh) == T     ! Fi_avg(...,icInuh) ice effective viscosity
 Aout(idItdx) == T     ! Fi_avg(...,icItdx) ice driving stress x
 Aout(idItdy) == T     ! Fi_avg(...,icItdy) ice driving stress y
 Aout(idIbta) == T     ! Fi_avg(...,icIbta) ice basal drag coefficient
+Aout(idIgrf) == T     ! Fi_avg(...,icIgrf) ice grounded fraction (SMOOTH_GL)
 
 Aout(idImel) == T     ! Fi_avg(...,icImel) iceshelf basal melt rate
 Aout(idIgat) == T     ! Fi_avg(...,icItat) iceshelf gammaT
@@ -337,6 +346,7 @@ Sout(idInuh) == T     ! Fi(...,icInuh)     ice effective viscosity
 Sout(idItdx) == T     ! Fi(...,icItdx)     ice driving stress x
 Sout(idItdy) == T     ! Fi(...,icItdy)     ice driving stress y
 Sout(idIbta) == T     ! Fi(...,icIbta)     ice basal drag coefficient
+Sout(idIgrf) == T     ! Fi(...,icIgrf)     ice grounded fraction (SMOOTH_GL)
 
 Sout(idImel) == T     ! Fi(...,icImel)     iceshelf basal melt rate
 Sout(idIgat) == T     ! Fi(...,icItat)     iceshelf gammaT

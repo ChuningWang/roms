@@ -56,7 +56,8 @@
 !                                                                      !
 !  The icesheet SSA diagnostic fields also live in Fi: with            !
 !  ICESHELF_THERMO their indices continue the thermo numbering         !
-!  (10-16); without it they start at 1 (1-7):                          !
+!  (10-16); without it they start at 1 (1-7); ICESHEET_SMOOTH_GL       !
+!  appends the grounded fraction ifIgrf (17 / 8):                      !
 !                                                                      !
 !    ifItis    icesheet temperature [degC]                             !
 !    ifIzsf    ice sheet surface elevation [m]                         !
@@ -65,6 +66,7 @@
 !    ifItdx    driving stress x-component [Pa]                         !
 !    ifItdy    driving stress y-component [Pa]                         !
 !    ifIbta    basal drag coefficient                                  !
+!    ifIgrf    grounded fraction [1] (ICESHEET_SMOOTH_GL only)         !
 !                                                                      !
 !  The ice-ocean coupling accumulators live in the separate Ci array   !
 !  (running sums over the SSA coupling window, part of the restart     !
@@ -171,10 +173,17 @@
       integer :: idItdx       ! Driving stress x-component
       integer :: idItdy       ! Driving stress y-component
       integer :: idIbta       ! Basal drag coefficient
+# ifdef ICESHEET_SMOOTH_GL
+      integer :: idIgrf       ! Grounded fraction
+# endif
       integer :: idCzta       ! Free surface accum. over SSA window
 # ifdef ICESHELF_THERMO
 !
+#  ifdef ICESHEET_SMOOTH_GL
+      integer, parameter :: nIsfF_ssa = 8    ! SSA diag field variables
+#  else
       integer, parameter :: nIsfF_ssa = 7    ! SSA diag field variables
+#  endif
 !
       integer, parameter :: ifItis = 10  ! Iceshelf temperature
       integer, parameter :: ifIzsf = 11  ! Ice sheet surface elevation
@@ -183,9 +192,16 @@
       integer, parameter :: ifItdx = 14  ! Driving stress x-component
       integer, parameter :: ifItdy = 15  ! Driving stress y-component
       integer, parameter :: ifIbta = 16  ! Basal drag coefficient
+#  ifdef ICESHEET_SMOOTH_GL
+      integer, parameter :: ifIgrf = 17  ! Grounded fraction
+#  endif
 # else
 !
+#  ifdef ICESHEET_SMOOTH_GL
+      integer, parameter :: nIsfF_ssa = 8    ! SSA diag field variables
+#  else
       integer, parameter :: nIsfF_ssa = 7    ! SSA diag field variables
+#  endif
 !
       integer, parameter :: ifItis =  1  ! Iceshelf temperature
       integer, parameter :: ifIzsf =  2  ! Ice sheet surface elevation
@@ -194,6 +210,9 @@
       integer, parameter :: ifItdx =  5  ! Driving stress x-component
       integer, parameter :: ifItdy =  6  ! Driving stress y-component
       integer, parameter :: ifIbta =  7  ! Basal drag coefficient
+#  ifdef ICESHEET_SMOOTH_GL
+      integer, parameter :: ifIgrf =  8  ! Grounded fraction
+#  endif
 # endif
 !
 !  Coupling (Ci) field variables: SSA-window accumulators that carry

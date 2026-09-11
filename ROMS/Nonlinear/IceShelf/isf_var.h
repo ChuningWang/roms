@@ -95,6 +95,11 @@
           CASE ('idIbta')
             idIbta=varid
             iFisf(ifIbta)=idIbta
+# ifdef ICESHEET_SMOOTH_GL
+          CASE ('idIgrf')
+            idIgrf=varid
+            iFisf(ifIgrf)=idIgrf
+# endif
           CASE ('idCzta')
             idCzta=varid
             iCisf(icIzta)=idCzta

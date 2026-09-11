@@ -692,6 +692,10 @@
 ** ICESHEET_COULOMB     use regularized Coulomb basal sliding law            **
 **                      (effective pressure, Tsai et al. 2015) in the SSA    **
 **                      bottom drag; otherwise Weertman power law (default)  **
+** ICESHEET_SMOOTH_GL    smooth the SSA basal drag across the grounding      **
+**                      line with a cosine ramp of the grounded fraction     **
+**                      (STREAMICE SMOOTH_FLOATATION equivalent; ramp width  **
+**                      is the gl_float_width parameter [m ice thickness])   **
 **                                                                           **
 ** OCEAN_FIXED          freeze the ocean: read the initial conditions and    **
 **                      skip all forward time integration of the ocean       **

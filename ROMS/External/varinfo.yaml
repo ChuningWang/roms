@@ -8170,6 +8170,17 @@ metadata:
     add_offset:     0.0d0
     scale:          1.0d0
 
+  - variable:       is_gfrac
+    standard_name:  grounded_ice_fraction
+    long_name:      ice sheet grounded fraction (smoothed flotation)
+    units:          1
+    field:          ice grounded fraction
+    time:           ocean_time
+    index_code:     idIgrf
+    type:           r2dvar
+    add_offset:     0.0d0
+    scale:          1.0d0
+
   - variable:       is_vol
     standard_name:  iceshelf_refreezed_draft
     long_name:      thickness of refreezed volume at ice shelf base

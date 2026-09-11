@@ -350,6 +350,16 @@
               END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Hout(idIbta,1:Ngrids)=Lswitch(1:Ngrids)
+# ifdef ICESHEET_SMOOTH_GL
+            CASE ('Hout(idIgrf)')
+              IF (idIgrf.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIgrf'
+                exit_flag=5
+                RETURN
+              END IF
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Hout(idIgrf,1:Ngrids)=Lswitch(1:Ngrids)
+# endif
 #endif
 #ifdef ICESHELF_THERMO
             CASE ('Hout(idImel)')
@@ -509,6 +519,11 @@
             CASE ('Qout(idIbta)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idIbta,1:Ngrids)=Lswitch(1:Ngrids)
+# ifdef ICESHEET_SMOOTH_GL
+            CASE ('Qout(idIgrf)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Qout(idIgrf,1:Ngrids)=Lswitch(1:Ngrids)
+# endif
 #endif
 #ifdef ICESHELF_THERMO
             CASE ('Qout(idImel)')
@@ -609,6 +624,11 @@
             CASE ('Aout(idIbta)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idIbta,1:Ngrids)=Lswitch(1:Ngrids)
+#  ifdef ICESHEET_SMOOTH_GL
+            CASE ('Aout(idIgrf)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Aout(idIgrf,1:Ngrids)=Lswitch(1:Ngrids)
+#  endif
 # endif
 # ifdef ICESHELF_THERMO
             CASE ('Aout(idImel)')
@@ -710,6 +730,11 @@
             CASE ('Sout(idIbta)')
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idIbta,1:Ngrids)=Lswitch(1:Ngrids)
+#  ifdef ICESHEET_SMOOTH_GL
+            CASE ('Sout(idIgrf)')
+              Npts=load_l(Nval, Cval, Ngrids, Lswitch)
+              Sout(idIgrf,1:Ngrids)=Lswitch(1:Ngrids)
+#  endif
 # endif
 # ifdef ICESHELF_THERMO
             CASE ('Sout(idImel)')

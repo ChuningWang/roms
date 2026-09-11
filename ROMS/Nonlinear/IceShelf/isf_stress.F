@@ -44,12 +44,17 @@
 !                                       from hydraulic connectivity.   !
 !       The float state follows the isf_masks.F flotation criterion     !
 !       evaluated with the window-averaged free surface.               !
+!       With ICESHEET_SMOOTH_GL the binary float switch is replaced    !
+!       by a cosine-ramped grounded fraction (STREAMICE float_frac)    !
+!       scaling both sliding laws; the ramp width is gl_float_width    !
+!       [m ice thickness].                                             !
 !                                                                      !
 !  References:                                                         !
 !    Holland & Jenkins (1999), J. Phys. Oceanogr. 29, 1787-1800.       !
 !    McPhee (1987), J. Geophys. Res. 92, 7017-7032.                    !
 !    Weertman (1957), J. Glaciol. 3, 33-38.                            !
 !    Tsai et al. (2015), J. Glaciol. 61, 649-655.                      !
+!    MITgcm STREAMICE streamice_upd_ffrac_uncoupled.F (float_frac).    !
 !                                                                      !
 !=======================================================================
 !
@@ -231,6 +236,9 @@
 # ifdef ICESHEET
       real(r8) :: H_rho, u_mid, v_mid, u_slide
       real(r8) :: C_sq, zeta_avg, D_avg
+#  ifdef ICESHEET_SMOOTH_GL
+      real(r8) :: H_float, gfrac, w_gl
+#  endif
 #  ifdef ICESHEET_COULOMB
       real(r8) :: N_eff
 #  endif
@@ -494,6 +502,19 @@
 !  limit tau_b = f_c*N as |u|->infinity; N=0 over floating and
 !  ice-free cells zeroes the drag automatically (the pressure test
 !  is the same inequality as the flotation criterion above).
+!
+!  With ICESHEET_SMOOTH_GL the binary float switch is replaced by a
+!  cosine-ramped grounded fraction gfrac (STREAMICE float_frac,
+!  phi_gl_streamice.F):
+!
+!    H_float = (rho0/rho_i) * D_avg    flotation thickness
+!    gfrac   = phi_gl(H - H_float + 0.5*W, W),  W = gl_float_width
+!
+!  gfrac is 1 well grounded, 0 floating, 0.5 exactly at the binary
+!  grounding line, and W=0 degenerates to the binary criterion
+!  (bit-identical behavior).  Both sliding laws are multiplied by
+!  gfrac, mirroring streamice_visc_beta.F; the diagnostic is stored
+!  in Fi(:,:,ifIgrf) (netCDF is_gfrac) at the SSA cadence.
 !=======================================================================
 !
       IF (MOD(iic(ng)-1,N_ssa(ng)).eq.0) THEN
@@ -515,6 +536,9 @@
             D_avg=zeta_avg+h(i,j)-Dcrit(ng)-eps_float
 !
             Fi(i,j,ifIbta)=0.0_r8
+#  ifdef ICESHEET_SMOOTH_GL
+            Fi(i,j,ifIgrf)=0.0_r8
+#  endif
             H_rho=Si(i,j,know,isIhis)
             IF (H_rho.gt.0.0_r8) THEN
 !
@@ -532,27 +556,54 @@
               u_slide=SQRT(u_mid*u_mid+v_mid*v_mid+                     &
      &                     eps_u_min(ng)*eps_u_min(ng))
 !
+#  ifdef ICESHEET_SMOOTH_GL
+!
+!  Grounded fraction:  cosine ramp of H about the flotation thickness
+!  H_float=(rho0/rho_i)*D_avg; gfrac=0.5 coincides with the binary
+!  grounding line and W=0 degenerates to the binary criterion.
+!
+              H_float=(rho0/rho_i)*D_avg
+              w_gl=gl_float_width(ng)
+              gfrac=phi_gl(H_rho-H_float+0.5_r8*w_gl, w_gl)
+              Fi(i,j,ifIgrf)=gfrac
+#  endif
+!
 #  ifdef ICESHEET_COULOMB
 !
 !  Effective pressure from full hydraulic connectivity to the ocean.
 !  N_eff > 0 holds exactly over grounded cells, so no separate float
-!  mask is needed.
+!  mask is needed.  With ICESHEET_SMOOTH_GL the drag is additionally
+!  scaled by the grounded fraction gfrac.
 !
               N_eff=rho_i*g*H_rho-rho0*g*D_avg
               IF (N_eff.gt.0.0_r8) THEN
                 cff2=f_coulomb(ng)*N_eff
+#   ifdef ICESHEET_SMOOTH_GL
+                Fi(i,j,ifIbta)=C_sq*                                    &
+     &               u_slide**(n_basal(ng)-1.0_r8)*cff2/                &
+     &               ((C_sq**(1.0_r8/n_basal(ng)))*u_slide+             &
+     &                cff2**(1.0_r8/n_basal(ng)))**n_basal(ng)*gfrac
+#   else
                 Fi(i,j,ifIbta)=C_sq*                                    &
      &               u_slide**(n_basal(ng)-1.0_r8)*cff2/                &
      &               ((C_sq**(1.0_r8/n_basal(ng)))*u_slide+             &
      &                cff2**(1.0_r8/n_basal(ng)))**n_basal(ng)
+#   endif
               END IF
 #  else
 !
-!  Weertman power law, zero over floating ice.
+!  Weertman power law, zero over floating ice.  With
+!  ICESHEET_SMOOTH_GL the grounded/floating switch becomes the
+!  gfrac ramp (zero drag over floating ice is preserved since
+!  gfrac=0 there).
 !
+#   ifdef ICESHEET_SMOOTH_GL
+              Fi(i,j,ifIbta)=C_sq*u_slide**(n_basal(ng)-1.0_r8)*gfrac
+#   else
               IF (rho_i*H_rho.gt.rho0*D_avg) THEN
                 Fi(i,j,ifIbta)=C_sq*u_slide**(n_basal(ng)-1.0_r8)
               END IF
+#   endif
 #  endif
 !
             END IF
@@ -592,5 +643,41 @@
       RETURN
       END SUBROUTINE isf_stress_tile
 !
+# ifdef ICESHEET_SMOOTH_GL
+!
+!***********************************************************************
+      FUNCTION phi_gl (x, w)
+!***********************************************************************
+!
+!  Smoothed indicator function for the grounding line transition
+!  (MITgcm STREAMICE phi_gl_streamice.F):  zero for x <= 0, one for
+!  x > w, and a raised-cosine ramp in between.  With w = 0 it
+!  collapses to the binary switch (x > 0).
+!
+      USE mod_kinds, ONLY : r8
+!
+      implicit none
+!
+!  Imported variable declarations.
+!
+      real(r8), intent(in) :: x, w
+!
+!  Local variable declarations.
+!
+      real(r8) :: cff
+      real(r8) :: phi_gl
+!
+      IF (x.le.0.0_r8) THEN
+        phi_gl=0.0_r8
+      ELSE IF (x.gt.w) THEN
+        phi_gl=1.0_r8
+      ELSE
+        cff=COS(3.141592653589793_r8*x/w)
+        phi_gl=0.5_r8*(1.0_r8-cff)
+      END IF
+!
+      RETURN
+      END FUNCTION phi_gl
+# endif
 #endif
       END MODULE isf_stress_mod

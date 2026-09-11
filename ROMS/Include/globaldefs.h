@@ -845,6 +845,17 @@
 #endif
 
 /*
+** Grounding line smoothing of the SSA basal drag (isf_stress.F).
+**   ICESHEET_SMOOTH_GL   scale the sliding-law beta with a
+**                        cosine-ramped grounded fraction about the
+**                        flotation thickness (MITgcm STREAMICE
+**                        SMOOTH_FLOATATION equivalent).
+** User-settable, no derivation, no mutual exclusion.  The ramp
+** width is the runtime parameter gl_float_width [m ice thickness];
+** gl_float_width = 0 degenerates to the binary flotation criterion.
+*/
+
+/*
 ** Check if dynamic/thermodynamic ice shelf model is activated.
 ** ICESHELF_THERMO is user-settable and enables 3-equation ice/ocean
 ** thermodynamics. ICESHEET enables ice sheet/shelf momentum.
