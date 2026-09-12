@@ -189,20 +189,18 @@
               rmask_isf(i,j)=1.0_r8
               zice(i,j)=-(rho_i/rho0)*hice(i,j)
             END IF
-!
-!  Update ice sheet bed and surface elevation.
-!
-            zbd(i,j)=zice(i,j)
-            zsf(i,j)=zbd(i,j)+hice(i,j)
           ELSE
 !
 !  Ice-free.
 !
             rmask_isf(i,j)=0.0_r8
             zice(i,j)=0.0_r8
-            zbd(i,j)=0.0_r8
-            zsf(i,j)=0.0_r8
           END IF
+!
+!  Update ice sheet bed and surface elevation.
+!
+          zbd(i,j)=zice(i,j)
+          zsf(i,j)=zbd(i,j)+hice(i,j)
 #  ifdef MASKING
 !
           rmask_isf(i,j)=rmask_isf(i,j)*rmask(i,j)
