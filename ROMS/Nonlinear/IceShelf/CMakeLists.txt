@@ -18,6 +18,7 @@ list( APPEND _files
       ROMS/Nonlinear/IceShelf/isf_set_avg.F
       ROMS/Nonlinear/IceShelf/isf_advection.F
       ROMS/Nonlinear/IceShelf/isf_calving.F
+      ROMS/Nonlinear/IceShelf/isf_coupling.F
       ROMS/Nonlinear/IceShelf/isf_bc2d.F
       ROMS/Nonlinear/IceShelf/isf_ini_fields.F
       ROMS/Nonlinear/IceShelf/isf_pibc.F

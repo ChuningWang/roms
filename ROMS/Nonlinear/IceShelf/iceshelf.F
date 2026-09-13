@@ -31,6 +31,7 @@
 # endif
 # ifdef ICESHEET
       USE isf_advection_mod, ONLY : isf_advection
+      USE isf_coupling_mod,  ONLY : isf_coupling
       USE isf_solver_mod,    ONLY : isf_ssa
       USE isf_bc2d_mod,      ONLY : isf_bc2d
       USE isf_tibc_mod,      ONLY : isf_tibc
@@ -80,6 +81,28 @@
 !  grid application (NestLayers = 1).
 !
       NEST_LAYER : DO nl=1,NestLayers
+!
+# ifdef ICESHEET
+!
+!-----------------------------------------------------------------------
+!  Accumulate the SSA coupling window (isf_coupling).
+!
+!  Runs FIRST, before every other iceshelf computation: at the last
+!  step of each N_ssa window (MOD(iic,N_ssa)=0) the window mean is
+!  finalized in Ci(:,:,icIzta) for this step's basal drag (isf_stress
+!  below) and SSA solve; at the first step of a window the
+!  accumulator is re-seeded.  The window phase is keyed to the
+!  absolute timestep iic, so partial windows carry across restart.
+!-----------------------------------------------------------------------
+!
+        DO ig=1,GridsInLayer(nl)
+          ng=GridNumber(ig,nl)
+          DO tile=first_tile(ng),last_tile(ng),+1
+            CALL isf_coupling (ng, tile, iNLM)
+          END DO
+!$OMP BARRIER
+        END DO
+# endif
 !
 !-----------------------------------------------------------------------
 !  Ice-ocean momentum coupling and surface flux masking.
@@ -134,23 +157,32 @@
 # ifdef ICESHEET
 !
 !-----------------------------------------------------------------------
-!  Compute the iceshelf momentum (SSA).  With ICESHEET, solved
-!  every N_ssa ocean timesteps for multi-timescale coupling.  The
-!  scalar state (thickness, enthalpy) is advected below every ocean
-!  timestep, decoupled from the SSA cadence.
+!  Compute the iceshelf momentum (SSA).  With ICESHEET, solved every
+!  N_ssa ocean timesteps for multi-timescale coupling, on the LAST
+!  step of each window (MOD(iic,N_ssa)=0): the same step the window
+!  mean is finalized in isf_coupling above and the basal drag beta is
+!  evaluated from it in isf_stress.  The cold-start first step
+!  (iic=1) also solves, so the initial velocity field reflects the
+!  initial geometry and drag (beta from the instantaneous free
+!  surface, the Ci seed sample).  The scalar state (thickness,
+!  enthalpy) is advected below every ocean timestep, decoupled from
+!  the SSA cadence.
 !-----------------------------------------------------------------------
 !
         DO ig=1,GridsInLayer(nl)
           ng=GridNumber(ig,nl)
 !
-!  Advance the iceshelf time levels every ocean timestep.  Since the
-!  advection below integrates the scalar state over each ocean dt,
-!  the lsold/lsnew swap is no longer tied to N_ssa: it runs on SSA
-!  steps (the solver expects a fresh target level) and on every
-!  step that advects.  At the initialization timestep neither runs
-!  and the swap is skipped so the restart/current layer is kept.
+!  Advance the iceshelf time levels on SSA steps: the solver expects
+!  a fresh target level.  Between solves the levels are not swapped:
+!  the solved velocity stays in the target level and the advection
+!  below writes the transported scalars there, so at the next swap
+!  both become the solver's old level.  On the cold-start first step
+!  both levels hold identical initial state, so the extra swap is
+!  harmless; on steps where neither the solver nor the advection
+!  runs (the restart first step inside a window) the swap is
+!  skipped so the restart/current layer is kept.
 !
-          IF (MOD(iic(ng)-1,N_ssa(ng)).eq.0) THEN
+          IF ((iic(ng).eq.1).or.(MOD(iic(ng),N_ssa(ng)).eq.0)) THEN
             lsold(ng)=lsnew(ng)
             lsnew(ng)=3-lsold(ng)
             DO tile=first_tile(ng),last_tile(ng),+1
