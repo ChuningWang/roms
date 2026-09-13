@@ -23,13 +23,21 @@
 !                    basal drag (isf_stress) reads at that step to     !
 !                    build Fi(:,:,ifIbta) for the SSA solve.           !
 !                                                                      !
+!  The routine also sets the per-grid solve-step flag                  !
+!  lssa_solve(ng) = (iic.eq.1) .or. (MOD(iic,N_ssa).eq.0),             !
+!  consumed by the isf_stress basal-drag gate and the iceshelf.F       !
+!  solver gate.  Valid from this call onward within the timestep:      !
+!  code executing before the iceshelf call in main3d would see the     !
+!  previous step's value.                                              !
+!                                                                      !
 !  Window phase (window_phase = MOD(iic,N_ssa), keyed to the           !
 !  absolute timestep iic so partial windows continue seamlessly        !
 !  across restart; the accumulator is part of the restart state,       !
 !  netCDF variable is_zta):                                            !
 !                                                                      !
-!    N_ssa <= 1          degenerate single-step window: Ci = zeta      !
-!                        (the instantaneous sample, explicit branch)   !
+!    N_ssa = 1            degenerate single-step window: Ci = zeta     !
+!                        (the instantaneous sample, explicit branch;   !
+!                        N_ssa >= 1 is enforced at input, isf_inp.h)   !
 !    window_phase = 1    window first step, including the cold-        !
 !                        start first step: Ci = zeta (clear + seed     !
 !                        with the variable's initial value)            !
@@ -66,9 +74,10 @@
 !***********************************************************************
 !
       USE mod_param
+      USE mod_scalars
       USE mod_ocean
       USE mod_stepping, ONLY : knew
-      USE mod_isf,      ONLY : ISF
+      USE mod_isf,      ONLY : ISF, N_ssa, lssa_solve
 !
 !  Imported variable declarations.
 !
@@ -84,6 +93,15 @@
 # ifdef PROFILE
       CALL wclock_on (ng, model, 42, __LINE__, MyFile)
 # endif
+!
+!  Record whether this step runs an SSA solve: the last step of the
+!  coupling window or the cold-start first step.  Valid from this
+!  point onward within the timestep (the isf_stress basal drag and
+!  the iceshelf.F solver gate below read it); code running before
+!  the iceshelf call in main3d would see the previous step's value.
+!
+      lssa_solve(ng)=(iic(ng).eq.1).or.(MOD(iic(ng),N_ssa(ng)).eq.0)
+!
       CALL isf_coupling_tile (ng, tile,                                 &
      &                        LBi, UBi, LBj, UBj,                       &
      &                        IminS, ImaxS, JminS, JmaxS,               &
@@ -138,7 +156,7 @@
 !  finalize or reseed the SSA coupling window.
 !-----------------------------------------------------------------------
 !
-      IF (N_ssa(ng).le.1) THEN
+      IF (N_ssa(ng).eq.1) THEN
 !
 !  Degenerate single-step window (N_ssa = 1): the accumulator holds
 !  the instantaneous sample.

@@ -336,6 +336,7 @@
 !  Multi-timescale parameters
 !
       integer, allocatable :: N_ssa(:)          ! SSA solve freq.
+      logical, allocatable :: lssa_solve(:)     ! SSA solve step flag
       integer, allocatable :: N_gl(:)           ! GL update freq.
 !
 !  Surface mass balance parameters
@@ -699,6 +700,11 @@
           allocate ( N_ssa(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
           N_ssa(1:Ngrids)=0
+        END IF
+        IF (.not.allocated(lssa_solve)) THEN
+          allocate ( lssa_solve(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          lssa_solve(1:Ngrids)=.false.
         END IF
         IF (.not.allocated(N_gl)) THEN
           allocate ( N_gl(Ngrids) )
@@ -1071,6 +1077,7 @@
       IF (allocated(picard_alpha))    deallocate ( picard_alpha )
       IF (allocated(H_calve))         deallocate ( H_calve )
       IF (allocated(N_ssa))           deallocate ( N_ssa )
+      IF (allocated(lssa_solve))      deallocate ( lssa_solve )
       IF (allocated(N_gl))            deallocate ( N_gl )
       IF (allocated(smb_rate))        deallocate ( smb_rate )
       IF (allocated(max_thickness))   deallocate ( max_thickness )

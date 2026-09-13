@@ -164,9 +164,10 @@
 !  evaluated from it in isf_stress.  The cold-start first step
 !  (iic=1) also solves, so the initial velocity field reflects the
 !  initial geometry and drag (beta from the instantaneous free
-!  surface, the Ci seed sample).  The scalar state (thickness,
-!  enthalpy) is advected below every ocean timestep, decoupled from
-!  the SSA cadence.
+!  surface, the Ci seed sample).  Both gates read the solve-step
+!  flag lssa_solve set by isf_coupling above.  The scalar state
+!  (thickness, enthalpy) is advected below every ocean timestep,
+!  decoupled from the SSA cadence.
 !-----------------------------------------------------------------------
 !
         DO ig=1,GridsInLayer(nl)
@@ -182,7 +183,7 @@
 !  runs (the restart first step inside a window) the swap is
 !  skipped so the restart/current layer is kept.
 !
-          IF ((iic(ng).eq.1).or.(MOD(iic(ng),N_ssa(ng)).eq.0)) THEN
+          IF (lssa_solve(ng)) THEN
             lsold(ng)=lsnew(ng)
             lsnew(ng)=3-lsold(ng)
             DO tile=first_tile(ng),last_tile(ng),+1

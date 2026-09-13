@@ -230,6 +230,15 @@
 !
             CASE ('N_ssa')
               Npts=load_i(Nval, Rval, Ngrids, N_ssa)
+!
+!  Clamp to a valid solve frequency (an unset or negative N_ssa would
+!  otherwise abort in MOD(iic,N_ssa)); the clamped value solves the
+!  SSA every ocean timestep, the fully coupled limit.
+!
+              IF (ANY(N_ssa(1:Ngrids).lt.1)) THEN
+                IF (Master) WRITE (out,95)
+                N_ssa(1:Ngrids)=MAX(N_ssa(1:Ngrids),1)
+              END IF
             CASE ('N_gl')
               Npts=load_i(Nval, Rval, Ngrids, N_gl)
 !
@@ -1313,7 +1322,9 @@
   70  FORMAT (10x,l1,2x,a,t32,a)
   80  FORMAT (/,' READ_IsfPar - variable index not yet loaded, ', a)
   90  FORMAT (/,' READ_IsfPar - wrong number of values: ',i3,           &
-      &        ' for string parameter: ',a)
+     &        ' for string parameter: ',a)
+  95  FORMAT (/,' READ_IsfPar - N_ssa < 1, clamped to 1',               &
+     &        ' (SSA solved every ocean timestep)')
  180  FORMAT (10x,l1,2x,a,t32,a,i2.2,':',1x,a)
  185  FORMAT (10x,l1,2x,a,'(',i2.2,')',t32,a,i2.2,':',1x,a)
 !

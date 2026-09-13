@@ -455,13 +455,13 @@
 !  (iceshelf.F), so the basal drag it needs is evaluated from the
 !  ocean state averaged over the coupling window.  The accumulator
 !  Ci(:,:,icIzta) is owned by isf_coupling, called at the top of
-!  iceshelf.F: at the last step of each window (MOD(iic,N_ssa)=0,
-!  the same cadence as the solver call) it holds the finalized
+!  iceshelf.F: at the last step of each window it holds the finalized
 !  window mean; on the cold-start first step (iic=1, where the
 !  driver also solves for the initial velocity) it holds the seed
-!  sample, i.e. the instantaneous free surface.  Both are read
-!  directly here.  This routine runs before the lsold/lsnew swap
-!  and the isf_ssa call in iceshelf.F, so lsnew is the previous
+!  sample, i.e. the instantaneous free surface.  Both cases are
+!  gated by the lssa_solve flag set by isf_coupling, and the value
+!  is read directly here.  This routine runs before the lsold/lsnew
+!  swap and the isf_ssa call in iceshelf.F, so lsnew is the previous
 !  SSA solution: sliding velocity and thickness come from that
 !  time level, matching the solver's frozen-coefficient (Picard)
 !  linearization of the drag term.
@@ -514,7 +514,7 @@
 !  is_gfrac) at the SSA cadence.
 !=======================================================================
 !
-      IF ((iic(ng).eq.1).or.(MOD(iic(ng),N_ssa(ng)).eq.0)) THEN
+      IF (lssa_solve(ng)) THEN
 !
         C_sq=C_basal(ng)*C_basal(ng)
 !
