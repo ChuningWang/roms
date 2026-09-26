@@ -309,6 +309,16 @@
               LdefVar=VarOut(ifield,ng)
             END IF
             IF (LdefVar) THEN
+!
+!  The driving-stress diagnostics (is_taudx/is_taudy) live at PSI
+!  points and need the PSI grid declaration (a pre-existing bug
+!  defined and wrote them on the RHO grid, misaligning the fields).
+!
+              IF ((nf.eq.ifItdx).or.(nf.eq.ifItdy)) THEN
+                isfgrd => p2dgrd
+              ELSE
+                isfgrd => t2dgrd
+              END IF
               Vinfo( 1)=Vname(1,ifield)
               Vinfo( 2)=Vname(2,ifield)
               Vinfo( 3)=Vname(3,ifield)
@@ -359,6 +369,7 @@
             LdefVar=.FALSE.
 #   endif
             IF (LdefVar) THEN
+              isfgrd => t2dgrd
               Vinfo( 1)=Vname(1,ifield)
               Vinfo( 2)=Vname(2,ifield)
               Vinfo( 3)=Vname(3,ifield)
@@ -933,23 +944,35 @@
             END IF
 !
             scale=1.0_dp
-            gtype=gfactor*r2dvar
+!
+!  The driving-stress diagnostics (is_taudx/is_taudy) are assembled
+!  at PSI points (isf_solver.F) and must be written as PSI fields;
+!  every other Fi diagnostic lives at RHO points.  Writing a PSI
+!  array through an r2dvar declaration misaligns the output (a
+!  pre-existing bug: the history fields were garbled).  The PSI
+!  diagnostics are masked by the PSI mask below.
+!
+            IF ((ifld.eq.ifItdx).or.(ifld.eq.ifItdy)) THEN
+              gtype=gfactor*p2dvar
+#  ifdef MASKING
+              isfMask => GRID(ng) % pmask
+#  endif
+            ELSE
+              gtype=gfactor*r2dvar
+#  ifdef MASKING
+#   ifdef ICESHEET
+              isfMask => GRID(ng) % rmask_ist
+#   else
+              isfMask => GRID(ng) % rmask_full
+#   endif
+#  endif
+            END IF
             status=nf_fwrite2d(ng, model, S(ng)%ncid, ifield,           &
      &                         S(ng)%Vid(ifield),                       &
      &                         S(ng)%Rindex, gtype,                     &
      &                         LBi, UBi, LBj, UBj, scale,               &
 #  ifdef MASKING
-#   ifdef ICESHEET
-!
-!  Mask the ice internal fields by the ice-extent mask:  rmask_full
-!  is zero over grounded-ice cells (Dcrit thin film), which would
-!  hide the diagnostics exactly where the ice is (same pitfall as
-!  the Ci accumulator write below).
-!
-     &                         GRID(ng) % rmask_ist,                    &
-#   else
-     &                         GRID(ng) % rmask_full,                   &
-#   endif
+     &                         isfMask,                                 &
 #  endif
      &                         isfField2d)
             IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN

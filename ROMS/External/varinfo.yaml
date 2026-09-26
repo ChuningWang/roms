@@ -8144,7 +8144,7 @@ metadata:
     field:          ice driving stress x
     time:           ocean_time
     index_code:     idItdx
-    type:           r2dvar
+    type:           p2dvar
     add_offset:     0.0d0
     scale:          1.0d0
 
@@ -8155,7 +8155,7 @@ metadata:
     field:          ice driving stress y
     time:           ocean_time
     index_code:     idItdy
-    type:           r2dvar
+    type:           p2dvar
     add_offset:     0.0d0
     scale:          1.0d0
 
