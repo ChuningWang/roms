@@ -37,6 +37,12 @@
 !    Fi(:,:,ifItis)                ice temperature [degC]              !
 !    Fi(:,:,ifIzsf)                ice surface elevation [m]           !
 !    Fi(:,:,ifIbta)                basal drag coefficient (isf_stress) !
+!    GRID%pmask_act                active solve mask at PSI points,    !
+!                                  halo exchanged (isf_masks): OR of   !
+!                                  the 4 surrounding RHO cells having  !
+!                                  ice, so the ice-margin ring solves  !
+!    GRID%rmask_ist                grounded/ice mask at RHO points,    !
+!                                  halo exchanged (isf_masks)          !
 !                                                                      !
 !  Output:                                                             !
 !                                                                      !
@@ -54,7 +60,12 @@
 !  closed or clamped -- which edges carry which condition is an        !
 !  application choice (e.g. MISOMIP uses a clamped western inflow      !
 !  and a free eastern calving front, but other setups may differ).     !
-!  The ice-front pressure boundary term is future work.                !
+!  Ice-front pressure boundary load:  front faces (ice cell against an !
+!  ice-free neighbour, free gradient edges included) carry the net     !
+!  hydrostatic push of the seawater as a Q1 line load (ssa_front_load),!
+!  with the floating / grounded-in-water / land-margin cases of        !
+!  Morland (1987) / MacAyeal (1989);  the ice-margin ring solves       !
+!  under the OR active mask GRID%pmask_act.                            !
 !                                                                      !
 !  MPI notes:  PSI tile ranges do not overlap (get_bounds.F:           !
 !  IstrP=my_Istr everywhere, IendP=my_Iend except on the eastern       !
@@ -135,8 +146,10 @@
      &                   lsold(ng), lsnew(ng),                          &
      &                   GRID(ng) % pm,                                 &
      &                   GRID(ng) % pn,                                 &
+     &                   GRID(ng) % h,                                  &
+     &                   ISF(ng) % Ci(:,:,icIzta),                      &
      &                   GRID(ng) % rmask_ist,                          &
-     &                   GRID(ng) % pmask_ist,                          &
+     &                   GRID(ng) % pmask_act,                          &
      &                   ISF(ng) % Si,                                  &
      &                   ISF(ng) % Fi)
 # ifdef PROFILE
@@ -151,8 +164,8 @@
      &                         LBi, UBi, LBj, UBj,                      &
      &                         IminS, ImaxS, JminS, JmaxS,              &
      &                         lsold, lsnew,                            &
-     &                         pm, pn,                                  &
-     &                         rmask_ist, pmask_ist,                    &
+     &                         pm, pn, h, zeta_avg,                     &
+     &                         rmask_ist, pmask_act,                    &
      &                         Si, Fi)
 !***********************************************************************
 !
@@ -173,14 +186,18 @@
 # ifdef ASSUMED_SHAPE
       real(r8), intent(in)    :: pm(LBi:,LBj:)
       real(r8), intent(in)    :: pn(LBi:,LBj:)
-      real(r8), intent(in)    :: pmask_ist(LBi:,LBj:)
+      real(r8), intent(in)    :: h(LBi:,LBj:)
+      real(r8), intent(in)    :: zeta_avg(LBi:,LBj:)
+      real(r8), intent(in)    :: pmask_act(LBi:,LBj:)
       real(r8), intent(in)    :: rmask_ist(LBi:,LBj:)
       real(r8), intent(inout) :: Si(LBi:,LBj:,:,:)
       real(r8), intent(inout) :: Fi(LBi:,LBj:,:)
 # else
       real(r8), intent(in)    :: pm(LBi:UBi,LBj:UBj)
       real(r8), intent(in)    :: pn(LBi:UBi,LBj:UBj)
-      real(r8), intent(in)    :: pmask_ist(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)    :: h(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)    :: zeta_avg(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)    :: pmask_act(LBi:UBi,LBj:UBj)
       real(r8), intent(in)    :: rmask_ist(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: Si(LBi:UBi,LBj:UBj,2,nIsfS)
       real(r8), intent(inout) :: Fi(LBi:UBi,LBj:UBj,nIsfF)
@@ -201,6 +218,13 @@
 !  re-evaluated by every ssa_viscosity call.
 !
       real(r8), dimension(LBi:UBi,LBj:UBj) :: B_hard
+!
+!  Land-margin PSI indicator for the driving-stress taper
+!  (ssa_land_margin):  1 at nodes adjacent to a land-margin front
+!  cell;  the taper distance is measured to these nodes only
+!  (plan option A -- marine fronts carry the full front load).
+!
+      real(r8), dimension(LBi:UBi,LBj:UBj) :: pmarg
 !
 !  Global-reduction buffer (batched mp_reduce).
 !
@@ -317,7 +341,7 @@
 !
       DO j=JstrP,JendP
         DO i=IstrP,IendP
-          IF (pmask_ist(i,j).eq.0.0_r8) THEN
+          IF (pmask_act(i,j).eq.0.0_r8) THEN
             Si(i,j,lsnew,isIuis)=0.0_r8
             Si(i,j,lsnew,isIvis)=0.0_r8
           ELSE
@@ -331,14 +355,33 @@
 !  Stage 2:  driving stress RHS (FE-consistent nodal forces).
 !=======================================================================
 !
+      CALL ssa_land_margin (ng, tile, model,                           &
+     &                       LBi, UBi, LBj, UBj,                        &
+     &                       Istr, Iend, Jstr, Jend,                    &
+     &                       IstrC, IendC, JstrC, JendC,                &
+     &                       IstrP, IendP, JstrP, JendP,                &
+     &                       h, zeta_avg, rmask_ist,                    &
+     &                       Si(:,:,lsold,isIhis), pmarg)
+!
       CALL ssa_driving_stress (ng, tile, model,                         &
      &                         LBi, UBi, LBj, UBj,                      &
      &                         pm, pn,                                  &
-     &                         rmask_ist, pmask_ist,                    &
+     &                         rmask_ist, pmask_act, pmarg,             &
      &                         Si(:,:,lsold,isIhis),                    &
      &                         Fi(:,:,ifIzsf),                          &
      &                         Fi(:,:,ifItdx),                          &
      &                         Fi(:,:,ifItdy))
+!
+      CALL ssa_front_load (ng, tile, model,                             &
+     &                     LBi, UBi, LBj, UBj,                          &
+     &                     Istr, Iend, Jstr, Jend,                      &
+     &                     IstrC, IendC, JstrC, JendC,                  &
+     &                     IstrP, IendP, JstrP, JendP,                  &
+     &                     pm, pn, h, zeta_avg,                         &
+     &                     rmask_ist, pmask_act,                        &
+     &                     Si(:,:,lsold,isIhis),                        &
+     &                     Fi(:,:,ifItdx),                              &
+     &                     Fi(:,:,ifItdy))
 !
 !=======================================================================
 !  Stage 3:  basal-drag warm start.
@@ -358,7 +401,7 @@
 !
       DO j=JstrP,JendP
         DO i=IstrP,IendP
-          IF (pmask_ist(i,j).eq.1.0_r8) THEN
+          IF (pmask_act(i,j).eq.1.0_r8) THEN
             u_slide=SQRT(Si(i,j,lsnew,isIuis)**2+                       &
      &                   Si(i,j,lsnew,isIvis)**2)
             IF (u_slide.lt.u_warm_min) THEN
@@ -472,7 +515,7 @@
      &                        IstrP, IendP, JstrP, JendP,               &
      &                        DPhi, phi_tab,                            &
      &                        pm, pn,                                   &
-     &                        pmask_ist,                                &
+     &                        pmask_act,                                &
      &                        Fi(:,:,ifInuh),                           &
      &                        Fi(:,:,ifIbta),                           &
      &                        diag_u, diag_v)
@@ -483,7 +526,7 @@
      &                   IstrP, IendP, JstrP, JendP,                    &
      &                   DPhi, phi_tab,                                 &
      &                   pm, pn,                                        &
-     &                   pmask_ist,                                     &
+     &                   pmask_act,                                     &
      &                   Fi(:,:,ifInuh),                                &
      &                   Fi(:,:,ifIbta),                                &
      &                   Si(:,:,lsnew,isIuis),                          &
@@ -492,7 +535,7 @@
 !
         DO j=JstrP,JendP
           DO i=IstrP,IendP
-            IF (pmask_ist(i,j).eq.1.0_r8) THEN
+            IF (pmask_act(i,j).eq.1.0_r8) THEN
               Ru(i,j)=Fi(i,j,ifItdx)-Au(i,j)
               Rv(i,j)=Fi(i,j,ifItdy)-Av(i,j)
             ELSE
@@ -516,7 +559,7 @@
         dot_zr=0.0_r8
         DO j=JstrP,JendP
           DO i=IstrP,IendP
-            IF (pmask_ist(i,j).eq.1.0_r8) THEN
+            IF (pmask_act(i,j).eq.1.0_r8) THEN
               IF (diag_u(i,j).gt.eps) THEN
                 Zu(i,j)=Ru(i,j)/diag_u(i,j)
               ELSE
@@ -568,7 +611,7 @@
      &                     IstrP, IendP, JstrP, JendP,                  &
      &                     DPhi, phi_tab,                               &
      &                     pm, pn,                                      &
-     &                     pmask_ist,                                   &
+     &                     pmask_act,                                   &
      &                     Fi(:,:,ifInuh),                              &
      &                     Fi(:,:,ifIbta),                              &
      &                     Du, Dv,                                      &
@@ -582,7 +625,7 @@
           dot_zr_old=dot_zr
           DO j=JstrP,JendP
             DO i=IstrP,IendP
-              IF (pmask_ist(i,j).eq.1.0_r8) THEN
+              IF (pmask_act(i,j).eq.1.0_r8) THEN
                 dot_dad=dot_dad+Du(i,j)*Au(i,j)+Dv(i,j)*Av(i,j)
               END IF
             END DO
@@ -607,7 +650,7 @@
 !
           DO j=JstrP,JendP
             DO i=IstrP,IendP
-              IF (pmask_ist(i,j).eq.1.0_r8) THEN
+              IF (pmask_act(i,j).eq.1.0_r8) THEN
                 Si(i,j,lsnew,isIuis)=Si(i,j,lsnew,isIuis)+alpha*Du(i,j)
                 Si(i,j,lsnew,isIvis)=Si(i,j,lsnew,isIvis)+alpha*Dv(i,j)
                 Ru(i,j)=Ru(i,j)-alpha*Au(i,j)
@@ -627,7 +670,7 @@
           dot_zr=0.0_r8
           DO j=JstrP,JendP
             DO i=IstrP,IendP
-              IF (pmask_ist(i,j).eq.1.0_r8) THEN
+              IF (pmask_act(i,j).eq.1.0_r8) THEN
                 IF (diag_u(i,j).gt.eps) THEN
                   Zu(i,j)=Ru(i,j)/diag_u(i,j)
                 ELSE
@@ -655,7 +698,7 @@
 !
           DO j=JstrP,JendP
             DO i=IstrP,IendP
-              IF (pmask_ist(i,j).eq.1.0_r8) THEN
+              IF (pmask_act(i,j).eq.1.0_r8) THEN
                 Du(i,j)=Zu(i,j)+beta_cg*Du(i,j)
                 Dv(i,j)=Zv(i,j)+beta_cg*Dv(i,j)
               END IF
@@ -685,7 +728,7 @@
 !
         DO j=JstrP,JendP
           DO i=IstrP,IendP
-            IF (pmask_ist(i,j).eq.1.0_r8) THEN
+            IF (pmask_act(i,j).eq.1.0_r8) THEN
               u_slide=SQRT(Si(i,j,lsnew,isIuis)**2+                     &
      &                     Si(i,j,lsnew,isIvis)**2)
               IF (u_slide.gt.ssa_max_speed(ng)) THEN
@@ -706,7 +749,7 @@
         IF (nl_iter.gt.1) THEN
           DO j=JstrP,JendP
             DO i=IstrP,IendP
-              IF (pmask_ist(i,j).eq.1.0_r8) THEN
+              IF (pmask_act(i,j).eq.1.0_r8) THEN
                 Si(i,j,lsnew,isIuis)=                                   &
      &                    picard_alpha(ng) *Si(i,j,lsnew,isIuis)+       &
      &            (1.0_r8-picard_alpha(ng))*Si(i,j,lsold,isIuis)
@@ -759,7 +802,7 @@
      &                   IstrP, IendP, JstrP, JendP,                    &
      &                   DPhi, phi_tab,                                 &
      &                   pm, pn,                                        &
-     &                   pmask_ist,                                     &
+     &                   pmask_act,                                     &
      &                   Fi(:,:,ifInuh),                                &
      &                   Fi(:,:,ifIbta),                                &
      &                   Si(:,:,lsnew,isIuis),                          &
@@ -782,7 +825,7 @@
         norms(4)=0.0_r8
         DO j=JstrP,JendP
           DO i=IstrP,IendP
-            IF (pmask_ist(i,j).eq.1.0_r8) THEN
+            IF (pmask_act(i,j).eq.1.0_r8) THEN
               norms(1)=norms(1)+                                        &
      &          (Si(i,j,lsnew,isIuis)-Si(i,j,lsold,isIuis))**2+         &
      &          (Si(i,j,lsnew,isIvis)-Si(i,j,lsold,isIvis))**2
@@ -829,7 +872,7 @@
             u_slide=0.0_r8
             DO j=JstrP,JendP
               DO i=IstrP,IendP
-                IF (pmask_ist(i,j).eq.1.0_r8) THEN
+                IF (pmask_act(i,j).eq.1.0_r8) THEN
                   cff1=SQRT(Si(i,j,lsnew,isIuis)**2+                    &
      &                      Si(i,j,lsnew,isIvis)**2)
                   IF (cff1.gt.u_slide) u_slide=cff1
@@ -896,7 +939,7 @@
 !
       DO j=JstrP,JendP
         DO i=IstrP,IendP
-          IF (pmask_ist(i,j).eq.1.0_r8) THEN
+          IF (pmask_act(i,j).eq.1.0_r8) THEN
             IF (Si(i,j,lsnew,isIuis).ne.Si(i,j,lsnew,isIuis).or.        &
      &          Si(i,j,lsnew,isIvis).ne.Si(i,j,lsnew,isIvis)) THEN
               WRITE(stdout,'(a,i3,a,2i4)')                              &
@@ -1047,7 +1090,7 @@
       SUBROUTINE ssa_driving_stress (ng, tile, model,                   &
      &                               LBi, UBi, LBj, UBj,                &
      &                               pm, pn,                            &
-     &                               rmask_ist, pmask_ist,              &
+     &                               rmask_ist, pmask_act, pmarg,       &
      &                               hi, zs,                            &
      &                               tdx, tdy)
 !***********************************************************************
@@ -1076,12 +1119,15 @@
 !  where S transitions between the grounded (S = -h + H) and
 !  floating (S = (1-rho_i/rho_w) H) branches.
 !
-!  Ice margin taper:  the driving stress is linearly tapered to
-!  zero within n_taper cells of the ice margin (any of the 8
-!  neighbouring RHO cells ice-free).  The missing resistance is
-!  to be provided by an ice-front pressure boundary term (future
-!  work).  Margin PSI nodes with an ice-free surrounding cell are
-!  skipped entirely (pmask_ist = 0 under the AND convention).
+!  Land-margin taper (plan option A):  the driving stress is
+!  linearly tapered to zero within n_taper cells of a LAND margin
+!  (grounded ice with bed at or above sea level terminating on
+!  ice-free cells;  indicator pmarg from ssa_land_margin).  Marine
+!  fronts (floating or grounded in water) carry the full driving
+!  stress plus the front-pressure load and are NOT tapered -- the
+!  cliff force is represented by that load alone (see the constant
+!  extension below).  n_taper <= 0 disables the taper (guard added:
+!  the previous 0/0 produced NaN for the default n_taper = 0).
 !
 !  Reference:  PISM compute_nuH_everywhere (slope regularization),
 !  MITgcm STREAMICE streamice_driving_stress.F.
@@ -1097,7 +1143,8 @@
       real(r8), intent(in)  :: pm(LBi:,LBj:)
       real(r8), intent(in)  :: pn(LBi:,LBj:)
       real(r8), intent(in)  :: rmask_ist(LBi:,LBj:)
-      real(r8), intent(in)  :: pmask_ist(LBi:,LBj:)
+      real(r8), intent(in)  :: pmask_act(LBi:,LBj:)
+      real(r8), intent(in)  :: pmarg(LBi:,LBj:)
       real(r8), intent(in)  :: hi(LBi:,LBj:)
       real(r8), intent(in)  :: zs(LBi:,LBj:)
       real(r8), intent(out) :: tdx(LBi:,LBj:)
@@ -1106,7 +1153,8 @@
       real(r8), intent(in)  :: pm(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: pn(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: rmask_ist(LBi:UBi,LBj:UBj)
-      real(r8), intent(in)  :: pmask_ist(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: pmask_act(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: pmarg(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: hi(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: zs(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: tdx(LBi:UBi,LBj:UBj)
@@ -1120,7 +1168,7 @@
       real(r8) :: hi_psi
       real(r8) :: dSdx, dSdy, dx_rho, dy_rho, jac_avg
       real(r8) :: zs_sum, taper_w
-      real(r8) :: cff
+      real(r8) :: cff, cff1
 !
       real(r8), dimension(LBi:UBi,LBj:UBj) :: zs_smooth
       real(r8), dimension(LBi:UBi,LBj:UBj) :: zs_smooth_temp
@@ -1156,6 +1204,7 @@
           END IF
         END DO
       END DO
+
 # ifdef DISTRIBUTE
       CALL mp_exchange2d (ng, tile, model, 1,                           &
      &                    LBi, UBi, LBj, UBj,                           &
@@ -1164,6 +1213,55 @@
      &                    zs_smooth)
 # endif
 !
+!  Constant extension of the surface elevation into ice-free cells
+!  adjacent to ice.  The ice-front cliff is represented by the
+!  front-pressure boundary load ONLY (ssa_front_load);  without this
+!  extension the FD gradient at margin nodes would see the zs = 0
+!  cliff drop of the ice-free side and add a spurious nodal force
+!  of order 2*rho_i*g*(1-rho_i/rho0)*H**2*dy -- twice the front load
+!  it replaces.  See .agents/docs/plans/ssa_front_load_gradient_
+!  rationale.md for the full derivation.
+!
+      DO j=JstrR,JendR
+        DO i=IstrR,IendR
+          IF (rmask_ist(i,j).ne.1.0_r8) THEN
+            cff=0.0_r8
+            cff1=0.0_r8
+!
+!  Same bounds guards as the smoothing gates above:  the +/-1
+!  neighbour reads must stay inside the array on domain-edge
+!  tiles (out-of-bounds = no such neighbour = skip).
+!
+            IF (i.gt.LBi.and.rmask_ist(i-1,j).eq.1.0_r8) THEN
+              cff=cff+zs_smooth(i-1,j)
+              cff1=cff1+1.0_r8
+            END IF
+            IF (i.lt.UBi.and.rmask_ist(i+1,j).eq.1.0_r8) THEN
+              cff=cff+zs_smooth(i+1,j)
+              cff1=cff1+1.0_r8
+            END IF
+            IF (j.gt.LBj.and.rmask_ist(i,j-1).eq.1.0_r8) THEN
+              cff=cff+zs_smooth(i,j-1)
+              cff1=cff1+1.0_r8
+            END IF
+            IF (j.lt.UBj.and.rmask_ist(i,j+1).eq.1.0_r8) THEN
+              cff=cff+zs_smooth(i,j+1)
+              cff1=cff1+1.0_r8
+            END IF
+            IF (cff1.gt.0.0_r8) THEN
+              zs_smooth(i,j)=cff/cff1
+            END IF
+          END IF
+        END DO
+      END DO
+!
+# ifdef DISTRIBUTE
+      CALL mp_exchange2d (ng, tile, model, 1,                           &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+     &                    zs_smooth)
+# endif
 !  Apply the 5-point Laplacian smoothing (n_smooth iterations).
 !  Only ice-covered cells are smoothed;  ice-free neighbours are
 !  replaced by the centre value (no-flux treatment at the margin).
@@ -1174,29 +1272,46 @@
           DO i=IstrR,IendR
             IF (rmask_ist(i,j).eq.1.0_r8) THEN
               zs_sum=zs_smooth(i,j)
-              IF (rmask_ist(i+1,j  ).eq.1.0_r8) THEN
+!
+!  Gate guards:  the +/-1 neighbours reach one cell beyond the
+!  JstrR..JendR / IstrR..IendR loop, which on domain-edge tiles
+!  sits OUTSIDE the array bounds (e.g. LBj = 0 with JstrR = 0:
+!  the south gate would read rmask_ist(i,-1)).  Those reads are
+!  undefined behaviour fetching adjacent heap/stack memory;  when
+!  the fetched bits happened to equal 1.0_r8 the gate opened and
+!  an out-of-bounds zs_smooth value entered the average (the L11
+!  nondeterminism).  An out-of-bounds neighbour is treated as
+!  ice-free (no-flux), which is exactly the boundary semantics.
+!
+              IF (i.lt.UBi.and.                                         &
+     &            rmask_ist(i+1,j  ).eq.1.0_r8) THEN
                 zs_sum=zs_sum+zs_smooth(i+1,j  )
               ELSE
                 zs_sum=zs_sum+zs_smooth(i  ,j  )
               END IF
-              IF (rmask_ist(i-1,j  ).eq.1.0_r8) THEN
+              IF (i.gt.LBi.and.                                         &
+     &            rmask_ist(i-1,j  ).eq.1.0_r8) THEN
                 zs_sum=zs_sum+zs_smooth(i-1,j  )
               ELSE
                 zs_sum=zs_sum+zs_smooth(i  ,j  )
               END IF
-              IF (rmask_ist(i  ,j+1).eq.1.0_r8) THEN
+              IF (j.lt.UBj.and.                                         &
+     &            rmask_ist(i  ,j+1).eq.1.0_r8) THEN
                 zs_sum=zs_sum+zs_smooth(i  ,j+1)
               ELSE
                 zs_sum=zs_sum+zs_smooth(i  ,j  )
               END IF
-              IF (rmask_ist(i  ,j-1).eq.1.0_r8) THEN
+              IF (j.gt.LBj.and.                                         &
+     &            rmask_ist(i  ,j-1).eq.1.0_r8) THEN
                 zs_sum=zs_sum+zs_smooth(i  ,j-1)
               ELSE
                 zs_sum=zs_sum+zs_smooth(i  ,j  )
               END IF
               zs_smooth_temp(i,j)=zs_sum/5.0_r8
             ELSE
-              zs_smooth_temp(i,j)=0.0_r8
+!  Keep the constant-extension value (above) instead of resetting
+!  to zero:  the gradient stencil at margin nodes reads these cells.
+              zs_smooth_temp(i,j)=zs_smooth(i,j)
             END IF
           END DO
         END DO
@@ -1229,23 +1344,36 @@
 !
       DO j=JstrP,JendP
         DO i=IstrP,IendP
-          IF (pmask_ist(i,j).eq.1.0_r8) THEN
+          IF (pmask_act(i,j).eq.1.0_r8) THEN
 !
 !  Ice margin taper:  distance to the nearest ice-free cell among
 !  the 8 neighbours, normalized by n_taper and clamped to 1.
 !
-            dist_margin=n_taper(ng)
-            DO dj=-1,1
-              DO di=-1,1
-                IF (di.ne.0.or.dj.ne.0) THEN
-                  IF (pmask_ist(i+di,j+dj).eq.0.0_r8) THEN
-                    dist_margin=MIN(dist_margin,MAX(ABS(di),ABS(dj)))
+            IF (n_taper(ng).le.0) THEN
+              taper_w=1.0_r8
+            ELSE
+              dist_margin=n_taper(ng)
+              DO dj=-1,1
+                DO di=-1,1
+                  IF (di.ne.0.or.dj.ne.0) THEN
+!
+!  Bounds guard:  JendP can equal UBj on the northern domain
+!  edge, where the +1 scan would read pmarg(i,UBj+1) out of
+!  bounds (same undefined-memory hazard as the gates above).
+!
+                    IF (i+di.ge.LBi.and.i+di.le.UBi.and.               &
+     &                  j+dj.ge.LBj.and.j+dj.le.UBj) THEN
+                      IF (pmarg(i+di,j+dj).eq.1.0_r8) THEN
+                        dist_margin=MIN(dist_margin,                    &
+     &                                  MAX(ABS(di),ABS(dj)))
+                      END IF
+                    END IF
                   END IF
-                END IF
+                END DO
               END DO
-            END DO
-            taper_w=MIN(REAL(dist_margin,r8)/REAL(n_taper(ng),r8),      &
-     &                  1.0_r8)
+              taper_w=MIN(REAL(dist_margin,r8)/REAL(n_taper(ng),r8),    &
+     &                    1.0_r8)
+            END IF
 !
 !  FD gradient of the smoothed surface at the PSI node.
 !
@@ -1281,6 +1409,401 @@
 !
       RETURN
       END SUBROUTINE ssa_driving_stress
+!
+!***********************************************************************
+      SUBROUTINE ssa_front_load (ng, tile, model,                       &
+     &                           LBi, UBi, LBj, UBj,                    &
+     &                           Istr, Iend, Jstr, Jend,                &
+     &                           IstrC, IendC, JstrC, JendC,            &
+     &                           IstrP, IendP, JstrP, JendP,            &
+     &                           pm, pn, h, zeta_avg,                   &
+     &                           rmask_ist, pmask_act, hi,              &
+     &                           tdx, tdy)
+!***********************************************************************
+!
+!  Ice-front pressure boundary load:  the depth-integrated net
+!  hydrostatic push acting on each ice-front face, scattered to the
+!  face's two PSI nodes as a Q1 line load.  Each endpoint receives
+!  p_hat*L_face/2 along the OUTWARD normal (seaward); the tangential
+!  component is zero (N_nt = 0 for uniform H along the front, the
+!  same approximation as MITgcm STREAMICE).
+!
+!  A front face separates an ice cell (rmask_ist = 1) from an
+!  ice-free neighbour cell;  a free (gradient) lateral boundary
+!  counts as ice-free (the ice continues into the open domain),
+!  while closed/clamped edges are walls and carry no load.  The
+!  load case depends only on the ICE cell's own state, evaluated
+!  with the same window-averaged criterion as the basal drag
+!  (isf_stress),  D_avg = h + zeta_avg - Dcrit:
+!
+!    floating, rho_i*H <= rho0*D_avg :
+!        p_hat = 0.5*rho_i*g*(1-rho_i/rho0)*H**2
+!    grounded in water, rho_i*H > rho0*D_avg > 0 :
+!        p_hat = 0.5*g*(rho_i*H**2 - rho0*D_avg**2)
+!    grounded land margin, D_avg <= 0 :
+!        p_hat = 0.5*rho_i*g*H**2
+!
+!  A consistently classified grounded cell always satisfies
+!  rho_i*H**2 > rho0*D_avg**2 (grounding implies rho_i*H > rho0*D_avg
+!  and H/rho_i > 0), so p_hat > 0 without any clamp.  The load
+!  accumulates on the driving-stress RHS (tdx/tdy) assembled by
+!  ssa_driving_stress, so the warm start and the Picard residual
+!  norms consume it automatically.
+!
+!  The cell loop covers the own cells plus the western/southern
+!  halo ring (IstrC/JstrC), and scatters only to owned PSI nodes
+!  (ownership filter), so the assembly is complete under multi-tile
+!  MPI by the same argument as ssa_matvec.  No halo exchange of the
+!  output:  every consumer reads tdx/tdy at owned PSI nodes only.
+!
+!  References:  Morland (1987), MacAyeal (1989), Schoof (2007);
+!  MITgcm STREAMICE streamice_driving_stress.F:124-211 (float_frac=1
+!  is the grounded branch there; see ssa_front_load_plan erratum).
+!
+      implicit none
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: ng, tile, model
+      integer, intent(in) :: LBi, UBi, LBj, UBj
+      integer, intent(in) :: Istr, Iend, Jstr, Jend
+      integer, intent(in) :: IstrC, IendC, JstrC, JendC
+      integer, intent(in) :: IstrP, IendP, JstrP, JendP
+!
+# ifdef ASSUMED_SHAPE
+      real(r8), intent(in)  :: pm(LBi:,LBj:)
+      real(r8), intent(in)  :: pn(LBi:,LBj:)
+      real(r8), intent(in)  :: h(LBi:,LBj:)
+      real(r8), intent(in)  :: zeta_avg(LBi:,LBj:)
+      real(r8), intent(in)  :: rmask_ist(LBi:,LBj:)
+      real(r8), intent(in)  :: pmask_act(LBi:,LBj:)
+      real(r8), intent(in)  :: hi(LBi:,LBj:)
+      real(r8), intent(inout) :: tdx(LBi:,LBj:)
+      real(r8), intent(inout) :: tdy(LBi:,LBj:)
+# else
+      real(r8), intent(in)  :: pm(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: pn(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: h(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: zeta_avg(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: rmask_ist(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: pmask_act(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: hi(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: tdx(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: tdy(LBi:UBi,LBj:UBj)
+# endif
+!
+!  Local variable declarations.
+!
+      integer :: i, j
+!
+      logical :: front_e, front_w, front_n, front_s
+!
+      real(r8) :: H_ice, D_avg, phat
+      real(r8) :: dyf, dxf, cff
+!
+!-----------------------------------------------------------------------
+!  Assemble the front-pressure line loads.
+!-----------------------------------------------------------------------
+!
+      DO j=JstrC,JendC
+        DO i=IstrC,IendC
+          IF (rmask_ist(i,j).eq.1.0_r8) THEN
+            H_ice=hi(i,j)
+            D_avg=h(i,j)+zeta_avg(i,j)-Dcrit(ng)
+!
+!  Net depth-integrated front pressure of this ice cell.
+!
+            IF (rho_i*H_ice.le.rho0*D_avg) THEN
+              phat=0.5_r8*rho_i*g*(1.0_r8-rho_i/rho0)*H_ice**2
+            ELSE IF (D_avg.gt.0.0_r8) THEN
+              phat=0.5_r8*g*(rho_i*H_ice**2-rho0*D_avg**2)
+            ELSE
+              phat=0.5_r8*rho_i*g*H_ice**2
+            END IF
+!
+!  Front-face detection:  ice-free neighbour, with a free (gradient)
+!  lateral boundary counting as ice-free (shared predicate).
+!
+            CALL ssa_front_faces (ng, tile, i, j,                       &
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            Istr, Iend, Jstr, Jend,               &
+     &                            rmask_ist,                            &
+     &                            front_e, front_w, front_n, front_s)
+!
+!  Q1 line-load scatter:  each endpoint node of the face receives
+!  p_hat*L_face/2 along the outward normal.
+!
+            IF (front_e) THEN
+              dyf=0.5_r8*(1.0_r8/pn(i,j)+1.0_r8/pn(i+1,j))
+              cff=0.5_r8*phat*dyf
+              IF (pmask_act(i+1,j).eq.1.0_r8.and.                       &
+     &            i+1.ge.IstrP.and.i+1.le.IendP.and.                    &
+     &            j.ge.JstrP.and.j.le.JendP) THEN
+                tdx(i+1,j)=tdx(i+1,j)+cff
+              END IF
+              IF (pmask_act(i+1,j+1).eq.1.0_r8.and.                     &
+     &            i+1.ge.IstrP.and.i+1.le.IendP.and.                    &
+     &            j+1.ge.JstrP.and.j+1.le.JendP) THEN
+                tdx(i+1,j+1)=tdx(i+1,j+1)+cff
+              END IF
+            END IF
+!
+            IF (front_w) THEN
+              dyf=0.5_r8*(1.0_r8/pn(i-1,j)+1.0_r8/pn(i,j))
+              cff=0.5_r8*phat*dyf
+              IF (pmask_act(i,j).eq.1.0_r8.and.                         &
+     &            i.ge.IstrP.and.i.le.IendP.and.                        &
+     &            j.ge.JstrP.and.j.le.JendP) THEN
+                tdx(i,j)=tdx(i,j)-cff
+              END IF
+              IF (pmask_act(i,j+1).eq.1.0_r8.and.                       &
+     &            i.ge.IstrP.and.i.le.IendP.and.                        &
+     &            j+1.ge.JstrP.and.j+1.le.JendP) THEN
+                tdx(i,j+1)=tdx(i,j+1)-cff
+              END IF
+            END IF
+!
+            IF (front_n) THEN
+              dxf=0.5_r8*(1.0_r8/pm(i,j)+1.0_r8/pm(i,j+1))
+              cff=0.5_r8*phat*dxf
+              IF (pmask_act(i,j+1).eq.1.0_r8.and.                       &
+     &            i.ge.IstrP.and.i.le.IendP.and.                        &
+     &            j+1.ge.JstrP.and.j+1.le.JendP) THEN
+                tdy(i,j+1)=tdy(i,j+1)+cff
+              END IF
+              IF (pmask_act(i+1,j+1).eq.1.0_r8.and.                     &
+     &            i+1.ge.IstrP.and.i+1.le.IendP.and.                    &
+     &            j+1.ge.JstrP.and.j+1.le.JendP) THEN
+                tdy(i+1,j+1)=tdy(i+1,j+1)+cff
+              END IF
+            END IF
+!
+            IF (front_s) THEN
+              dxf=0.5_r8*(1.0_r8/pm(i,j-1)+1.0_r8/pm(i,j))
+              cff=0.5_r8*phat*dxf
+              IF (pmask_act(i,j).eq.1.0_r8.and.                         &
+     &            i.ge.IstrP.and.i.le.IendP.and.                        &
+     &            j.ge.JstrP.and.j.le.JendP) THEN
+                tdy(i,j)=tdy(i,j)-cff
+              END IF
+              IF (pmask_act(i+1,j).eq.1.0_r8.and.                       &
+     &            i+1.ge.IstrP.and.i+1.le.IendP.and.                    &
+     &            j.ge.JstrP.and.j.le.JendP) THEN
+                tdy(i+1,j)=tdy(i+1,j)-cff
+              END IF
+            END IF
+!
+          END IF
+        END DO
+      END DO
+!
+      RETURN
+      END SUBROUTINE ssa_front_load
+!
+!***********************************************************************
+      SUBROUTINE ssa_front_faces (ng, tile, i, j,                       &
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            Istr, Iend, Jstr, Jend,               &
+     &                            rmask_ist,                            &
+     &                            front_e, front_w, front_n, front_s)
+!***********************************************************************
+!
+!  Front-face predicate shared by ssa_front_load and ssa_land_margin:
+!  the east/west/north/south face of cell (i,j) is a front face if
+!  the corresponding neighbour cell is ice-free.  A free (gradient)
+!  lateral boundary counts as ice-free (the ice continues into the
+!  open domain);  closed and clamped edges are walls and never
+!  fronts.  Domain-edge ghost cells are outside the caller cell
+!  loops (IstrC/JstrC skip them), so only the override reaches
+!  beyond the physical domain.
+!
+      implicit none
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: ng, tile, i, j
+      integer, intent(in) :: LBi, UBi, LBj, UBj
+      integer, intent(in) :: Istr, Iend, Jstr, Jend
+!
+      logical, intent(out) :: front_e, front_w, front_n, front_s
+!
+# ifdef ASSUMED_SHAPE
+      real(r8), intent(in) :: rmask_ist(LBi:,LBj:)
+# else
+      real(r8), intent(in) :: rmask_ist(LBi:UBi,LBj:UBj)
+# endif
+!
+      front_e=(rmask_ist(i+1,j  ).eq.0.0_r8)
+      front_w=(rmask_ist(i-1,j  ).eq.0.0_r8)
+      front_n=(rmask_ist(i  ,j+1).eq.0.0_r8)
+      front_s=(rmask_ist(i  ,j-1).eq.0.0_r8)
+!
+!  At a physical domain edge the neighbour cell does not exist and
+!  the ghost mask is not consulted:  the edge status comes from the
+!  LBC alone.  A free (gradient) edge is open ocean (a front);  a
+!  closed or clamped edge is a wall (never a front).  Overriding in
+!  BOTH directions matters:  leaving the zero-ghost mask value in
+!  place at closed/clamped edges declared every ice cell at the
+!  wall a front -- the spurious wall load landed on the Dirichlet
+!  boundary nodes (inert for the velocity solution, but polluting
+!  the residual norms and the is_taudx/is_taudy diagnostics), and
+!  ssa_land_margin flagged a spurious land margin (driving-stress
+!  taper) along the wall.
+!
+      IF (.not.EWperiodic(ng)) THEN
+        IF (i.eq.Iend) THEN
+          IF (DOMAIN(ng)%Eastern_Edge(tile)) THEN
+            front_e=LBC(ieast,ibISF(isIuis),ng)%gradient
+          END IF
+        END IF
+        IF (i.eq.Istr) THEN
+          IF (DOMAIN(ng)%Western_Edge(tile)) THEN
+            front_w=LBC(iwest,ibISF(isIuis),ng)%gradient
+          END IF
+        END IF
+      END IF
+      IF (.not.NSperiodic(ng)) THEN
+        IF (j.eq.Jend) THEN
+          IF (DOMAIN(ng)%Northern_Edge(tile)) THEN
+            front_n=LBC(inorth,ibISF(isIvis),ng)%gradient
+          END IF
+        END IF
+        IF (j.eq.Jstr) THEN
+          IF (DOMAIN(ng)%Southern_Edge(tile)) THEN
+            front_s=LBC(isouth,ibISF(isIvis),ng)%gradient
+          END IF
+        END IF
+      END IF
+!
+      RETURN
+      END SUBROUTINE ssa_front_faces
+!
+!***********************************************************************
+      SUBROUTINE ssa_land_margin (ng, tile, model,                      &
+     &                           LBi, UBi, LBj, UBj,                    &
+     &                           Istr, Iend, Jstr, Jend,                &
+     &                           IstrC, IendC, JstrC, JendC,            &
+     &                           IstrP, IendP, JstrP, JendP,            &
+     &                           h, zeta_avg, rmask_ist, hi,            &
+     &                           pmarg)
+!***********************************************************************
+!
+!  Land-margin indicator for the driving-stress taper (plan option
+!  A).  A RHO cell is a land-margin FRONT cell when it holds
+!  grounded ice with its bed at or above sea level (D_avg <= 0,
+!  same window-averaged criterion as the basal drag and
+!  ssa_front_load) AND at least one of its faces is a front face
+!  (ssa_front_faces).  pmarg = 1 at PSI nodes one of whose 4 RHO
+!  cells is such a cell;  the taper distance in ssa_driving_stress
+!  is measured to these nodes ONLY -- marine fronts (floating or
+!  grounded in water) carry the full front-pressure load and keep
+!  the full driving stress.
+!
+!  The cell loop runs over the assembly ring (IstrC..IendC) so the
+!  seam nodes of the neighbouring tile are classified identically
+!  from both sides;  pmarg is then halo-exchanged for the 8-neighbour
+!  taper scan at owned nodes.
+!
+      implicit none
+!
+!  Imported variable declarations.
+!
+      integer, intent(in) :: ng, tile, model
+      integer, intent(in) :: LBi, UBi, LBj, UBj
+      integer, intent(in) :: Istr, Iend, Jstr, Jend
+      integer, intent(in) :: IstrC, IendC, JstrC, JendC
+      integer, intent(in) :: IstrP, IendP, JstrP, JendP
+!
+# ifdef ASSUMED_SHAPE
+      real(r8), intent(in)  :: h(LBi:,LBj:)
+      real(r8), intent(in)  :: zeta_avg(LBi:,LBj:)
+      real(r8), intent(in)  :: rmask_ist(LBi:,LBj:)
+      real(r8), intent(in)  :: hi(LBi:,LBj:)
+      real(r8), intent(out) :: pmarg(LBi:,LBj:)
+# else
+      real(r8), intent(in)  :: h(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: zeta_avg(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: rmask_ist(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: hi(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: pmarg(LBi:UBi,LBj:UBj)
+# endif
+!
+!  Local variable declarations.
+!
+      integer :: i, j
+!
+      logical :: front_e, front_w, front_n, front_s
+!
+      real(r8) :: D_avg
+!
+      real(r8), dimension(LBi:UBi,LBj:UBj) :: lcell
+!
+!-----------------------------------------------------------------------
+!  Classify the land-margin front cells and project to PSI nodes.
+!-----------------------------------------------------------------------
+!
+      DO j=LBj,UBj
+        DO i=LBi,UBi
+          lcell(i,j)=0.0_r8
+        END DO
+      END DO
+!
+      DO j=JstrC,JendC
+        DO i=IstrC,IendC
+          IF (rmask_ist(i,j).eq.1.0_r8) THEN
+            D_avg=h(i,j)+zeta_avg(i,j)-Dcrit(ng)
+!  D_avg <= 0 (bed above the window-averaged sea level) implies
+!  rho_i*H > rho0*D_avg for every H > 0 (rmask gate above), so the
+!  single comparison suffices.
+            IF (D_avg.le.0.0_r8) THEN
+              CALL ssa_front_faces (ng, tile, i, j,                     &
+     &                              LBi, UBi, LBj, UBj,                 &
+     &                              Istr, Iend, Jstr, Jend,             &
+     &                              rmask_ist,                          &
+     &                              front_e, front_w,                   &
+     &                              front_n, front_s)
+              IF (front_e.or.front_w.or.front_n.or.front_s) THEN
+                lcell(i,j)=1.0_r8
+              END IF
+            END IF
+          END IF
+        END DO
+      END DO
+!
+!
+!  Zero the FULL array first:  the taper scan in ssa_driving_stress
+!  reads pmarg one node beyond the owned range, and on single-tile
+!  runs that halo is never exchanged (an uninitialized automatic
+!  array made the taper nondeterministic there).
+!
+      DO j=LBj,UBj
+        DO i=LBi,UBi
+          pmarg(i,j)=0.0_r8
+        END DO
+      END DO
+!
+      DO j=JstrP,JendP
+        DO i=IstrP,IendP
+          pmarg(i,j)=MAX(lcell(i-1,j-1),lcell(i  ,j-1),                 &
+     &                   lcell(i-1,j  ),lcell(i  ,j  ))
+        END DO
+      END DO
+!
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+        CALL exchange_p2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          pmarg)
+      END IF
+# ifdef DISTRIBUTE
+      CALL mp_exchange2d (ng, tile, model, 1,                           &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+     &                    pmarg)
+# endif
+!
+      RETURN
+      END SUBROUTINE ssa_land_margin
 !
 !***********************************************************************
       SUBROUTINE ssa_hardness (ng, tile, model,                         &
@@ -1496,7 +2019,7 @@
      &                            IstrP, IendP, JstrP, JendP,           &
      &                            DPhi, phi_tab,                        &
      &                            pm, pn,                               &
-     &                            pmask_ist,                            &
+     &                            pmask_act,                            &
      &                            nuH, beta,                            &
      &                            diag_u, diag_v)
 !***********************************************************************
@@ -1533,7 +2056,7 @@
 # ifdef ASSUMED_SHAPE
       real(r8), intent(in)  :: pm(LBi:,LBj:)
       real(r8), intent(in)  :: pn(LBi:,LBj:)
-      real(r8), intent(in)  :: pmask_ist(LBi:,LBj:)
+      real(r8), intent(in)  :: pmask_act(LBi:,LBj:)
       real(r8), intent(in)  :: nuH(LBi:,LBj:)
       real(r8), intent(in)  :: beta(LBi:,LBj:)
       real(r8), intent(out) :: diag_u(LBi:,LBj:)
@@ -1541,7 +2064,7 @@
 # else
       real(r8), intent(in)  :: pm(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: pn(LBi:UBi,LBj:UBj)
-      real(r8), intent(in)  :: pmask_ist(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: pmask_act(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: nuH(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: beta(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: diag_u(LBi:UBi,LBj:UBj)
@@ -1594,7 +2117,7 @@
 !  integrated here, and by the own cells integrated on the
 !  neighbouring tile).
 !
-                IF (pmask_ist(i1,j1).eq.1.0_r8.and.                     &
+                IF (pmask_act(i1,j1).eq.1.0_r8.and.                     &
      &              i1.ge.IstrP.and.i1.le.IendP.and.                    &
      &              j1.ge.JstrP.and.j1.le.JendP) THEN
                   dphi_x=DPhi(k_node,nq,1)*2.0_r8/dx_rho
@@ -1640,7 +2163,7 @@
      &                       IstrP, IendP, JstrP, JendP,                &
      &                       DPhi, phi_tab,                             &
      &                       pm, pn,                                    &
-     &                       pmask_ist,                                 &
+     &                       pmask_act,                                 &
      &                       nuH, beta,                                 &
      &                       xu, xv,                                    &
      &                       Au, Av)
@@ -1684,7 +2207,7 @@
 # ifdef ASSUMED_SHAPE
       real(r8), intent(in)  :: pm(LBi:,LBj:)
       real(r8), intent(in)  :: pn(LBi:,LBj:)
-      real(r8), intent(in)  :: pmask_ist(LBi:,LBj:)
+      real(r8), intent(in)  :: pmask_act(LBi:,LBj:)
       real(r8), intent(in)  :: nuH(LBi:,LBj:)
       real(r8), intent(in)  :: beta(LBi:,LBj:)
       real(r8), intent(inout) :: xu(LBi:,LBj:)
@@ -1694,7 +2217,7 @@
 # else
       real(r8), intent(in)  :: pm(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: pn(LBi:UBi,LBj:UBj)
-      real(r8), intent(in)  :: pmask_ist(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: pmask_act(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: nuH(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: beta(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: xu(LBi:UBi,LBj:UBj)
@@ -1798,7 +2321,7 @@
                 ELSE
                   i1=i+1; j1=j+1
                 END IF
-                IF (pmask_ist(i1,j1).eq.1.0_r8.and.                     &
+                IF (pmask_act(i1,j1).eq.1.0_r8.and.                     &
      &              i1.ge.IstrP.and.i1.le.IendP.and.                    &
      &              j1.ge.JstrP.and.j1.le.JendP) THEN
                   dphi_x=DPhi(k_node,nq,1)*2.0_r8/dx_rho

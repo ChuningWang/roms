@@ -71,6 +71,7 @@
      &                     GRID(ng) % umask_ist,                        &
      &                     GRID(ng) % vmask_ist,                        &
      &                     GRID(ng) % pmask_ist,                        &
+     &                     GRID(ng) % pmask_act,                        &
 # endif
      &                     GRID(ng) % rmask_isf)
 # ifdef PROFILE
@@ -92,6 +93,7 @@
      &                           zeta, hice, zsf, zbd,                  &
      &                           rmask_ist, umask_ist,                  &
      &                           vmask_ist, pmask_ist,                  &
+     &                           pmask_act,                             &
 # endif
      &                           rmask_isf)
 !***********************************************************************
@@ -128,6 +130,7 @@
       real(r8), intent(out) :: umask_ist(LBi:,LBj:)
       real(r8), intent(out) :: vmask_ist(LBi:,LBj:)
       real(r8), intent(out) :: pmask_ist(LBi:,LBj:)
+      real(r8), intent(out) :: pmask_act(LBi:,LBj:)
 #  else
       real(r8), intent(in) :: zice(LBi:,LBj:)
 #  endif
@@ -147,6 +150,7 @@
       real(r8), intent(out) :: umask_ist(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: vmask_ist(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: pmask_ist(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: pmask_act(LBi:UBi,LBj:UBj)
 #  else
       real(r8), intent(in) :: zice(LBi:UBi,LBj:UBj)
 #  endif
@@ -211,6 +215,26 @@
         END DO
       END DO
 !
+!  The mask family is NOT re-zeroed here.  Every point of the
+!  allocated arrays is defined without it (verified 2026-09-26,
+!  bit-identical smoke/analytic runs; see work_plan D-2026-09-26):
+!
+!    - initialize_grid zeroes the FULL allocated range once per run
+!      (DISTRIBUTE: LBi..UBi directly;  serial/OpenMP: per-tile ranges
+!      whose union covers the shared array);
+!    - the loops below assign every point of their ranges each step
+!      unconditionally (IF/ELSE pairs or direct assignment);
+!    - halo points are refreshed each step by mp_exchange2d (MPI) or
+!      by the neighbour tile loops writing the shared array (serial);
+!    - points covered by none of the above (e.g. the PSI-mask column
+!      at a closed domain edge) are written by nobody, so their
+!      initial 0 persists.
+!
+!  CONSTRAINT: any future partial-write path into these masks (e.g.
+!  a set-only activation of pmask_act) breaks this coverage argument
+!  and requires reinstating the full-array zeroing (or unconditional
+!  assignment).
+!
 ! Compute local ice sheet mask at RHO-points in terms of ice sheet
 ! thickness.
 !
@@ -225,6 +249,12 @@
       END DO
 !
 !  ice sheet mask at PSI-points.
+!
+!  NOTE: the east/north transient column of these PSI masks is
+!  computed from the not-yet-exchanged rmask_ist halo;  those values
+!  are always overwritten by the pmask exchange below (MPI) or by
+!  the neighbour tile loops (serial shared memory).  Do not insert
+!  a consumer between this loop and the exchange.
 !
       DO j=Jstr,JendR
         DO i=Istr,IendR
@@ -245,6 +275,19 @@
             pmask_ist(i,j)=1.0_r8
           ELSE
             pmask_ist(i,j)=0.0_r8
+          END IF
+!
+!  Active solve mask: OR of the surrounding RHO cells (any ice), so
+!  the ice-margin ring participates in the SSA solve and receives
+!  the ice-front pressure load (ssa_front_load, isf_solver.F).
+!
+          IF ((rmask_ist(i-1,j-1).eq.1.0_r8).or.                        &
+     &        (rmask_ist(i  ,j-1).eq.1.0_r8).or.                        &
+     &        (rmask_ist(i-1,j  ).eq.1.0_r8).or.                        &
+     &        (rmask_ist(i  ,j  ).eq.1.0_r8)) THEN
+            pmask_act(i,j)=1.0_r8
+          ELSE
+            pmask_act(i,j)=0.0_r8
           END IF
         END DO
       END DO
@@ -293,6 +336,9 @@
         CALL exchange_p2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          pmask_ist)
+        CALL exchange_p2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          pmask_act)
 # endif
       END IF
 
@@ -314,6 +360,11 @@
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    rmask_ist, umask_ist, vmask_ist, pmask_ist)
+      CALL mp_exchange2d (ng, tile, model, 1,                           &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+     &                    pmask_act)
 #  endif
 # endif
 

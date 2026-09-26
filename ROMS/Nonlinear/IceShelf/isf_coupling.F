@@ -49,9 +49,13 @@
 !                        ended; the next window's first step           !
 !                        clears it and starts a new cycle.             !
 !                                                                      !
-!  The per-cell update needs no halo exchange:                         !
-!  each tile accumulates its ghost points from the exchanged zeta      !
-!  identically to their owner tiles.                                   !
+!  Halo management:  the accumulation loop covers the own cells and    !
+!  the domain-edge rows only (IstrR..IendR), so the seam halo of the   !
+!  accumulator is stale on interior tiles;  the halo of                !
+!  Ci(:,:,icIzta) is exchanged HERE, once per ocean step, so every     !
+!  consumer (isf_stress interior reads, the isf_solver front-load      !
+!  assembly ring) reads the finalized accumulator without any          !
+!  exchange of its own.                                                !
 !                                                                      !
 !  Future coupling accumulators (e.g. a cavity-mask floating           !
 !  fraction for window-mean geometry) extend here: add the icI         !
@@ -102,7 +106,7 @@
 !
       lssa_solve(ng)=(iic(ng).eq.1).or.(MOD(iic(ng),N_ssa(ng)).eq.0)
 !
-      CALL isf_coupling_tile (ng, tile,                                 &
+      CALL isf_coupling_tile (ng, tile, model,                          &
      &                        LBi, UBi, LBj, UBj,                       &
      &                        IminS, ImaxS, JminS, JmaxS,               &
      &                        OCEAN(ng) % zeta(:,:,knew(ng)),           &
@@ -115,7 +119,7 @@
       END SUBROUTINE isf_coupling
 !
 !***********************************************************************
-      SUBROUTINE isf_coupling_tile (ng, tile,                           &
+      SUBROUTINE isf_coupling_tile (ng, tile, model,                    &
      &                              LBi, UBi, LBj, UBj,                 &
      &                              IminS, ImaxS, JminS, JmaxS,         &
      &                              zeta, Ci)
@@ -129,9 +133,14 @@
       USE mod_scalars
       USE mod_isf,      ONLY : N_ssa, nIsfC, icIzta
 !
+      USE exchange_2d_mod, ONLY : exchange_r2d_tile
+# ifdef DISTRIBUTE
+      USE mp_exchange_mod, ONLY : mp_exchange2d
+# endif
+!
 !  Imported variable declarations.
 !
-      integer, intent(in) :: ng, tile
+      integer, intent(in) :: ng, tile, model
       integer, intent(in) :: LBi, UBi, LBj, UBj
       integer, intent(in) :: IminS, ImaxS, JminS, JmaxS
 !
@@ -183,6 +192,28 @@
           END DO
         END DO
       END IF
+!
+!-----------------------------------------------------------------------
+!  Synchronize the halo of the accumulator (see module header):  the
+!  consumers read Ci(:,:,icIzta) both at interior points (isf_stress)
+!  and at the solver front-load assembly ring (one halo cell on the
+!  western/southern tile seams), so the halo must reflect the owner
+!  tiles' interior accumulation every step.  No corner or multi-ring
+!  needs exist;  NghostPoints covers the ring width.
+!-----------------------------------------------------------------------
+!
+      IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Ci(:,:,icIzta))
+      END IF
+# ifdef DISTRIBUTE
+      CALL mp_exchange2d (ng, tile, model, 1,                           &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+     &                    Ci(:,:,icIzta))
+# endif
 !
       RETURN
       END SUBROUTINE isf_coupling_tile

@@ -114,6 +114,11 @@
 !  pmask_ist  ice sheet mask at PSI-points (0=no full ice node,        !
 !             1=all 4 surrounding RHO cells have ice; dynamic,         !
 !             recomputed in isf_masks.F from rmask_ist).               !
+!  pmask_act  ice sheet ACTIVE solve mask at PSI-points (0=inactive,   !
+!             1=solve): OR of the 4 surrounding RHO cells having       !
+!             ice, so the ice-margin ring solves (front-pressure       !
+!             load in isf_solver.F); dynamic, recomputed in            !
+!             isf_masks.F from rmask_ist).                             !
 #  ifdef MASKING
 !  pumask_ist ice sheet mask at PSI-points (0=non-glacial, 1=glacial). !
 !  pvmask_ist ice sheet mask at PSI-points (0=non-glacial, 1=glacial). !
@@ -332,6 +337,7 @@
           real(r8), pointer :: umask_ist(:,:)
           real(r8), pointer :: vmask_ist(:,:)
           real(r8), pointer :: pmask_ist(:,:)
+          real(r8), pointer :: pmask_act(:,:)
 #  ifdef MASKING
           real(r8), pointer :: pumask_ist(:,:)
           real(r8), pointer :: pvmask_ist(:,:)
@@ -757,6 +763,9 @@
       Dmem(ng)=Dmem(ng)+size2d
 
       allocate ( GRID(ng) % pmask_ist(LBi:UBi,LBj:UBj) )
+      Dmem(ng)=Dmem(ng)+size2d
+
+      allocate ( GRID(ng) % pmask_act(LBi:UBi,LBj:UBj) )
       Dmem(ng)=Dmem(ng)+size2d
 #  ifdef MASKING
       allocate ( GRID(ng) % pumask_ist(LBi:UBi,LBj:UBj) )
@@ -1273,6 +1282,9 @@
       IF (.not.destroy(ng, GRID(ng)%pmask_ist, MyFile,                  &
      &                 __LINE__, 'GRID(ng)%pmask_ist')) RETURN
 
+      IF (.not.destroy(ng, GRID(ng)%pmask_act, MyFile,                  &
+     &                 __LINE__, 'GRID(ng)%pmask_act')) RETURN
+
 #   ifdef MASKING
       IF (.not.destroy(ng, GRID(ng)%pumask_ist, MyFile,                 &
      &                 __LINE__, 'GRID(ng)%pumask_ist')) RETURN
@@ -1593,6 +1605,7 @@
             GRID(ng) % umask_ist(i,j) = IniVal
             GRID(ng) % vmask_ist(i,j) = IniVal
             GRID(ng) % pmask_ist(i,j) = IniVal
+            GRID(ng) % pmask_act(i,j) = IniVal
 #  ifdef MASKING
             GRID(ng) % pumask_ist(i,j) = IniVal
             GRID(ng) % pvmask_ist(i,j) = IniVal
