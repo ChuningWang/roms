@@ -25,12 +25,25 @@
 !                                                                      !
 !  Cadence: called from iceshelf.F every ocean timestep, decoupled     !
 !  from the SSA solve (every N_ssa steps).  The velocity field is      !
-!  the latest SSA solution, held constant between solves; on non-      !
-!  SSA steps it is carried into the new time level below.              !
-!  Integrating transport at the ocean dt (instead of lumping it at     !
-!  the SSA cadence) removes the O(N_ssa) staircase in the ice          !
-!  thickness seen by the ocean-side coupling, so thermodynamics and    !
-!  mass-exchange feedbacks vary smoothly in time.                      !
+!  the latest SSA solution: it stays in the new time level between     !
+!  solves (the layer roles swap only on SSA steps, and the solver      !
+!  overwrites the new level at each solve).  Integrating transport     !
+!  at the ocean dt (instead of lumping it at the SSA cadence)          !
+!  removes the O(N_ssa) staircase in the ice thickness seen by the     !
+!  ocean-side coupling, so thermodynamics and mass-exchange            !
+!  feedbacks vary smoothly in time.                                    !
+!                                                                      !
+!  Old-level write-back (L9 fix, 2026-09-27):  after the transported   !
+!  state is written to the new level it is also copied back into the   !
+!  old level (thickness and enthalpy only, not velocities).  Without   !
+!  the write-back the old level accumulates only the source terms      !
+!  between solves and the transport divergence enters the state only   !
+!  at the window-end layer exchange, under-applying the transport by   !
+!  a factor of N_ssa for N_ssa > 1 (diagnostic: transport increment    !
+!  ratio N_ssa=10 vs N_ssa=1 = 0.1032).  With the write-back the old   !
+!  level carries the running state between solves; the old-level halo  !
+!  is refreshed by the source-term exchange at the start of the next   !
+!  step, before the flux stencils read it.                             !
 !                                                                      !
 !  Numerical scheme (first-order upwind, flux form):                   !
 !    - PSI velocity interpolated to RHO cell faces (2-point average)   !
@@ -121,10 +134,11 @@
 !    - Single explicit step at the ocean dt (ice-flow CFL << 1)
 !    - Source terms (basal melt, SMB) added at the old time level
 !
-!  Cadence: called every ocean timestep (see module header).  On non-
-!  SSA steps the velocity of the new time level is first carried
-!  forward from the old level (the latest SSA solution); on SSA steps
-!  isf_mom has just written the fresh solution into the new level.
+!  Cadence: called every ocean timestep (see module header).  The
+!  velocity stays in the new level between solves (the latest SSA
+!  solution; the layer roles swap only on SSA steps).  The transported
+!  state written to the new level is copied back into the old level
+!  below (L9 write-back) so the transport feeds back every step.
 !
 !  The enthalpy fluxes take the upwind state from the same cell as
 !  the thickness fluxes so that the advected temperature T = E/H is
@@ -308,6 +322,26 @@
      &                   Si(:,:,lsnew,isIeis),                          &
      &                   Fi(:,:,ifItis))
 # endif
+!
+!-----------------------------------------------------------------------
+!  Write the transported state back into the old time level (L9 fix,
+!  2026-09-27):  thickness and enthalpy only, NOT the velocities (the
+!  solver overwrites the velocities in the new level at each solve and
+!  they stay frozen there between solves).  Without this feedback the
+!  old level accumulates only the source terms between solves and the
+!  transport enters the state just once per window, at the layer
+!  exchange, under-applying it by a factor of N_ssa (N_ssa > 1).  The
+!  interior-only copy leaves the old-level halo stale for one step;
+!  the exchange after the source terms at the top of the next call
+!  refreshes it before the flux stencils read it.
+!-----------------------------------------------------------------------
+!
+      DO j=Jstr,Jend
+        DO i=Istr,Iend
+          Si(i,j,lsold,isIhis)=Si(i,j,lsnew,isIhis)
+          Si(i,j,lsold,isIeis)=Si(i,j,lsnew,isIeis)
+        END DO
+      END DO
 !
       RETURN
       END SUBROUTINE isf_advection_tile
