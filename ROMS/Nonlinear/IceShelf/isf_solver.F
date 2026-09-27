@@ -1262,6 +1262,7 @@
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    zs_smooth)
 # endif
+!
 !  Apply the 5-point Laplacian smoothing (n_smooth iterations).
 !  Only ice-covered cells are smoothed;  ice-free neighbours are
 !  replaced by the centre value (no-flux treatment at the margin).
@@ -1309,8 +1310,10 @@
               END IF
               zs_smooth_temp(i,j)=zs_sum/5.0_r8
             ELSE
+!
 !  Keep the constant-extension value (above) instead of resetting
 !  to zero:  the gradient stencil at margin nodes reads these cells.
+!
               zs_smooth_temp(i,j)=zs_smooth(i,j)
             END IF
           END DO
@@ -1752,9 +1755,11 @@
         DO i=IstrC,IendC
           IF (rmask_ist(i,j).eq.1.0_r8) THEN
             D_avg=h(i,j)+zeta_avg(i,j)-Dcrit(ng)
+!
 !  D_avg <= 0 (bed above the window-averaged sea level) implies
 !  rho_i*H > rho0*D_avg for every H > 0 (rmask gate above), so the
 !  single comparison suffices.
+!
             IF (D_avg.le.0.0_r8) THEN
               CALL ssa_front_faces (ng, tile, i, j,                     &
      &                              LBi, UBi, LBj, UBj,                 &
@@ -1769,7 +1774,6 @@
           END IF
         END DO
       END DO
-!
 !
 !  Zero the FULL array first:  the taper scan in ssa_driving_stress
 !  reads pmarg one node beyond the owned range, and on single-tile
