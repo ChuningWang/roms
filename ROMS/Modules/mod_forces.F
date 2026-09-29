@@ -1578,6 +1578,7 @@
 #    endif
 #   endif
 
+#   if defined ICE_BULK_FLUXES && defined BULK_FLUXES
       IF (.not.destroy(ng, FORCES(ng)%sustr_ao, MyFile,                 &
      &                 __LINE__, 'FORCES(ng)%sustr_ao')) RETURN
 
@@ -1589,6 +1590,7 @@
 
       IF (.not.destroy(ng, FORCES(ng)%svstr_ai, MyFile,                 &
      &                 __LINE__, 'FORCES(ng)%svstr_ai')) RETURN
+#   endif
 #   ifdef ICE_FIXED
 
       IF (.not.destroy(ng, FORCES(ng)%aice , MyFile,                    &

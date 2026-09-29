@@ -869,6 +869,20 @@
     !defined ICESHELF_GAMMAS_MC1987 && !defined ICESHELF_GAMMAS_KY1972
 # define ICESHELF_GAMMAS_MC1987
 #endif
+#if defined ICESHELF && !defined ICESHELF_DYNAM
+# error ICESHELF alone (static cavity, upstream develop option) is not \
+supported in this branch: use ICESHELF_THERMO or an ICESHEET_* option, \
+which derive both ICESHELF and ICESHELF_DYNAM.
+#endif
+
+/*
+** Compatibility alias:  the sea-ice under-ice salinity correction was
+** renamed NO_SCORRECTION_ICE -> ICE_NO_CORRECTION; keep honoring the
+** old keyword so legacy build scripts do not silently drop it.
+*/
+#if defined NO_SCORRECTION_ICE && !defined ICE_NO_CORRECTION
+# define ICE_NO_CORRECTION
+#endif
 
 /*
 ** Ice shelf bottom stress parameterization.  Three options mirror the
