@@ -3234,6 +3234,7 @@
 #endif
 #ifndef ANA_M2OBC
           BOUNDARY(ng) % ubarG_north = IniVal
+          BOUNDARY(ng) % vbarG_north = IniVal
 #endif
         END IF
 #ifdef WEC

@@ -1049,7 +1049,10 @@
      &                         S(ng)%Rindex, gtype,                     &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
 #   ifdef MASKING
-     &                         GRID(ng) % rmask_full,                   &
+!  Static mask:  the Oi read-back in get_state uses the static rmask;
+!  writing with the dynamic rmask_full left cells _FillValue on one
+!  side of the round-trip.
+     &                         GRID(ng) % rmask,                        &
 #   endif
      &                         isfField3d)
             IF (FoundError(status, nf90_noerr, __LINE__, MyFile)) THEN
@@ -1693,7 +1696,15 @@
           ifield=iSisf(ifld)
           IF (VarOut(ifield,ng)) THEN
             scale=1.0_dp
-            CALL extract_sta2d (ng, model, Cgrid, ifield, r2dvar,       &
+!  PSI-stored components must be sampled as p2dvar (review finding
+!  E-7); sampling a PSI array through the RHO interpolation stencil
+!  maps stations to the wrong grid location.
+            IF ((ifld.eq.isIuis).or.(ifld.eq.isIvis)) THEN
+              sta_gtype=p2dvar
+            ELSE
+              sta_gtype=r2dvar
+            END IF
+            CALL extract_sta2d (ng, model, Cgrid, ifield, sta_gtype,    &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          scale, ISF(ng)%Si(:,:,lsnew(ng),ifld),  &
      &                          Nstation(ng), Xpos, Ypos, psta)
@@ -1772,7 +1783,12 @@
           ifield=iFisf(ifld)
           IF (VarOut(ifield,ng)) THEN
             scale=1.0_dp
-            CALL extract_sta2d (ng, model, Cgrid, ifield, r2dvar,       &
+            IF ((ifld.eq.ifItdx).or.(ifld.eq.ifItdy)) THEN
+              sta_gtype=p2dvar
+            ELSE
+              sta_gtype=r2dvar
+            END IF
+            CALL extract_sta2d (ng, model, Cgrid, ifield, sta_gtype,    &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          scale, ISF(ng)%Fi(:,:,ifld),            &
      &                          Nstation(ng), Xpos, Ypos, psta)
@@ -1796,7 +1812,12 @@
         ifield=idIvol
         IF (VarOut(ifield,ng)) THEN
           scale=1.0_dp
-          CALL extract_sta2d (ng, model, Cgrid, ifield, r2dvar,         &
+          IF ((ifld.eq.ifItdx).or.(ifld.eq.ifItdy)) THEN
+            sta_gtype=p2dvar
+          ELSE
+            sta_gtype=r2dvar
+          END IF
+          CALL extract_sta2d (ng, model, Cgrid, ifield, sta_gtype,         &
      &                        LBi, UBi, LBj, UBj,                       &
      &                        scale, ISF(ng)%Vi(:,:,lsnew(ng)),         &
      &                        Nstation(ng), Xpos, Ypos, psta)
@@ -2972,7 +2993,10 @@
      &                         ioDesc,                                  &
      &                         LBi, UBi, LBj, UBj, 1, N(ng), scale,     &
 #   ifdef MASKING
-     &                         GRID(ng) % rmask_full,                   &
+!  Static mask:  the Oi read-back in get_state uses the static rmask;
+!  writing with the dynamic rmask_full left cells _FillValue on one
+!  side of the round-trip.
+     &                         GRID(ng) % rmask,                        &
 #   endif
      &                         isfField3d)
             IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
@@ -3628,6 +3652,7 @@
       integer :: i, ifield, ifld, ic, itrc
 !
       real(dp) :: scale
+      integer :: sta_gtype
 !
       real(r8), dimension(Nstation(ng)) :: Xpos, Ypos, psta
 !
@@ -3671,7 +3696,12 @@
           ifield=iSisf(ifld)
           IF (VarOut(ifield,ng)) THEN
             scale=1.0_dp
-            CALL extract_sta2d (ng, model, Cgrid, ifield, r2dvar,       &
+            IF ((ifld.eq.isIuis).or.(ifld.eq.isIvis)) THEN
+              sta_gtype=p2dvar
+            ELSE
+              sta_gtype=r2dvar
+            END IF
+            CALL extract_sta2d (ng, model, Cgrid, ifield, sta_gtype,       &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          scale, ISF(ng)%Si(:,:,lsnew(ng),ifld),  &
      &                          Nstation(ng), Xpos, Ypos, psta)
@@ -3750,7 +3780,12 @@
           ifield=iFisf(ifld)
           IF (VarOut(ifield,ng)) THEN
             scale=1.0_dp
-            CALL extract_sta2d (ng, model, Cgrid, ifield, r2dvar,       &
+            IF ((ifld.eq.ifItdx).or.(ifld.eq.ifItdy)) THEN
+              sta_gtype=p2dvar
+            ELSE
+              sta_gtype=r2dvar
+            END IF
+            CALL extract_sta2d (ng, model, Cgrid, ifield, sta_gtype,       &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          scale, ISF(ng)%Fi(:,:,ifld),            &
      &                          Nstation(ng), Xpos, Ypos, psta)

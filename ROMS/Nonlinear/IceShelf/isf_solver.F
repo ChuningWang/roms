@@ -1935,7 +1935,10 @@
             IF (A_glen(ng).gt.0.0_r8) THEN
               B_hard(i,j)=A_glen(ng)**(-1.0_r8/n_glen(ng))
             ELSE
-              T_star=ti(i,j)+273.15_r8+8.66E-4_r8*0.5_r8*hi(i,j)
+!  Floor at 100 K:  a garbage ice temperature at or below absolute
+!  zero would overflow EXP(-Q/RT) or divide by zero below.
+              T_star=MAX(ti(i,j)+273.15_r8+8.66E-4_r8*0.5_r8*hi(i,j), &
+     &                   100.0_r8)
               RT_star=8.314_r8*T_star
               IF (T_star.le.263.15_r8) THEN
                 A_pat=3.61E-13_r8*EXP(-6.0E4_r8/RT_star)

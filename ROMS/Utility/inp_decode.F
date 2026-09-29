@@ -269,9 +269,11 @@
 ! If KEYWORD is TileMask, load line-by-line instead of load multiple
 ! lines altoghether into Cval.
 !
+#ifdef TILEMASK
         IF ((TRIM(KeyWord).eq.'TileMask').and.(status.gt.0)) THEN
           Nval=0
         END IF
+#endif
 !
 ! Extract parameter values string.  Remove continuation symbol
 ! [char(92)=\] or multi-line value [char(124)=|], if any.  Trim

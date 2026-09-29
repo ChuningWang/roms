@@ -137,6 +137,19 @@
             Si(i,j,lsold,isIeis)=Si(i,j,lsold,isIeis)*rmask(i,j)
             Si(i,j,lsnew,isIeis)=Si(i,j,lsnew,isIeis)*rmask(i,j)
 # endif
+!
+!  Initialize the temperature diagnostic T = E/H (review finding P3):
+!  the enthalpy source terms in isf_advection read Fi(ifItis), which
+!  otherwise stays at its zero initialization until the first
+!  advection step recomputes it (one-step T = 0 error at cold start
+!  and every restart with an enthalpy-carrying file).
+!
+            IF (Si(i,j,lsnew,isIhis).gt.0.0_r8) THEN
+              Fi(i,j,ifItis)=Si(i,j,lsnew,isIeis)/                       &
+     &                       Si(i,j,lsnew,isIhis)
+            ELSE
+              Fi(i,j,ifItis)=0.0_r8
+            END IF
           END DO
         END DO
 !

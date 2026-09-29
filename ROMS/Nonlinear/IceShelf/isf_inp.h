@@ -494,76 +494,191 @@
 #endif
 #ifdef ICESHEET
             CASE ('Qout(idIhis)')
+              IF (idIhis.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIhis'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idIhis,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Qout(idIuis)')
+              IF (idIuis.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIuis'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idIuis,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Qout(idIvis)')
+              IF (idIvis.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIvis'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idIvis,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Qout(idIuer)')
+              IF (idIuer.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIuer'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idIuer,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Qout(idIvnr)')
+              IF (idIvnr.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIvnr'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idIvnr,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Qout(idItis)')
+              IF (idItis.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idItis'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idItis,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Qout(idIeis)')
+              IF (idIeis.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIeis'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idIeis,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Qout(idIzsf)')
+              IF (idIzsf.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIzsf'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idIzsf,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Qout(idIzbd)')
+              IF (idIzbd.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIzbd'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idIzbd,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Qout(idInuh)')
+              IF (idInuh.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idInuh'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idInuh,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Qout(idItdx)')
+              IF (idItdx.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idItdx'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idItdx,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Qout(idItdy)')
+              IF (idItdy.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idItdy'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idItdy,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Qout(idIbta)')
+              IF (idIbta.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIbta'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idIbta,1:Ngrids)=Lswitch(1:Ngrids)
 # ifdef ICESHEET_SMOOTH_GL
             CASE ('Qout(idIgrf)')
+              IF (idIgrf.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIgrf'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idIgrf,1:Ngrids)=Lswitch(1:Ngrids)
 # endif
 #endif
 #ifdef ICESHELF_THERMO
             CASE ('Qout(idImel)')
+              IF (idImel.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idImel'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idImel,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Qout(idIgat)')
+              IF (idIgat.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIgat'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idIgat,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Qout(idIgas)')
+              IF (idIgas.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIgas'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idIgas,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Qout(idItst)')
+              IF (idItst.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idItst'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idItst,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Qout(idIust)')
+              IF (idIust.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIust'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idIust,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Qout(idItbo)')
+              IF (idItbo.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idItbo'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idItbo,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Qout(idIsbo)')
+              IF (idIsbo.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIsbo'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idIsbo,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Qout(idItba)')
+              IF (idItba.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idItba'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idItba,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Qout(idIsba)')
+              IF (idIsba.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIsba'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Qout(idIsba,1:Ngrids)=Lswitch(1:Ngrids)
 # ifdef T_PASSIVE
@@ -599,76 +714,191 @@
 #ifdef AVERAGES
 # ifdef ICESHEET
             CASE ('Aout(idIhis)')
+              IF (idIhis.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIhis'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idIhis,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Aout(idIuis)')
+              IF (idIuis.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIuis'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idIuis,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Aout(idIvis)')
+              IF (idIvis.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIvis'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idIvis,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Aout(idIuer)')
+              IF (idIuer.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIuer'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idIuer,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Aout(idIvnr)')
+              IF (idIvnr.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIvnr'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idIvnr,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Aout(idItis)')
+              IF (idItis.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idItis'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idItis,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Aout(idIeis)')
+              IF (idIeis.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIeis'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idIeis,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Aout(idIzsf)')
+              IF (idIzsf.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIzsf'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idIzsf,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Aout(idIzbd)')
+              IF (idIzbd.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIzbd'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idIzbd,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Aout(idInuh)')
+              IF (idInuh.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idInuh'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idInuh,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Aout(idItdx)')
+              IF (idItdx.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idItdx'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idItdx,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Aout(idItdy)')
+              IF (idItdy.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idItdy'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idItdy,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Aout(idIbta)')
+              IF (idIbta.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIbta'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idIbta,1:Ngrids)=Lswitch(1:Ngrids)
 #  ifdef ICESHEET_SMOOTH_GL
             CASE ('Aout(idIgrf)')
+              IF (idIgrf.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIgrf'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idIgrf,1:Ngrids)=Lswitch(1:Ngrids)
 #  endif
 # endif
 # ifdef ICESHELF_THERMO
             CASE ('Aout(idImel)')
+              IF (idImel.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idImel'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idImel,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Aout(idIgat)')
+              IF (idIgat.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIgat'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idIgat,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Aout(idIgas)')
+              IF (idIgas.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIgas'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idIgas,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Aout(idItst)')
+              IF (idItst.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idItst'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idItst,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Aout(idIust)')
+              IF (idIust.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIust'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idIust,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Aout(idItbo)')
+              IF (idItbo.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idItbo'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idItbo,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Aout(idIsbo)')
+              IF (idIsbo.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIsbo'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idIsbo,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Aout(idItba)')
+              IF (idItba.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idItba'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idItba,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Aout(idIsba)')
+              IF (idIsba.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIsba'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Aout(idIsba,1:Ngrids)=Lswitch(1:Ngrids)
 #  ifdef T_PASSIVE
@@ -705,76 +935,191 @@
 #ifdef STATIONS
 # ifdef ICESHEET
             CASE ('Sout(idIhis)')
+              IF (idIhis.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIhis'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idIhis,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Sout(idIuis)')
+              IF (idIuis.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIuis'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idIuis,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Sout(idIvis)')
+              IF (idIvis.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIvis'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idIvis,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Sout(idIuer)')
+              IF (idIuer.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIuer'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idIuer,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Sout(idIvnr)')
+              IF (idIvnr.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIvnr'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idIvnr,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Sout(idItis)')
+              IF (idItis.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idItis'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idItis,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Sout(idIeis)')
+              IF (idIeis.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIeis'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idIeis,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Sout(idIzsf)')
+              IF (idIzsf.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIzsf'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idIzsf,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Sout(idIzbd)')
+              IF (idIzbd.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIzbd'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idIzbd,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Sout(idInuh)')
+              IF (idInuh.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idInuh'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idInuh,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Sout(idItdx)')
+              IF (idItdx.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idItdx'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idItdx,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Sout(idItdy)')
+              IF (idItdy.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idItdy'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idItdy,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Sout(idIbta)')
+              IF (idIbta.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIbta'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idIbta,1:Ngrids)=Lswitch(1:Ngrids)
 #  ifdef ICESHEET_SMOOTH_GL
             CASE ('Sout(idIgrf)')
+              IF (idIgrf.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIgrf'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idIgrf,1:Ngrids)=Lswitch(1:Ngrids)
 #  endif
 # endif
 # ifdef ICESHELF_THERMO
             CASE ('Sout(idImel)')
+              IF (idImel.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idImel'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idImel,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Sout(idIgat)')
+              IF (idIgat.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIgat'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idIgat,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Sout(idIgas)')
+              IF (idIgas.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIgas'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idIgas,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Sout(idItst)')
+              IF (idItst.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idItst'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idItst,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Sout(idIust)')
+              IF (idIust.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIust'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idIust,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Sout(idItbo)')
+              IF (idItbo.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idItbo'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idItbo,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Sout(idIsbo)')
+              IF (idIsbo.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIsbo'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idIsbo,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Sout(idItba)')
+              IF (idItba.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idItba'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idItba,1:Ngrids)=Lswitch(1:Ngrids)
             CASE ('Sout(idIsba)')
+              IF (idIsba.eq.0) THEN
+                IF (Master) WRITE (out,80) 'idIsba'
+                exit_flag=5
+                RETURN
+              END IF
               Npts=load_l(Nval, Cval, Ngrids, Lswitch)
               Sout(idIsba,1:Ngrids)=Lswitch(1:Ngrids)
 #  ifdef T_PASSIVE

@@ -179,7 +179,7 @@
 !
       integer :: i, j
 !
-      real(r8) :: Fx, Fe
+      real(r8) :: Fx, Fe, cff
 !
 !  Work arrays.
 !
@@ -205,16 +205,26 @@
       DO j=Jstr,Jend
         DO i=Istr,Iend
           IF (rmask_ist(i,j).gt.0.5_r8) THEN
-            Si(i,j,lsold,isIhis)=Si(i,j,lsold,isIhis)                   &
+!  Cap the melt by the available thickness (review finding P3):  an
+!  uncapped melt on a thin advected front drives H negative, and the
+!  negative "anti-ice" would keep transporting until divergence
+!  removes it (isf_vbc already caps the tracer side the same way).
+!
 # ifdef ICESHELF_THERMO
-     &                           -dt(ng)*Fi(i,j,ifImel)                 &
-# endif
+            cff=MIN(dt(ng)*Fi(i,j,ifImel),                                 &
+     &              Si(i,j,lsold,isIhis))
+            Si(i,j,lsold,isIhis)=Si(i,j,lsold,isIhis)                      &
+     &                           -cff                                     &
      &                           +dt(ng)*smb_rate(ng)
-            Si(i,j,lsold,isIeis)=Si(i,j,lsold,isIeis)                   &
-# ifdef ICESHELF_THERMO
-     &                           -dt(ng)*Fi(i,j,ifImel)*Fi(i,j,ifItis)  &
-# endif
+            Si(i,j,lsold,isIeis)=Si(i,j,lsold,isIeis)                      &
+     &                           -cff*Fi(i,j,ifItis)                       &
      &                           +dt(ng)*smb_rate(ng)*Fi(i,j,ifItis)
+# else
+            Si(i,j,lsold,isIhis)=Si(i,j,lsold,isIhis)                      &
+     &                           +dt(ng)*smb_rate(ng)
+            Si(i,j,lsold,isIeis)=Si(i,j,lsold,isIeis)                      &
+     &                           +dt(ng)*smb_rate(ng)*Fi(i,j,ifItis)
+# endif
           END IF
         END DO
       END DO
@@ -246,9 +256,19 @@
 !  ve(i,j): y-direction velocity on the y-face between
 !           RHO(i,j-1) and RHO(i,j).
 !
-      DO j=Jstr-1,Jend+1
+!  Only the consumed ranges are computed (review finding P3):  the
+!  flux loop reads ux(i..i+1, j) over i=Istr..Iend+1, j=Jstr..Jend and
+!  ve(i, j..j+1) over i=Istr..Iend, j=Jstr..Jend+1;  the wider loop
+!  above read PSI points one ring beyond the domain that no boundary
+!  routine ever writes.
+!
+      DO j=Jstr,Jend
         DO i=Istr-1,Iend+1
           ux(i,j)=0.5_r8*(Si(i,j,lsnew,isIuis)+Si(i,j+1,lsnew,isIuis))
+        END DO
+      END DO
+      DO j=Jstr-1,Jend+1
+        DO i=Istr,Iend
           ve(i,j)=0.5_r8*(Si(i,j,lsnew,isIvis)+Si(i+1,j,lsnew,isIvis))
         END DO
       END DO

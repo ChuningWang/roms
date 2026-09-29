@@ -185,7 +185,10 @@
 !  Grounded ice: no cavity. set water column depth to Dcrit(ng)+eps
 !
               rmask_isf(i,j)=0.0_r8
-              zice(i,j)=-zeta(i,j)-h(i,j)+Dcrit(ng)+eps
+!  Clamp at zero (sign convention: zice <= 0):  in ultra-shallow
+!  water (depth < Dcrit) the film expression can turn positive.
+              zice(i,j)=MIN(-zeta(i,j)-h(i,j)+Dcrit(ng)+eps,           &
+     &                      0.0_r8)
             ELSE
 !
 !  Floating ice: cavity exists, zice from hydrostatic equilibrium.

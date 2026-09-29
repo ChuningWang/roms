@@ -58,10 +58,21 @@
 # ifdef PROFILE
       CALL wclock_on (ng, model, 42, __LINE__, MyFile)
 # endif
+!  Apply to BOTH time levels (review finding P3):  since the L9
+!  write-back the old level's interior advances every step while its
+!  domain-edge ghost ring was refreshed only at solve cadence, so a
+!  time-varying clamped inflow was under-applied on non-solve steps.
+!  The tile writes ghost values only;  for N_ssa = 1 the extra call
+!  writes the values the layer swap would carry anyway (bit-neutral).
+!
       CALL isf_bc2d_tile (ng, tile, model,                              &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    IminS, ImaxS, JminS, JmaxS,                   &
      &                    ISF(ng) % Si(:,:,lsnew(ng),isIhis))
+      CALL isf_bc2d_tile (ng, tile, model,                              &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    IminS, ImaxS, JminS, JmaxS,                   &
+     &                    ISF(ng) % Si(:,:,lsold(ng),isIhis))
 # ifdef PROFILE
       CALL wclock_off (ng, model, 42, __LINE__, MyFile)
 # endif

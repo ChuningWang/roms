@@ -64,10 +64,20 @@
 # ifdef PROFILE
       CALL wclock_on (ng, model, 42, __LINE__, MyFile)
 # endif
+!  Apply to BOTH time levels (same rationale as isf_bc2d):  each
+!  layer's enthalpy ghost is constructed from that layer's thickness
+!  ghost (E = h*T), keeping the carrier level's boundary state
+!  coherent with its interior between solves.
+!
       CALL isf_tibc_tile (ng, tile, model,                              &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    ISF(ng) % Si(:,:,lsnew(ng),isIhis),           &
      &                    ISF(ng) % Si(:,:,lsnew(ng),isIeis),           &
+     &                    ISF(ng) % Fi(:,:,ifItis))
+      CALL isf_tibc_tile (ng, tile, model,                              &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    ISF(ng) % Si(:,:,lsold(ng),isIhis),           &
+     &                    ISF(ng) % Si(:,:,lsold(ng),isIeis),           &
      &                    ISF(ng) % Fi(:,:,ifItis))
 # ifdef PROFILE
       CALL wclock_off (ng, model, 42, __LINE__, MyFile)
