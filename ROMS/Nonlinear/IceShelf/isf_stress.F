@@ -97,6 +97,7 @@
      &                       IminS, ImaxS, JminS, JmaxS,                &
      &                       nrhs(ng), lsnew(ng),                       &
      &                       GRID(ng) % rmask_isf,                      &
+     &                       GRID(ng) % rmask_ist,                      &
 # if defined ICESHELF_LOGDRAG
      &                       GRID(ng) % ZoSur_isf,                      &
      &                       GRID(ng) % z_r,                            &
@@ -132,7 +133,7 @@
      &                             LBi, UBi, LBj, UBj,                  &
      &                             IminS, ImaxS, JminS, JmaxS,          &
      &                             nrhs, lsnew,                         &
-     &                             rmask_isf,                           &
+     &                             rmask_isf, rmask_ist,                &
 # if defined ICESHELF_LOGDRAG
      &                             ZoSur_isf, z_r, z_w,                 &
 # elif defined ICESHELF_QDRAG
@@ -170,6 +171,7 @@
 !
 # ifdef ASSUMED_SHAPE
       real(r8), intent(in) :: rmask_isf(LBi:,LBj:)
+      real(r8), intent(in) :: rmask_ist(LBi:,LBj:)
 #  if defined ICESHELF_LOGDRAG
       real(r8), intent(in) :: ZoSur_isf(LBi:,LBj:)
       real(r8), intent(in) :: z_r(LBi:,LBj:,:)
@@ -195,6 +197,7 @@
       real(r8), intent(inout) :: svstr(LBi:,LBj:)
 # else
       real(r8), intent(in) :: rmask_isf(LBi:UBi,LBj:UBj)
+      real(r8), intent(in) :: rmask_ist(LBi:UBi,LBj:UBj)
 #  if defined ICESHELF_LOGDRAG
       real(r8), intent(in) :: ZoSur_isf(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: z_r(LBi:UBi,LBj:UBj,N(ng))
@@ -406,17 +409,26 @@
 !  remain zeroed here.  Shortwave radiation is similarly masked.
 !=======================================================================
 !
+!  Suppress the atmospheric fluxes over the ice shelf cavity AND over
+!  grounded ice (review finding M-7):  under ICESHEET a grounded cell
+!  keeps a Dcrit water film on a statically wet ocean mask, so masking
+!  with the cavity mask alone left full open-ocean heat/salt/shortwave
+!  forcing diffusing into the film beneath grounded ice.  rmask_ist
+!  is the ice-presence mask (hice > 0).
+!
       DO itrc=1,NT(ng)
         DO j=JstrR,JendR
           DO i=IstrR,IendR
-            stflx(i,j,itrc)=stflx(i,j,itrc)*(1.0_r8-rmask_isf(i,j))
+            stflx(i,j,itrc)=stflx(i,j,itrc)*                            &
+     &            (1.0_r8-MAX(rmask_isf(i,j),rmask_ist(i,j)))
           END DO
         END DO
       END DO
 # ifdef SHORTWAVE
       DO j=JstrR,JendR
         DO i=IstrR,IendR
-          srflx(i,j)=srflx(i,j)*(1.0_r8-rmask_isf(i,j))
+          srflx(i,j)=srflx(i,j)*                                        &
+     &            (1.0_r8-MAX(rmask_isf(i,j),rmask_ist(i,j)))
         END DO
       END DO
 # endif
