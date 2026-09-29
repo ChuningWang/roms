@@ -1250,6 +1250,10 @@
 !  is redistributed over the boundary layer using Oi weights.  For other
 !  advection schemes the SBL source is applied after the vertical
 !  advection is completed (below).  This mirrors the LwSrc pattern.
+!  Ta carries m*Tunits here (the oHz conversion to Tunits happens
+!  after the vertical advection), so the flux enters WITHOUT an oHz
+!  factor, like the adjacent LwSrc and SED_MORPH blocks (the stray
+!  oHz under-applied the flux by 1/Hz(k); review finding M-5).
 !
           IF (isf_Hsbl(ng).gt.0.0_r8 .and.                              &
      &        Vadvection(itrc,ng)%MPDATA) THEN
@@ -1258,7 +1262,7 @@
                 cff=dt(ng)*stflx(i,j,itrc)
                 DO k=1,N(ng)
                   Ta(i,j,k,itrc)=Ta(i,j,k,itrc)+                        &
-     &                           cff*Oi(i,j,k,ioHsbl)*oHz(i,j,k)
+     &                           cff*Oi(i,j,k,ioHsbl)
                 END DO
               END IF
             END DO

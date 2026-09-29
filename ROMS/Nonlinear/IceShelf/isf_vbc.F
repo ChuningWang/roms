@@ -158,6 +158,7 @@
       real(r8) :: Sm, Tm, turb, ct
       real(r8) :: Tm_theta, tracer_amb
       real(r8) :: cff, cff1, cff2, cff3
+      real(r8) :: melt
 # include "set_bounds.h"
 !
 !-----------------------------------------------------------------------
@@ -297,10 +298,10 @@
               Fi(i,j,ifIsbo) = -(cff2 + SQRT(cff2**2-4.0*cff1*cff3)) /    &
      &                         (2.0_r8*cff1)
               Fi(i,j,ifItbo) = a*Fi(i,j,ifIsbo) + b - c*zice(i,j)
-              Fi(i,j,ifImel) = Fi(i,j,ifIgas)*(Sm-Fi(i,j,ifIsbo)) /       &
-     &                         MAX(Fi(i,j,ifIsbo), eps)
+              melt = Fi(i,j,ifIgas)*(Sm-Fi(i,j,ifIsbo)) /                 &
+     &               MAX(Fi(i,j,ifIsbo), eps)
 !
-              IF (Fi(i,j,ifImel).lt.0.0_r8) THEN
+              IF (melt.lt.0.0_r8) THEN
 !
 !  Freezing, use boundary layer temperature to recalculate melt rates
 !
@@ -313,16 +314,27 @@
                 Fi(i,j,ifIsbo) = -(cff2+SQRT(cff2*cff2-4.0*cff1*cff3)) /  &
      &                           (2.0_r8*cff1)
                 Fi(i,j,ifItbo) = a*Fi(i,j,ifIsbo) + b - c*zice(i,j)
-                Fi(i,j,ifImel) = Fi(i,j,ifIgas)*(Sm-Fi(i,j,ifIsbo)) /     &
-     &                           MAX(Fi(i,j,ifIsbo), eps)
+                melt = Fi(i,j,ifIgas)*(Sm-Fi(i,j,ifIsbo)) /               &
+     &                 MAX(Fi(i,j,ifIsbo), eps)
               END IF
+!
+!  Convert to the ICE-equivalent melt rate stored in Fi(ifImel)
+!  (m/s of ice thickness, consumed by isf_advection and the tracer
+!  reservoirs below).  The 3EQN quadratic is solved with the
+!  rho_i = rho0 simplification, which makes its melt rate
+!  WATER-equivalent; the strict Holland & Jenkins (1999) salt
+!  balance gives m_ice = (rho0/rho_i)*m_water.  The ocean-side
+!  fluxes below keep the water-equivalent value (review finding
+!  M-9).
+!
+              Fi(i,j,ifImel)=(rho0/rho_i)*melt
 !
 !  Calculate fluxes
 !
               Fi(i,j,ifItst)   = Tm-Fi(i,j,ifItbo)
-              stflx(i,j,itemp) = (Fi(i,j,ifIgat)+Fi(i,j,ifImel)) *        &
+              stflx(i,j,itemp) = (Fi(i,j,ifIgat)+melt)*                   &
      &                           (Fi(i,j,ifItbo)-Tm)
-              stflx(i,j,isalt) = (Fi(i,j,ifIgas)+Fi(i,j,ifImel)) *        &
+              stflx(i,j,isalt) = (Fi(i,j,ifIgas)+melt)*                   &
      &                           (Fi(i,j,ifIsbo)-Sm)
             ELSE
               Fi(i,j,ifIsbo)   = Sm
@@ -387,8 +399,12 @@
                     cff1=Ai(i,j,ic)
                     cff2=cff1
                   END IF
+!  The reservoir bookkeeping (Vi/Ti) uses the ICE-equivalent melt
+!  (Fi(ifImel)); the ocean-side tracer fluxes use the WATER-
+!  equivalent melt (Fi(ifImel)*rho_i/rho0), consistent with stflx.
+!
                   stflx(i,j,itrc)=stflx(i,j,itrc)+                      &
-     &                            Fi(i,j,ifImel)*                       &
+     &                            Fi(i,j,ifImel)*(rho_i/rho0)*          &
      &                            (cff2-Ai(i,j,ic))
                   Ti(i,j,lsnew(ng),ic)=Ti(i,j,lsnew(ng),ic)-cff1*cff
                   Ti(i,j,lsnew(ng),ic)=MAX(Ti(i,j,lsnew(ng),ic), 0.0_r8)
@@ -409,7 +425,8 @@
               DO i=Istr,Iend
                 IF (rmask_isf(i,j).eq.1.0_r8) THEN
                   stflx(i,j,itrc)=stflx(i,j,itrc)+                      &
-     &                            MAX(Fi(i,j,ifImel), 0.0_r8)*          &
+     &                            MAX(Fi(i,j,ifImel)*(rho_i/rho0),      &
+     &                                0.0_r8)*                           &
      &                            trcIsf(itrc,ng)
                 END IF
               END DO
