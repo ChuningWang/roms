@@ -205,7 +205,8 @@
 !
 !  Local variable declarations.
 !
-      integer :: i, j, cg_iter, nl_iter
+      integer :: i, j, cg_iter, nl_iter, ic
+      logical :: u_dW, u_dE, u_dS, u_dN, v_dW, v_dE, v_dS, v_dN
 !
       logical :: converged
 !
@@ -303,6 +304,25 @@
 # endif
 !
 # include "set_bounds.h"
+!
+!  Carry the refreeze reservoirs Vi/Ti across the time-level swap
+!  (review finding M-6):  isf_vbc accumulates them in the new level
+!  every step, but the driver swaps the layer roles just before this
+!  solve without copying them, so under N_ssa > 1 the reservoir chain
+!  would resume from one-to-two windows ago.  Interior ranges only:
+!  isf_vbc consumes interior values and the reservoirs are not halo-
+!  exchanged (output masks the halo).
+!
+      IF (Lisftrc(ng)) THEN
+        DO j=Jstr,Jend
+          DO i=Istr,Iend
+            ISF(ng) % Vi(i,j,lsnew)=ISF(ng) % Vi(i,j,lsold)
+            DO ic=1,NTISF(ng)
+              ISF(ng) % Ti(i,j,lsnew,ic)=ISF(ng) % Ti(i,j,lsold,ic)
+            END DO
+          END DO
+        END DO
+      END IF
 !
 !  Extended cell-assembly bounds (see module header).
 !
@@ -819,6 +839,39 @@
 !  criterion catches stagnation at a non-solution fixed point.
 !-----------------------------------------------------------------------
 !
+!  Dirichlet-constrained components are excluded from the residual
+!  norms (review finding M-8):  at closed/clamped boundary nodes
+!  ssa_lbc_zero keeps the CG residual at zero, so the local true
+!  residual b - Au is the constraint reaction, O(driving stress),
+!  and never decays -- including it gives criterion 2 an irreducible
+!  floor and blinds the stagnation detector for clamped-boundary
+!  configurations.  The node sets mirror ssa_lbc_zero.
+!
+        u_dW=(.not.EWperiodic(ng)).and.DOMAIN(ng)%Western_Edge(tile)   &
+     &      .and.(LBC(iwest,ibISF(isIuis),ng)%closed .or.              &
+     &            LBC(iwest,ibISF(isIuis),ng)%clamped)
+        u_dE=(.not.EWperiodic(ng)).and.DOMAIN(ng)%Eastern_Edge(tile)   &
+     &      .and.(LBC(ieast,ibISF(isIuis),ng)%closed .or.              &
+     &            LBC(ieast,ibISF(isIuis),ng)%clamped)
+        u_dS=(.not.NSperiodic(ng)).and.DOMAIN(ng)%Southern_Edge(tile)  &
+     &      .and.(LBC(isouth,ibISF(isIuis),ng)%closed .or.             &
+     &            LBC(isouth,ibISF(isIuis),ng)%clamped)
+        u_dN=(.not.NSperiodic(ng)).and.DOMAIN(ng)%Northern_Edge(tile)  &
+     &      .and.(LBC(inorth,ibISF(isIuis),ng)%closed .or.             &
+     &            LBC(inorth,ibISF(isIuis),ng)%clamped)
+        v_dW=(.not.EWperiodic(ng)).and.DOMAIN(ng)%Western_Edge(tile)   &
+     &      .and.(LBC(iwest,ibISF(isIvis),ng)%closed .or.              &
+     &            LBC(iwest,ibISF(isIvis),ng)%clamped)
+        v_dE=(.not.EWperiodic(ng)).and.DOMAIN(ng)%Eastern_Edge(tile)   &
+     &      .and.(LBC(ieast,ibISF(isIvis),ng)%closed .or.              &
+     &            LBC(ieast,ibISF(isIvis),ng)%clamped)
+        v_dS=(.not.NSperiodic(ng)).and.DOMAIN(ng)%Southern_Edge(tile)  &
+     &      .and.(LBC(isouth,ibISF(isIvis),ng)%closed .or.             &
+     &            LBC(isouth,ibISF(isIvis),ng)%clamped)
+        v_dN=(.not.NSperiodic(ng)).and.DOMAIN(ng)%Northern_Edge(tile)  &
+     &      .and.(LBC(inorth,ibISF(isIvis),ng)%closed .or.             &
+     &            LBC(inorth,ibISF(isIvis),ng)%clamped)
+!
         norms(1)=0.0_r8
         norms(2)=0.0_r8
         norms(3)=0.0_r8
@@ -831,10 +884,20 @@
      &          (Si(i,j,lsnew,isIvis)-Si(i,j,lsold,isIvis))**2
               norms(2)=norms(2)+                                        &
      &          Si(i,j,lsnew,isIuis)**2+Si(i,j,lsnew,isIvis)**2
-              norms(3)=norms(3)+                                        &
-     &          (Au(i,j)-Fi(i,j,ifItdx))**2+(Av(i,j)-Fi(i,j,ifItdy))**2
-              norms(4)=norms(4)+                                        &
-     &          Fi(i,j,ifItdx)**2+Fi(i,j,ifItdy)**2
+              IF (.not.((u_dW.and.i.eq.IstrP).or.                       &
+     &                  (u_dE.and.i.eq.IendP).or.                       &
+     &                  (u_dS.and.j.eq.JstrP).or.                       &
+     &                  (u_dN.and.j.eq.JendP))) THEN
+                norms(3)=norms(3)+(Au(i,j)-Fi(i,j,ifItdx))**2
+                norms(4)=norms(4)+Fi(i,j,ifItdx)**2
+              END IF
+              IF (.not.((v_dW.and.i.eq.IstrP).or.                       &
+     &                  (v_dE.and.i.eq.IendP).or.                       &
+     &                  (v_dS.and.j.eq.JstrP).or.                       &
+     &                  (v_dN.and.j.eq.JendP))) THEN
+                norms(3)=norms(3)+(Av(i,j)-Fi(i,j,ifItdy))**2
+                norms(4)=norms(4)+Fi(i,j,ifItdy)**2
+              END IF
             END IF
           END DO
         END DO
