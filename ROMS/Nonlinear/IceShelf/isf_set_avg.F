@@ -121,7 +121,7 @@
                   ISF_SAVG(ns,ng)%var(i,j)=ISF(ng)%Si(i,j,lsnew,ns)
 # ifdef MASKING
                   ISF_SAVG(ns,ng)%var(i,j)=ISF_SAVG(ns,ng)%var(i,j)*    &
-     &                                     GRID(ng)%rmask_full(i,j)
+     &                                     GRID(ng)%rmask(i,j)
 # endif
                 END DO
               END DO
@@ -140,7 +140,7 @@
                   ISF_FAVG(nf,ng)%var(i,j)=ISF(ng)%Fi(i,j,nf)
 # ifdef MASKING
                   ISF_FAVG(nf,ng)%var(i,j)=ISF_FAVG(nf,ng)%var(i,j)*    &
-     &                                     GRID(ng)%rmask_full(i,j)
+     &                                     GRID(ng)%rmask(i,j)
 # endif
                 END DO
               END DO
@@ -157,7 +157,7 @@
                 ISF_VAVG(ng)%var(i,j)=ISF(ng)%Vi(i,j,lsnew)
 # ifdef MASKING
                 ISF_VAVG(ng)%var(i,j)=ISF_VAVG(ng)%var(i,j)*            &
-     &                                GRID(ng)%rmask_full(i,j)
+     &                                GRID(ng)%rmask(i,j)
 # endif
               END DO
             END DO
@@ -174,7 +174,7 @@
 # ifdef MASKING
                     ISF_TAVG(itrc,ng)%var(i,j)=                         &
      &                ISF_TAVG(itrc,ng)%var(i,j) *                      &
-     &                GRID(ng)%rmask_full(i,j)
+     &                GRID(ng)%rmask(i,j)
 # endif
                   END DO
                 END DO
@@ -186,7 +186,7 @@
 # ifdef MASKING
                     ISF_AAVG(itrc,ng)%var(i,j)=                         &
      &                ISF_AAVG(itrc,ng)%var(i,j) *                      &
-     &                GRID(ng)%rmask_full(i,j)
+     &                GRID(ng)%rmask(i,j)
 # endif
                   END DO
                 END DO
@@ -211,7 +211,7 @@
                 DO i=IstrR,IendR
                   ISF_SAVG(ns,ng)%var(i,j)=ISF_SAVG(ns,ng)%var(i,j)+    &
 # ifdef MASKING
-     &                                     GRID(ng)%rmask_full(i,j)*    &
+     &                                     GRID(ng)%rmask(i,j)*    &
 # endif
      &                                     ISF(ng)%Si(i,j,lsnew,ns)
                 END DO
@@ -230,7 +230,7 @@
                 DO i=IstrR,IendR
                   ISF_FAVG(nf,ng)%var(i,j)=ISF_FAVG(nf,ng)%var(i,j)+    &
 # ifdef MASKING
-     &                                     GRID(ng)%rmask_full(i,j)*    &
+     &                                     GRID(ng)%rmask(i,j)*    &
 # endif
      &                                     ISF(ng)%Fi(i,j,nf)
                 END DO
@@ -247,7 +247,7 @@
               DO i=IstrR,IendR
                 ISF_VAVG(ng)%var(i,j)=ISF_VAVG(ng)%var(i,j)+            &
 # ifdef MASKING
-     &                                GRID(ng)%rmask_full(i,j)*         &
+     &                                GRID(ng)%rmask(i,j)*         &
 # endif
      &                                ISF(ng)%Vi(i,j,lsnew)
               END DO
@@ -264,7 +264,7 @@
                     ISF_TAVG(itrc,ng)%var(i,j)=                         &
      &                ISF_TAVG(itrc,ng)%var(i,j)+                       &
 # ifdef MASKING
-     &                GRID(ng)%rmask_full(i,j)*                         &
+     &                GRID(ng)%rmask(i,j)*                         &
 # endif
      &                ISF(ng)%Ti(i,j,lsnew,ic)
                   END DO
@@ -276,7 +276,7 @@
                     ISF_AAVG(itrc,ng)%var(i,j)=                         &
      &                ISF_AAVG(itrc,ng)%var(i,j)+                       &
 # ifdef MASKING
-     &                GRID(ng)%rmask_full(i,j)*                         &
+     &                GRID(ng)%rmask(i,j)*                         &
 # endif
      &                ISF(ng)%Ai(i,j,ic)
                   END DO
@@ -300,25 +300,18 @@
 !
 !  Set time-averaged factors for each C-grid variable type. Notice that
 !  the I- and J-ranges are all grid types are the same for convinience.
-# ifdef WET_DRY
-!  In wetting and drying, the sums are devided by the number of times
-!  that each qrid point is wet.
-# endif
 !
-# ifdef WET_DRY
-        DO j=JstrR,JendR
-          DO i=IstrR,IendR
-            rfac(i,j)=1.0_r8/MAX(1.0_r8, GRID(ng)%rmask_avg(i,j))
-          END DO
-        END DO
-# else
+!  The ice averages accumulate under the STATIC mask (rmask, set above),
+!  so the normalization is the plain record count; the wet/dry wet-time
+!  fraction (rmask_avg) is not applicable to ice fields (review
+!  finding M-3).
+!
         fac=1.0_r8/REAL(nAVG(ng),r8)
         DO j=JstrR,JendR
           DO i=IstrR,IendR
             rfac(i,j)=fac
           END DO
         END DO
-# endif
 !
 !  Process iceshelf model state variables.
 !
@@ -364,14 +357,14 @@
               IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
                 CALL exchange_r2d_tile (ng, tile,                       &
      &                                  LBi, UBi, LBj, UBj,             &
-     &                                  ISF_FAVG(ns,ng)%var)
+     &                                  ISF_FAVG(nf,ng)%var)
 
 # ifdef DISTRIBUTE
                 CALL mp_exchange2d (ng, tile, model, 1,                 &
      &                              LBi, UBi, LBj, UBj,                 &
      &                              NghostPoints,                       &
      &                              EWperiodic(ng), NSperiodic(ng),     &
-     &                              ISF_FAVG(ns,ng)%var)
+     &                              ISF_FAVG(nf,ng)%var)
 # endif
               END IF
             END IF
