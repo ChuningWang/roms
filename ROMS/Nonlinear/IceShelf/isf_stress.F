@@ -492,15 +492,18 @@
 !    default            Weertman power law
 !                       beta = C^2 |u|^(m-1)
 !    ICESHEET_COULOMB   regularized Coulomb (Tsai et al. 2015):
-!                       H_eff = rho_i*H - rho0*D_avg,
-!                       beta = C^2 |u|^(m-1) * f_c*H_eff /
-!                              (C^(2/m)|u| + (f_c*H_eff)^(1/m))^m
+!                       H_eff = rho_i*H - rho0*D_avg        [kg/m2]
+!                       tau_c = f_c*g*H_eff                 [Pa]
+!                       beta = C^2 |u|^(m-1) * tau_c /
+!                              (C^(2/m)|u| + tau_c^(1/m))^m
 !  with C=C_basal, m=n_basal, |u| the 4-corner PSI-average sliding
-!  speed regularized by eps_u_min, and f_c=f_coulomb.  H_eff is the
-!  effective pressure scaled by 1/g (the g factors cancel in beta);
-!  the Coulomb form reduces to Weertman as |u|->0 and saturates at
-!  the Coulomb limit tau_b = f_c*g*H_eff as |u|->infinity.  Over
-!  floating and ice-free cells the drag is zeroed: the Coulomb
+!  speed regularized by eps_u_min, and f_c=f_coulomb.  The Coulomb
+!  form reduces to Weertman as |u|->0 and saturates at the Coulomb
+!  yield stress tau_b = tau_c = f_c*g*H_eff as |u|->infinity
+!  (the g factor is REQUIRED:  without it the plateau and the
+!  Weertman-Coulomb crossover speed are both a factor g too low;
+!  review finding H-4, cf. MITgcm streamice_visc_beta_hybrid).
+!  Over floating and ice-free cells the drag is zeroed: the Coulomb
 !  formula clamps H_eff at zero (the drag vanishes continuously as
 !  H_eff -> 0+), and without ICESHEET_SMOOTH_GL the Weertman value
 !  is zeroed a posteriori wherever H_eff <= 0.
@@ -563,13 +566,16 @@
 !
 #  ifdef ICESHEET_COULOMB
 !
-!  Effective pressure from full hydraulic connectivity to the ocean.
-!  Negative H_eff (floating and ice-free cells) is clamped at zero,
-!  which zeroes the drag and matches the continuous limit of the
-!  formula as H_eff -> 0+.  With ICESHEET_SMOOTH_GL the drag is
-!  additionally scaled by the grounded fraction gfrac.
+!  Effective pressure from full hydraulic connectivity to the ocean:
+!  tau_c = f_c * g * H_eff is the Coulomb yield stress in Pa (the g
+!  factor was missing -- review finding H-4:  the plateau and the
+!  crossover speed were a factor g too low).  Negative H_eff
+!  (floating and ice-free cells) is clamped at zero, which zeroes
+!  the drag and matches the continuous limit of the formula as
+!  H_eff -> 0+.  With ICESHEET_SMOOTH_GL the drag is additionally
+!  scaled by the grounded fraction gfrac.
 !
-              cff2=f_coulomb(ng)*MAX(H_eff, 0.0_r8)
+              cff2=f_coulomb(ng)*g*MAX(H_eff, 0.0_r8)
               Fi(i,j,ifIbta)=C_sq*cff2*u_slide**(n_basal(ng)-1.0_r8)/   &
      &                       ((C_sq**(1.0_r8/n_basal(ng)))*u_slide+     &
      &                        cff2**(1.0_r8/n_basal(ng)))**n_basal(ng)
