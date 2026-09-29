@@ -369,7 +369,13 @@
             LdefVar=.FALSE.
 #   endif
             IF (LdefVar) THEN
-              isfgrd => t2dgrd
+!  Ci is written to the restart file only; keep the single-record
+!  grid vector the Fi block associated for RST (sr2dgrd =
+!  (xi_rho, eta_rho, ocean_time)).  Pointing at t2dgrd instead
+!  picked up def_rst's double-layer i2dgrd under PERFECT_RESTART,
+!  defining is_zta as (two, eta_rho, xi_rho) with no time dimension
+!  (review finding H-3).
+              isfgrd => sr2dgrd
               Vinfo( 1)=Vname(1,ifield)
               Vinfo( 2)=Vname(2,ifield)
               Vinfo( 3)=Vname(3,ifield)
@@ -2127,6 +2133,18 @@
               LdefVar=VarOut(ifield,ng)
             END IF
             IF (LdefVar) THEN
+!
+!  The driving-stress diagnostics (is_taudx/is_taudy) live at PSI
+!  points and need the PSI grid declaration (review finding M-2:
+!  the 2026-09-14 PSI fix was applied to the nf90 path only).
+!
+              IF ((nf.eq.ifItdx).or.(nf.eq.ifItdy)) THEN
+                isfgrd => p2dgrd
+                S(ng)%pioVar(ifield)%gtype=p2dvar
+              ELSE
+                isfgrd => t2dgrd
+                S(ng)%pioVar(ifield)%gtype=r2dvar
+              END IF
               Vinfo( 1)=Vname(1,ifield)
               Vinfo( 2)=Vname(2,ifield)
               Vinfo( 3)=Vname(3,ifield)
@@ -2146,7 +2164,6 @@
               Vinfo(22)='coordinates'
               Aval(5)=REAL(Iinfo(1,ifield,ng),r8)
               S(ng)%pioVar(ifield)%dkind=vtype
-              S(ng)%pioVar(ifield)%gtype=r2dvar
 !
               status=def_var(ng, model, S(ng)%pioFile,                  &
      &                       S(ng)%pioVar(ifield)%vd,                   &
@@ -2839,24 +2856,44 @@
             END IF
 !
             scale=1.0_dp
-            IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
-              ioDesc => ioDesc_dp_r2dvar(ng)
+!
+!  The driving-stress diagnostics (is_taudx/is_taudy) are assembled
+!  at PSI points and must be written as PSI fields; every other Fi
+!  diagnostic lives at RHO points (review finding M-2: this dispatch
+!  existed in the nf90 path only).
+!
+            IF ((ifld.eq.ifItdx).or.(ifld.eq.ifItdy)) THEN
+              IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
+                ioDesc => ioDesc_dp_p2dvar(ng)
+              ELSE
+                ioDesc => ioDesc_sp_p2dvar(ng)
+              END IF
+#   ifdef MASKING
+              isfMask => GRID(ng) % pmask
+#   endif
             ELSE
-              ioDesc => ioDesc_sp_r2dvar(ng)
+              IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
+                ioDesc => ioDesc_dp_r2dvar(ng)
+              ELSE
+                ioDesc => ioDesc_sp_r2dvar(ng)
+              END IF
+#   ifdef MASKING
+#    ifdef ICESHEET
+!
+!  Mask by the ice-extent mask (see the nf90 Fi loop).
+!
+              isfMask => GRID(ng) % rmask_ist
+#    else
+              isfMask => GRID(ng) % rmask_full
+#    endif
+#   endif
             END IF
             status=nf_fwrite2d(ng, model, S(ng)%pioFile, ifield,        &
      &                         S(ng)%pioVar(ifield), S(ng)%Rindex,      &
      &                         ioDesc,                                  &
      &                         LBi, UBi, LBj, UBj, scale,               &
 #   ifdef MASKING
-#    ifdef ICESHEET
-!
-!  Mask by the ice-extent mask (see the nf90 Fi loop).
-!
-     &                         GRID(ng) % rmask_ist,                    &
-#    else
-     &                         GRID(ng) % rmask_full,                   &
-#    endif
+     &                         isfMask,                                 &
 #   endif
      &                         isfField2d)
             IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
