@@ -130,10 +130,24 @@
 !
 #  if !defined ICESHELF_NO_SBL
 !
-!  Compute sub-boundary layer weights on the first time step only.
-!  Oi depends only on static geometry (h, zice, Hz), so the result
-!  is the same whether computed from cold start or restart.
+!  Compute sub-boundary layer weights.  Under ICESHEET the cavity
+!  geometry (zice) evolves every timestep (isf_masks), so the weights
+!  must be recomputed every step: a cavity cell that opens after a
+!  one-time computation keeps Oi == 0, which collapses isf_vbc's
+!  boundary-layer average and degenerates the melt-rate division
+!  (review finding H-1).  For static ice shelf configurations the
+!  weights depend only on fixed geometry (h, zice, Hz) and are
+!  computed on the first step only.
 !
+#   ifdef ICESHEET
+        DO ig=1,GridsInLayer(nl)
+          ng=GridNumber(ig,nl)
+          DO tile=first_tile(ng),last_tile(ng),+1
+            CALL isf_sbl (ng, tile)
+          END DO
+!$OMP BARRIER
+        END DO
+#   else
         DO ig=1,GridsInLayer(nl)
           ng=GridNumber(ig,nl)
           IF (iic(ng).eq.ntstart(ng)) THEN
@@ -143,6 +157,7 @@
 !$OMP BARRIER
           END IF
         END DO
+#   endif
 #  endif
 !
         DO ig=1,GridsInLayer(nl)

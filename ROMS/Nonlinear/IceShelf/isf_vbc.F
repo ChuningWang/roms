@@ -279,45 +279,59 @@
             Fi(i,j,ifIgas) = 5.05e-7_r8
 # endif
 !
-!  Use 3-EQ formula
+!  Use 3-EQ formula.  Guard against a degenerate boundary layer
+!  (review finding H-1):  a cavity cell whose Oi weights are all
+!  zero (opened after the weights were computed) or a zero-salinity
+!  column drives Sm to zero; the quadratic then collapses to
+!  Sb == 0 and the melt-rate division below degenerates to 0/0.
+!  Skip the interfacial solve there (no melt, no fluxes).
 !
-            cff1 = a*(Fi(i,j,ifIgat)*Cp-Fi(i,j,ifIgas)*cp_i)
-            cff2 = Fi(i,j,ifIgas)*cp_i*(a*Sm-b+c*zice(i,j)+Tis -        &
+            IF (Sm.gt.eps) THEN
+              cff1 = a*(Fi(i,j,ifIgat)*Cp-Fi(i,j,ifIgas)*cp_i)
+              cff2 = Fi(i,j,ifIgas)*cp_i*(a*Sm-b+c*zice(i,j)+Tis -        &
      &                                  (L/cp_i)) -                     &
      &             Fi(i,j,ifIgat)*Cp*(Tm-b+c*zice(i,j)+a*Sis)
-            cff3 = Fi(i,j,ifIgas)*Sm*(cp_i*(b-c*zice(i,j)-Tis) + L) +   &
-     &             Fi(i,j,ifIgat)*Sis*Cp*(Tm-b+c*zice(i,j))
+              cff3 = Fi(i,j,ifIgas)*Sm*(cp_i*(b-c*zice(i,j)-Tis) + L) +   &
+     &               Fi(i,j,ifIgat)*Sis*Cp*(Tm-b+c*zice(i,j))
 !
-            Fi(i,j,ifIsbo) = -(cff2 + SQRT(cff2**2-4.0*cff1*cff3)) /    &
-     &                       (2.0_r8*cff1)
-            Fi(i,j,ifItbo) = a*Fi(i,j,ifIsbo) + b - c*zice(i,j)
-            Fi(i,j,ifImel) = Fi(i,j,ifIgas)*(Sm-Fi(i,j,ifIsbo)) /       &
-     &                       Fi(i,j,ifIsbo)
+              Fi(i,j,ifIsbo) = -(cff2 + SQRT(cff2**2-4.0*cff1*cff3)) /    &
+     &                         (2.0_r8*cff1)
+              Fi(i,j,ifItbo) = a*Fi(i,j,ifIsbo) + b - c*zice(i,j)
+              Fi(i,j,ifImel) = Fi(i,j,ifIgas)*(Sm-Fi(i,j,ifIsbo)) /       &
+     &                         MAX(Fi(i,j,ifIsbo), eps)
 !
-            IF (Fi(i,j,ifImel).lt.0.0_r8) THEN
+              IF (Fi(i,j,ifImel).lt.0.0_r8) THEN
 !
 !  Freezing, use boundary layer temperature to recalculate melt rates
 !
-              cff1 = a*Fi(i,j,ifIgat)*Cp
-              cff2 = -Fi(i,j,ifIgas)*L -                                &
-     &                Fi(i,j,ifIgat)*Cp*(Tm-b+c*zice(i,j)+a*Sis)
-              cff3 = Fi(i,j,ifIgas)*Sm*L +                              &
-     &               Fi(i,j,ifIgat)*Cp*Sis*(Tm-b+c*zice(i,j))
+                cff1 = a*Fi(i,j,ifIgat)*Cp
+                cff2 = -Fi(i,j,ifIgas)*L -                                &
+     &                  Fi(i,j,ifIgat)*Cp*(Tm-b+c*zice(i,j)+a*Sis)
+                cff3 = Fi(i,j,ifIgas)*Sm*L +                              &
+     &                 Fi(i,j,ifIgat)*Cp*Sis*(Tm-b+c*zice(i,j))
 !
-              Fi(i,j,ifIsbo) = -(cff2+SQRT(cff2*cff2-4.0*cff1*cff3)) /  &
-     &                         (2.0_r8*cff1)
-              Fi(i,j,ifItbo) = a*Fi(i,j,ifIsbo) + b - c*zice(i,j)
-              Fi(i,j,ifImel) = Fi(i,j,ifIgas)*(Sm-Fi(i,j,ifIsbo)) /     &
-     &                         Fi(i,j,ifIsbo)
-            END IF
+                Fi(i,j,ifIsbo) = -(cff2+SQRT(cff2*cff2-4.0*cff1*cff3)) /  &
+     &                           (2.0_r8*cff1)
+                Fi(i,j,ifItbo) = a*Fi(i,j,ifIsbo) + b - c*zice(i,j)
+                Fi(i,j,ifImel) = Fi(i,j,ifIgas)*(Sm-Fi(i,j,ifIsbo)) /     &
+     &                           MAX(Fi(i,j,ifIsbo), eps)
+              END IF
 !
 !  Calculate fluxes
 !
-            Fi(i,j,ifItst)   = Tm-Fi(i,j,ifItbo)
-            stflx(i,j,itemp) = (Fi(i,j,ifIgat)+Fi(i,j,ifImel)) *        &
-     &                         (Fi(i,j,ifItbo)-Tm)
-            stflx(i,j,isalt) = (Fi(i,j,ifIgas)+Fi(i,j,ifImel)) *        &
-     &                         (Fi(i,j,ifIsbo)-Sm)
+              Fi(i,j,ifItst)   = Tm-Fi(i,j,ifItbo)
+              stflx(i,j,itemp) = (Fi(i,j,ifIgat)+Fi(i,j,ifImel)) *        &
+     &                           (Fi(i,j,ifItbo)-Tm)
+              stflx(i,j,isalt) = (Fi(i,j,ifIgas)+Fi(i,j,ifImel)) *        &
+     &                           (Fi(i,j,ifIsbo)-Sm)
+            ELSE
+              Fi(i,j,ifIsbo)   = Sm
+              Fi(i,j,ifItbo)   = Tm
+              Fi(i,j,ifImel)   = 0.0_r8
+              Fi(i,j,ifItst)   = 0.0_r8
+              stflx(i,j,itemp) = 0.0_r8
+              stflx(i,j,isalt) = 0.0_r8
+            END IF
           ELSE
             Fi(i,j,ifImel) = 0.0_r8
           END IF
