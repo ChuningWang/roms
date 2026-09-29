@@ -54,7 +54,7 @@
 !
       USE mod_param
       USE mod_grid
-      USE mod_stepping, ONLY : lsnew
+      USE mod_stepping, ONLY : lsold, lsnew
       USE mod_isf,      ONLY : ISF, isIhis, isIeis, ifItis
 !
 !  Imported variable declarations.
@@ -75,6 +75,8 @@
      &                            LBi, UBi, LBj, UBj,                   &
      &                            IminS, ImaxS, JminS, JmaxS,           &
      &                            GRID(ng) % calving_mask,              &
+     &                            ISF(ng) % Si(:,:,lsold(ng),isIhis),   &
+     &                            ISF(ng) % Si(:,:,lsold(ng),isIeis),   &
      &                            ISF(ng) % Si(:,:,lsnew(ng),isIhis),   &
      &                            ISF(ng) % Si(:,:,lsnew(ng),isIeis),   &
      &                            ISF(ng) % Fi(:,:,ifItis))
@@ -90,15 +92,24 @@
      &                                  LBi, UBi, LBj, UBj,             &
      &                                  IminS, ImaxS, JminS, JmaxS,     &
      &                                  calving_mask,                   &
-     &                                  h_ice, e_ice, t_ice)
+     &                                  h_ice, e_ice, h_new, e_new,     &
+     &                                  t_ice)
 !***********************************************************************
 !
-!  Applies the pre-defined calving mask to the current time level
-!  (lsnew) of the ice state.  Called from iceshelf.F after thickness
-!  advection, every SSA coupling cycle:
+!  Applies the pre-defined calving mask to BOTH time levels of the
+!  ice thickness/enthalpy state.  Called from iceshelf.F after
+!  thickness advection every timestep:
 !
-!    calving_mask = 0  ->  h_ice = 0, e_ice = 0, t_ice = 0
+!    calving_mask = 0  ->  h_ice = 0, e_ice = 0, t_ice = 0 (both levels)
 !    calving_mask != 0 ->  no action
+!
+!  Both levels must be cleaned (review finding H-2):  since the L9
+!  write-back in isf_advection the old level is the transport
+!  carrier between SSA solves, so ice left in the forbidden region
+!  of the old level would keep feeding the upwind fluxes for the
+!  rest of the window even though the visible (new) level is clean.
+!  With N_ssa = 1 the extra zeroing is a no-op (the layer swap
+!  promotes the already-cleaned new level).
 !
 !  Zeroing enthalpy and temperature together with thickness keeps the
 !  E = H*T state consistent (a stale E would pollute T = E/H when ice
@@ -122,11 +133,15 @@
       real(r8), intent(in) :: calving_mask(LBi:,LBj:)
       real(r8), intent(inout) :: h_ice(LBi:,LBj:)
       real(r8), intent(inout) :: e_ice(LBi:,LBj:)
+      real(r8), intent(inout) :: h_new(LBi:,LBj:)
+      real(r8), intent(inout) :: e_new(LBi:,LBj:)
       real(r8), intent(inout) :: t_ice(LBi:,LBj:)
 # else
       real(r8), intent(in) :: calving_mask(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: h_ice(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: e_ice(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: h_new(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: e_new(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: t_ice(LBi:UBi,LBj:UBj)
 # endif
 !
@@ -143,13 +158,18 @@
 !  The loop covers IstrT:IendT, JstrT:JendT (interior + ghost points)
 !  so boundary ghost cells are masked as well; halo exchange below
 !  restores inter-tile consistency.  The 0.5 tolerance accepts integer
-!  or scaled 0/1 input read from the grid file.
+!  or scaled 0/1 input read from the grid file.  Both time levels are
+!  zeroed (see subroutine header); the old level's halo is refreshed
+!  by the exchange below, and its next-step interior state by the
+!  advection write-back.
 !
       DO j=JstrT,JendT
         DO i=IstrT,IendT
           IF (calving_mask(i,j).lt.0.5_r8) THEN
             h_ice(i,j)=0.0_r8
             e_ice(i,j)=0.0_r8
+            h_new(i,j)=0.0_r8
+            e_new(i,j)=0.0_r8
             t_ice(i,j)=0.0_r8
           END IF
         END DO
@@ -166,14 +186,25 @@
      &                          e_ice)
         CALL exchange_r2d_tile (ng, tile,                               &
      &                          LBi, UBi, LBj, UBj,                     &
+     &                          h_new)
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          e_new)
+        CALL exchange_r2d_tile (ng, tile,                               &
+     &                          LBi, UBi, LBj, UBj,                     &
      &                          t_ice)
       END IF
 # ifdef DISTRIBUTE
-      CALL mp_exchange2d (ng, tile, model, 3,                           &
+      CALL mp_exchange2d (ng, tile, model, 4,                           &
      &                    LBi, UBi, LBj, UBj,                           &
      &                    NghostPoints,                                 &
      &                    EWperiodic(ng), NSperiodic(ng),               &
-     &                    h_ice, e_ice, t_ice)
+     &                    h_ice, e_ice, h_new, e_new)
+      CALL mp_exchange2d (ng, tile, model, 1,                           &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    NghostPoints,                                 &
+     &                    EWperiodic(ng), NSperiodic(ng),               &
+     &                    t_ice)
 # endif
 !
       RETURN

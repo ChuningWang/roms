@@ -211,12 +211,6 @@
      &                              calving_mask,                      &
      &                              Si(:,:,lsold,isIhis),              &
      &                              Si(:,:,lsold,isIeis),              &
-     &                              Fi(:,:,ifItis))
-!
-        CALL isf_calving_mask_tile (ng, tile, model,                   &
-     &                              LBi, UBi, LBj, UBj,                &
-     &                              IminS, ImaxS, JminS, JmaxS,        &
-     &                              calving_mask,                      &
      &                              Si(:,:,lsnew,isIhis),              &
      &                              Si(:,:,lsnew,isIeis),              &
      &                              Fi(:,:,ifItis))
