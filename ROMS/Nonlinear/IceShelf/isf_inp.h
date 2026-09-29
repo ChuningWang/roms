@@ -1314,6 +1314,55 @@
 # endif
 #endif
 !
+!-----------------------------------------------------------------------
+!  Validate the SSA solver parameters (review finding M-1).  Their
+!  allocation defaults are zero, and several zero values are silent
+!  failure modes:  max_thickness = 0 zeroes every ice thickness in
+!  Stage 1 of the solve, n_glen = 0 divides by zero in the Glen
+!  exponents, nl_max_iter = 0 leaves the printed Picard residual
+!  uninitialized, eps_glen_min = 0 with n_glen > 1 gives an infinite
+!  viscosity at zero-strain nodes.  Abort with the offending keyword.
+!-----------------------------------------------------------------------
+!
+# ifdef ICESHEET
+      IF (ANY(n_glen(1:Ngrids).lt.1)) THEN
+        IF (Master) WRITE (out,96) 'n_glen'
+        exit_flag=5
+        RETURN
+      END IF
+      IF (ANY(nl_max_iter(1:Ngrids).lt.1).or.                          &
+     &    ANY(cg_max_iter(1:Ngrids).lt.1)) THEN
+        IF (Master) WRITE (out,96) 'nl_max_iter/cg_max_iter'
+        exit_flag=5
+        RETURN
+      END IF
+      IF (ANY(nl_tol(1:Ngrids).le.0.0_r8).or.                          &
+     &    ANY(cg_tol(1:Ngrids).le.0.0_r8)) THEN
+        IF (Master) WRITE (out,96) 'nl_tol/cg_tol'
+        exit_flag=5
+        RETURN
+      END IF
+      IF (ANY(picard_alpha(1:Ngrids).le.0.0_r8).or.                    &
+     &    ANY(picard_alpha(1:Ngrids).gt.1.0_r8)) THEN
+        IF (Master) WRITE (out,96) 'picard_alpha'
+        exit_flag=5
+        RETURN
+      END IF
+      IF (ANY(min_thickness(1:Ngrids).le.0.0_r8).or.                   &
+     &    ANY(max_thickness(1:Ngrids).le.0.0_r8).or.                   &
+     &    ANY(min_thickness(1:Ngrids).gt.max_thickness(1:Ngrids))) THEN
+        IF (Master) WRITE (out,96) 'min_thickness/max_thickness'
+        exit_flag=5
+        RETURN
+      END IF
+      IF (ANY(n_glen(1:Ngrids).gt.1).and.                              &
+     &    ANY(eps_glen_min(1:Ngrids).le.0.0_r8)) THEN
+        IF (Master) WRITE (out,96) 'eps_glen_min'
+        exit_flag=5
+        RETURN
+      END IF
+# endif
+!
   30  FORMAT (/,' READ_IsfPar - Error while processing line: ',/,a)
   40  FORMAT (/,/,' Iceshelf Parameters, Grid: ',i2.2,                  &
      &        /,  ' ========================',/)
@@ -1325,6 +1374,8 @@
      &        ' for string parameter: ',a)
   95  FORMAT (/,' READ_IsfPar - N_ssa < 1, clamped to 1',               &
      &        ' (SSA solved every ocean timestep)')
+  96  FORMAT (/,' READ_IsfPar - invalid (non-positive) value for: ',a,  &
+     &        /,14x,'set a physical value in isf.in')
  180  FORMAT (10x,l1,2x,a,t32,a,i2.2,':',1x,a)
  185  FORMAT (10x,l1,2x,a,'(',i2.2,')',t32,a,i2.2,':',1x,a)
 !

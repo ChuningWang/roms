@@ -699,7 +699,10 @@
         IF (.not.allocated(N_ssa)) THEN
           allocate ( N_ssa(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
-          N_ssa(1:Ngrids)=0
+!  Default 1 (solve every step): an isf.in that omits the N_ssa
+!  keyword must not leave 0 here or isf_coupling's MOD(iic,N_ssa)
+!  would divide by zero on the first step (review finding M-1).
+          N_ssa(1:Ngrids)=1
         END IF
         IF (.not.allocated(lssa_solve)) THEN
           allocate ( lssa_solve(Ngrids) )
