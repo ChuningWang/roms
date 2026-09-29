@@ -332,6 +332,7 @@
 !  Calving parameters
 !
       real(r8), allocatable :: H_calve(:)       ! Thick. thre. calv. [m]
+      real(r8), allocatable :: min_his(:)       ! Min. bnd. thick. [m]
 !
 !  Multi-timescale parameters
 !
@@ -696,6 +697,16 @@
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
           H_calve(1:Ngrids)=IniVal
         END IF
+!
+!  Minimum ice thickness for the enthalpy boundary values (isf_tibc):
+!  boundary cells thinner than this carry zero enthalpy/temperature
+!  (documented 10 m semantics; review finding M-10).
+!
+        IF (.not.allocated(min_his)) THEN
+          allocate ( min_his(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          min_his(1:Ngrids)=10.0_r8
+        END IF
         IF (.not.allocated(N_ssa)) THEN
           allocate ( N_ssa(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
@@ -960,9 +971,9 @@
 !
         IF (LBC(ieast,ibISF(i),ng)%acquire) THEN
           IF (.not.destroy(ng, ISF_LOBC(i,ng)%isf_east, MyFile,         &
-     &                     __LINE__, 'ISF_LOBC(i,ng)%isf_west')) RETURN
+     &                     __LINE__, 'ISF_LOBC(i,ng)%isf_east')) RETURN
           IF (.not.destroy(ng, ISF_LOBC(i,ng)%isfG_east, MyFile,        &
-     &                     __LINE__, 'ISF_LOBC(i,ng)%isfG_west')) RETURN
+     &                     __LINE__, 'ISF_LOBC(i,ng)%isfG_east')) RETURN
         END IF
 !
         IF (LBC(isouth,ibISF(i),ng)%acquire) THEN
@@ -975,7 +986,7 @@
         IF (LBC(inorth,ibISF(i),ng)%acquire) THEN
           IF (.not.destroy(ng, ISF_LOBC(i,ng)%isf_north, MyFile,        &
      &                     __LINE__, 'ISF_LOBC(i,ng)%isf_north')) RETURN
-          IF (.not.destroy(ng, ISF_LOBC(i,ng)%isfG_south, MyFile,       &
+          IF (.not.destroy(ng, ISF_LOBC(i,ng)%isfG_north, MyFile,       &
      &                     __LINE__,'ISF_LOBC(i,ng)%isfG_north')) RETURN
         END IF
       END DO
@@ -1052,6 +1063,15 @@
 #endif
 !
       IF (allocated(isf_Hsbl))        deallocate ( isf_Hsbl )
+      IF (allocated(isf_drdz))        deallocate ( isf_drdz )
+      IF (allocated(gamU))            deallocate ( gamU )
+      IF (allocated(min_ustar))       deallocate ( min_ustar )
+      IF (allocated(NTISF))           deallocate ( NTISF )
+      IF (allocated(Lisftrc))         deallocate ( Lisftrc )
+      IF (allocated(LtracerIsf))      deallocate ( LtracerIsf )
+      IF (allocated(Lisfsrc))         deallocate ( Lisfsrc )
+      IF (allocated(LsourceIsf))      deallocate ( LsourceIsf )
+      IF (allocated(trcIsf))          deallocate ( trcIsf )
 #ifdef ICESHELF
       IF (allocated(rdrg_isf))        deallocate ( rdrg_isf )
       IF (allocated(rdrg2_isf))       deallocate ( rdrg2_isf )
@@ -1079,6 +1099,7 @@
       IF (allocated(n_taper))         deallocate ( n_taper )
       IF (allocated(picard_alpha))    deallocate ( picard_alpha )
       IF (allocated(H_calve))         deallocate ( H_calve )
+      IF (allocated(min_his))         deallocate ( min_his )
       IF (allocated(N_ssa))           deallocate ( N_ssa )
       IF (allocated(lssa_solve))      deallocate ( lssa_solve )
       IF (allocated(N_gl))            deallocate ( N_gl )

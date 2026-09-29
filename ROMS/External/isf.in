@@ -177,11 +177,17 @@
 
      picard_alpha == 0.7d0
 
-! Calving thickness threshold [m].
-! Ice at the calving front thinner than H_calve is removed.
+! Calving thickness threshold [m] (RETAINED, UNUSED: superseded by the
+! pre-defined calving mask; kept for the archived threshold scheme).
 ! MISOMIP1 protocol: H_calve = 100 m (Asay-Davis et al., 2016).
 
           H_calve == 100.0d0
+
+! Minimum boundary ice thickness for enthalpy BCs [m]: boundary cells
+! thinner than this carry zero enthalpy/temperature (isf_tibc).
+! Default = 10.0.
+
+          min_his == 10.0d0
 
 ! Multi-timescale coupling parameters.
 ! N_ssa: SSA momentum is solved every N_ssa ocean timesteps; between

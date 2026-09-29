@@ -13,6 +13,7 @@
 !
       USE mod_param
       USE mod_parallel
+      USE mod_boundary
       USE mod_isf
       USE mod_ncparam
       USE mod_scalars
@@ -33,7 +34,7 @@
 #ifdef AVERAGES
       integer :: nf, ns
 #endif
-      integer :: i, ic, itrc
+      integer :: i, ic, itrc, ibnd
       logical, allocatable :: Lswitch(:)
 #ifdef T_PASSIVE
       real(r8), allocatable :: Rtracer(:,:)
@@ -225,6 +226,9 @@
 !
             CASE ('H_calve')
               Npts=load_r(Nval, Rval, Ngrids, H_calve)
+!
+            CASE ('min_his')
+              Npts=load_r(Nval, Rval, Ngrids, min_his)
 !
 !  Multi-timescale parameters
 !
@@ -1315,6 +1319,31 @@
 #endif
 !
 !-----------------------------------------------------------------------
+!  Validate the ice-state lateral boundary keywords (review finding
+!  M-11):  only Clamped/Gradient/Closed are implemented;  the generic
+!  parser accepts radiation/nudging/mixed/Chapman/Flather keywords
+!  and the BC routines would silently take no branch, leaving the
+!  ghost ring unrefreshed.  Abort with the offending component.
+!-----------------------------------------------------------------------
+!
+      DO ng=1,Ngrids
+        DO i=1,nIsfS
+          DO ibnd=1,4
+            IF (LBC(ibnd,ibISF(i),ng)%radiation      .or.               &
+     &          LBC(ibnd,ibISF(i),ng)%nudging        .or.               &
+     &          LBC(ibnd,ibISF(i),ng)%mixed          .or.               &
+     &          LBC(ibnd,ibISF(i),ng)%Chapman_explicit .or.             &
+     &          LBC(ibnd,ibISF(i),ng)%Chapman_implicit .or.             &
+     &          LBC(ibnd,ibISF(i),ng)%Flather) THEN
+              IF (Master) WRITE (out,97) i
+              exit_flag=5
+              RETURN
+            END IF
+          END DO
+        END DO
+      END DO
+!
+!-----------------------------------------------------------------------
 !  Validate the SSA solver parameters (review finding M-1).  Their
 !  allocation defaults are zero, and several zero values are silent
 !  failure modes:  max_thickness = 0 zeroes every ice thickness in
@@ -1376,6 +1405,9 @@
      &        ' (SSA solved every ocean timestep)')
   96  FORMAT (/,' READ_IsfPar - invalid (non-positive) value for: ',a,  &
      &        /,14x,'set a physical value in isf.in')
+  97  FORMAT (/,' READ_IsfPar - unsupported LBC keyword for ice state',   &
+     &        ' component ',i1,' (1=H, 2=u, 3=v, 4=T)',                      &
+     &        /,14x,'use Clamped, Gradient or Closed only')
  180  FORMAT (10x,l1,2x,a,t32,a,i2.2,':',1x,a)
  185  FORMAT (10x,l1,2x,a,'(',i2.2,')',t32,a,i2.2,':',1x,a)
 !

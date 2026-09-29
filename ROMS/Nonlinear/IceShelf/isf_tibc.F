@@ -113,7 +113,7 @@
             DO j=Jstr,Jend
               ei(Istr-1,j)=ISF_LOBC(isIhis,ng)%isf_west(j)*             &
      &                     ISF_LOBC(isIeis,ng)%isf_west(j)
-              IF (hi(Istr-1,j).le.eps) THEN
+              IF (hi(Istr-1,j).le.min_his(ng)) THEN
                 ei(Istr-1,j)=0.0_r8
                 ti(Istr-1,j)=0.0_r8
               ELSE
@@ -128,7 +128,7 @@
      &             LBC(iwest,ibISF(isIeis),ng)%closed) THEN
             DO j=Jstr,Jend
               ei(Istr-1,j)=hi(Istr,j)*ti(Istr,j)
-              IF (hi(Istr-1,j).le.eps) THEN
+              IF (hi(Istr-1,j).le.min_his(ng)) THEN
                 ei(Istr-1,j)=0.0_r8
                 ti(Istr-1,j)=0.0_r8
               ELSE
@@ -151,7 +151,7 @@
             DO j=Jstr,Jend
               ei(Iend+1,j)=ISF_LOBC(isIhis,ng)%isf_east(j)*             &
      &                     ISF_LOBC(isIeis,ng)%isf_east(j)
-              IF (hi(Iend+1,j).le.eps) THEN
+              IF (hi(Iend+1,j).le.min_his(ng)) THEN
                 ei(Iend+1,j)=0.0_r8
                 ti(Iend+1,j)=0.0_r8
               ELSE
@@ -166,7 +166,7 @@
      &             LBC(ieast,ibISF(isIeis),ng)%closed) THEN
             DO j=Jstr,Jend
               ei(Iend+1,j)=hi(Iend,j)*ti(Iend,j)
-              IF (hi(Iend+1,j).le.eps) THEN
+              IF (hi(Iend+1,j).le.min_his(ng)) THEN
                 ei(Iend+1,j)=0.0_r8
                 ti(Iend+1,j)=0.0_r8
               ELSE
@@ -192,7 +192,7 @@
             DO i=Istr,Iend
               ei(i,Jstr-1)=ISF_LOBC(isIhis,ng)%isf_south(i)*            &
      &                     ISF_LOBC(isIeis,ng)%isf_south(i)
-              IF (hi(i,Jstr-1).le.eps) THEN
+              IF (hi(i,Jstr-1).le.min_his(ng)) THEN
                 ei(i,Jstr-1)=0.0_r8
                 ti(i,Jstr-1)=0.0_r8
               ELSE
@@ -207,7 +207,7 @@
      &             LBC(isouth,ibISF(isIeis),ng)%closed) THEN
             DO i=Istr,Iend
               ei(i,Jstr-1)=hi(i,Jstr)*ti(i,Jstr)
-              IF (hi(i,Jstr-1).le.eps) THEN
+              IF (hi(i,Jstr-1).le.min_his(ng)) THEN
                 ei(i,Jstr-1)=0.0_r8
                 ti(i,Jstr-1)=0.0_r8
               ELSE
@@ -230,7 +230,7 @@
             DO i=Istr,Iend
               ei(i,Jend+1)=ISF_LOBC(isIhis,ng)%isf_north(i)*            &
      &                     ISF_LOBC(isIeis,ng)%isf_north(i)
-              IF (hi(i,Jend+1).le.eps) THEN
+              IF (hi(i,Jend+1).le.min_his(ng)) THEN
                 ei(i,Jend+1)=0.0_r8
                 ti(i,Jend+1)=0.0_r8
               ELSE
@@ -245,7 +245,7 @@
      &             LBC(inorth,ibISF(isIeis),ng)%closed) THEN
             DO i=Istr,Iend
               ei(i,Jend+1)=hi(i,Jend)*ti(i,Jend)
-              IF (hi(i,Jend+1).le.eps) THEN
+              IF (hi(i,Jend+1).le.min_his(ng)) THEN
                 ei(i,Jend+1)=0.0_r8
                 ti(i,Jend+1)=0.0_r8
               ELSE
@@ -268,45 +268,45 @@
         IF (DOMAIN(ng)%SouthWest_Corner(tile)) THEN
           ei(Istr-1,Jstr-1)=0.5_r8*(hi(Istr,Jstr-1)*ti(Istr,Jstr-1) +   &
      &                              hi(Istr-1,Jstr)*ti(Istr-1,Jstr))
-          IF (hi(Istr-1,Jstr-1).le.eps) THEN
+          IF (hi(Istr-1,Jstr-1).le.min_his(ng)) THEN
             ei(Istr-1,Jstr-1)=0.0_r8
             ti(Istr-1,Jstr-1)=0.0_r8
           ELSE
             ti(Istr-1,Jstr-1)=ei(Istr-1,Jstr-1) /                       &
-     &                        MAX(hi(Istr-1,Jstr-1),eps)
+     &                        MAX(hi(Istr-1,Jstr-1),min_his(ng))
           END IF
         END IF
         IF (DOMAIN(ng)%SouthEast_Corner(tile)) THEN
           ei(Iend+1,Jstr-1)=0.5_r8*(hi(Iend+1,Jstr)*ti(Iend+1,Jstr) +   &
      &                              hi(Iend,Jstr-1)*ti(Iend,Jstr-1))
-          IF (hi(Iend+1,Jstr-1).le.eps) THEN
+          IF (hi(Iend+1,Jstr-1).le.min_his(ng)) THEN
             ei(Iend+1,Jstr-1)=0.0_r8
             ti(Iend+1,Jstr-1)=0.0_r8
           ELSE
             ti(Iend+1,Jstr-1)=ei(Iend+1,Jstr-1) /                       &
-     &                        MAX(hi(Iend+1,Jstr-1),eps)
+     &                        MAX(hi(Iend+1,Jstr-1),min_his(ng))
           END IF
         END IF
         IF (DOMAIN(ng)%NorthWest_Corner(tile)) THEN
           ei(Istr-1,Jend+1)=0.5_r8*(hi(Istr-1,Jend)*ti(Istr-1,Jend) +   &
      &                              hi(Istr,Jend+1)*ti(Istr,Jend+1))
-          IF (hi(Istr-1,Jend+1).le.eps) THEN
+          IF (hi(Istr-1,Jend+1).le.min_his(ng)) THEN
             ei(Istr-1,Jend+1)=0.0_r8
             ti(Istr-1,Jend+1)=0.0_r8
           ELSE
             ti(Istr-1,Jend+1)=ei(Istr-1,Jend+1) /                       &
-     &                        MAX(hi(Istr-1,Jend+1),eps)
+     &                        MAX(hi(Istr-1,Jend+1),min_his(ng))
           END IF
         END IF
         IF (DOMAIN(ng)%NorthEast_Corner(tile)) THEN
           ei(Iend+1,Jend+1)=0.5_r8*(hi(Iend+1,Jend)*ti(Iend+1,Jend) +   &
      &                              hi(Iend,Jend+1)*ti(Iend,Jend+1))
-          IF (hi(Iend+1,Jend+1).le.eps) THEN
+          IF (hi(Iend+1,Jend+1).le.min_his(ng)) THEN
             ei(Iend+1,Jend+1)=0.0_r8
             ti(Iend+1,Jend+1)=0.0_r8
           ELSE
             ti(Iend+1,Jend+1)=ei(Iend+1,Jend+1) /                       &
-     &                        MAX(hi(Iend+1,Jend+1),eps)
+     &                        MAX(hi(Iend+1,Jend+1),min_his(ng))
           END IF
         END IF
       END IF
