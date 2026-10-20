@@ -11,8 +11,7 @@ list( APPEND _files
       ROMS/Nonlinear/IceShelf/iceshelf.F
       ROMS/Nonlinear/IceShelf/isf_stress.F
       ROMS/Nonlinear/IceShelf/isf_masks.F
-      ROMS/Nonlinear/IceShelf/isf_mms_source.F
-      ROMS/Nonlinear/IceShelf/isf_mom.F
+      ROMS/Nonlinear/IceShelf/isf_solver.F
       ROMS/Nonlinear/IceShelf/isf_output.F
       ROMS/Nonlinear/IceShelf/isf_sbl.F
       ROMS/Nonlinear/IceShelf/isf_set_avg.F
