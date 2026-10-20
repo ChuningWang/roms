@@ -375,13 +375,13 @@
 !  Stage 2:  driving stress RHS (FE-consistent nodal forces).
 !=======================================================================
 !
-      CALL ssa_land_margin (ng, tile, model,                           &
-     &                       LBi, UBi, LBj, UBj,                        &
-     &                       Istr, Iend, Jstr, Jend,                    &
-     &                       IstrC, IendC, JstrC, JendC,                &
-     &                       IstrP, IendP, JstrP, JendP,                &
-     &                       h, zeta_avg, rmask_ist,                    &
-     &                       Si(:,:,lsold,isIhis), pmarg)
+      CALL ssa_land_margin (ng, tile, model,                            &
+     &                      LBi, UBi, LBj, UBj,                         &
+     &                      Istr, Iend, Jstr, Jend,                     &
+     &                      IstrC, IendC, JstrC, JendC,                 &
+     &                      IstrP, IendP, JstrP, JendP,                 &
+     &                      h, zeta_avg, rmask_ist,                     &
+     &                      Si(:,:,lsold,isIhis), pmarg)
 !
       CALL ssa_driving_stress (ng, tile, model,                         &
      &                         LBi, UBi, LBj, UBj,                      &
@@ -2331,20 +2331,22 @@
 !  Element assembly.
 !-----------------------------------------------------------------------
 !
-!  Clear the output pair over the owned PSI nodes plus the one-node
-!  halo ring, CLAMPED to the array bounds:  on the eastern/northern
-!  domain-edge tiles IendP+1 / JendP+1 exceed the array upper bounds
-!  UBi / UBj, and the unclamped loop wrote one full row/column past
-!  the end of the Au/Av allocations on EVERY call (heap corruption
-!  behind the L11 crashes:  the smashed malloc metadata surfaced as
-!  the set_zeta null-descriptor SIGSEGV, netCDF/HDF5 malloc aborts,
-!  and freelist surgery inside live allocations such as the OCEAN
-!  zeta descriptor).  The scatters below are filtered to owned PSI
-!  nodes (IstrP..IendP, JstrP..JendP), so clamping removes only the
-!  out-of-bounds writes:  no in-bounds behaviour changes.
+!  Clear the output pair over exactly the reach of the scatters below:
+!  cell corners of the assembly ring, [IstrC..IendC+1] x [JstrC..JendC+1].
+!  This always lies inside the array bounds (IendC=Iend, so the upper
+!  edge is Iend+1 <= UBi with equality on eastern/northern domain-edge
+!  tiles), whereas the original PSI-ring loop DO j=JstrP-1,JendP+1 ran
+!  to IendP+1/JendP+1, which exceed UBi/UBj on domain-edge tiles
+!  (IendP=IendR=Iend+1 there) and wrote one full row/column past the
+!  Au/Av allocations on EVERY call -- the heap corruption behind the
+!  L11 crashes (smashed malloc metadata surfacing as the set_zeta
+!  null-descriptor SIGSEGV, netCDF/HDF5 malloc aborts, and freelist
+!  surgery inside live allocations).  The range below also covers all
+!  owned PSI nodes (IstrC <= IstrP, IendC+1 >= IendP), so every node
+!  the consumers read is either scattered or cleared.
 !
-      DO j=MAX(JstrP-1,LBj),MIN(JendP+1,UBj)
-        DO i=MAX(IstrP-1,LBi),MIN(IendP+1,UBi)
+      DO j=JstrC,JendC+1
+        DO i=IstrC,IendC+1
           Au(i,j)=0.0_r8
           Av(i,j)=0.0_r8
         END DO
@@ -2395,13 +2397,17 @@
 !
               DO k_node=1,4
                 IF (k_node.eq.1) THEN
-                  i1=i;   j1=j
+                  i1=i
+                  j1=j
                 ELSE IF (k_node.eq.2) THEN
-                  i1=i+1; j1=j
+                  i1=i+1
+                  j1=j
                 ELSE IF (k_node.eq.3) THEN
-                  i1=i;   j1=j+1
+                  i1=i
+                  j1=j+1
                 ELSE
-                  i1=i+1; j1=j+1
+                  i1=i+1
+                  j1=j+1
                 END IF
                 IF (pmask_act(i1,j1).eq.1.0_r8.and.                     &
      &              i1.ge.IstrP.and.i1.le.IendP.and.                    &
