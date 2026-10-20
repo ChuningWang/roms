@@ -291,6 +291,16 @@
       real(r8), dimension(LBi:UBi,LBj:UBj) :: Au, Av
       real(r8), dimension(LBi:UBi,LBj:UBj) :: diag_u, diag_v
 !
+!  Static per-cell Q1 metric factors for the assembly kernels (filled
+!  once per solve from the fixed grid metrics pm/pn; see the fill loop
+!  below):  fac_dx = 2*pm = 2/dx (the Q1 reference cell spans [-1,1]),
+!  fac_dy = 2*pn = 2/dy, fac_jac = 1/(pm*pn) (cell area).  Passing
+!  these instead of pm/pn removes ~35 divisions per cell from every
+!  ssa_matvec / ssa_jacobi_diag call -- matvec runs once per CG
+!  iteration, the hottest kernel of the solve.
+!
+      real(r8), dimension(LBi:UBi,LBj:UBj) :: fac_dx, fac_dy, fac_jac
+!
 !  Extended cell-assembly bounds (see module header):  own RHO
 !  cells Istr..Iend plus the western/southern halo ring that feeds
 !  the seam PSI nodes owned by this tile.  The ring is skipped
@@ -336,6 +346,20 @@
       END IF
       IendC=Iend
       JendC=Jend
+!
+!  Precompute the static per-cell metric factors over the assembly
+!  ring (the exact range the assembly kernels evaluate them on; the
+!  pm/pn halo values feeding the seam ring are exchanged grid fields).
+!  Replacing DPhi*2/dx_rho (two roundings and an FDIV per quadrature
+!  point) by DPhi*fac_dx changes results only at roundoff level.
+!
+      DO j=JstrC,JendC
+        DO i=IstrC,IendC
+          fac_dx(i,j)=2.0_r8*pm(i,j)
+          fac_dy(i,j)=2.0_r8*pn(i,j)
+          fac_jac(i,j)=1.0_r8/(pm(i,j)*pn(i,j))
+        END DO
+      END DO
 !
 !=======================================================================
 !  Stage 1:  initial velocity guess.
@@ -534,7 +558,7 @@
      &                        IstrC, IendC, JstrC, JendC,               &
      &                        IstrP, IendP, JstrP, JendP,               &
      &                        DPhi, phi_tab,                            &
-     &                        pm, pn,                                   &
+     &                        fac_dx, fac_dy, fac_jac,                  &
      &                        pmask_act,                                &
      &                        Fi(:,:,ifInuh),                           &
      &                        Fi(:,:,ifIbta),                           &
@@ -545,7 +569,7 @@
      &                   IstrC, IendC, JstrC, JendC,                    &
      &                   IstrP, IendP, JstrP, JendP,                    &
      &                   DPhi, phi_tab,                                 &
-     &                   pm, pn,                                        &
+     &                   fac_dx, fac_dy, fac_jac,                       &
      &                   pmask_act,                                     &
      &                   Fi(:,:,ifInuh),                                &
      &                   Fi(:,:,ifIbta),                                &
@@ -630,7 +654,7 @@
      &                     IstrC, IendC, JstrC, JendC,                  &
      &                     IstrP, IendP, JstrP, JendP,                  &
      &                     DPhi, phi_tab,                               &
-     &                     pm, pn,                                      &
+     &                     fac_dx, fac_dy, fac_jac,                     &
      &                     pmask_act,                                   &
      &                     Fi(:,:,ifInuh),                              &
      &                     Fi(:,:,ifIbta),                              &
@@ -821,7 +845,7 @@
      &                   IstrC, IendC, JstrC, JendC,                    &
      &                   IstrP, IendP, JstrP, JendP,                    &
      &                   DPhi, phi_tab,                                 &
-     &                   pm, pn,                                        &
+     &                   fac_dx, fac_dy, fac_jac,                       &
      &                   pmask_act,                                     &
      &                   Fi(:,:,ifInuh),                                &
      &                   Fi(:,:,ifIbta),                                &
@@ -2088,7 +2112,7 @@
      &                            IstrC, IendC, JstrC, JendC,           &
      &                            IstrP, IendP, JstrP, JendP,           &
      &                            DPhi, phi_tab,                        &
-     &                            pm, pn,                               &
+     &                            fac_dx, fac_dy, fac_jac,              &
      &                            pmask_act,                            &
      &                            nuH, beta,                            &
      &                            diag_u, diag_v)
@@ -2124,16 +2148,18 @@
       real(r8), intent(in)  :: DPhi(4,4,2)
       real(r8), intent(in)  :: phi_tab(4,4)
 # ifdef ASSUMED_SHAPE
-      real(r8), intent(in)  :: pm(LBi:,LBj:)
-      real(r8), intent(in)  :: pn(LBi:,LBj:)
+      real(r8), intent(in)  :: fac_dx(LBi:,LBj:)
+      real(r8), intent(in)  :: fac_dy(LBi:,LBj:)
+      real(r8), intent(in)  :: fac_jac(LBi:,LBj:)
       real(r8), intent(in)  :: pmask_act(LBi:,LBj:)
       real(r8), intent(in)  :: nuH(LBi:,LBj:)
       real(r8), intent(in)  :: beta(LBi:,LBj:)
       real(r8), intent(out) :: diag_u(LBi:,LBj:)
       real(r8), intent(out) :: diag_v(LBi:,LBj:)
 # else
-      real(r8), intent(in)  :: pm(LBi:UBi,LBj:UBj)
-      real(r8), intent(in)  :: pn(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: fac_dx(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: fac_dy(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: fac_jac(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: pmask_act(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: nuH(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: beta(LBi:UBi,LBj:UBj)
@@ -2145,7 +2171,6 @@
 !
       integer :: i, j, i1, j1, nq, k_node
 !
-      real(r8) :: dx_rho, dy_rho, jac
       real(r8) :: dphi_x, dphi_y, phv
 !
 !-----------------------------------------------------------------------
@@ -2162,9 +2187,6 @@
       DO j=JstrC,JendC
         DO i=IstrC,IendC
           IF (nuH(i,j).gt.0.0_r8) THEN
-            dx_rho=1.0_r8/pm(i,j)
-            dy_rho=1.0_r8/pn(i,j)
-            jac=1.0_r8/(pm(i,j)*pn(i,j))
 !
             DO nq=1,4
               DO k_node=1,4
@@ -2190,18 +2212,18 @@
                 IF (pmask_act(i1,j1).eq.1.0_r8.and.                     &
      &              i1.ge.IstrP.and.i1.le.IendP.and.                    &
      &              j1.ge.JstrP.and.j1.le.JendP) THEN
-                  dphi_x=DPhi(k_node,nq,1)*2.0_r8/dx_rho
-                  dphi_y=DPhi(k_node,nq,2)*2.0_r8/dy_rho
+                  dphi_x=DPhi(k_node,nq,1)*fac_dx(i,j)
+                  dphi_y=DPhi(k_node,nq,2)*fac_dy(i,j)
                   phv=phi_tab(k_node,nq)
 !
                   diag_u(i1,j1)=diag_u(i1,j1)+                          &
-     &                          0.25_r8*jac*nuH(i,j)*                   &
+     &                          0.25_r8*fac_jac(i,j)*nuH(i,j)*          &
      &                          (4.0_r8*dphi_x*dphi_x+dphi_y*dphi_y)+   &
-     &                          0.25_r8*jac*beta(i,j)*phv**2
+     &                          0.25_r8*fac_jac(i,j)*beta(i,j)*phv**2
                   diag_v(i1,j1)=diag_v(i1,j1)+                          &
-     &                          0.25_r8*jac*nuH(i,j)*                   &
+     &                          0.25_r8*fac_jac(i,j)*nuH(i,j)*          &
      &                          (4.0_r8*dphi_y*dphi_y+dphi_x*dphi_x)+   &
-     &                          0.25_r8*jac*beta(i,j)*phv**2
+     &                          0.25_r8*fac_jac(i,j)*beta(i,j)*phv**2
                 END IF
               END DO
             END DO
@@ -2232,7 +2254,7 @@
      &                       IstrC, IendC, JstrC, JendC,                &
      &                       IstrP, IendP, JstrP, JendP,                &
      &                       DPhi, phi_tab,                             &
-     &                       pm, pn,                                    &
+     &                       fac_dx, fac_dy, fac_jac,                   &
      &                       pmask_act,                                 &
      &                       nuH, beta,                                 &
      &                       xu, xv,                                    &
@@ -2275,8 +2297,9 @@
       real(r8), intent(in)    :: DPhi(4,4,2)
       real(r8), intent(in)    :: phi_tab(4,4)
 # ifdef ASSUMED_SHAPE
-      real(r8), intent(in)  :: pm(LBi:,LBj:)
-      real(r8), intent(in)  :: pn(LBi:,LBj:)
+      real(r8), intent(in)  :: fac_dx(LBi:,LBj:)
+      real(r8), intent(in)  :: fac_dy(LBi:,LBj:)
+      real(r8), intent(in)  :: fac_jac(LBi:,LBj:)
       real(r8), intent(in)  :: pmask_act(LBi:,LBj:)
       real(r8), intent(in)  :: nuH(LBi:,LBj:)
       real(r8), intent(in)  :: beta(LBi:,LBj:)
@@ -2285,8 +2308,9 @@
       real(r8), intent(out) :: Au(LBi:,LBj:)
       real(r8), intent(out) :: Av(LBi:,LBj:)
 # else
-      real(r8), intent(in)  :: pm(LBi:UBi,LBj:UBj)
-      real(r8), intent(in)  :: pn(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: fac_dx(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: fac_dy(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: fac_jac(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: pmask_act(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: nuH(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: beta(LBi:UBi,LBj:UBj)
@@ -2300,8 +2324,7 @@
 !
       integer :: i, j, i1, j1, nq, k_node
 !
-      real(r8) :: dx_rho, dy_rho, jac
-      real(r8) :: dphi_x, dphi_y, phv
+      real(r8), dimension(4) :: dpx, dpy, phv4
       real(r8) :: uq, vq, exx, eyy, exy
 !
 !-----------------------------------------------------------------------
@@ -2332,7 +2355,7 @@
 !-----------------------------------------------------------------------
 !
 !  Clear the output pair over exactly the reach of the scatters below:
-!  cell corners of the assembly ring, [IstrC..IendC+1] x [JstrC..JendC+1].
+!  cell corners of the assembly ring, [IstrC..IendC+1]x[JstrC..JendC+1].
 !  This always lies inside the array bounds (IendC=Iend, so the upper
 !  edge is Iend+1 <= UBi with equality on eastern/northern domain-edge
 !  tiles), whereas the original PSI-ring loop DO j=JstrP-1,JendP+1 ran
@@ -2355,14 +2378,13 @@
       DO j=JstrC,JendC
         DO i=IstrC,IendC
           IF (nuH(i,j).gt.0.0_r8) THEN
-            dx_rho=1.0_r8/pm(i,j)
-            dy_rho=1.0_r8/pn(i,j)
-            jac=1.0_r8/(pm(i,j)*pn(i,j))
 !
             DO nq=1,4
 !
 !  Interpolate the velocity and form the strain rates at the
-!  quadrature point.
+!  quadrature point.  The shape-function values and derivatives at
+!  this quadrature point (one per corner node) are formed once and
+!  reused by the scatter below.
 !
               uq=0.0_r8
               vq=0.0_r8
@@ -2383,14 +2405,15 @@
                   i1=i+1
                   j1=j+1
                 END IF
-                phv=phi_tab(k_node,nq)
-                dphi_x=DPhi(k_node,nq,1)*2.0_r8/dx_rho
-                dphi_y=DPhi(k_node,nq,2)*2.0_r8/dy_rho
-                uq=uq+xu(i1,j1)*phv
-                vq=vq+xv(i1,j1)*phv
-                exx=exx+xu(i1,j1)*dphi_x
-                eyy=eyy+xv(i1,j1)*dphi_y
-                exy=exy+0.5_r8*(xu(i1,j1)*dphi_y+xv(i1,j1)*dphi_x)
+                phv4(k_node)=phi_tab(k_node,nq)
+                dpx(k_node)=DPhi(k_node,nq,1)*fac_dx(i,j)
+                dpy(k_node)=DPhi(k_node,nq,2)*fac_dy(i,j)
+                uq=uq+xu(i1,j1)*phv4(k_node)
+                vq=vq+xv(i1,j1)*phv4(k_node)
+                exx=exx+xu(i1,j1)*dpx(k_node)
+                eyy=eyy+xv(i1,j1)*dpy(k_node)
+                exy=exy+0.5_r8*(xu(i1,j1)*dpy(k_node)+                  &
+     &                           xv(i1,j1)*dpx(k_node))
               END DO
 !
 !  Scatter to the 4 corner nodes (ownership filter).
@@ -2412,21 +2435,18 @@
                 IF (pmask_act(i1,j1).eq.1.0_r8.and.                     &
      &              i1.ge.IstrP.and.i1.le.IendP.and.                    &
      &              j1.ge.JstrP.and.j1.le.JendP) THEN
-                  dphi_x=DPhi(k_node,nq,1)*2.0_r8/dx_rho
-                  dphi_y=DPhi(k_node,nq,2)*2.0_r8/dy_rho
-                  phv=phi_tab(k_node,nq)
 !
                   Au(i1,j1)=Au(i1,j1)+                                  &
-     &              0.25_r8*jac*nuH(i,j)*                               &
-     &              (dphi_x*(4.0_r8*exx+2.0_r8*eyy)+                    &
-     &               dphi_y*(2.0_r8*exy))+                              &
-     &              0.25_r8*jac*beta(i,j)*phv*uq
+     &              0.25_r8*fac_jac(i,j)*nuH(i,j)*                      &
+     &              (dpx(k_node)*(4.0_r8*exx+2.0_r8*eyy)+               &
+     &               dpy(k_node)*(2.0_r8*exy))+                         &
+     &              0.25_r8*fac_jac(i,j)*beta(i,j)*phv4(k_node)*uq
 !
                   Av(i1,j1)=Av(i1,j1)+                                  &
-     &              0.25_r8*jac*nuH(i,j)*                               &
-     &              (dphi_y*(4.0_r8*eyy+2.0_r8*exx)+                    &
-     &               dphi_x*(2.0_r8*exy))+                              &
-     &              0.25_r8*jac*beta(i,j)*phv*vq
+     &              0.25_r8*fac_jac(i,j)*nuH(i,j)*                      &
+     &              (dpy(k_node)*(4.0_r8*eyy+2.0_r8*exx)+               &
+     &               dpx(k_node)*(2.0_r8*exy))+                         &
+     &              0.25_r8*fac_jac(i,j)*beta(i,j)*phv4(k_node)*vq
                 END IF
               END DO
             END DO
