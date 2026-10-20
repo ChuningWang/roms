@@ -172,8 +172,10 @@
 # ifdef ICESHEET
 !  Dynamic grounding line: compute masks from flotation criterion.
 !
-!    grounded:  rho_i * H > rho_w * h  (ice fills ocean column)
-!    floating:  rho_i * H <= rho_w * h  (ice shelf cavity exists)
+!    grounded:  rho_i * H > rho0 * (zeta + h - Dcrit)   (ice fills the
+!               ocean column above the Dcrit residual film; same
+!               construction as the WET_DRY criterion)
+!    floating:  rho_i * H <= rho0 * (zeta + h - Dcrit)
 !    ice-free:  H <= 0
 !
       DO j=JstrR,JendR
