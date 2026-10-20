@@ -156,8 +156,20 @@
       integer, parameter :: nIsfO = 1    ! number of ocean variables
 !
       integer, parameter :: ioHsbl = 1   ! SBL vertical weight
-#else
+#elif defined ICESHEET_PRESCRIBED_MELT
 !
+!  Prescribed-melt builds (MISMIP+ ice-only experiments): a single
+!  thermo slot carrying the analytical melt rate filled by
+!  isf_melt_prescribed.F; the SSA diagnostic fields shift to 2:nIsfF.
+!
+      integer, parameter :: nIsfF_thermo = 1  ! prescribed melt slot
+      integer, parameter :: ifImel =  1  ! Prescribed/3EQN melt rate
+!
+!  Placeholders so that ICESHEET applications without ICESHELF_THERMO
+!  (no SBL weights) still compile: iOisf/Oi become zero-sized.
+      integer, parameter :: nIsfO      = 0    ! number of ocean variables
+      integer, parameter :: ioHsbl     = 1    ! SBL vertical weight
+#else
       integer, parameter :: nIsfF_thermo = 0  ! thermo field variables
 !  Placeholders so that ICESHEET applications without ICESHELF_THERMO
 !  (no SBL weights) still compile: iOisf/Oi become zero-sized.
@@ -203,6 +215,18 @@
       integer, parameter :: nIsfF_ssa = 7    ! SSA diag field variables
 #  endif
 !
+#  ifdef ICESHEET_PRESCRIBED_MELT
+      integer, parameter :: ifItis =  2  ! Iceshelf temperature
+      integer, parameter :: ifIzsf =  3  ! Ice sheet surface elevation
+      integer, parameter :: ifIzbd =  4  ! Ice sheet bed elevation
+      integer, parameter :: ifInuh =  5  ! Depth-inte. eff. viscosity
+      integer, parameter :: ifItdx =  6  ! Driving stress x-component
+      integer, parameter :: ifItdy =  7  ! Driving stress y-component
+      integer, parameter :: ifIbta =  8  ! Basal drag coefficient
+#   ifdef ICESHEET_SMOOTH_GL
+      integer, parameter :: ifIgrf =  9  ! Grounded fraction
+#   endif
+#  else
       integer, parameter :: ifItis =  1  ! Iceshelf temperature
       integer, parameter :: ifIzsf =  2  ! Ice sheet surface elevation
       integer, parameter :: ifIzbd =  3  ! Ice sheet bed elevation
@@ -210,8 +234,9 @@
       integer, parameter :: ifItdx =  5  ! Driving stress x-component
       integer, parameter :: ifItdy =  6  ! Driving stress y-component
       integer, parameter :: ifIbta =  7  ! Basal drag coefficient
-#  ifdef ICESHEET_SMOOTH_GL
+#   ifdef ICESHEET_SMOOTH_GL
       integer, parameter :: ifIgrf =  8  ! Grounded fraction
+#   endif
 #  endif
 # endif
 !
@@ -337,6 +362,7 @@
 !  Multi-timescale parameters
 !
       integer, allocatable :: N_ssa(:)          ! SSA solve freq.
+      integer, allocatable :: mismip_melt(:)    ! MISMIP+ melt profile
       logical, allocatable :: lssa_solve(:)     ! SSA solve step flag
       integer, allocatable :: N_gl(:)           ! GL update freq.
 !
@@ -707,6 +733,11 @@
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
           min_his(1:Ngrids)=10.0_r8
         END IF
+        IF (.not.allocated(mismip_melt)) THEN
+          allocate ( mismip_melt(Ngrids) )
+          mismip_melt(1:Ngrids)=0
+        END IF
+!
         IF (.not.allocated(N_ssa)) THEN
           allocate ( N_ssa(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
@@ -1101,6 +1132,7 @@
       IF (allocated(H_calve))         deallocate ( H_calve )
       IF (allocated(min_his))         deallocate ( min_his )
       IF (allocated(N_ssa))           deallocate ( N_ssa )
+      IF (allocated(mismip_melt))      deallocate ( mismip_melt )
       IF (allocated(lssa_solve))      deallocate ( lssa_solve )
       IF (allocated(N_gl))            deallocate ( N_gl )
       IF (allocated(smb_rate))        deallocate ( smb_rate )

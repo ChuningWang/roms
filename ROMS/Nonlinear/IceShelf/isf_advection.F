@@ -210,7 +210,7 @@
 !  negative "anti-ice" would keep transporting until divergence
 !  removes it (isf_vbc already caps the tracer side the same way).
 !
-# ifdef ICESHELF_THERMO
+# if defined ICESHELF_THERMO || defined ICESHEET_PRESCRIBED_MELT
             cff=MIN(dt(ng)*Fi(i,j,ifImel),                                 &
      &              Si(i,j,lsold,isIhis))
             Si(i,j,lsold,isIhis)=Si(i,j,lsold,isIhis)                      &

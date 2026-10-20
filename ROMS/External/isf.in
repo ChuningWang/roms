@@ -202,6 +202,14 @@
 ! Default = 1 (every step) for tight coupling; increase for efficiency.
 
             N_ssa == 10
+
+! MISMIP+ prescribed basal melt profile selector (B2, freeze table §5):
+!   0 = none (Ice0 / Ice1ra / spin-up)
+!   1 = Ice1/Ice1r:  m = 0.2/a * tanh(Hc/75 m) * max(-100 m - zd, 0)
+!   2 = Ice2/Ice2r:  m = 100 m/a where x > 480 km (floating ice only)
+! Applied to floating ice only; ice-equivalent [m/s] in Fi(:,:,ifImel).
+
+         mismip_melt == 0
              N_gl == 1
 
 ! Surface mass balance rate [m/s ice equivalent, positive = accumulation].

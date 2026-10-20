@@ -31,6 +31,9 @@
 # endif
 # ifdef ICESHEET
       USE isf_advection_mod, ONLY : isf_advection
+# ifdef ICESHEET_PRESCRIBED_MELT
+      USE isf_melt_prescribed_mod, ONLY : isf_melt_prescribed
+# endif
       USE isf_coupling_mod,  ONLY : isf_coupling
       USE isf_solver_mod,    ONLY : isf_ssa
       USE isf_bc2d_mod,      ONLY : isf_bc2d
@@ -206,6 +209,20 @@
             END DO
 !$OMP BARRIER
           END IF
+!
+!  Prescribed MISMIP+ melt profiles (no-thermodynamics builds): fill
+!  Fi(:,:,ifImel) ahead of the advection, mirroring the 3EQN source
+!  cadence under ICESHELF_THERMO.  Skipped entirely when the input
+!  selector mismip_melt = 0 (spin-up, Ice0, re-advance experiments).
+!
+# ifdef ICESHEET_PRESCRIBED_MELT
+          IF (mismip_melt(ng).gt.0) THEN
+            DO tile=first_tile(ng),last_tile(ng),+1
+              CALL isf_melt_prescribed (ng, tile, model)
+            END DO
+!$OMP BARRIER
+          END IF
+# endif
 !
 !  Advect ice thickness and enthalpy (mass and heat conservation)
 !  every ocean timestep, with the SSA velocity held constant between

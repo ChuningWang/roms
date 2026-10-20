@@ -684,7 +684,7 @@
           alpha=dot_zr_old/dot_dad
 !
           IF (alpha.ne.alpha.or.alpha.gt.1.0e30_r8) THEN
-            IF (Master) WRITE(stdout,'(a,i3,3e12.4)')                   &
+            IF (Master) WRITE(stdout,'(a,i3,a,1p,e12.4,a,e12.4)')      &
      &          ' SSA CG NaN: iter=',cg_iter,' dot_dad=',dot_dad,       &
      &          ' dot_zr_old=',dot_zr_old
             EXIT

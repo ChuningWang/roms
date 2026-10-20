@@ -232,6 +232,9 @@
 !
 !  Multi-timescale parameters
 !
+            CASE ('mismip_melt')
+              Npts=load_i(Nval, Rval, Ngrids, mismip_melt)
+!
             CASE ('N_ssa')
               Npts=load_i(Nval, Rval, Ngrids, N_ssa)
 !
@@ -1251,6 +1254,8 @@
      &          'Calving thickness threshold [m].'
           WRITE (out,50) N_ssa(ng), 'N_ssa',                            &
      &          'SSA solve frequency [ocean steps].'
+          WRITE (out,50) mismip_melt(ng), 'mismip_melt',                &
+     &          'MISMIP+ melt profile: 0=none 1=Ice1 2=Ice2.'
           WRITE (out,50) N_gl(ng), 'N_gl',                              &
      &          'Grounding line update frequency [SSA steps].'
           WRITE (out,60) smb_rate(ng), 'smb_rate',                      &
