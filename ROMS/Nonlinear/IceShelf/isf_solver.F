@@ -2331,8 +2331,20 @@
 !  Element assembly.
 !-----------------------------------------------------------------------
 !
-      DO j=JstrP-1,JendP+1
-        DO i=IstrP-1,IendP+1
+!  Clear the output pair over the owned PSI nodes plus the one-node
+!  halo ring, CLAMPED to the array bounds:  on the eastern/northern
+!  domain-edge tiles IendP+1 / JendP+1 exceed the array upper bounds
+!  UBi / UBj, and the unclamped loop wrote one full row/column past
+!  the end of the Au/Av allocations on EVERY call (heap corruption
+!  behind the L11 crashes:  the smashed malloc metadata surfaced as
+!  the set_zeta null-descriptor SIGSEGV, netCDF/HDF5 malloc aborts,
+!  and freelist surgery inside live allocations such as the OCEAN
+!  zeta descriptor).  The scatters below are filtered to owned PSI
+!  nodes (IstrP..IendP, JstrP..JendP), so clamping removes only the
+!  out-of-bounds writes:  no in-bounds behaviour changes.
+!
+      DO j=MAX(JstrP-1,LBj),MIN(JendP+1,UBj)
+        DO i=MAX(IstrP-1,LBi),MIN(IendP+1,UBi)
           Au(i,j)=0.0_r8
           Av(i,j)=0.0_r8
         END DO
