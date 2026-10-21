@@ -1740,6 +1740,17 @@
         exit_flag=5
         RETURN
       END IF
+!
+!  Power-law sliding exponent below unity makes beta = C*u^(n-1)
+!  singular at u = 0 (the divide nodes have u = v = 0 exactly):
+!  eps_u_min must regularize it or beta overflows to Inf.
+!
+      IF (ANY(n_basal(1:Ngrids).lt.1.0_r8).and.                       &
+     &    ANY(eps_u_min(1:Ngrids).le.0.0_r8)) THEN
+        IF (Master) WRITE (out,96) 'eps_u_min (required: n_basal < 1)'
+        exit_flag=5
+        RETURN
+      END IF
 # endif
 !
   30  FORMAT (/,' READ_IsfPar - Error while processing line: ',/,a)
