@@ -211,6 +211,7 @@
       logical :: converged
 !
       real(r8) :: cff, cff1, u_slide, beta_avg, jac_avg
+      real(r8) :: u_prev, u_allow
 !
 !  Glen hardness field B = A^(-1/n) at RHO points, computed once
 !  per solve by ssa_hardness (Stage 4):  it depends only on the ice
@@ -768,32 +769,32 @@
 !  zero), so the boundary values are still in place.
 !-----------------------------------------------------------------------
 !
-!  PISM-style velocity cap.
+!  Velocity cap as a Picard-update damper (2026-10-24 redesign).
+!
+!  The former post-solve truncation (u -> u*cap/|u| whenever |u|
+!  exceeded the cap) is incompatible with the convergence criteria
+!  and the transport:  a binding cap pins the iterate, the two time
+!  levels become identical, nl_resid evaluates to 0/0 = 0 and Picard
+!  "converges" on the first iteration with the full cap velocity
+!  released into the advection (CFL blow-up, the 2026-10-24 4 km
+!  scan failure).  Instead the cap now bounds the UPDATE relative to
+!  the previous iterate:  where the relaxed update would push the
+!  node past the cap, the step is shortened so the node approaches
+!  the cap magnitude along the update direction but never gets
+!  clamped onto it.  Nodes whose solution is below the cap -- the
+!  converged regime everywhere in normal physics -- are untouched,
+!  so the fixed point is exactly the uncapped solution.
 !
         DO j=JstrP,JendP
           DO i=IstrP,IendP
             IF (pmask_act(i,j).eq.1.0_r8) THEN
-              u_slide=SQRT(Si(i,j,lsnew,isIuis)**2+                     &
-     &                     Si(i,j,lsnew,isIvis)**2)
-              IF (u_slide.gt.ssa_max_speed(ng)) THEN
-                cff=ssa_max_speed(ng)/u_slide
-                Si(i,j,lsnew,isIuis)=Si(i,j,lsnew,isIuis)*cff
-                Si(i,j,lsnew,isIvis)=Si(i,j,lsnew,isIvis)*cff
-              END IF
-            END IF
-          END DO
-        END DO
 !
 !  Picard relaxation u = alpha*u_new + (1-alpha)*u_old.  Prevents
 !  oscillation between high/low viscosity regimes.  Skipped on
 !  the first iteration, where lsold holds the (physical) initial
-!  guess rather than a Picard iterate; later iterations anchor
-!  to the previous iterate written back into lsold.
+!  guess rather than a Picard iterate.
 !
-        IF (nl_iter.gt.1) THEN
-          DO j=JstrP,JendP
-            DO i=IstrP,IendP
-              IF (pmask_act(i,j).eq.1.0_r8) THEN
+              IF (nl_iter.gt.1) THEN
                 Si(i,j,lsnew,isIuis)=                                   &
      &                    picard_alpha(ng) *Si(i,j,lsnew,isIuis)+       &
      &            (1.0_r8-picard_alpha(ng))*Si(i,j,lsold,isIuis)
@@ -801,9 +802,33 @@
      &                    picard_alpha(ng) *Si(i,j,lsnew,isIvis)+       &
      &            (1.0_r8-picard_alpha(ng))*Si(i,j,lsold,isIvis)
               END IF
-            END DO
+!
+!  Cap the relaxed UPDATE:  the allowed magnitude grows by at most
+!  50 percent of the cap per Picard iteration beyond the cap --
+!  overshooting nodes approach the cap region geometrically instead
+!  of being clamped onto it, and a diverging iterate (u_prev far
+!  above the cap) is pulled BACK toward the cap each iteration.
+!  Nodes below the allowed magnitude are untouched, so the fixed
+!  point is exactly the uncapped solution.
+!
+              u_slide=SQRT(Si(i,j,lsnew,isIuis)**2+                     &
+     &                     Si(i,j,lsnew,isIvis)**2)
+              u_allow=1.5_r8*ssa_max_speed(ng)
+              IF (u_slide.gt.u_allow) THEN
+                u_prev=SQRT(Si(i,j,lsold,isIuis)**2+                    &
+     &                      Si(i,j,lsold,isIvis)**2)
+                IF (u_prev.gt.u_allow) THEN
+                  u_allow=MAX(u_allow, 0.9_r8*u_prev)
+                END IF
+                IF (u_slide.gt.u_allow) THEN
+                  cff=u_allow/u_slide
+                  Si(i,j,lsnew,isIuis)=cff*Si(i,j,lsnew,isIuis)
+                  Si(i,j,lsnew,isIvis)=cff*Si(i,j,lsnew,isIvis)
+                END IF
+              END IF
+            END IF
           END DO
-        END IF
+        END DO
 !
         CALL isf_pibc_tile (ng, tile, model,                            &
      &                      LBi, UBi, LBj, UBj,                         &
