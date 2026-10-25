@@ -36,7 +36,7 @@
 !                                                                      !
 !  Geometry: zd = zice (ice draft, negative; for floating ice          !
 !  zice = -(rho_i/rho0)*H from isf_masks), Hc = zd - zb is the        !
-!  ocean-cavity thickness with zb = h the bed elevation (negative).    !
+!  ocean-cavity thickness Hc = zd - zb = zice - (-h) = zice + h.       !
 !                                                                      !
 !=======================================================================
 !
@@ -149,7 +149,7 @@
 !
 !  Ice1 profile: cavity-thickness taper times linear thermal driving.
 !
-              h_cav=zice(i,j)-h(i,j)
+              h_cav=zice(i,j)+h(i,j)
               cff=gamma_melt*TANH(h_cav/Hc0)*MAX(z0-zice(i,j), 0.0_r8)
               melt(i,j)=cff/sec_year
             ELSE IF (mismip_melt(ng).eq.2) THEN
