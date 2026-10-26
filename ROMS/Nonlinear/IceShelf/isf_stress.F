@@ -46,9 +46,13 @@
 !       The float state follows the isf_masks.F flotation criterion    !
 !       evaluated with the window-averaged free surface.               !
 !       With ICESHEET_SMOOTH_GL the drag of both sliding laws is       !
-!       scaled by a cosine-ramped grounded fraction (STREAMICE         !
-!       float_frac) about the flotation thickness; the ramp width is   !
-!       gl_float_width [m ice thickness].                              !
+!       scaled by a grounded fraction gfrac about the flotation        !
+!       thickness:  a cosine ramp in H space (STREAMICE float_frac,    !
+!       width gl_float_width [m ice thickness]), or, with              !
+!       ICESHEET_SUBGRID_GL, the exact analytic fraction of the cell   !
+!       area on the grounded side of the piecewise-linear subcell      !
+!       flotation function (PISM grounded_cell_fraction, Feldmann      !
+!       et al. 2014 subgrid friction).                                 !
 !                                                                      !
 !  References:                                                         !
 !    Holland & Jenkins (1999), J. Phys. Oceanogr. 29, 1787-1800.       !
@@ -56,6 +60,9 @@
 !    Weertman (1957), J. Glaciol. 3, 33-38.                            !
 !    Tsai et al. (2015), J. Glaciol. 61, 649-655.                      !
 !    MITgcm STREAMICE streamice_upd_ffrac_uncoupled.F (float_frac).    !
+!    Feldmann et al. (2014), The Cryosphere 8, 2077-2086 (subgrid      !
+!      GL friction); PISM src/geometry/grounded_cell_fraction.cc       !
+!      (gfrac_tri port source).                                        !
 !                                                                      !
 !=======================================================================
 !
@@ -237,6 +244,12 @@
       real(r8) :: u_mid, v_mid, u_slide
       real(r8) :: C_sq, zeta_avg, D_avg
       real(r8) :: H_eff, H_float
+#  ifdef ICESHEET_SUBGRID_GL
+      integer :: ii, jj, kk
+      real(r8), dimension(0:8) :: Fbox
+      real(r8) :: fc, fw, fe, fs, fn
+      real(r8) :: fsw, fse, fnw, fne
+#  endif
 # endif
 !
 # include "set_bounds.h"
@@ -590,9 +603,50 @@
 #  endif
 #  ifdef ICESHEET_SMOOTH_GL
 !
-!  Grounded fraction:  cosine ramp of H about the flotation thickness
-!  H_float=(rho0/rho_i)*D_avg; gfrac=0.5 coincides with the binary
-!  grounding line and W=0 degenerates to the binary criterion.
+!  Grounded fraction gfrac of the RHO cell (SSA element) centered
+!  at (i,j).  ICESHEET_SUBGRID_GL computes it analytically from the
+!  piecewise-linear subcell representation of the flotation function
+!  (PISM grounded_cell_fraction, Feldmann et al. 2014 SEP-style
+!  subgrid friction); otherwise it is a cosine ramp of H about the
+!  flotation thickness H_float=(rho0/rho_i)*D_avg (STREAMICE
+!  float_frac semantics; gfrac=0.5 coincides with the binary
+!  grounding line and W=0 degenerates to the binary criterion).
+!
+#   ifdef ICESHEET_SUBGRID_GL
+!
+!  Flotation function F = rho_i*H - rho_0*D_avg (positive grounded;
+!  no-ice nodes give F < 0) at the nodes of the 3x3 stencil, stored
+!  south-to-north, west-to-east as Fbox = (sw,s,se,w,c,e,nw,n,ne).
+!  F is averaged to the cell edge midpoints and corners, and the
+!  fraction of the cell area where F > 0 is exact for the 8-triangle
+!  piecewise-linear representation of F (gfrac_tri).  Well inside
+!  the grounded (floating) ice the whole stencil shares the sign and
+!  gfrac collapses to 1 (0), so only the one- to two-cell grounding
+!  line band is ever fractional; the neighbor halos (Si post-
+!  advection, Ci from isf_coupling) are the same freshness class as
+!  the 4-corner velocity stencil above.
+!
+              DO kk=0,8
+                ii=i+MOD(kk,3)-1
+                jj=j+(kk/3)-1
+                Fbox(kk)=rho_i*Si(ii,jj,lsnew,isIhis)-rho0*             &
+     &                   (h(ii,jj)+Ci(ii,jj,icIzta)-Dcrit(ng))
+              END DO
+              fc=Fbox(4)
+              fs=0.5_r8*(Fbox(4)+Fbox(1))
+              fn=0.5_r8*(Fbox(4)+Fbox(7))
+              fw=0.5_r8*(Fbox(4)+Fbox(3))
+              fe=0.5_r8*(Fbox(4)+Fbox(5))
+              fsw=0.25_r8*(Fbox(4)+Fbox(3)+Fbox(1)+Fbox(0))
+              fse=0.25_r8*(Fbox(4)+Fbox(5)+Fbox(1)+Fbox(2))
+              fnw=0.25_r8*(Fbox(4)+Fbox(3)+Fbox(7)+Fbox(6))
+              fne=0.25_r8*(Fbox(4)+Fbox(5)+Fbox(7)+Fbox(8))
+              cff=gfrac_tri(fc,fne,fn)+gfrac_tri(fc,fn,fnw)
+              cff=cff+gfrac_tri(fc,fnw,fw)+gfrac_tri(fc,fw,fsw)
+              cff=cff+gfrac_tri(fc,fsw,fs)+gfrac_tri(fc,fs,fse)
+              cff=cff+gfrac_tri(fc,fse,fe)+gfrac_tri(fc,fe,fne)
+              Fi(i,j,ifIgrf)=0.125_r8*cff
+#   else
 !
               H_float=(rho0/rho_i)*D_avg
               cff=Si(i,j,lsnew,isIhis)-                                 &
@@ -605,6 +659,7 @@
                 Fi(i,j,ifIgrf)=0.5_r8*                                  &
      &                         (1.0_r8-COS(pi*cff/gl_float_width(ng)))
               END IF
+#   endif
 !
               Fi(i,j,ifIbta)=Fi(i,j,ifIbta)*Fi(i,j,ifIgrf)
 #  else
@@ -636,6 +691,159 @@
 !
       RETURN
       END SUBROUTINE isf_stress_tile
+!
+!***********************************************************************
+# ifdef ICESHEET_SUBGRID_GL
+      FUNCTION gfrac_tri (a, b, c)
+!***********************************************************************
+!
+!  Grounded area fraction of the right triangle A(0,0)-B(1,0)-C(0,1)
+!  for a linear function z with nodal values a, b, c:  the fraction
+!  of the triangle area where z > 0, which is the grounded fraction
+!  when z is the flotation criterion.  Port of PISM
+!  src/geometry/grounded_cell_fraction.cc (grounded_area_fraction),
+!  branch for branch; the degenerate cases where z = 0 passes
+!  through a node are resolved by coincident-intersection tests.
+!  Called only under ICESHEET_SUBGRID_GL.
+!
+!  Imported variable declarations.
+!
+      USE mod_kinds, ONLY : r8
+!
+!  Input variables.
+!
+      real(r8), intent(in) :: a, b, c
+!
+!  Local variable declarations.
+!
+      real(r8), parameter :: tiny = 1.0E-12_r8
+      real(r8) :: gfrac_tri
+      real(r8) :: ratio
+      real(r8) :: xab, yab, xbc, ybc, xac, yac
+!
+!  All-positive / all-nonpositive fast paths (z = 0 counts as
+!  floating, matching the binary criterion H_eff <= 0).
+!
+      IF ((a.gt.0.0_r8).and.(b.gt.0.0_r8).and.(c.gt.0.0_r8)) THEN
+        gfrac_tri=1.0_r8
+        RETURN
+      END IF
+      IF ((a.le.0.0_r8).and.(b.le.0.0_r8).and.(c.le.0.0_r8)) THEN
+        gfrac_tri=0.0_r8
+        RETURN
+      END IF
+!
+!  Intersections of z = 0 with the triangle sides; sides without a
+!  sign change are flagged invalid with coordinates outside [0,1]^2.
+!
+      IF (a.ne.b) THEN
+        xab=a/(a-b)
+        yab=0.0_r8
+      ELSE
+        xab=-2.0_r8
+        yab=-2.0_r8
+      END IF
+      IF (b.ne.c) THEN
+        xbc=c/(c-b)
+        ybc=b/(b-c)
+      ELSE
+        xbc=-2.0_r8
+        ybc=-2.0_r8
+      END IF
+      IF (a.ne.c) THEN
+        xac=0.0_r8
+        yac=a/(a-c)
+      ELSE
+        xac=-2.0_r8
+        yac=-2.0_r8
+      END IF
+!
+!  Mixed-sign case:  z = 0 crosses exactly two sides.  The grounded
+!  region is the sub-triangle adjacent to the positive node(s); its
+!  area is computed with the shoelace formula.
+!
+      IF ((xbc.lt.0.0_r8).or.(xbc.gt.1.0_r8).or.                        &
+     &    (ybc.lt.0.0_r8).or.(ybc.gt.1.0_r8)) THEN
+!
+!  BC not crossed:  grounded/floating split along AB-AC.
+!
+        ratio=ABS(xab*yac-xac*yab)
+        IF (a.gt.0.0_r8) THEN
+          gfrac_tri=ratio
+        ELSE
+          gfrac_tri=1.0_r8-ratio
+        END IF
+!
+      ELSE IF ((xac.lt.0.0_r8).or.(xac.gt.1.0_r8).or.                    &
+     &         (yac.lt.0.0_r8).or.(yac.gt.1.0_r8)) THEN
+!
+!  AC not crossed:  split along AB-BC.
+!
+        ratio=ABS((xbc-1.0_r8)*yab-(xab-1.0_r8)*ybc)
+        IF (b.gt.0.0_r8) THEN
+          gfrac_tri=ratio
+        ELSE
+          gfrac_tri=1.0_r8-ratio
+        END IF
+!
+      ELSE IF ((xab.lt.0.0_r8).or.(xab.gt.1.0_r8).or.                    &
+     &         (yab.lt.0.0_r8).or.(yab.gt.1.0_r8)) THEN
+!
+!  AB not crossed:  split along AC-BC.
+!
+        ratio=ABS(xac*(ybc-1.0_r8)-xbc*(yac-1.0_r8))
+        IF (c.gt.0.0_r8) THEN
+          gfrac_tri=ratio
+        ELSE
+          gfrac_tri=1.0_r8-ratio
+        END IF
+!
+      ELSE IF ((ABS(xab-xac).lt.tiny).and.                               &
+     &         (ABS(yab-yac).lt.tiny)) THEN
+!
+!  z = 0 passes through node A (a = 0):  split along AB-BC.
+!
+        ratio=ABS((xbc-1.0_r8)*yab-(xab-1.0_r8)*ybc)
+        IF (b.gt.0.0_r8) THEN
+          gfrac_tri=ratio
+        ELSE
+          gfrac_tri=1.0_r8-ratio
+        END IF
+!
+      ELSE IF (((ABS(xab-xbc).lt.tiny).and.                              &
+     &          (ABS(yab-ybc).lt.tiny)).or.                              &
+     &         ((ABS(xac-xbc).lt.tiny).and.                              &
+     &          (ABS(yac-ybc).lt.tiny))) THEN
+!
+!  z = 0 passes through node B or C (b = 0 or c = 0):  split along
+!  AB-AC.
+!
+        ratio=ABS(xab*yac-xac*yab)
+        IF (a.gt.0.0_r8) THEN
+          gfrac_tri=ratio
+        ELSE
+          gfrac_tri=1.0_r8-ratio
+        END IF
+!
+      ELSE
+!
+!  Unreachable in exact arithmetic (PISM raises an error here); the
+!  line z = 0 crosses all three sides only through a node, which is
+!  covered by the coincident-intersection branches above.  Return
+!  the nodal majority as a defensive fallback.
+!
+        IF ((a.gt.0.0_r8).and.(b.gt.0.0_r8).or.                          &
+     &      (a.gt.0.0_r8).and.(c.gt.0.0_r8).or.                          &
+     &      (b.gt.0.0_r8).and.(c.gt.0.0_r8)) THEN
+          gfrac_tri=1.0_r8
+        ELSE
+          gfrac_tri=0.0_r8
+        END IF
+      END IF
+!
+      RETURN
+      END FUNCTION gfrac_tri
+# endif
 !
 #endif
       END MODULE isf_stress_mod

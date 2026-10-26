@@ -259,6 +259,8 @@
             CASE ('max_thickness')
               Npts=load_r(Nval, Rval, Ngrids, max_thickness)
             CASE ('gl_float_width')
+!             cosine-ramp width of the SMOOTH_GL grounded fraction;
+!             unused (still read) under ICESHEET_SUBGRID_GL
               Npts=load_r(Nval, Rval, Ngrids, gl_float_width)
 #endif
 #ifdef ICESHEET

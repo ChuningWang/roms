@@ -696,6 +696,12 @@
 **                      line with a cosine ramp of the grounded fraction     **
 **                      (STREAMICE SMOOTH_FLOATATION equivalent; ramp width  **
 **                      is the gl_float_width parameter [m ice thickness])   **
+** ICESHEET_SUBGRID_GL   subgrid grounding line friction: the grounded       **
+**                      fraction scaling the SSA basal drag (implies         **
+**                      ICESHEET_SMOOTH_GL) is the exact analytic subcell    **
+**                      area fraction of the piecewise-linear flotation      **
+**                      function (PISM grounded_cell_fraction, Feldmann      **
+**                      et al. 2014) instead of the cosine ramp              **
 **                                                                           **
 ** OCEAN_FIXED          freeze the ocean: read the initial conditions and    **
 **                      skip all forward time integration of the ocean       **

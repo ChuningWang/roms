@@ -850,10 +850,22 @@
 **                        cosine-ramped grounded fraction about the
 **                        flotation thickness (MITgcm STREAMICE
 **                        SMOOTH_FLOATATION equivalent).
-** User-settable, no derivation, no mutual exclusion.  The ramp
-** width is the runtime parameter gl_float_width [m ice thickness];
-** gl_float_width = 0 degenerates to the binary flotation criterion.
+**   ICESHEET_SUBGRID_GL  compute that grounded fraction analytically
+**                        as the exact subcell area fraction of the
+**                        piecewise-linear flotation function (PISM
+**                        grounded_cell_fraction, Feldmann et al.
+**                        2014 subgrid friction) instead of the
+**                        cosine ramp.  Implies ICESHEET_SMOOTH_GL
+**                        (same beta-scaling plumbing and is_gfrac
+**                        diagnostic); the gl_float_width parameter
+**                        is then unused.
+** User-settable, no mutual exclusion.  The ramp width is the runtime
+** parameter gl_float_width [m ice thickness]; gl_float_width = 0
+** degenerates to the binary flotation criterion.
 */
+#if defined ICESHEET_SUBGRID_GL && !defined ICESHEET_SMOOTH_GL
+# define ICESHEET_SMOOTH_GL
+#endif
 
 /*
 ** Check if dynamic/thermodynamic ice shelf model is activated.
