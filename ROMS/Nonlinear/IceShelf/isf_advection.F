@@ -293,6 +293,18 @@
           Si(i,j,lsnew,isIhis)=Si(i,j,lsold,isIhis) +                   &
      &                         dt(ng)*(Fx*pm(i,j)+Fe*pn(i,j))
 !
+!  Non-negativity floor on the transported thickness:  the explicit
+!  upwind step is monotone but a diverging flux (e.g. under a capped
+!  speed next to an over-thick pile) can take H below zero in one
+!  step, and a negative state then corrupts every consumer (masks,
+!  flotation, SSA, output -- the 2026-10-26 8 km crash).  Clamping at
+!  zero keeps the damage local:  rmask_ist reclassifies the cell as
+!  ice-free on the next isf_masks call.  The melt source above is
+!  already clamped by MIN(dt*melt,H);  the floor is a no-op for
+!  healthy states (all runs to date transport monotone positive).
+!
+          Si(i,j,lsnew,isIhis)=MAX(Si(i,j,lsnew,isIhis),0.0_r8)
+!
 !  Xi and Eta direction upwind enthalpy fluxes.
 !  Left   Xi-face  (i  ): between RHO(i-1,j  ) and RHO(i  ,j  ).
 !  Right  Xi-face  (i+1): between RHO(i  ,j  ) and RHO(i+1,j  ).
@@ -309,6 +321,13 @@
      &        MIN(ve(i,j+1),0.0_r8)*Si(i,j+1,lsold,isIeis))
           Si(i,j,lsnew,isIeis)=Si(i,j,lsold,isIeis) +                   &
      &                         dt(ng)*(Fx*pm(i,j)+Fe*pn(i,j))
+!
+!  Consistent enthalpy for floored (ice-free) cells:  E = h*T carries
+!  no meaning at h = 0.
+!
+          IF (Si(i,j,lsnew,isIhis).le.0.0_r8) THEN
+            Si(i,j,lsnew,isIeis)=0.0_r8
+          END IF
 !
 !  Update ice sheet temperature T=E/H.
 !
