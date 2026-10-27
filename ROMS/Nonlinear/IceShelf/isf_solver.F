@@ -455,8 +455,8 @@
 !
 !  Map the current PSI state to cell centers (FD state mask).
 !
-          DO j=Jstr,Jend
-            DO i=Istr,Iend
+          DO j=LBj,UBj
+            DO i=LBi,UBi
               IF (Si(i,j,lsold,isIhis).gt.0.0_r8) THEN
                 urho(i,j)=0.25_r8*(Si(i,j,lsnew,isIuis)+                 &
      &                             Si(i+1,j,lsnew,isIuis)+               &
@@ -478,7 +478,6 @@
      &                         Istr, Iend, Jstr, Jend,                  &
      &                         pm, pn, h, zeta_avg,                     &
      &                         Si(:,:,lsold,isIhis),                    &
-     &                         Fi(:,:,ifIzsf),                          &
      &                         fdx, fdy)
 !
 !  Transpose map to the PSI nodes (consumed by the shared PCG).
@@ -676,8 +675,8 @@
 !  the U/V faces, the diagonal and the operator act through the
 !  PSI<->RHO transpose maps so the PCG driver below is shared.
 !
-          DO j=Jstr,Jend
-            DO i=Istr,Iend
+          DO j=LBj,UBj
+            DO i=LBi,UBi
               IF (Si(i,j,lsold,isIhis).gt.0.0_r8) THEN
                 urho(i,j)=0.25_r8*(Si(i,j,lsnew,isIuis)+                 &
      &                             Si(i+1,j,lsnew,isIuis)+               &
@@ -3014,7 +3013,7 @@
      &                           LBi, UBi, LBj, UBj,                    &
      &                           Istr, Iend, Jstr, Jend,                &
      &                           pm, pn, h, zeta_avg,                   &
-     &                           hi, zs,                                &
+     &                           hi,                                    &
      &                           fdx, fdy)
 !***********************************************************************
 !
@@ -3037,7 +3036,6 @@
       real(r8), intent(in)  :: h(LBi:,LBj:)
       real(r8), intent(in)  :: zeta_avg(LBi:,LBj:)
       real(r8), intent(in)  :: hi(LBi:,LBj:)
-      real(r8), intent(in)  :: zs(LBi:,LBj:)
       real(r8), intent(out) :: fdx(LBi:,LBj:)
       real(r8), intent(out) :: fdy(LBi:,LBj:)
 # else
@@ -3046,17 +3044,17 @@
       real(r8), intent(in)  :: h(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: zeta_avg(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: hi(LBi:UBi,LBj:UBj)
-      real(r8), intent(in)  :: zs(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: fdx(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: fdy(LBi:UBi,LBj:UBj)
 # endif
 !
-      integer :: i, j
+      integer :: i, j, ii, jj
       integer :: cw, ce, cs, cn, cc
 !
       real(r8) :: D_c, D_n
       real(r8) :: hx, hy, Pice, Pwat, dp, wc
       real(r8) :: wsum
+      real(r8), dimension(LBi:UBi,LBj:UBj) :: sfld
 !
 !
       DO j=MAX(LBj,Jstr-1),MIN(UBj,Jend)
@@ -3124,6 +3122,26 @@
               cn=0
             END IF
 !
+!  Surface elevation from the branch codes (s = H - h grounded,
+!  s = (1-rho_i/rho_0) H floating):  self-contained so the RHS does
+!  not depend on the isf_masks refresh order (Fi(ifIzsf) is not part
+!  of the restart state).
+!
+          DO jj=LBj,UBj
+            DO ii=LBi,UBi
+              IF (hi(ii,jj).gt.0.0_r8) THEN
+                D_n=h(ii,jj)+zeta_avg(ii,jj)-Dcrit(ng)
+                IF (rho_i*hi(ii,jj).gt.rho0*MAX(D_n,0.0_r8)) THEN
+                  sfld(ii,jj)=hi(ii,jj)-h(ii,jj)
+                ELSE
+                  sfld(ii,jj)=(1.0_r8-rho_i/rho0)*hi(ii,jj)
+                END IF
+              ELSE
+                sfld(ii,jj)=0.0_r8
+              END IF
+            END DO
+          END DO
+!
 !  Branch-aware weighted one-sided surface gradient:  grounded --
 !  centered over the two grounded neighbors;  floating -- centered
 !  over the two floating neighbors;  GL/marginal transitions use
@@ -3135,19 +3153,19 @@
             hx=0.0_r8
             hy=0.0_r8
             IF (cw.eq.cc.and.cc.ne.0) THEN
-              hx=hx-(zs(i,j)-zs(i-1,j))*pm(i,j)
+              hx=hx-(sfld(i,j)-sfld(i-1,j))*pm(i,j)
               wsum=wsum+1.0_r8
             END IF
             IF (ce.eq.cc.and.cc.ne.0) THEN
-              hx=hx+(zs(i+1,j)-zs(i,j))*pm(i,j)
+              hx=hx+(sfld(i+1,j)-sfld(i,j))*pm(i,j)
               wsum=wsum+1.0_r8
             END IF
             IF (cs.eq.cc.and.cc.ne.0) THEN
-              hy=hy-(zs(i,j)-zs(i,j-1))*pn(i,j)
+              hy=hy-(sfld(i,j)-sfld(i,j-1))*pn(i,j)
               wsum=wsum+1.0_r8
             END IF
             IF (cn.eq.cc.and.cc.ne.0) THEN
-              hy=hy+(zs(i,j+1)-zs(i,j))*pn(i,j)
+              hy=hy+(sfld(i,j+1)-sfld(i,j))*pn(i,j)
               wsum=wsum+1.0_r8
             END IF
             IF (wsum.gt.0.0_r8) THEN
@@ -3171,7 +3189,7 @@
 !  the ice surface gets no pressure difference.
 !
             IF (cw.eq.0.and.h(i-1,j).gt.0.0_r8) THEN
-              IF (-h(i-1,j).lt.zs(i,j)) THEN
+              IF (-h(i-1,j).lt.sfld(i,j)) THEN
                 Pice=0.5_r8*rho_i*g*hi(i,j)
                 wc=MAX(-h(i-1,j)-zeta_avg(i-1,j),0.0_r8)
                 Pwat=0.5_r8*rho0*g*wc*wc/MAX(hi(i,j),1.0_r8)
@@ -3180,7 +3198,7 @@
               END IF
             END IF
             IF (ce.eq.0.and.h(i+1,j).gt.0.0_r8) THEN
-              IF (-h(i+1,j).lt.zs(i,j)) THEN
+              IF (-h(i+1,j).lt.sfld(i,j)) THEN
                 Pice=0.5_r8*rho_i*g*hi(i,j)
                 wc=MAX(-h(i+1,j)-zeta_avg(i+1,j),0.0_r8)
                 Pwat=0.5_r8*rho0*g*wc*wc/MAX(hi(i,j),1.0_r8)
@@ -3189,7 +3207,7 @@
               END IF
             END IF
             IF (cs.eq.0.and.h(i,j-1).gt.0.0_r8) THEN
-              IF (-h(i,j-1).lt.zs(i,j)) THEN
+              IF (-h(i,j-1).lt.sfld(i,j)) THEN
                 Pice=0.5_r8*rho_i*g*hi(i,j)
                 wc=MAX(-h(i,j-1)-zeta_avg(i,j-1),0.0_r8)
                 Pwat=0.5_r8*rho0*g*wc*wc/MAX(hi(i,j),1.0_r8)
@@ -3198,7 +3216,7 @@
               END IF
             END IF
             IF (cn.eq.0.and.h(i,j+1).gt.0.0_r8) THEN
-              IF (-h(i,j+1).lt.zs(i,j)) THEN
+              IF (-h(i,j+1).lt.sfld(i,j)) THEN
                 Pice=0.5_r8*rho_i*g*hi(i,j)
                 wc=MAX(-h(i,j+1)-zeta_avg(i,j+1),0.0_r8)
                 Pwat=0.5_r8*rho0*g*wc*wc/MAX(hi(i,j),1.0_r8)
@@ -3300,8 +3318,8 @@
 !  Step 1:  PSI -> RHO map (4-corner average, ice-free cells zero).
 !-----------------------------------------------------------------------
 !
-      DO j=Jstr,Jend
-        DO i=Istr,Iend
+      DO j=LBj,UBj
+        DO i=LBi,UBi
           IF (hi(i,j).gt.0.0_r8) THEN
             urho(i,j)=0.25_r8*(xu(i,j)+xu(i+1,j)+xu(i,j+1)+xu(i+1,j+1))
             vrho(i,j)=0.25_r8*(xv(i,j)+xv(i+1,j)+xv(i,j+1)+xv(i+1,j+1))
