@@ -212,6 +212,7 @@
 !
       real(r8) :: cff, cff1, u_slide, beta_avg, jac_avg
       real(r8) :: u_prev, u_allow
+      integer :: nb
 !
 !  Glen hardness field B = A^(-1/n) at RHO points, computed once
 !  per solve by ssa_hardness (Stage 4):  it depends only on the ice
@@ -239,6 +240,10 @@
       real(r8), dimension(LBi:UBi,LBj:UBj) :: nuhy
       real(r8), dimension(LBi:UBi,LBj:UBj) :: fdx
       real(r8), dimension(LBi:UBi,LBj:UBj) :: fdy
+      real(r8), dimension(LBi:UBi,LBj:UBj) :: urho
+      real(r8), dimension(LBi:UBi,LBj:UBj) :: vrho
+      real(r8), dimension(LBi:UBi,LBj:UBj) :: aurho
+      real(r8), dimension(LBi:UBi,LBj:UBj) :: avrho
 !
 !  Global-reduction buffer (batched mp_reduce).
 !
@@ -440,6 +445,80 @@
      &                     Fi(:,:,ifItdx),                              &
      &                     Fi(:,:,ifItdy))
 !
+!  FD path (n_ssa_fd > 0):  replace the nodal RHS with the mapped
+!  cell-centered force of ssa_fd_driving (branch-aware gradient +
+!  cfbc delta_p).  Linear in the state, so it is assembled once
+!  here;  the is_taudx/is_taudy diagnostics then carry the FD node
+!  forces in this mode.
+!
+        IF (n_ssa_fd(ng).gt.0) THEN
+!
+!  Map the current PSI state to cell centers (FD state mask).
+!
+          DO j=Jstr,Jend
+            DO i=Istr,Iend
+              IF (Si(i,j,lsold,isIhis).gt.0.0_r8) THEN
+                urho(i,j)=0.25_r8*(Si(i,j,lsnew,isIuis)+                 &
+     &                             Si(i+1,j,lsnew,isIuis)+               &
+     &                             Si(i,j+1,lsnew,isIuis)+               &
+     &                             Si(i+1,j+1,lsnew,isIuis))
+                vrho(i,j)=0.25_r8*(Si(i,j,lsnew,isIvis)+                 &
+     &                             Si(i+1,j,lsnew,isIvis)+               &
+     &                             Si(i,j+1,lsnew,isIvis)+               &
+     &                             Si(i+1,j+1,lsnew,isIvis))
+              ELSE
+                urho(i,j)=0.0_r8
+                vrho(i,j)=0.0_r8
+              END IF
+            END DO
+          END DO
+!
+          CALL ssa_fd_driving (ng, tile, model,                         &
+     &                         LBi, UBi, LBj, UBj,                      &
+     &                         Istr, Iend, Jstr, Jend,                  &
+     &                         pm, pn, h, zeta_avg,                     &
+     &                         Si(:,:,lsold,isIhis),                    &
+     &                         Fi(:,:,ifIzsf),                          &
+     &                         fdx, fdy)
+!
+!  Transpose map to the PSI nodes (consumed by the shared PCG).
+!
+          DO j=JstrP,JendP
+            DO i=IstrP,IendP
+              nb=0
+              cff=0.0_r8
+              cff1=0.0_r8
+              IF (i-1.ge.Istr.and.j-1.ge.Jstr) THEN
+                cff=cff+fdx(i-1,j-1)
+                cff1=cff1+fdy(i-1,j-1)
+                nb=nb+1
+              END IF
+              IF (i.le.Iend.and.j-1.ge.Jstr) THEN
+                cff=cff+fdx(i,j-1)
+                cff1=cff1+fdy(i,j-1)
+                nb=nb+1
+              END IF
+              IF (i-1.ge.Istr.and.j.le.Jend) THEN
+                cff=cff+fdx(i-1,j)
+                cff1=cff1+fdy(i-1,j)
+                nb=nb+1
+              END IF
+              IF (i.le.Iend.and.j.le.Jend) THEN
+                cff=cff+fdx(i,j)
+                cff1=cff1+fdy(i,j)
+                nb=nb+1
+              END IF
+              IF (nb.gt.0) THEN
+                Fi(i,j,ifItdx)=cff/REAL(nb,r8)
+                Fi(i,j,ifItdy)=cff1/REAL(nb,r8)
+              ELSE
+                Fi(i,j,ifItdx)=0.0_r8
+                Fi(i,j,ifItdy)=0.0_r8
+              END IF
+            END DO
+          END DO
+        END IF
+!
 !=======================================================================
 !  Stage 3:  basal-drag warm start.
 !=======================================================================
@@ -553,42 +632,95 @@
 !  estimate (Glen law with the Stage-4 cached hardness field,
 !  thin-ice strength extension and additive regularization).
 !
-        CALL ssa_viscosity (ng, tile, model,                            &
+        IF (n_ssa_fd(ng).eq.0) THEN
+!
+!  FE path:  cell-centered viscosity, nodal diagonal, Q1 matvec.
+!
+          CALL ssa_viscosity (ng, tile, model,                          &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Istr, Iend, Jstr, Jend,                   &
+     &                        pm, pn,                                   &
+     &                        Si(:,:,lsold,isIhis),                     &
+     &                        Si(:,:,lsnew,isIuis),                     &
+     &                        Si(:,:,lsnew,isIvis),                     &
+     &                        B_hard,                                   &
+     &                        Fi(:,:,ifInuh))
+!
+          CALL ssa_jacobi_diag (ng, tile, model,                        &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          IstrC, IendC, JstrC, JendC,             &
+     &                          IstrP, IendP, JstrP, JendP,             &
+     &                          DPhi, phi_tab,                          &
+     &                          fac_dx, fac_dy, fac_jac,                &
+     &                          pmask_act,                              &
+     &                          Fi(:,:,ifInuh),                         &
+     &                          Fi(:,:,ifIbta),                         &
+     &                          diag_u, diag_v)
+!
+          CALL ssa_matvec (ng, tile, model,                             &
+     &                     LBi, UBi, LBj, UBj,                          &
+     &                     IstrC, IendC, JstrC, JendC,                  &
+     &                     IstrP, IendP, JstrP, JendP,                  &
+     &                     DPhi, phi_tab,                               &
+     &                     fac_dx, fac_dy, fac_jac,                     &
+     &                     pmask_act,                                   &
+     &                     Fi(:,:,ifInuh),                              &
+     &                     Fi(:,:,ifIbta),                              &
+     &                     Si(:,:,lsnew,isIuis),                        &
+     &                     Si(:,:,lsnew,isIvis),                        &
+     &                     Au, Av)
+        ELSE
+!
+!  FD path (PISM SSAFD recipe):  the cell-centered state is the
+!  4-corner PSI average (ssa_fd_matvec step 1), viscosities live on
+!  the U/V faces, the diagonal and the operator act through the
+!  PSI<->RHO transpose maps so the PCG driver below is shared.
+!
+          DO j=Jstr,Jend
+            DO i=Istr,Iend
+              IF (Si(i,j,lsold,isIhis).gt.0.0_r8) THEN
+                urho(i,j)=0.25_r8*(Si(i,j,lsnew,isIuis)+                 &
+     &                             Si(i+1,j,lsnew,isIuis)+               &
+     &                             Si(i,j+1,lsnew,isIuis)+               &
+     &                             Si(i+1,j+1,lsnew,isIuis))
+                vrho(i,j)=0.25_r8*(Si(i,j,lsnew,isIvis)+                 &
+     &                             Si(i+1,j,lsnew,isIvis)+               &
+     &                             Si(i,j+1,lsnew,isIvis)+               &
+     &                             Si(i+1,j+1,lsnew,isIvis))
+              ELSE
+                urho(i,j)=0.0_r8
+                vrho(i,j)=0.0_r8
+              END IF
+            END DO
+          END DO
+!
+          CALL ssa_fd_viscosity (ng, tile, model,                       &
+     &                           LBi, UBi, LBj, UBj,                    &
+     &                           Istr, Iend, Jstr, Jend,                &
+     &                           pm, pn,                                &
+     &                           Si(:,:,lsold,isIhis), B_hard,          &
+     &                           urho, vrho, nuhx, nuhy)
+!
+          CALL ssa_fd_diag (ng, tile, model,                            &
      &                      LBi, UBi, LBj, UBj,                         &
      &                      Istr, Iend, Jstr, Jend,                     &
+     &                      IstrP, IendP, JstrP, JendP,                 &
      &                      pm, pn,                                     &
-     &                      Si(:,:,lsold,isIhis),                       &
-     &                      Si(:,:,lsnew,isIuis),                       &
-     &                      Si(:,:,lsnew,isIvis),                       &
-     &                      B_hard,                                     &
-     &                      Fi(:,:,ifInuh))
+     &                      Si(:,:,lsold,isIhis), nuhx, nuhy,           &
+     &                      Fi(:,:,ifIbta),                             &
+     &                      diag_u, diag_v)
 !
-!  Jacobi preconditioner:  the diagonal of the assembled SSA
-!  operator at the active PSI nodes (ssa_jacobi_diag).
-!
-        CALL ssa_jacobi_diag (ng, tile, model,                          &
+          CALL ssa_fd_matvec (ng, tile, model,                          &
      &                        LBi, UBi, LBj, UBj,                       &
-     &                        IstrC, IendC, JstrC, JendC,               &
+     &                        Istr, Iend, Jstr, Jend,                   &
      &                        IstrP, IendP, JstrP, JendP,               &
-     &                        DPhi, phi_tab,                            &
-     &                        fac_dx, fac_dy, fac_jac,                  &
-     &                        pmask_act,                                &
-     &                        Fi(:,:,ifInuh),                           &
-     &                        Fi(:,:,ifIbta),                           &
-     &                        diag_u, diag_v)
-!
-        CALL ssa_matvec (ng, tile, model,                               &
-     &                   LBi, UBi, LBj, UBj,                            &
-     &                   IstrC, IendC, JstrC, JendC,                    &
-     &                   IstrP, IendP, JstrP, JendP,                    &
-     &                   DPhi, phi_tab,                                 &
-     &                   fac_dx, fac_dy, fac_jac,                       &
-     &                   pmask_act,                                     &
-     &                   Fi(:,:,ifInuh),                                &
-     &                   Fi(:,:,ifIbta),                                &
-     &                   Si(:,:,lsnew,isIuis),                          &
-     &                   Si(:,:,lsnew,isIvis),                          &
-     &                   Au, Av)
+     &                        pm, pn,                                   &
+     &                        Si(:,:,lsold,isIhis),                     &
+     &                        nuhx, nuhy, Fi(:,:,ifIbta),               &
+     &                        Si(:,:,lsnew,isIuis),                     &
+     &                        Si(:,:,lsnew,isIvis),                     &
+     &                        Au, Av, urho, vrho, aurho, avrho)
+        END IF
 !
         DO j=JstrP,JendP
           DO i=IstrP,IendP
@@ -877,18 +1009,31 @@
 !  iteration;  the legacy solver reused the last CG search
 !  direction action, which does not measure the SSA residual).
 !
-        CALL ssa_matvec (ng, tile, model,                               &
-     &                   LBi, UBi, LBj, UBj,                            &
-     &                   IstrC, IendC, JstrC, JendC,                    &
-     &                   IstrP, IendP, JstrP, JendP,                    &
-     &                   DPhi, phi_tab,                                 &
-     &                   fac_dx, fac_dy, fac_jac,                       &
-     &                   pmask_act,                                     &
-     &                   Fi(:,:,ifInuh),                                &
-     &                   Fi(:,:,ifIbta),                                &
-     &                   Si(:,:,lsnew,isIuis),                          &
-     &                   Si(:,:,lsnew,isIvis),                          &
-     &                   Au, Av)
+        IF (n_ssa_fd(ng).eq.0) THEN
+          CALL ssa_matvec (ng, tile, model,                             &
+     &                     LBi, UBi, LBj, UBj,                          &
+     &                     IstrC, IendC, JstrC, JendC,                  &
+     &                     IstrP, IendP, JstrP, JendP,                  &
+     &                     DPhi, phi_tab,                               &
+     &                     fac_dx, fac_dy, fac_jac,                     &
+     &                     pmask_act,                                   &
+     &                     Fi(:,:,ifInuh),                              &
+     &                     Fi(:,:,ifIbta),                              &
+     &                     Si(:,:,lsnew,isIuis),                        &
+     &                     Si(:,:,lsnew,isIvis),                        &
+     &                     Au, Av)
+        ELSE
+          CALL ssa_fd_matvec (ng, tile, model,                          &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Istr, Iend, Jstr, Jend,                   &
+     &                        IstrP, IendP, JstrP, JendP,               &
+     &                        pm, pn,                                   &
+     &                        Si(:,:,lsold,isIhis),                     &
+     &                        nuhx, nuhy, Fi(:,:,ifIbta),               &
+     &                        Si(:,:,lsnew,isIuis),                     &
+     &                        Si(:,:,lsnew,isIvis),                     &
+     &                        Au, Av, urho, vrho, aurho, avrho)
+        END IF
 !
 !-----------------------------------------------------------------------
 !  Picard convergence check:  dual criterion.
@@ -2869,7 +3014,7 @@
      &                           LBi, UBi, LBj, UBj,                    &
      &                           Istr, Iend, Jstr, Jend,                &
      &                           pm, pn, h, zeta_avg,                   &
-     &                           hi, zs, bed,                           &
+     &                           hi, zs,                                &
      &                           fdx, fdy)
 !***********************************************************************
 !
@@ -2893,7 +3038,6 @@
       real(r8), intent(in)  :: zeta_avg(LBi:,LBj:)
       real(r8), intent(in)  :: hi(LBi:,LBj:)
       real(r8), intent(in)  :: zs(LBi:,LBj:)
-      real(r8), intent(in)  :: bed(LBi:,LBj:)
       real(r8), intent(out) :: fdx(LBi:,LBj:)
       real(r8), intent(out) :: fdy(LBi:,LBj:)
 # else
@@ -2903,7 +3047,6 @@
       real(r8), intent(in)  :: zeta_avg(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: hi(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: zs(LBi:UBi,LBj:UBj)
-      real(r8), intent(in)  :: bed(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: fdx(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: fdy(LBi:UBi,LBj:UBj)
 # endif
@@ -3028,7 +3171,7 @@
 !  the ice surface gets no pressure difference.
 !
             IF (cw.eq.0.and.h(i-1,j).gt.0.0_r8) THEN
-              IF (bed(i-1,j).lt.zs(i,j)) THEN
+              IF (-h(i-1,j).lt.zs(i,j)) THEN
                 Pice=0.5_r8*rho_i*g*hi(i,j)
                 wc=MAX(-h(i-1,j)-zeta_avg(i-1,j),0.0_r8)
                 Pwat=0.5_r8*rho0*g*wc*wc/MAX(hi(i,j),1.0_r8)
@@ -3037,7 +3180,7 @@
               END IF
             END IF
             IF (ce.eq.0.and.h(i+1,j).gt.0.0_r8) THEN
-              IF (bed(i+1,j).lt.zs(i,j)) THEN
+              IF (-h(i+1,j).lt.zs(i,j)) THEN
                 Pice=0.5_r8*rho_i*g*hi(i,j)
                 wc=MAX(-h(i+1,j)-zeta_avg(i+1,j),0.0_r8)
                 Pwat=0.5_r8*rho0*g*wc*wc/MAX(hi(i,j),1.0_r8)
@@ -3046,7 +3189,7 @@
               END IF
             END IF
             IF (cs.eq.0.and.h(i,j-1).gt.0.0_r8) THEN
-              IF (bed(i,j-1).lt.zs(i,j)) THEN
+              IF (-h(i,j-1).lt.zs(i,j)) THEN
                 Pice=0.5_r8*rho_i*g*hi(i,j)
                 wc=MAX(-h(i,j-1)-zeta_avg(i,j-1),0.0_r8)
                 Pwat=0.5_r8*rho0*g*wc*wc/MAX(hi(i,j),1.0_r8)
@@ -3055,7 +3198,7 @@
               END IF
             END IF
             IF (cn.eq.0.and.h(i,j+1).gt.0.0_r8) THEN
-              IF (bed(i,j+1).lt.zs(i,j)) THEN
+              IF (-h(i,j+1).lt.zs(i,j)) THEN
                 Pice=0.5_r8*rho_i*g*hi(i,j)
                 wc=MAX(-h(i,j+1)-zeta_avg(i,j+1),0.0_r8)
                 Pwat=0.5_r8*rho0*g*wc*wc/MAX(hi(i,j),1.0_r8)
@@ -3074,33 +3217,40 @@
       SUBROUTINE ssa_fd_matvec (ng, tile, model,                        &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          Istr, Iend, Jstr, Jend,                 &
-     &                          pm, pn,                                 &
-     &                          hi, nuhx, nuhy, beta,                   &
+     &                          IstrP, IendP, JstrP, JendP,             &
+     &                          pm, pn, hi,                             &
+     &                          nuhx, nuhy, beta,                       &
      &                          xu, xv,                                 &
-     &                          Au, Av)
+     &                          Au, Av, urho, vrho,                     &
+     &                          aurho, avrho)
 !***********************************************************************
 !
-!  FD stencil action (PISM SSAFD fd_operator, Maxima-generated
-!  coefficients used verbatim) on the RHO-point velocity pair.
-!  Layout follows PISM exactly:  eq1/eq2 hold the 18 coefficients of
-!  the u- and v-equations (first 9: coupling to the 9-point u
-!  neighborhood SW,S,SE,W,C,E,NW,N,NE;  last 9: coupling to the v
-!  neighborhood in the same order);  the marginal switch weights
-!  N/E/S/W and NNE..NNW drop faces / switch to one-sided differences
-!  at ice-adjacent-to-ice-free interfaces (PISM cfbc rule);  ice-free
-!  cells carry identity rows (velocity fixed at zero);  the
-!  cell-centered beta enters the u- and v-diagonals (diag_u=5,
-!  diag_v=14 in the 1-based arrays below).
+!  FD stencil action (PISM SSAFD fd_operator, Maxima coefficients
+!  verbatim) wrapped in the PSI<->RHO maps so the Picard/PCG driver
+!  above is shared verbatim with the FE path:
 !
-!  Grid metrics:  PISM assumes a uniform grid;  here the cell-center
-!  spacings are taken from the local pm/pn (uniform-grid equivalent
-!  dx = 1/pm at the cell), matching the FE paths\' fac_* convention.
+!    1. map the PSI state to cell centers:  urho(i,j) = the 4-corner
+!       PSI average, masked to zero at ice-free cells (the FD state
+!       is identically zero there, the PISM cfbc ice-free rule);
+!    2. run the 13-point stencil on the cell-centered state (the
+!       eq1/eq2 18-coefficient arrays, the marginal switch weights
+!       N/E/S/W and NNE..NNW, and the cell-centered beta on the
+!       diagonals diag_u=eq1(5), diag_v=eq2(14));
+!    3. scatter the cell forces back to the PSI nodes with the
+!       transpose map:  Au(node) = the mean of the up-to-4 adjacent
+!       cell forces (the two maps are adjoints, so interior velocity
+!       magnitude is preserved to O(dx^2)).
+!
+!  Grid metrics:  PISM assumes a uniform grid;  the local cell
+!  spacing dx = 1/pm, dy = 1/pn is used per cell (the FE paths use
+!  the same convention through fac_dx/fac_dy).
 !
       implicit none
 !
       integer, intent(in) :: ng, tile, model
       integer, intent(in) :: LBi, UBi, LBj, UBj
       integer, intent(in) :: Istr, Iend, Jstr, Jend
+      integer, intent(in) :: IstrP, IendP, JstrP, JendP
 !
 # ifdef ASSUMED_SHAPE
       real(r8), intent(in)    :: pm(LBi:,LBj:)
@@ -3113,6 +3263,10 @@
       real(r8), intent(in)    :: xv(LBi:,LBj:)
       real(r8), intent(out)   :: Au(LBi:,LBj:)
       real(r8), intent(out)   :: Av(LBi:,LBj:)
+      real(r8), intent(inout) :: urho(LBi:,LBj:)
+      real(r8), intent(inout) :: vrho(LBi:,LBj:)
+      real(r8), intent(inout) :: aurho(LBi:,LBj:)
+      real(r8), intent(inout) :: avrho(LBi:,LBj:)
 # else
       real(r8), intent(in)    :: pm(LBi:UBi,LBj:UBj)
       real(r8), intent(in)    :: pn(LBi:UBi,LBj:UBj)
@@ -3124,11 +3278,16 @@
       real(r8), intent(in)    :: xv(LBi:UBi,LBj:UBj)
       real(r8), intent(out)   :: Au(LBi:UBi,LBj:UBj)
       real(r8), intent(out)   :: Av(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: urho(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: vrho(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: aurho(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: avrho(LBi:UBi,LBj:UBj)
 # endif
 !
       integer :: i, j, kk, ic, jc
       integer :: Nf, Ef, Sf, Wf
       integer :: NNE, NNW, ENE, ESE, SSW, SSE, WSW, WNW
+      integer :: nb
 !
       real(r8) :: cw, ce, cn, cs
       real(r8) :: dx, dy, dx2, dy2, d4, d2
@@ -3137,20 +3296,31 @@
       real(r8), dimension(18) :: eq1
       real(r8), dimension(18) :: eq2
 !
+!-----------------------------------------------------------------------
+!  Step 1:  PSI -> RHO map (4-corner average, ice-free cells zero).
+!-----------------------------------------------------------------------
 !
       DO j=Jstr,Jend
         DO i=Istr,Iend
+          IF (hi(i,j).gt.0.0_r8) THEN
+            urho(i,j)=0.25_r8*(xu(i,j)+xu(i+1,j)+xu(i,j+1)+xu(i+1,j+1))
+            vrho(i,j)=0.25_r8*(xv(i,j)+xv(i+1,j)+xv(i,j+1)+xv(i+1,j+1))
+          ELSE
+            urho(i,j)=0.0_r8
+            vrho(i,j)=0.0_r8
+          END IF
+        END DO
+      END DO
 !
-!  Default:  ice-free cell -> identity row (PISM cfbc ice-free rule;
-!  the FD state is identically zero there).
+!-----------------------------------------------------------------------
+!  Step 2:  the FD stencil on the cell-centered state.
+!-----------------------------------------------------------------------
 !
-          Au(i,j)=xu(i,j)
-          Av(i,j)=xv(i,j)
-!
+      DO j=Jstr,Jend
+        DO i=Istr,Iend
           IF (hi(i,j).gt.0.0_r8) THEN
 !
-!  Face viscosities around the cell;  faces to ice-free neighbors
-!  drop out (weight 0 below, matching PISM\'s cfbc switches).
+!  Face viscosities;  faces to ice-free neighbors drop out.
 !
             IF (i.gt.LBi) THEN
               cw=nuhx(i-1,j)
@@ -3173,9 +3343,9 @@
               cs=0.0_r8
             END IF
 !
-!  Marginal switch weights (PISM cfbc):  any direct ice-free
-!  neighbor zeroes that face;  any diagonal ice-free neighbor
-!  zeroes the adjacent interface switches.
+!  Marginal switch weights (PISM cfbc):  an ice-free direct neighbor
+!  zeroes that face;  an ice-free diagonal neighbor zeroes the two
+!  adjacent interface switches (centered -> one-sided).
 !
             Nf=1; Ef=1; Sf=1; Wf=1
             NNE=1; NNW=1; ENE=1; ESE=1; SSW=1; SSE=1; WSW=1; WNW=1
@@ -3231,37 +3401,35 @@
             eq1(8)=-cs*Sf/dy2
             eq1(9)=0.0_r8
             eq1(10)= cw*Wf*WNW/d2 + cn*Nf*NNW/d4
-            eq1(11)=(cn*Nf*NNE*Nf-cn*Nf*NNW*Nf)/d4                       &
-     &             +(cw*Wf*Nf-ce*Ef*Nf)/d2
+            eq1(11)=(cn*Nf*NNE-cn*Nf*NNW)*Nf/d4                           &
+     &             +(cw*Wf-ce*Ef)*Nf/d2
             eq1(12)=-ce*Ef*ENE/d2 - cn*Nf*NNE/d4
-            eq1(13)=(cw*Wf*WSW-cw*Wf*WNW)/d2                             &
-     &             +(cn*Nf*Wf-cs*Sf*Wf)/d4
-            eq1(14)=(cn*Nf*Ef*Nf-cn*Nf*Wf*Nf-cs*Sf*Ef*Sf                 &
-     &              +cs*Sf*Wf*Sf)/d4                                     &
-     &             +(ce*Ef*Nf-cw*Wf*Nf-ce*Ef*Sf+cw*Wf*Sf)/d2
-            eq1(15)=(ce*Ef*ENE-ce*Ef*ESE)/d2                             &
-     &             +(cs*Sf*Ef*Sf-cn*Nf*Ef*Nf)/d4
+            eq1(13)=(cw*Wf*WSW-cw*Wf*WNW)*Wf/d2                           &
+     &             +(cn*Nf-cs*Sf)*Wf/d4
+            eq1(14)=(cn*Nf-cs*Sf)*(ce*Ef-cw*Wf)/d4                        &
+     &             +(ce*Ef-cw*Wf)*(Nf-Sf)/d2
+            eq1(15)=(ce*Ef*ENE-ce*Ef*ESE)*Ef/d2                           &
+     &             +(cs*Sf-ce*Ef)*Sf/d4
             eq1(16)=-cw*Wf*WSW/d2 - cs*Sf*SSW/d4
-            eq1(17)=(cs*Sf*SSW-cs*Sf*SSE)/d4                             &
-     &             +(ce*Ef*Sf-cw*Wf*Sf)/d2
+            eq1(17)=(cs*Sf*SSW-cs*Sf*SSE)*Sf/d4                           &
+     &             +(ce*Ef-cw*Wf)*Sf/d2
             eq1(18)= ce*Ef*ESE/d2 + cs*Sf*SSE/d4
 !
 !  ---- PISM Maxima coefficients:  v-equation (eq2) ----
 !
             eq2(1)= cw*Wf*WNW/d4 + cn*Nf*NNW/d2
-            eq2(2)=(cn*Nf*NNE*Nf-cn*Nf*NNW*Nf)/d2                        &
-     &            +(cw*Wf*Nf-ce*Ef*Nf)/d4
+            eq2(2)=(cn*Nf*NNE-cn*Nf*NNW)*Nf/d2                            &
+     &            +(cw*Wf-ce*Ef)*Nf/d4
             eq2(3)=-ce*Ef*ENE/d4 - cn*Nf*NNE/d2
-            eq2(4)=(cw*Wf*WSW-cw*Wf*WNW)/d4                              &
-     &            +(cn*Nf*Wf-cs*Sf*Wf)/d2
-            eq2(5)=(cn*Nf*Ef*Nf-cn*Nf*Wf*Nf-cs*Sf*Ef*Sf                  &
-     &             +cs*Sf*Wf*Sf)/d2                                      &
-     &            +(ce*Ef*Nf-cw*Wf*Nf-ce*Ef*Sf+cw*Wf*Sf)/d4
-            eq2(6)=(ce*Ef*ENE-ce*Ef*ESE)/d4                              &
-     &            +(cs*Sf*Ef*Sf-cn*Nf*Ef*Nf)/d2
+            eq2(4)=(cw*Wf*WSW-cw*Wf*WNW)*Wf/d4                            &
+     &            +(cn*Nf-cs*Sf)*Wf/d2
+            eq2(5)=(cn*Nf-cs*Sf)*(ce*Ef-cw*Wf)/d2                         &
+     &            +(ce*Ef-cw*Wf)*(Nf-Sf)/d4
+            eq2(6)=(ce*Ef*ENE-ce*Ef*ESE)*Ef/d4                            &
+     &            +(cs*Sf-ce*Ef)*Sf/d2
             eq2(7)=-cw*Wf*WSW/d4 - cs*Sf*SSW/d2
-            eq2(8)=(cs*Sf*SSW-cs*Sf*SSE)/d2                              &
-     &            +(ce*Ef*Sf-cw*Wf*Sf)/d4
+            eq2(8)=(cs*Sf*SSW-cs*Sf*SSE)*Sf/d2                            &
+     &            +(ce*Ef-cw*Wf)*Sf/d4
             eq2(9)= ce*Ef*ESE/d4 + cs*Sf*SSE/d2
             eq2(10)=0.0_r8
             eq2(11)=-4.0_r8*cn*Nf/dy2
@@ -3273,56 +3441,77 @@
             eq2(17)=-4.0_r8*cs*Sf/dy2
             eq2(18)=0.0_r8
 !
-!  Cell-centered basal drag on the diagonals (diag_u=5, diag_v=14);
-!  Fi(ifIbta) is already branch/mask-correct and gfrac-scaled by
-!  isf_stress, exactly the PISM scaling*drag() product.
+!  Cell-centered basal drag on the diagonals (Fi(ifIbta) is already
+!  branch/mask-correct and gfrac-scaled by isf_stress).
 !
             bu=beta(i,j)
             bv=beta(i,j)
             eq1(5)=eq1(5)+bu
             eq2(14)=eq2(14)+bv
 !
-!  9-point neighborhood offsets (PISM compass order) and the action:
-!  the u-equation couples to u and v, the v-equation likewise.
+!  9-point stencil action (compass order SW,S,SE,W,C,E,NW,N,NE):
+!  eq1(1:9) on u, eq1(10:18) on v;  eq2(1:9) on u, eq2(10:18) on v.
 !
-            Au(i,j)=0.0_r8
-            Av(i,j)=0.0_r8
-            DO kk=1,18
-              IF (kk.le.9) THEN
-                ic=MOD(kk-1,3)-1
-                jc=(kk-1)/3-1
-              ELSE
-                ic=MOD(kk-10,3)-1
-                jc=(kk-10)/3-1
-              END IF
-              Au(i,j)=Au(i,j)+eq1(kk)*xu(i+ic,j+jc)
-              Av(i,j)=Av(i,j)+eq2(kk)*xv(i+ic,j+jc)
-            END DO
-!
-!  Cross coupling:  eq1(10:18) multiply the v-neighborhood, eq2(1:9)
-!  multiply the u-neighborhood.
-!
-            DO kk=10,18
-              ic=MOD(kk-10,3)-1
-              jc=(kk-10)/3-1
-              Au(i,j)=Au(i,j)+eq1(kk)*xv(i+ic,j+jc)
-            END DO
+            aurho(i,j)=0.0_r8
+            avrho(i,j)=0.0_r8
             DO kk=1,9
               ic=MOD(kk-1,3)-1
               jc=(kk-1)/3-1
-              Av(i,j)=Av(i,j)+eq2(kk)*xu(i+ic,j+jc)
+              aurho(i,j)=aurho(i,j)+eq1(kk)*urho(i+ic,j+jc)
+              avrho(i,j)=avrho(i,j)+eq2(kk+9)*vrho(i+ic,j+jc)
+            END DO
+            DO kk=10,18
+              ic=MOD(kk-10,3)-1
+              jc=(kk-10)/3-1
+              aurho(i,j)=aurho(i,j)+eq1(kk)*vrho(i+ic,j+jc)
+              avrho(i,j)=avrho(i,j)+eq2(kk-9)*urho(i+ic,j+jc)
             END DO
 !
-!  Zero-diagonal guard (PISM replace_zero_diagonal_entries):  at a
-!  lone floating cell with all-ice-free faces the diagonal can
-!  vanish;  fall back to a small identity row so PCG stays finite.
+!  Zero-diagonal guard (PISM replace_zero_diagonal_entries):  a lone
+!  floating cell with all-ice-free faces;  fall back to identity.
 !
-            IF (ABS(eq1(5)).lt.1.0E-16_r8) THEN
-              Au(i,j)=xu(i,j)
-            END IF
-            IF (ABS(eq2(14)).lt.1.0E-16_r8) THEN
-              Av(i,j)=xv(i,j)
-            END IF
+            IF (ABS(eq1(5)).lt.1.0E-16_r8) aurho(i,j)=urho(i,j)
+            IF (ABS(eq2(14)).lt.1.0E-16_r8) avrho(i,j)=vrho(i,j)
+          ELSE
+            aurho(i,j)=0.0_r8
+            avrho(i,j)=0.0_r8
+          END IF
+        END DO
+      END DO
+!
+!-----------------------------------------------------------------------
+!  Step 3:  RHO -> PSI transpose map (node = mean of the up-to-4
+!  adjacent cell forces;  boundary nodes use the available cells).
+!-----------------------------------------------------------------------
+!
+      DO j=JstrP,JendP
+        DO i=IstrP,IendP
+          nb=0
+          Au(i,j)=0.0_r8
+          Av(i,j)=0.0_r8
+          IF (i-1.ge.Istr.and.j-1.ge.Jstr) THEN
+            Au(i,j)=Au(i,j)+aurho(i-1,j-1)
+            Av(i,j)=Av(i,j)+avrho(i-1,j-1)
+            nb=nb+1
+          END IF
+          IF (i.le.Iend.and.j-1.ge.Jstr) THEN
+            Au(i,j)=Au(i,j)+aurho(i,j-1)
+            Av(i,j)=Av(i,j)+avrho(i,j-1)
+            nb=nb+1
+          END IF
+          IF (i-1.ge.Istr.and.j.le.Jend) THEN
+            Au(i,j)=Au(i,j)+aurho(i-1,j)
+            Av(i,j)=Av(i,j)+avrho(i-1,j)
+            nb=nb+1
+          END IF
+          IF (i.le.Iend.and.j.le.Jend) THEN
+            Au(i,j)=Au(i,j)+aurho(i,j)
+            Av(i,j)=Av(i,j)+avrho(i,j)
+            nb=nb+1
+          END IF
+          IF (nb.gt.0) THEN
+            Au(i,j)=Au(i,j)/REAL(nb,r8)
+            Av(i,j)=Av(i,j)/REAL(nb,r8)
           END IF
         END DO
       END DO
@@ -3333,6 +3522,7 @@
       SUBROUTINE ssa_fd_diag (ng, tile, model,                          &
      &                        LBi, UBi, LBj, UBj,                       &
      &                        Istr, Iend, Jstr, Jend,                   &
+     &                        IstrP, IendP, JstrP, JendP,               &
      &                        pm, pn,                                   &
      &                        hi, nuhx, nuhy, beta,                     &
      &                        diag_u, diag_v)
@@ -3347,6 +3537,7 @@
       integer, intent(in) :: ng, tile, model
       integer, intent(in) :: LBi, UBi, LBj, UBj
       integer, intent(in) :: Istr, Iend, Jstr, Jend
+      integer, intent(in) :: IstrP, IendP, JstrP, JendP
 !
 # ifdef ASSUMED_SHAPE
       real(r8), intent(in)  :: pm(LBi:,LBj:)
@@ -3368,12 +3559,12 @@
       real(r8), intent(out) :: diag_v(LBi:UBi,LBj:UBj)
 # endif
 !
-      integer :: i, j
-      integer :: Nf, Ef, Sf, Wf
+      integer :: i, j, nb
 !
       real(r8) :: cw, ce, cn, cs
       real(r8) :: dx, dy
-!
+      real(r8), dimension(LBi:UBi,LBj:UBj) :: wrkx
+      real(r8), dimension(LBi:UBi,LBj:UBj) :: wrky
 !
       DO j=Jstr,Jend
         DO i=Istr,Iend
@@ -3400,12 +3591,50 @@
             END IF
             dx=1.0_r8/pm(i,j)
             dy=1.0_r8/pn(i,j)
-            diag_u(i,j)=(cn+cs)/dy**2 + 4.0_r8*(cw+ce)/dx**2            &
-     &                 +beta(i,j)
-            diag_v(i,j)=4.0_r8*(cn+cs)/dy**2 + (cw+ce)/dx**2            &
-     &                 +beta(i,j)
-            IF (ABS(diag_u(i,j)).lt.1.0E-16_r8) diag_u(i,j)=1.0_r8
-            IF (ABS(diag_v(i,j)).lt.1.0E-16_r8) diag_v(i,j)=1.0_r8
+            wrkx(i,j)=(cn+cs)/dy**2 + 4.0_r8*(cw+ce)/dx**2               &
+     &              +beta(i,j)
+            wrky(i,j)=4.0_r8*(cn+cs)/dy**2 + (cw+ce)/dx**2               &
+     &              +beta(i,j)
+            IF (ABS(wrkx(i,j)).lt.1.0E-16_r8) wrkx(i,j)=1.0_r8
+            IF (ABS(wrky(i,j)).lt.1.0E-16_r8) wrky(i,j)=1.0_r8
+          ELSE
+            wrkx(i,j)=1.0_r8
+            wrky(i,j)=1.0_r8
+          END IF
+        END DO
+      END DO
+!
+!  Transpose map to the PSI nodes (Jacobi diagonals are consumed at
+!  PSI nodes by the shared PCG driver).
+!
+      DO j=JstrP,JendP
+        DO i=IstrP,IendP
+          nb=0
+          diag_u(i,j)=0.0_r8
+          diag_v(i,j)=0.0_r8
+          IF (i-1.ge.Istr.and.j-1.ge.Jstr) THEN
+            diag_u(i,j)=diag_u(i,j)+wrkx(i-1,j-1)
+            diag_v(i,j)=diag_v(i,j)+wrky(i-1,j-1)
+            nb=nb+1
+          END IF
+          IF (i.le.Iend.and.j-1.ge.Jstr) THEN
+            diag_u(i,j)=diag_u(i,j)+wrkx(i,j-1)
+            diag_v(i,j)=diag_v(i,j)+wrky(i,j-1)
+            nb=nb+1
+          END IF
+          IF (i-1.ge.Istr.and.j.le.Jend) THEN
+            diag_u(i,j)=diag_u(i,j)+wrkx(i-1,j)
+            diag_v(i,j)=diag_v(i,j)+wrky(i-1,j)
+            nb=nb+1
+          END IF
+          IF (i.le.Iend.and.j.le.Jend) THEN
+            diag_u(i,j)=diag_u(i,j)+wrkx(i,j)
+            diag_v(i,j)=diag_v(i,j)+wrky(i,j)
+            nb=nb+1
+          END IF
+          IF (nb.gt.0) THEN
+            diag_u(i,j)=diag_u(i,j)/REAL(nb,r8)
+            diag_v(i,j)=diag_v(i,j)/REAL(nb,r8)
           ELSE
             diag_u(i,j)=1.0_r8
             diag_v(i,j)=1.0_r8
