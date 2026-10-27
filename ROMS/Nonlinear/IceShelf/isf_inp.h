@@ -1260,6 +1260,10 @@
      &          'Calving thickness threshold [m].'
           WRITE (out,50) N_ssa(ng), 'N_ssa',                            &
      &          'SSA solve frequency [ocean steps].'
+          WRITE (out,50) n_ssa_fd(ng), 'n_ssa_fd',                      &
+     &          'FD solver switch (0=FE Q1 Galerkin, 1=PISM SSAFD).'
+          WRITE (out,50) n_dsbranch(ng), 'n_dsbranch',                  &
+     &          'Branch-aware driving stress gradient switch.'
           WRITE (out,50) mismip_melt(ng), 'mismip_melt',                &
      &          'MISMIP+ melt profile: 0=none 1=Ice1 2=Ice2.'
           WRITE (out,50) N_gl(ng), 'N_gl',                              &
