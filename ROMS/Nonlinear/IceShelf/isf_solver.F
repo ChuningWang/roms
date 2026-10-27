@@ -2956,8 +2956,8 @@
 !  difference, u_y from the 4-point average of the two straddled
 !  faces;  face thickness is the mean of the two cells.
 !
-      DO j=Jstr,Jend
-        DO i=Istr,Iend-1
+      DO j=MAX(LBj,Jstr-1),MIN(UBj,Jend)
+        DO i=MAX(LBi,Istr-1),MIN(UBi-1,Iend)
           Hf=0.5_r8*(hi(i,j)+hi(i+1,j))
           IF (Hf.gt.0.0_r8) THEN
             ux=(urho(i+1,j)-urho(i,j))*pm(i,j)
@@ -2976,13 +2976,13 @@
             nuhx(i,j)=0.0_r8
           END IF
         END DO
-        nuhx(Iend,j)=nuhx(Iend-1,j)
+        nuhx(MIN(UBi-1,Iend),j)=nuhx(MIN(UBi-2,Iend-1),j)
       END DO
 !
 !  y-face viscosities (PISM o=1).
 !
-      DO j=Jstr,Jend-1
-        DO i=Istr,Iend
+      DO j=MAX(LBj,Jstr-1),MIN(UBj-1,Jend)
+        DO i=MAX(LBi,Istr-1),MIN(UBi,Iend)
           Hf=0.5_r8*(hi(i,j)+hi(i,j+1))
           IF (Hf.gt.0.0_r8) THEN
             ux=0.25_r8*((urho(i+1,j)+urho(i+1,j+1)-                     &
@@ -3002,8 +3002,8 @@
           END IF
         END DO
       END DO
-      DO i=Istr,Iend
-        nuhy(i,Jend)=nuhy(i,Jend-1)
+      DO i=MAX(LBi,Istr-1),MIN(UBi,Iend)
+        nuhy(i,MIN(UBj-1,Jend))=nuhy(i,MIN(UBj-2,Jend-1))
       END DO
 !
       RETURN
@@ -3059,8 +3059,8 @@
       real(r8) :: wsum
 !
 !
-      DO j=Jstr,Jend
-        DO i=Istr,Iend
+      DO j=MAX(LBj,Jstr-1),MIN(UBj,Jend)
+        DO i=MAX(LBi,Istr-1),MIN(UBi,Iend)
           fdx(i,j)=0.0_r8
           fdy(i,j)=0.0_r8
 !
