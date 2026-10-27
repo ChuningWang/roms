@@ -410,7 +410,7 @@
 !
       CALL ssa_driving_stress (ng, tile, model,                         &
      &                         LBi, UBi, LBj, UBj,                      &
-     &                         pm, pn,                                  &
+     &                         pm, pn, h, zeta_avg,                     &
      &                         rmask_ist, pmask_act, pmarg,             &
      &                         Si(:,:,lsold,isIhis),                    &
      &                         Fi(:,:,ifIzsf),                          &
@@ -1201,7 +1201,7 @@
 !***********************************************************************
       SUBROUTINE ssa_driving_stress (ng, tile, model,                   &
      &                               LBi, UBi, LBj, UBj,                &
-     &                               pm, pn,                            &
+     &                               pm, pn, h, zeta_avg,               &
      &                               rmask_ist, pmask_act, pmarg,       &
      &                               hi, zs,                            &
      &                               tdx, tdy)
@@ -1254,6 +1254,8 @@
 # ifdef ASSUMED_SHAPE
       real(r8), intent(in)  :: pm(LBi:,LBj:)
       real(r8), intent(in)  :: pn(LBi:,LBj:)
+      real(r8), intent(in)  :: h(LBi:,LBj:)
+      real(r8), intent(in)  :: zeta_avg(LBi:,LBj:)
       real(r8), intent(in)  :: rmask_ist(LBi:,LBj:)
       real(r8), intent(in)  :: pmask_act(LBi:,LBj:)
       real(r8), intent(in)  :: pmarg(LBi:,LBj:)
@@ -1264,6 +1266,8 @@
 # else
       real(r8), intent(in)  :: pm(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: pn(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: h(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: zeta_avg(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: rmask_ist(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: pmask_act(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: pmarg(LBi:UBi,LBj:UBj)
@@ -1276,16 +1280,36 @@
 !  Local variable declarations.
 !
       integer :: i, j, di, dj, is_iter, dist_margin
+      integer :: iw, ie, js, jn
+      integer :: cw, ce, cs, cn, cc
+      integer :: IstrC, IendC, JstrC, JendC
 !
       real(r8) :: hi_psi
       real(r8) :: dSdx, dSdy, dx_rho, dy_rho, jac_avg
       real(r8) :: zs_sum, taper_w
       real(r8) :: cff, cff1
+      real(r8) :: D_c, hx_c, hy_c
 !
       real(r8), dimension(LBi:UBi,LBj:UBj) :: zs_smooth
       real(r8), dimension(LBi:UBi,LBj:UBj) :: zs_smooth_temp
+      real(r8), dimension(LBi:UBi,LBj:UBj) :: taperfld
 !
 #include "set_bounds.h"
+!
+!  Extended cell-assembly bounds (the same convention as the other
+!  element-assembly routines:  the western/southern halo ring is
+!  integrated so seam nodes receive complete contributions).
+!
+      IstrC=Istr
+      IF (.not.DOMAIN(ng)%Western_Edge(tile).or.EWperiodic(ng)) THEN
+        IstrC=Istr-1
+      END IF
+      JstrC=Jstr
+      IF (.not.DOMAIN(ng)%Southern_Edge(tile).or.NSperiodic(ng)) THEN
+        JstrC=Jstr-1
+      END IF
+      IendC=Iend
+      JendC=Jend
 !
 !-----------------------------------------------------------------------
 !  Initialize the nodal forces.
@@ -1521,6 +1545,205 @@
 !  No halo exchange of the assembled RHS:  every consumer (warm
 !  start, CG residual, convergence norms) reads tdx/tdy at
 !  owned PSI nodes only.
+!
+!-----------------------------------------------------------------------
+!  Branch-aware driving stress (n_dsbranch > 0, B5.5 ablation A'):
+!  PISM SSAFD recipe -- the surface gradient at each CELL uses
+!  one-sided differences within its own flotation branch, never
+!  differencing across a grounded/floating interface (where the
+!  surface elevation switches between the S = -h + H and
+!  S = (1-rho_i/rho_w) H branches).  The audit (2026-10-27) showed
+!  the centered cross-branch node gradient puts ~5.7x PISM's
+!  driving stress on the first floating cell behind the grounding
+!  line (~18 kPa excess), the surviving candidate for the ~85 km
+!  westward equilibrium bias;  the ice front is unaffected (the
+!  constant extension above already flattens the cross-front
+!  gradient and the front-load line load is carried unchanged).
+!  The cell stresses are scattered to the 4 corner PSI nodes with
+!  the Q1 hat weight A_e/4 (the same lumping as jac_avg), which
+!  reproduces the centered node gradient to O(dx^2) in the
+!  interior, so only the GL band differs from the default path.
+!
+      IF (n_dsbranch(ng).gt.0) THEN
+!
+!  Nodal taper weights (same rule as the default path above).
+!
+        DO j=JstrP,JendP
+          DO i=IstrP,IendP
+            IF (n_taper(ng).le.0) THEN
+              taperfld(i,j)=1.0_r8
+            ELSE
+              dist_margin=n_taper(ng)
+              DO dj=-1,1
+                DO di=-1,1
+                  IF (di.ne.0.or.dj.ne.0) THEN
+                    IF (i+di.ge.LBi.and.i+di.le.UBi.and.             &
+     &                  j+dj.ge.LBj.and.j+dj.le.UBj) THEN
+                      IF (pmarg(i+di,j+dj).eq.1.0_r8) THEN
+                        dist_margin=MIN(dist_margin,                  &
+     &                                  MAX(ABS(di),ABS(dj)))
+                      END IF
+                    END IF
+                  END IF
+                END DO
+              END DO
+              taperfld(i,j)=MIN(REAL(dist_margin,r8)/                 &
+     &                          REAL(n_taper(ng),r8),1.0_r8)
+            END IF
+          END DO
+        END DO
+!
+!  Overwrite the nodal forces with the branch-aware assembly.
+!
+        DO j=JstrP,JendP
+          DO i=IstrP,IendP
+            tdx(i,j)=0.0_r8
+            tdy(i,j)=0.0_r8
+          END DO
+        END DO
+!
+!  Cell loop over the assembly ring (the same reach as ssa_matvec)
+!  so seam nodes receive complete contributions from both tiles.
+!  Branch code:  0 = ice-free, 1 = grounded, 2 = floating, using
+!  the window-mean criterion shared with isf_stress and
+!  ssa_front_load (D_avg = h + zeta_avg - Dcrit).
+!
+        DO j=JstrC,JendC
+          DO i=IstrC,IendC
+            IF (hi(i,j).gt.0.0_r8) THEN
+!
+!  Branch codes of the cell and its 4 neighbors.
+!
+              D_c=h(i,j)+zeta_avg(i,j)-Dcrit(ng)
+              IF (rho_i*hi(i,j).gt.rho0*MAX(D_c,0.0_r8)) THEN
+                cc=1
+              ELSE
+                cc=2
+              END IF
+              IF (i-1.ge.LBi) THEN
+                D_c=h(i-1,j)+zeta_avg(i-1,j)-Dcrit(ng)
+                IF (hi(i-1,j).le.0.0_r8) THEN
+                  cw=0
+                ELSE IF (rho_i*hi(i-1,j).gt.rho0*MAX(D_c,0.0_r8)) THEN
+                  cw=1
+                ELSE
+                  cw=2
+                END IF
+              ELSE
+                cw=0
+              END IF
+              IF (i+1.le.UBi) THEN
+                D_c=h(i+1,j)+zeta_avg(i+1,j)-Dcrit(ng)
+                IF (hi(i+1,j).le.0.0_r8) THEN
+                  ce=0
+                ELSE IF (rho_i*hi(i+1,j).gt.rho0*MAX(D_c,0.0_r8)) THEN
+                  ce=1
+                ELSE
+                  ce=2
+                END IF
+              ELSE
+                ce=0
+              END IF
+              IF (j-1.ge.LBj) THEN
+                D_c=h(i,j-1)+zeta_avg(i,j-1)-Dcrit(ng)
+                IF (hi(i,j-1).le.0.0_r8) THEN
+                  cs=0
+                ELSE IF (rho_i*hi(i,j-1).gt.rho0*MAX(D_c,0.0_r8)) THEN
+                  cs=1
+                ELSE
+                  cs=2
+                END IF
+              ELSE
+                cs=0
+              END IF
+              IF (j+1.le.UBj) THEN
+                D_c=h(i,j+1)+zeta_avg(i,j+1)-Dcrit(ng)
+                IF (hi(i,j+1).le.0.0_r8) THEN
+                  cn=0
+                ELSE IF (rho_i*hi(i,j+1).gt.rho0*MAX(D_c,0.0_r8)) THEN
+                  cn=1
+                ELSE
+                  cn=2
+                END IF
+              ELSE
+                cn=0
+              END IF
+!
+!  Branch-aware one-sided weights:  zero across a grounded/floating
+!  interface only (ice-free neighbours keep the constant-extension
+!  gradient;  the front load is the sole cliff force there).
+!
+              IF ((cc.eq.1.and.cw.eq.2).or.(cc.eq.2.and.cw.eq.1)) THEN
+                iw=0
+              ELSE
+                iw=1
+              END IF
+              IF ((cc.eq.1.and.ce.eq.2).or.(cc.eq.2.and.ce.eq.1)) THEN
+                ie=0
+              ELSE
+                ie=1
+              END IF
+              IF ((cc.eq.1.and.cs.eq.2).or.(cc.eq.2.and.cs.eq.1)) THEN
+                js=0
+              ELSE
+                js=1
+              END IF
+              IF ((cc.eq.1.and.cn.eq.2).or.(cc.eq.2.and.cn.eq.1)) THEN
+                jn=0
+              ELSE
+                jn=1
+              END IF
+!
+!  Weighted one-sided gradient of the (extended) surface.
+!
+              IF (iw+ie.gt.0) THEN
+                hx_c=(REAL(iw,r8)*(zs_smooth(i,j)-zs_smooth(i-1,j))+   &
+     &                REAL(ie,r8)*(zs_smooth(i+1,j)-zs_smooth(i,j)))/  &
+     &               (REAL(iw+ie,r8)/pm(i,j))
+              ELSE
+                hx_c=0.0_r8
+              END IF
+              IF (js+jn.gt.0) THEN
+                hy_c=(REAL(js,r8)*(zs_smooth(i,j)-zs_smooth(i,j-1))+   &
+     &                REAL(jn,r8)*(zs_smooth(i,j+1)-zs_smooth(i,j)))/  &
+     &               (REAL(js+jn,r8)/pn(i,j))
+              ELSE
+                hy_c=0.0_r8
+              END IF
+!
+!  Cell driving stress scattered to the 4 corner PSI nodes with
+!  the Q1 hat weight A_e/4 (lumped-area consistent).
+!
+              cff1=-rho_i*g*hi(i,j)*0.25_r8/(pm(i,j)*pn(i,j))
+!
+              IF (pmask_act(i,j).eq.1.0_r8.and.                         &
+     &            i.ge.IstrP.and.i.le.IendP.and.                        &
+     &            j.ge.JstrP.and.j.le.JendP) THEN
+                tdx(i,j)=tdx(i,j)+cff1*hx_c*taperfld(i,j)
+                tdy(i,j)=tdy(i,j)+cff1*hy_c*taperfld(i,j)
+              END IF
+              IF (pmask_act(i+1,j).eq.1.0_r8.and.                       &
+     &            i+1.ge.IstrP.and.i+1.le.IendP.and.                    &
+     &            j.ge.JstrP.and.j.le.JendP) THEN
+                tdx(i+1,j)=tdx(i+1,j)+cff1*hx_c*taperfld(i+1,j)
+                tdy(i+1,j)=tdy(i+1,j)+cff1*hy_c*taperfld(i+1,j)
+              END IF
+              IF (pmask_act(i,j+1).eq.1.0_r8.and.                       &
+     &            i.ge.IstrP.and.i.le.IendP.and.                        &
+     &            j+1.ge.JstrP.and.j+1.le.JendP) THEN
+                tdx(i,j+1)=tdx(i,j+1)+cff1*hx_c*taperfld(i,j+1)
+                tdy(i,j+1)=tdy(i,j+1)+cff1*hy_c*taperfld(i,j+1)
+              END IF
+              IF (pmask_act(i+1,j+1).eq.1.0_r8.and.                     &
+     &            i+1.ge.IstrP.and.i+1.le.IendP.and.                    &
+     &            j+1.ge.JstrP.and.j+1.le.JendP) THEN
+                tdx(i+1,j+1)=tdx(i+1,j+1)+cff1*hx_c*taperfld(i+1,j+1)
+                tdy(i+1,j+1)=tdy(i+1,j+1)+cff1*hy_c*taperfld(i+1,j+1)
+              END IF
+            END IF
+          END DO
+        END DO
+      END IF
 !
       RETURN
       END SUBROUTINE ssa_driving_stress
