@@ -3304,7 +3304,7 @@
 !
 !  FD stencil action on the RHO-point velocity pair (PISM SSAFD
 !  fd_operator, Maxima coefficients verbatim).  The FD system lives
-!  entirely in the RHO space:  no PSI mapping here (the棋盘 null
+!  entirely in the RHO space:  no PSI mapping here (the checkerboard null
 !  space of the averaged-projection form made the shared PCG
 !  diverge on real geometries;  the FD Picard driver ssa_fd_picard
 !  runs its own PCG on the cell-centered state instead).
