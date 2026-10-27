@@ -228,6 +228,18 @@
 !
       real(r8), dimension(LBi:UBi,LBj:UBj) :: pmarg
 !
+!  FD solver (n_ssa_fd > 0) work arrays:  the FD discretization
+!  (PISM SSAFD recipe) defines the equations at the RHO cell
+!  centers, so the solver state lives on RHO points;  the staggered
+!  viscosities live on the U/V faces (nuhx = x-face between
+!  (i,j)-(i+1,j), nuhy = y-face between (i,j)-(i,j+1)) and the
+!  driving forces on the cell centers (fdx/fdy).
+!
+      real(r8), dimension(LBi:UBi,LBj:UBj) :: nuhx
+      real(r8), dimension(LBi:UBi,LBj:UBj) :: nuhy
+      real(r8), dimension(LBi:UBi,LBj:UBj) :: fdx
+      real(r8), dimension(LBi:UBi,LBj:UBj) :: fdy
+!
 !  Global-reduction buffer (batched mp_reduce).
 !
       real(r8), dimension(4) :: norms
@@ -2711,5 +2723,698 @@
 !
       RETURN
       END SUBROUTINE ssa_matvec
+!
+!***********************************************************************
+!  FD solver (n_ssa_fd > 0):  finite-difference discretization of
+!  the SSA following the PISM SSAFD recipe.  Every piece below is
+!  the one-for-one FD counterpart of an FE piece above:
+!
+!    ssa_fd_viscosity  <-> ssa_viscosity
+!        staggered face viscosities nuhx (x-face between RHO(i,j)
+!        and RHO(i+1,j)) and nuhy (y-face between RHO(i,j) and
+!        RHO(i,j+1));  strain rates from face differences of the
+!        RHO-point velocity with the 4-point cross term;  same Glen
+!        invariant, hardness field, thin-ice strength extension and
+!        (unused here) additive regularization as the FE path.
+!
+!    ssa_fd_driving    <-> ssa_driving_stress (+ ssa_front_load)
+!        cell-centered driving stress with the branch-aware weighted
+!        one-sided surface gradient (PISM compute_driving_stress)
+!        and the marginal-cell front pressure difference
+!        delta_p = H*(P_ice - P_water) folded into the cell RHS
+!        (PISM cfbc), replacing the FE pair of the nodal gradient
+!        plus the Q1 line load.
+!
+!    ssa_fd_matvec     <-> ssa_matvec
+!        the 13-point FD stencil action (PISM fd_operator Maxima
+!        coefficients) on the RHO-point velocity, with the marginal
+!        switch weights (centered -> one-sided differences at
+!        ice-adjacent-to-ice-free interfaces) and the cell-centered
+!        beta on the diagonal.
+!
+!    ssa_fd_diag       <-> ssa_jacobi_diag
+!        stencil diagonal + beta.
+!
+!  The solver state (search directions, residuals, preconditioned
+!  vectors) lives on RHO points;  velocity enters the solve as the
+!  4-corner PSI average and leaves as the 4-cell RHO average
+!  (the two maps are transposes of each other, so interior velocity
+!  magnitude is preserved to O(dx^2);  the PSI boundary values are
+!  handled by isf_pibc as before).  LBC semantics:  the FE path
+!  zeroes residual/search rows at closed/clamped PSI edge nodes
+!  (ssa_lbc_zero);  the FD path carries the same intent by fixing
+!  the RHO cells adjacent to closed/clamped edges (identity rows),
+!  the closest cell-centered analogue.
+!***********************************************************************
+!
+      SUBROUTINE ssa_fd_viscosity (ng, tile, model,                     &
+     &                             LBi, UBi, LBj, UBj,                  &
+     &                             Istr, Iend, Jstr, Jend,              &
+     &                             pm, pn,                              &
+     &                             hi, B_hard,                          &
+     &                             urho, vrho,                          &
+     &                             nuhx, nuhy)
+!***********************************************************************
+!
+      implicit none
+!
+      integer, intent(in) :: ng, tile, model
+      integer, intent(in) :: LBi, UBi, LBj, UBj
+      integer, intent(in) :: Istr, Iend, Jstr, Jend
+!
+# ifdef ASSUMED_SHAPE
+      real(r8), intent(in)  :: pm(LBi:,LBj:)
+      real(r8), intent(in)  :: pn(LBi:,LBj:)
+      real(r8), intent(in)  :: hi(LBi:,LBj:)
+      real(r8), intent(in)  :: B_hard(LBi:,LBj:)
+      real(r8), intent(in)  :: urho(LBi:,LBj:)
+      real(r8), intent(in)  :: vrho(LBi:,LBj:)
+      real(r8), intent(out) :: nuhx(LBi:,LBj:)
+      real(r8), intent(out) :: nuhy(LBi:,LBj:)
+# else
+      real(r8), intent(in)  :: pm(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: pn(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: hi(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: B_hard(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: urho(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: vrho(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: nuhx(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: nuhy(LBi:UBi,LBj:UBj)
+# endif
+!
+      integer :: i, j
+!
+      real(r8) :: Hf, gam, ux, uy, vx, vy, wz
+!
+!
+!  x-face viscosities (PISM o=0):  u_x from the 2-point face
+!  difference, u_y from the 4-point average of the two straddled
+!  faces;  face thickness is the mean of the two cells.
+!
+      DO j=Jstr,Jend
+        DO i=Istr,Iend-1
+          Hf=0.5_r8*(hi(i,j)+hi(i+1,j))
+          IF (Hf.gt.0.0_r8) THEN
+            ux=(urho(i+1,j)-urho(i,j))*pm(i,j)
+            uy=0.25_r8*((urho(i,j+1)+urho(i+1,j+1)-                     &
+     &                   urho(i,j-1)-urho(i+1,j-1))*pn(i,j))
+            vx=(vrho(i+1,j)-vrho(i,j))*pm(i,j)
+            vy=0.25_r8*((vrho(i,j+1)+vrho(i+1,j+1)-                     &
+     &                   vrho(i,j-1)-vrho(i+1,j-1))*pn(i,j))
+            wz=-(ux+vy)
+            gam=0.5_r8*(ux*ux+vy*vy+wz*wz+0.5_r8*(uy+vx)*(uy+vx))+      &
+     &          eps_glen_min(ng)**2
+            nuhx(i,j)=0.5_r8*0.5_r8*(B_hard(i,j)+B_hard(i+1,j))*        &
+     &                gam**((1.0_r8-n_glen(ng))/(2.0_r8*n_glen(ng)))*   &
+     &                MAX(Hf,min_thickness(ng))
+          ELSE
+            nuhx(i,j)=0.0_r8
+          END IF
+        END DO
+        nuhx(Iend,j)=nuhx(Iend-1,j)
+      END DO
+!
+!  y-face viscosities (PISM o=1).
+!
+      DO j=Jstr,Jend-1
+        DO i=Istr,Iend
+          Hf=0.5_r8*(hi(i,j)+hi(i,j+1))
+          IF (Hf.gt.0.0_r8) THEN
+            ux=0.25_r8*((urho(i+1,j)+urho(i+1,j+1)-                     &
+     &                   urho(i-1,j)-urho(i-1,j+1))*pm(i,j))
+            uy=(vrho(i,j+1)-vrho(i,j))*pn(i,j)
+            vx=0.25_r8*((vrho(i+1,j)+vrho(i+1,j+1)-                     &
+     &                   vrho(i-1,j)-vrho(i-1,j+1))*pm(i,j))
+            vy=(vrho(i,j+1)-vrho(i,j))*pn(i,j)
+            wz=-(ux+vy)
+            gam=0.5_r8*(ux*ux+vy*vy+wz*wz+0.5_r8*(uy+vx)*(uy+vx))+      &
+     &          eps_glen_min(ng)**2
+            nuhy(i,j)=0.5_r8*0.5_r8*(B_hard(i,j)+B_hard(i,j+1))*        &
+     &                gam**((1.0_r8-n_glen(ng))/(2.0_r8*n_glen(ng)))*   &
+     &                MAX(Hf,min_thickness(ng))
+          ELSE
+            nuhy(i,j)=0.0_r8
+          END IF
+        END DO
+      END DO
+      DO i=Istr,Iend
+        nuhy(i,Jend)=nuhy(i,Jend-1)
+      END DO
+!
+      RETURN
+      END SUBROUTINE ssa_fd_viscosity
+!
+!***********************************************************************
+      SUBROUTINE ssa_fd_driving (ng, tile, model,                       &
+     &                           LBi, UBi, LBj, UBj,                    &
+     &                           Istr, Iend, Jstr, Jend,                &
+     &                           pm, pn, h, zeta_avg,                   &
+     &                           hi, zs, bed,                           &
+     &                           fdx, fdy)
+!***********************************************************************
+!
+!  Cell-centered driving stress (PISM compute_driving_stress) plus
+!  the marginal front-pressure difference (PISM assemble_rhs cfbc
+!  block), folded into one cell RHS:  fdx = taud_x + (E-W)*delta_p/dx.
+!  Surface gradients are branch-aware one-sided differences (the
+!  audit-established PISM semantics);  ice-free cells carry a zero
+!  RHS (their velocity rows are identity in ssa_fd_matvec).
+!
+      implicit none
+!
+      integer, intent(in) :: ng, tile, model
+      integer, intent(in) :: LBi, UBi, LBj, UBj
+      integer, intent(in) :: Istr, Iend, Jstr, Jend
+!
+# ifdef ASSUMED_SHAPE
+      real(r8), intent(in)  :: pm(LBi:,LBj:)
+      real(r8), intent(in)  :: pn(LBi:,LBj:)
+      real(r8), intent(in)  :: h(LBi:,LBj:)
+      real(r8), intent(in)  :: zeta_avg(LBi:,LBj:)
+      real(r8), intent(in)  :: hi(LBi:,LBj:)
+      real(r8), intent(in)  :: zs(LBi:,LBj:)
+      real(r8), intent(in)  :: bed(LBi:,LBj:)
+      real(r8), intent(out) :: fdx(LBi:,LBj:)
+      real(r8), intent(out) :: fdy(LBi:,LBj:)
+# else
+      real(r8), intent(in)  :: pm(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: pn(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: h(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: zeta_avg(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: hi(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: zs(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: bed(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: fdx(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: fdy(LBi:UBi,LBj:UBj)
+# endif
+!
+      integer :: i, j
+      integer :: cw, ce, cs, cn, cc
+!
+      real(r8) :: D_c, D_n
+      real(r8) :: hx, hy, Pice, Pwat, dp, wc
+      real(r8) :: wsum
+!
+!
+      DO j=Jstr,Jend
+        DO i=Istr,Iend
+          fdx(i,j)=0.0_r8
+          fdy(i,j)=0.0_r8
+!
+          IF (hi(i,j).gt.0.0_r8) THEN
+!
+!  Branch codes:  0 = ice-free, 1 = grounded, 2 = floating (window
+!  criterion shared with isf_stress / ssa_front_load).
+!
+            D_c=h(i,j)+zeta_avg(i,j)-Dcrit(ng)
+            IF (rho_i*hi(i,j).gt.rho0*MAX(D_c,0.0_r8)) THEN
+              cc=1
+            ELSE
+              cc=2
+            END IF
+            IF (i.gt.LBi) THEN
+              D_n=h(i-1,j)+zeta_avg(i-1,j)-Dcrit(ng)
+              IF (hi(i-1,j).le.0.0_r8) THEN
+                cw=0
+              ELSE IF (rho_i*hi(i-1,j).gt.rho0*MAX(D_n,0.0_r8)) THEN
+                cw=1
+              ELSE
+                cw=2
+              END IF
+            ELSE
+              cw=0
+            END IF
+            IF (i.lt.UBi) THEN
+              D_n=h(i+1,j)+zeta_avg(i+1,j)-Dcrit(ng)
+              IF (hi(i+1,j).le.0.0_r8) THEN
+                ce=0
+              ELSE IF (rho_i*hi(i+1,j).gt.rho0*MAX(D_n,0.0_r8)) THEN
+                ce=1
+              ELSE
+                ce=2
+              END IF
+            ELSE
+              ce=0
+            END IF
+            IF (j.gt.LBj) THEN
+              D_n=h(i,j-1)+zeta_avg(i,j-1)-Dcrit(ng)
+              IF (hi(i,j-1).le.0.0_r8) THEN
+                cs=0
+              ELSE IF (rho_i*hi(i,j-1).gt.rho0*MAX(D_n,0.0_r8)) THEN
+                cs=1
+              ELSE
+                cs=2
+              END IF
+            ELSE
+              cs=0
+            END IF
+            IF (j.lt.UBj) THEN
+              D_n=h(i,j+1)+zeta_avg(i,j+1)-Dcrit(ng)
+              IF (hi(i,j+1).le.0.0_r8) THEN
+                cn=0
+              ELSE IF (rho_i*hi(i,j+1).gt.rho0*MAX(D_n,0.0_r8)) THEN
+                cn=1
+              ELSE
+                cn=2
+              END IF
+            ELSE
+              cn=0
+            END IF
+!
+!  Branch-aware weighted one-sided surface gradient:  grounded --
+!  centered over the two grounded neighbors;  floating -- centered
+!  over the two floating neighbors;  GL/marginal transitions use
+!  the single in-branch one-sided difference (PISM weight()).
+!  Ice-free neighbors are excluded (zs=0 extension would fake a
+!  cliff;  the cliff force is the delta_p term below).
+!
+            wsum=0.0_r8
+            hx=0.0_r8
+            hy=0.0_r8
+            IF (cw.eq.cc.and.cc.ne.0) THEN
+              hx=hx-(zs(i,j)-zs(i-1,j))*pm(i,j)
+              wsum=wsum+1.0_r8
+            END IF
+            IF (ce.eq.cc.and.cc.ne.0) THEN
+              hx=hx+(zs(i+1,j)-zs(i,j))*pm(i,j)
+              wsum=wsum+1.0_r8
+            END IF
+            IF (cs.eq.cc.and.cc.ne.0) THEN
+              hy=hy-(zs(i,j)-zs(i,j-1))*pn(i,j)
+              wsum=wsum+1.0_r8
+            END IF
+            IF (cn.eq.cc.and.cc.ne.0) THEN
+              hy=hy+(zs(i,j+1)-zs(i,j))*pn(i,j)
+              wsum=wsum+1.0_r8
+            END IF
+            IF (wsum.gt.0.0_r8) THEN
+              hx=hx/wsum
+              hy=hy/wsum
+            END IF
+!
+!  Floating cells at the ice front:  halve the gradient (PISM's
+!  constant-extrapolation half-weight at ocean fronts).
+!
+            IF (cc.eq.2.and.(ce.eq.0.or.cw.eq.0)) hx=0.5_r8*hx
+            IF (cc.eq.2.and.(cn.eq.0.or.cs.eq.0)) hy=0.5_r8*hy
+!
+            fdx(i,j)=-rho_i*g*hi(i,j)*hx
+            fdy(i,j)=-rho_i*g*hi(i,j)*hy
+!
+!  Marginal-cell front pressure difference (cfbc):  any ice-free
+!  ocean neighbor in the 8-neighborhood (PISM is_marginal) adds
+!  delta_p = H*(P_ice - P_water) per open face, along the outward
+!  normal.  Fjord-wall override:  ice-free neighbor with bed above
+!  the ice surface gets no pressure difference.
+!
+            IF (cw.eq.0.and.h(i-1,j).gt.0.0_r8) THEN
+              IF (bed(i-1,j).lt.zs(i,j)) THEN
+                Pice=0.5_r8*rho_i*g*hi(i,j)
+                wc=MAX(-h(i-1,j)-zeta_avg(i-1,j),0.0_r8)
+                Pwat=0.5_r8*rho0*g*wc*wc/MAX(hi(i,j),1.0_r8)
+                dp=hi(i,j)*(Pice-Pwat)
+                fdx(i,j)=fdx(i,j)-dp*pm(i,j)
+              END IF
+            END IF
+            IF (ce.eq.0.and.h(i+1,j).gt.0.0_r8) THEN
+              IF (bed(i+1,j).lt.zs(i,j)) THEN
+                Pice=0.5_r8*rho_i*g*hi(i,j)
+                wc=MAX(-h(i+1,j)-zeta_avg(i+1,j),0.0_r8)
+                Pwat=0.5_r8*rho0*g*wc*wc/MAX(hi(i,j),1.0_r8)
+                dp=hi(i,j)*(Pice-Pwat)
+                fdx(i,j)=fdx(i,j)+dp*pm(i,j)
+              END IF
+            END IF
+            IF (cs.eq.0.and.h(i,j-1).gt.0.0_r8) THEN
+              IF (bed(i,j-1).lt.zs(i,j)) THEN
+                Pice=0.5_r8*rho_i*g*hi(i,j)
+                wc=MAX(-h(i,j-1)-zeta_avg(i,j-1),0.0_r8)
+                Pwat=0.5_r8*rho0*g*wc*wc/MAX(hi(i,j),1.0_r8)
+                dp=hi(i,j)*(Pice-Pwat)
+                fdy(i,j)=fdy(i,j)-dp*pn(i,j)
+              END IF
+            END IF
+            IF (cn.eq.0.and.h(i,j+1).gt.0.0_r8) THEN
+              IF (bed(i,j+1).lt.zs(i,j)) THEN
+                Pice=0.5_r8*rho_i*g*hi(i,j)
+                wc=MAX(-h(i,j+1)-zeta_avg(i,j+1),0.0_r8)
+                Pwat=0.5_r8*rho0*g*wc*wc/MAX(hi(i,j),1.0_r8)
+                dp=hi(i,j)*(Pice-Pwat)
+                fdy(i,j)=fdy(i,j)+dp*pn(i,j)
+              END IF
+            END IF
+          END IF
+        END DO
+      END DO
+!
+      RETURN
+      END SUBROUTINE ssa_fd_driving
+!
+!***********************************************************************
+      SUBROUTINE ssa_fd_matvec (ng, tile, model,                        &
+     &                          LBi, UBi, LBj, UBj,                     &
+     &                          Istr, Iend, Jstr, Jend,                 &
+     &                          pm, pn,                                 &
+     &                          hi, nuhx, nuhy, beta,                   &
+     &                          xu, xv,                                 &
+     &                          Au, Av)
+!***********************************************************************
+!
+!  FD stencil action (PISM SSAFD fd_operator, Maxima-generated
+!  coefficients used verbatim) on the RHO-point velocity pair.
+!  Layout follows PISM exactly:  eq1/eq2 hold the 18 coefficients of
+!  the u- and v-equations (first 9: coupling to the 9-point u
+!  neighborhood SW,S,SE,W,C,E,NW,N,NE;  last 9: coupling to the v
+!  neighborhood in the same order);  the marginal switch weights
+!  N/E/S/W and NNE..NNW drop faces / switch to one-sided differences
+!  at ice-adjacent-to-ice-free interfaces (PISM cfbc rule);  ice-free
+!  cells carry identity rows (velocity fixed at zero);  the
+!  cell-centered beta enters the u- and v-diagonals (diag_u=5,
+!  diag_v=14 in the 1-based arrays below).
+!
+!  Grid metrics:  PISM assumes a uniform grid;  here the cell-center
+!  spacings are taken from the local pm/pn (uniform-grid equivalent
+!  dx = 1/pm at the cell), matching the FE paths\' fac_* convention.
+!
+      implicit none
+!
+      integer, intent(in) :: ng, tile, model
+      integer, intent(in) :: LBi, UBi, LBj, UBj
+      integer, intent(in) :: Istr, Iend, Jstr, Jend
+!
+# ifdef ASSUMED_SHAPE
+      real(r8), intent(in)    :: pm(LBi:,LBj:)
+      real(r8), intent(in)    :: pn(LBi:,LBj:)
+      real(r8), intent(in)    :: hi(LBi:,LBj:)
+      real(r8), intent(in)    :: nuhx(LBi:,LBj:)
+      real(r8), intent(in)    :: nuhy(LBi:,LBj:)
+      real(r8), intent(in)    :: beta(LBi:,LBj:)
+      real(r8), intent(in)    :: xu(LBi:,LBj:)
+      real(r8), intent(in)    :: xv(LBi:,LBj:)
+      real(r8), intent(out)   :: Au(LBi:,LBj:)
+      real(r8), intent(out)   :: Av(LBi:,LBj:)
+# else
+      real(r8), intent(in)    :: pm(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)    :: pn(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)    :: hi(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)    :: nuhx(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)    :: nuhy(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)    :: beta(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)    :: xu(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)    :: xv(LBi:UBi,LBj:UBj)
+      real(r8), intent(out)   :: Au(LBi:UBi,LBj:UBj)
+      real(r8), intent(out)   :: Av(LBi:UBi,LBj:UBj)
+# endif
+!
+      integer :: i, j, kk, ic, jc
+      integer :: Nf, Ef, Sf, Wf
+      integer :: NNE, NNW, ENE, ESE, SSW, SSE, WSW, WNW
+!
+      real(r8) :: cw, ce, cn, cs
+      real(r8) :: dx, dy, dx2, dy2, d4, d2
+      real(r8) :: bu, bv
+!
+      real(r8), dimension(18) :: eq1
+      real(r8), dimension(18) :: eq2
+!
+!
+      DO j=Jstr,Jend
+        DO i=Istr,Iend
+!
+!  Default:  ice-free cell -> identity row (PISM cfbc ice-free rule;
+!  the FD state is identically zero there).
+!
+          Au(i,j)=xu(i,j)
+          Av(i,j)=xv(i,j)
+!
+          IF (hi(i,j).gt.0.0_r8) THEN
+!
+!  Face viscosities around the cell;  faces to ice-free neighbors
+!  drop out (weight 0 below, matching PISM\'s cfbc switches).
+!
+            IF (i.gt.LBi) THEN
+              cw=nuhx(i-1,j)
+            ELSE
+              cw=0.0_r8
+            END IF
+            IF (i.lt.UBi) THEN
+              ce=nuhx(i,j)
+            ELSE
+              ce=0.0_r8
+            END IF
+            IF (j.lt.UBj) THEN
+              cn=nuhy(i,j)
+            ELSE
+              cn=0.0_r8
+            END IF
+            IF (j.gt.LBj) THEN
+              cs=nuhy(i,j-1)
+            ELSE
+              cs=0.0_r8
+            END IF
+!
+!  Marginal switch weights (PISM cfbc):  any direct ice-free
+!  neighbor zeroes that face;  any diagonal ice-free neighbor
+!  zeroes the adjacent interface switches.
+!
+            Nf=1; Ef=1; Sf=1; Wf=1
+            NNE=1; NNW=1; ENE=1; ESE=1; SSW=1; SSE=1; WSW=1; WNW=1
+            IF (j.ge.UBj.or.hi(i,j+1).le.0.0_r8) THEN
+              Nf=0; NNE=0; NNW=0
+            END IF
+            IF (j.le.LBj.or.hi(i,j-1).le.0.0_r8) THEN
+              Sf=0; SSW=0; SSE=0
+            END IF
+            IF (i.ge.UBi.or.hi(i+1,j).le.0.0_r8) THEN
+              Ef=0; ENE=0; ESE=0
+            END IF
+            IF (i.le.LBi.or.hi(i-1,j).le.0.0_r8) THEN
+              Wf=0; WSW=0; WNW=0
+            END IF
+            IF (i.lt.UBi.and.j.lt.UBj) THEN
+              IF (hi(i+1,j+1).le.0.0_r8) THEN
+                NNE=0; ENE=0
+              END IF
+            END IF
+            IF (i.lt.UBi.and.j.gt.LBj) THEN
+              IF (hi(i+1,j-1).le.0.0_r8) THEN
+                ESE=0; SSE=0
+              END IF
+            END IF
+            IF (i.gt.LBi.and.j.gt.LBj) THEN
+              IF (hi(i-1,j-1).le.0.0_r8) THEN
+                SSW=0; WSW=0
+              END IF
+            END IF
+            IF (i.gt.LBi.and.j.lt.UBj) THEN
+              IF (hi(i-1,j+1).le.0.0_r8) THEN
+                WNW=0; NNW=0
+              END IF
+            END IF
+!
+            dx=1.0_r8/pm(i,j)
+            dy=1.0_r8/pn(i,j)
+            dx2=dx*dx
+            dy2=dy*dy
+            d4=4.0_r8*dx*dy
+            d2=2.0_r8*dx*dy
+!
+!  ---- PISM Maxima coefficients:  u-equation (eq1) ----
+!
+            eq1(1)=0.0_r8
+            eq1(2)=-cn*Nf/dy2
+            eq1(3)=0.0_r8
+            eq1(4)=-4.0_r8*cw*Wf/dx2
+            eq1(5)=(cn*Nf+cs*Sf)/dy2 + 4.0_r8*(ce*Ef+cw*Wf)/dx2
+            eq1(6)=-4.0_r8*ce*Ef/dx2
+            eq1(7)=0.0_r8
+            eq1(8)=-cs*Sf/dy2
+            eq1(9)=0.0_r8
+            eq1(10)= cw*Wf*WNW/d2 + cn*Nf*NNW/d4
+            eq1(11)=(cn*Nf*NNE*Nf-cn*Nf*NNW*Nf)/d4                       &
+     &             +(cw*Wf*Nf-ce*Ef*Nf)/d2
+            eq1(12)=-ce*Ef*ENE/d2 - cn*Nf*NNE/d4
+            eq1(13)=(cw*Wf*WSW-cw*Wf*WNW)/d2                             &
+     &             +(cn*Nf*Wf-cs*Sf*Wf)/d4
+            eq1(14)=(cn*Nf*Ef*Nf-cn*Nf*Wf*Nf-cs*Sf*Ef*Sf                 &
+     &              +cs*Sf*Wf*Sf)/d4                                     &
+     &             +(ce*Ef*Nf-cw*Wf*Nf-ce*Ef*Sf+cw*Wf*Sf)/d2
+            eq1(15)=(ce*Ef*ENE-ce*Ef*ESE)/d2                             &
+     &             +(cs*Sf*Ef*Sf-cn*Nf*Ef*Nf)/d4
+            eq1(16)=-cw*Wf*WSW/d2 - cs*Sf*SSW/d4
+            eq1(17)=(cs*Sf*SSW-cs*Sf*SSE)/d4                             &
+     &             +(ce*Ef*Sf-cw*Wf*Sf)/d2
+            eq1(18)= ce*Ef*ESE/d2 + cs*Sf*SSE/d4
+!
+!  ---- PISM Maxima coefficients:  v-equation (eq2) ----
+!
+            eq2(1)= cw*Wf*WNW/d4 + cn*Nf*NNW/d2
+            eq2(2)=(cn*Nf*NNE*Nf-cn*Nf*NNW*Nf)/d2                        &
+     &            +(cw*Wf*Nf-ce*Ef*Nf)/d4
+            eq2(3)=-ce*Ef*ENE/d4 - cn*Nf*NNE/d2
+            eq2(4)=(cw*Wf*WSW-cw*Wf*WNW)/d4                              &
+     &            +(cn*Nf*Wf-cs*Sf*Wf)/d2
+            eq2(5)=(cn*Nf*Ef*Nf-cn*Nf*Wf*Nf-cs*Sf*Ef*Sf                  &
+     &             +cs*Sf*Wf*Sf)/d2                                      &
+     &            +(ce*Ef*Nf-cw*Wf*Nf-ce*Ef*Sf+cw*Wf*Sf)/d4
+            eq2(6)=(ce*Ef*ENE-ce*Ef*ESE)/d4                              &
+     &            +(cs*Sf*Ef*Sf-cn*Nf*Ef*Nf)/d2
+            eq2(7)=-cw*Wf*WSW/d4 - cs*Sf*SSW/d2
+            eq2(8)=(cs*Sf*SSW-cs*Sf*SSE)/d2                              &
+     &            +(ce*Ef*Sf-cw*Wf*Sf)/d4
+            eq2(9)= ce*Ef*ESE/d4 + cs*Sf*SSE/d2
+            eq2(10)=0.0_r8
+            eq2(11)=-4.0_r8*cn*Nf/dy2
+            eq2(12)=0.0_r8
+            eq2(13)=-cw*Wf/dx2
+            eq2(14)=4.0_r8*(cn*Nf+cs*Sf)/dy2 + (ce*Ef+cw*Wf)/dx2
+            eq2(15)= ce*Ef/dx2
+            eq2(16)=0.0_r8
+            eq2(17)=-4.0_r8*cs*Sf/dy2
+            eq2(18)=0.0_r8
+!
+!  Cell-centered basal drag on the diagonals (diag_u=5, diag_v=14);
+!  Fi(ifIbta) is already branch/mask-correct and gfrac-scaled by
+!  isf_stress, exactly the PISM scaling*drag() product.
+!
+            bu=beta(i,j)
+            bv=beta(i,j)
+            eq1(5)=eq1(5)+bu
+            eq2(14)=eq2(14)+bv
+!
+!  9-point neighborhood offsets (PISM compass order) and the action:
+!  the u-equation couples to u and v, the v-equation likewise.
+!
+            Au(i,j)=0.0_r8
+            Av(i,j)=0.0_r8
+            DO kk=1,18
+              IF (kk.le.9) THEN
+                ic=MOD(kk-1,3)-1
+                jc=(kk-1)/3-1
+              ELSE
+                ic=MOD(kk-10,3)-1
+                jc=(kk-10)/3-1
+              END IF
+              Au(i,j)=Au(i,j)+eq1(kk)*xu(i+ic,j+jc)
+              Av(i,j)=Av(i,j)+eq2(kk)*xv(i+ic,j+jc)
+            END DO
+!
+!  Cross coupling:  eq1(10:18) multiply the v-neighborhood, eq2(1:9)
+!  multiply the u-neighborhood.
+!
+            DO kk=10,18
+              ic=MOD(kk-10,3)-1
+              jc=(kk-10)/3-1
+              Au(i,j)=Au(i,j)+eq1(kk)*xv(i+ic,j+jc)
+            END DO
+            DO kk=1,9
+              ic=MOD(kk-1,3)-1
+              jc=(kk-1)/3-1
+              Av(i,j)=Av(i,j)+eq2(kk)*xu(i+ic,j+jc)
+            END DO
+!
+!  Zero-diagonal guard (PISM replace_zero_diagonal_entries):  at a
+!  lone floating cell with all-ice-free faces the diagonal can
+!  vanish;  fall back to a small identity row so PCG stays finite.
+!
+            IF (ABS(eq1(5)).lt.1.0E-16_r8) THEN
+              Au(i,j)=xu(i,j)
+            END IF
+            IF (ABS(eq2(14)).lt.1.0E-16_r8) THEN
+              Av(i,j)=xv(i,j)
+            END IF
+          END IF
+        END DO
+      END DO
+!
+      RETURN
+      END SUBROUTINE ssa_fd_matvec
+!
+      SUBROUTINE ssa_fd_diag (ng, tile, model,                          &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Istr, Iend, Jstr, Jend,                   &
+     &                        pm, pn,                                   &
+     &                        hi, nuhx, nuhy, beta,                     &
+     &                        diag_u, diag_v)
+!***********************************************************************
+!
+!  Stencil diagonal (eq1(5) / eq2(14) with the same marginal switch
+!  weights) plus the cell-centered beta:  the Jacobi preconditioner
+!  of the FD system.  Ice-free cells:  1 (identity rows).
+!
+      implicit none
+!
+      integer, intent(in) :: ng, tile, model
+      integer, intent(in) :: LBi, UBi, LBj, UBj
+      integer, intent(in) :: Istr, Iend, Jstr, Jend
+!
+# ifdef ASSUMED_SHAPE
+      real(r8), intent(in)  :: pm(LBi:,LBj:)
+      real(r8), intent(in)  :: pn(LBi:,LBj:)
+      real(r8), intent(in)  :: hi(LBi:,LBj:)
+      real(r8), intent(in)  :: nuhx(LBi:,LBj:)
+      real(r8), intent(in)  :: nuhy(LBi:,LBj:)
+      real(r8), intent(in)  :: beta(LBi:,LBj:)
+      real(r8), intent(out) :: diag_u(LBi:,LBj:)
+      real(r8), intent(out) :: diag_v(LBi:,LBj:)
+# else
+      real(r8), intent(in)  :: pm(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: pn(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: hi(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: nuhx(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: nuhy(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: beta(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: diag_u(LBi:UBi,LBj:UBj)
+      real(r8), intent(out) :: diag_v(LBi:UBi,LBj:UBj)
+# endif
+!
+      integer :: i, j
+      integer :: Nf, Ef, Sf, Wf
+!
+      real(r8) :: cw, ce, cn, cs
+      real(r8) :: dx, dy
+!
+!
+      DO j=Jstr,Jend
+        DO i=Istr,Iend
+          IF (hi(i,j).gt.0.0_r8) THEN
+            IF (i.gt.LBi.and.hi(i-1,j).gt.0.0_r8) THEN
+              cw=nuhx(i-1,j)
+            ELSE
+              cw=0.0_r8
+            END IF
+            IF (i.lt.UBi.and.hi(i+1,j).gt.0.0_r8) THEN
+              ce=nuhx(i,j)
+            ELSE
+              ce=0.0_r8
+            END IF
+            IF (j.lt.UBj.and.hi(i,j+1).gt.0.0_r8) THEN
+              cn=nuhy(i,j)
+            ELSE
+              cn=0.0_r8
+            END IF
+            IF (j.gt.LBj.and.hi(i,j-1).gt.0.0_r8) THEN
+              cs=nuhy(i,j-1)
+            ELSE
+              cs=0.0_r8
+            END IF
+            dx=1.0_r8/pm(i,j)
+            dy=1.0_r8/pn(i,j)
+            diag_u(i,j)=(cn+cs)/dy**2 + 4.0_r8*(cw+ce)/dx**2            &
+     &                 +beta(i,j)
+            diag_v(i,j)=4.0_r8*(cn+cs)/dy**2 + (cw+ce)/dx**2            &
+     &                 +beta(i,j)
+            IF (ABS(diag_u(i,j)).lt.1.0E-16_r8) diag_u(i,j)=1.0_r8
+            IF (ABS(diag_v(i,j)).lt.1.0E-16_r8) diag_v(i,j)=1.0_r8
+          ELSE
+            diag_u(i,j)=1.0_r8
+            diag_v(i,j)=1.0_r8
+          END IF
+        END DO
+      END DO
+!
+      RETURN
+      END SUBROUTINE ssa_fd_diag
+!
 #endif
       END MODULE isf_solver_mod

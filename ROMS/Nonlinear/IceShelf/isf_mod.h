@@ -349,6 +349,7 @@
 !
       integer, allocatable :: n_smooth(:)       ! elev. smo. iter.
       integer, allocatable :: n_dsbranch(:)     ! branch-aware taud
+      integer, allocatable :: n_ssa_fd(:)       ! FD solver switch
       integer, allocatable :: n_taper(:)        ! ice margin taper width
 !
 !  Picard iteration parameters
@@ -707,10 +708,14 @@
         IF (.not.allocated(n_dsbranch)) THEN
           allocate ( n_dsbranch(Ngrids) )
         END IF
+        IF (.not.allocated(n_ssa_fd)) THEN
+          allocate ( n_ssa_fd(Ngrids) )
+        END IF
         IF (.not.allocated(n_smooth)) THEN
           allocate ( n_smooth(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
           n_dsbranch(1:Ngrids)=0
+          n_ssa_fd(1:Ngrids)=0
           n_smooth(1:Ngrids)=0
         END IF
         IF (.not.allocated(n_taper)) THEN
@@ -1133,6 +1138,7 @@
       IF (allocated(ssa_max_speed))   deallocate ( ssa_max_speed )
       IF (allocated(n_smooth))        deallocate ( n_smooth )
       IF (allocated(n_dsbranch))      deallocate ( n_dsbranch )
+      IF (allocated(n_ssa_fd))        deallocate ( n_ssa_fd )
       IF (allocated(n_taper))         deallocate ( n_taper )
       IF (allocated(picard_alpha))    deallocate ( picard_alpha )
       IF (allocated(H_calve))         deallocate ( H_calve )

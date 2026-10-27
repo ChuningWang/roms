@@ -216,6 +216,8 @@
               Npts=load_i(Nval, Rval, Ngrids, n_smooth)
             CASE ('n_dsbranch')
               Npts=load_i(Nval, Rval, Ngrids, n_dsbranch)
+            CASE ('n_ssa_fd')
+              Npts=load_i(Nval, Rval, Ngrids, n_ssa_fd)
             CASE ('n_taper')
               Npts=load_i(Nval, Rval, Ngrids, n_taper)
 !
