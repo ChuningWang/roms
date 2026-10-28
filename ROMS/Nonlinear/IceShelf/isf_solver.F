@@ -765,6 +765,24 @@
      &                     Si(:,:,lsnew,isIvis),                        &
      &                     Au, Av)
 !
+!  Initial residual R = b - A(u) of the Picard linearization (the
+!  c942bde1 Stage-6 restructure accidentally dropped this block:
+!  with Stage-5-zeroed Ru the first dot_zr is zero, the CG loop
+!  exits immediately and the FE solve degenerates to echoing the
+!  input velocity -- regression found and fixed 2026-10-28).
+!
+        DO j=JstrP,JendP
+          DO i=IstrP,IendP
+            IF (pmask_act(i,j).eq.1.0_r8) THEN
+              Ru(i,j)=Fi(i,j,ifItdx)-Au(i,j)
+              Rv(i,j)=Fi(i,j,ifItdy)-Av(i,j)
+            ELSE
+              Ru(i,j)=0.0_r8
+              Rv(i,j)=0.0_r8
+            END IF
+          END DO
+        END DO
+!
 !  Zero the residual on Dirichlet-constrained components (edges
 !  flagged closed or clamped in the ice-state LBC) so the CG
 !  update never touches those nodes.
@@ -2598,9 +2616,9 @@
 !
 !  Local variable declarations.
 !
-      integer :: i, j, i1, j1, nq, k_node
+      integer :: i, j, i1, j1, i2, j2, kk, nq, k_node
 !
-      real(r8) :: dphi_x, dphi_y, phv
+      real(r8) :: dphi_x, dphi_y, phv, nuhq
 !
 !-----------------------------------------------------------------------
 !  Assemble the diagonal contributions.
@@ -2645,12 +2663,38 @@
                   dphi_y=DPhi(k_node,nq,2)*fac_dy(i,j)
                   phv=phi_tab(k_node,nq)
 !
+!  B5.6 variant:  nuH at the quadrature point by bilinear
+!  interpolation (matching ssa_matvec;  the diagonal must stay the
+!  operator diagonal of the same discretization).
+!
+                  IF (n_nuh_interp(ng).gt.0) THEN
+                    nuhq=0.0_r8
+                    DO kk=1,4
+                      IF (kk.eq.1) THEN
+                        i2=i
+                        j2=j
+                      ELSE IF (kk.eq.2) THEN
+                        i2=i+1
+                        j2=j
+                      ELSE IF (kk.eq.3) THEN
+                        i2=i
+                        j2=j+1
+                      ELSE
+                        i2=i+1
+                        j2=j+1
+                      END IF
+                      nuhq=nuhq+nuH(i2,j2)*phi_tab(kk,nq)
+                    END DO
+                  ELSE
+                    nuhq=nuH(i,j)
+                  END IF
+!
                   diag_u(i1,j1)=diag_u(i1,j1)+                          &
-     &                          0.25_r8*fac_jac(i,j)*nuH(i,j)*          &
+     &                          0.25_r8*fac_jac(i,j)*nuhq*              &
      &                          (4.0_r8*dphi_x*dphi_x+dphi_y*dphi_y)+   &
      &                          0.25_r8*fac_jac(i,j)*beta(i,j)*phv**2
                   diag_v(i1,j1)=diag_v(i1,j1)+                          &
-     &                          0.25_r8*fac_jac(i,j)*nuH(i,j)*          &
+     &                          0.25_r8*fac_jac(i,j)*nuhq*              &
      &                          (4.0_r8*dphi_y*dphi_y+dphi_x*dphi_x)+   &
      &                          0.25_r8*fac_jac(i,j)*beta(i,j)*phv**2
                 END IF
@@ -2754,7 +2798,7 @@
       integer :: i, j, i1, j1, nq, k_node
 !
       real(r8), dimension(4) :: dpx, dpy, phv4
-      real(r8) :: uq, vq, exx, eyy, exy
+      real(r8) :: uq, vq, exx, eyy, exy, nuhq
 !
 !-----------------------------------------------------------------------
 !  Exchange the INPUT halos before assembly:  the ring cells
@@ -2845,6 +2889,36 @@
      &                           xv(i1,j1)*dpx(k_node))
               END DO
 !
+!  B5.6 membrane variant (n_nuh_interp > 0):  the effective
+!  viscosity is bilinearly interpolated to the quadrature point from
+!  the cell-centred nuH field (a continuous Q1 nuH over the mesh,
+!  PISM SSAFEM-style) instead of the element-constant value --
+!  capturing the sub-element nuH variation that the cell-centre
+!  constant drops and that the B5.6.1 operator audit measured as a
+!  60-140% membrane-divergence bias.
+!
+              IF (n_nuh_interp(ng).gt.0) THEN
+                nuhq=0.0_r8
+                DO k_node=1,4
+                  IF (k_node.eq.1) THEN
+                    i1=i
+                    j1=j
+                  ELSE IF (k_node.eq.2) THEN
+                    i1=i+1
+                    j1=j
+                  ELSE IF (k_node.eq.3) THEN
+                    i1=i
+                    j1=j+1
+                  ELSE
+                    i1=i+1
+                    j1=j+1
+                  END IF
+                  nuhq=nuhq+nuH(i1,j1)*phv4(k_node)
+                END DO
+              ELSE
+                nuhq=nuH(i,j)
+              END IF
+!
 !  Scatter to the 4 corner nodes (ownership filter).
 !
               DO k_node=1,4
@@ -2866,13 +2940,13 @@
      &              j1.ge.JstrP.and.j1.le.JendP) THEN
 !
                   Au(i1,j1)=Au(i1,j1)+                                  &
-     &              0.25_r8*fac_jac(i,j)*nuH(i,j)*                      &
+     &              0.25_r8*fac_jac(i,j)*nuhq*                           &
      &              (dpx(k_node)*(4.0_r8*exx+2.0_r8*eyy)+               &
      &               dpy(k_node)*(2.0_r8*exy))+                         &
      &              0.25_r8*fac_jac(i,j)*beta(i,j)*phv4(k_node)*uq
 !
                   Av(i1,j1)=Av(i1,j1)+                                  &
-     &              0.25_r8*fac_jac(i,j)*nuH(i,j)*                      &
+     &              0.25_r8*fac_jac(i,j)*nuhq*                           &
      &              (dpy(k_node)*(4.0_r8*eyy+2.0_r8*exx)+               &
      &               dpx(k_node)*(2.0_r8*exy))+                         &
      &              0.25_r8*fac_jac(i,j)*beta(i,j)*phv4(k_node)*vq
