@@ -426,14 +426,32 @@
      &                      h, zeta_avg, rmask_ist,                     &
      &                      Si(:,:,lsold,isIhis), pmarg)
 !
-      CALL ssa_driving_stress (ng, tile, model,                         &
-     &                         LBi, UBi, LBj, UBj,                      &
-     &                         pm, pn, h, zeta_avg,                     &
-     &                         rmask_ist, pmask_act, pmarg,             &
-     &                         Si(:,:,lsold,isIhis),                    &
-     &                         Fi(:,:,ifIzsf),                          &
-     &                         Fi(:,:,ifItdx),                          &
-     &                         Fi(:,:,ifItdy))
+      IF (n_ds_fem(ng).gt.0) THEN
+!
+!  B5.8:  PISM-FEM style driving stress (smooth bed/H gradients +
+!  pointwise flotation branch at quadrature points;  replaces the
+!  node-based FD gradient of the branch-mixed surface field).
+!
+        CALL ssa_ds_fem (ng, tile, model,                              &
+     &                    LBi, UBi, LBj, UBj,                           &
+     &                    Istr, Iend, Jstr, Jend,                       &
+     &                    IstrP, IendP, JstrP, JendP,                   &
+     &                    DPhi, phi_tab,                                &
+     &                    pm, pn, h, zeta_avg,                          &
+     &                    rmask_ist, pmask_act,                         &
+     &                    Si(:,:,lsold,isIhis),                         &
+     &                    Fi(:,:,ifItdx),                                &
+     &                    Fi(:,:,ifItdy))
+      ELSE
+        CALL ssa_driving_stress (ng, tile, model,                       &
+     &                           LBi, UBi, LBj, UBj,                    &
+     &                           pm, pn, h, zeta_avg,                   &
+     &                           rmask_ist, pmask_act, pmarg,           &
+     &                           Si(:,:,lsold,isIhis),                  &
+     &                           Fi(:,:,ifIzsf),                        &
+     &                           Fi(:,:,ifItdx),                        &
+     &                           Fi(:,:,ifItdy))
+      END IF
 !
       CALL ssa_front_load (ng, tile, model,                             &
      &                     LBi, UBi, LBj, UBj,                          &
@@ -1946,6 +1964,183 @@
 !
       RETURN
       END SUBROUTINE ssa_driving_stress
+!
+!***********************************************************************
+      SUBROUTINE ssa_ds_fem (ng, tile, model,                           &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Istr, Iend, Jstr, Jend,                   &
+     &                        IstrP, IendP, JstrP, JendP,               &
+     &                        DPhi, phi_tab,                            &
+     &                        pm, pn, h, zeta_avg,                      &
+     &                        rmask_ist, pmask_act,                     &
+     &                        hi,                                       &
+     &                        tdx, tdy)
+!***********************************************************************
+!
+!  B5.8:  PISM-FEM style driving stress (SSAFEM::driving_stress):
+!  element-wise quadrature-point evaluation from the SMOOTH bed and
+!  thickness fields, with the flotation branch determined POINTWISE
+!  at each quadrature point.  The surface gradient is never taken
+!  across the grounded/floating branch boundary (the B5.5 audit
+!  measured a 5.7x local RHS difference from the centered
+!  differencing of the branch-mixed surface field, and the B5.7
+!  three-operator comparison attributed the ROMS-FE 12-44% velocity
+!  excess primarily to this driving-stress construction difference).
+!
+!  At each quadrature point q of element (i,j):
+!    b_q, H_q, sl_q   = interpolated bed, thickness, sea level
+!    b_x, b_y, H_x, H_y = shape-function gradients (smooth fields)
+!    grounded_q        = rho_i*H_q > rho0*max(sl_q - b_q, 0)
+!    h_x               = grounded_q ? b_x + H_x : alpha*H_x
+!    tau_d,q           = -rho_i*g*H_q*(h_x, h_y)
+!  scattered to the 4 corner PSI nodes with test-function weights,
+!  same assembly convention as ssa_matvec.  ssa_front_load remains
+!  the cliff/boundary term (B5.3 verified equivalent to PISM cfbc).
+!
+      implicit none
+!
+      integer, intent(in) :: ng, tile, model
+      integer, intent(in) :: LBi, UBi, LBj, UBj
+      integer, intent(in) :: Istr, Iend, Jstr, Jend
+      integer, intent(in) :: IstrP, IendP, JstrP, JendP
+!
+      real(r8), intent(in)  :: DPhi(4,4,2)
+      real(r8), intent(in)  :: phi_tab(4,4)
+!
+      real(r8), intent(in)  :: pm(LBi:,LBj:)
+      real(r8), intent(in)  :: pn(LBi:,LBj:)
+      real(r8), intent(in)  :: h(LBi:,LBj:)
+      real(r8), intent(in)  :: zeta_avg(LBi:,LBj:)
+      real(r8), intent(in)  :: rmask_ist(LBi:,LBj:)
+      real(r8), intent(in)  :: pmask_act(LBi:,LBj:)
+      real(r8), intent(in)  :: hi(LBi:,LBj:)
+      real(r8), intent(out) :: tdx(LBi:,LBj:)
+      real(r8), intent(out) :: tdy(LBi:,LBj:)
+!
+      integer :: i, j, nq, k, i1, j1
+      integer :: IstrC, IendC, JstrC, JendC
+!
+      real(r8) :: alpha_c
+      real(r8) :: bed_k(4), thk_k(4), zeta_k(4)
+      real(r8) :: b_q, H_q, sl_q, dep_q
+      real(r8) :: b_x, b_y, H_x, H_y
+      real(r8) :: hx_q, hy_q, taud_x, taud_y
+      real(r8) :: phv, dpx, dpy
+      real(r8) :: f_dx, f_dy, f_jac
+!
+!
+!  Assembly-ring bounds (the same convention as ssa_matvec).
+!
+      IstrC=Istr
+      IF (.not.DOMAIN(ng)%Western_Edge(tile).or.EWperiodic(ng)) THEN
+        IstrC=Istr-1
+      END IF
+      JstrC=Jstr
+      IF (.not.DOMAIN(ng)%Southern_Edge(tile).or.NSperiodic(ng)) THEN
+        JstrC=Jstr-1
+      END IF
+      IendC=Iend
+      JendC=Jend
+!
+      alpha_c=1.0_r8-rho_i/rho0
+!
+!  Clear output.
+!
+      DO j=JstrP,JendP
+        DO i=IstrP,IendP
+          tdx(i,j)=0.0_r8
+          tdy(i,j)=0.0_r8
+        END DO
+      END DO
+!
+      DO j=JstrC,JendC
+        DO i=IstrC,IendC
+          IF (hi(i,j).gt.0.0_r8) THEN
+            f_dx=2.0_r8*pm(i,j)
+            f_dy=2.0_r8*pn(i,j)
+            f_jac=1.0_r8/(pm(i,j)*pn(i,j))
+!
+            bed_k(1)=-h(i,j)
+            bed_k(2)=-h(i+1,j)
+            bed_k(3)=-h(i,j+1)
+            bed_k(4)=-h(i+1,j+1)
+            thk_k(1)=hi(i,j)
+            thk_k(2)=hi(i+1,j)
+            thk_k(3)=hi(i,j+1)
+            thk_k(4)=hi(i+1,j+1)
+            zeta_k(1)=zeta_avg(i,j)
+            zeta_k(2)=zeta_avg(i+1,j)
+            zeta_k(3)=zeta_avg(i,j+1)
+            zeta_k(4)=zeta_avg(i+1,j+1)
+!
+            DO nq=1,4
+              b_q=0.0_r8
+              H_q=0.0_r8
+              sl_q=0.0_r8
+              b_x=0.0_r8
+              b_y=0.0_r8
+              H_x=0.0_r8
+              H_y=0.0_r8
+              DO k=1,4
+                phv=phi_tab(k,nq)
+                dpx=DPhi(k,nq,1)*f_dx
+                dpy=DPhi(k,nq,2)*f_dy
+                b_q=b_q+phv*bed_k(k)
+                H_q=H_q+phv*thk_k(k)
+                sl_q=sl_q+phv*zeta_k(k)
+                b_x=b_x+dpx*bed_k(k)
+                b_y=b_y+dpy*bed_k(k)
+                H_x=H_x+dpx*thk_k(k)
+                H_y=H_y+dpy*thk_k(k)
+              END DO
+!
+!  Pointwise flotation branch at the quadrature point.
+!
+              dep_q=MAX(sl_q-b_q,0.0_r8)
+              IF (rho_i*H_q.gt.rho0*dep_q) THEN
+                hx_q=b_x+H_x
+                hy_q=b_y+H_y
+              ELSE
+                hx_q=alpha_c*H_x
+                hy_q=alpha_c*H_y
+              END IF
+!
+              taud_x=-rho_i*g*H_q*hx_q
+              taud_y=-rho_i*g*H_q*hy_q
+!
+!  Scatter to the 4 corner PSI nodes (test-function weights,
+!  ownership filter;  same convention as ssa_matvec).
+!
+              DO k=1,4
+                IF (k.eq.1) THEN
+                  i1=i
+                  j1=j
+                ELSE IF (k.eq.2) THEN
+                  i1=i+1
+                  j1=j
+                ELSE IF (k.eq.3) THEN
+                  i1=i
+                  j1=j+1
+                ELSE
+                  i1=i+1
+                  j1=j+1
+                END IF
+                IF (pmask_act(i1,j1).eq.1.0_r8.and.                    &
+     &              i1.ge.IstrP.and.i1.le.IendP.and.                    &
+     &              j1.ge.JstrP.and.j1.le.JendP) THEN
+                  tdx(i1,j1)=tdx(i1,j1)+                               &
+     &                0.25_r8*f_jac*phi_tab(k,nq)*taud_x
+                  tdy(i1,j1)=tdy(i1,j1)+                               &
+     &                0.25_r8*f_jac*phi_tab(k,nq)*taud_y
+                END IF
+              END DO
+            END DO
+          END IF
+        END DO
+      END DO
+!
+      RETURN
+      END SUBROUTINE ssa_ds_fem
 !
 !***********************************************************************
       SUBROUTINE ssa_front_load (ng, tile, model,                       &

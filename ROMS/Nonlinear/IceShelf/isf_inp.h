@@ -220,6 +220,8 @@
               Npts=load_i(Nval, Rval, Ngrids, n_ssa_fd)
             CASE ('n_nuh_interp')
               Npts=load_i(Nval, Rval, Ngrids, n_nuh_interp)
+            CASE ('n_ds_fem')
+              Npts=load_i(Nval, Rval, Ngrids, n_ds_fem)
             CASE ('n_taper')
               Npts=load_i(Nval, Rval, Ngrids, n_taper)
 !
@@ -1266,6 +1268,8 @@
      &          'FD solver switch (0=FE Q1 Galerkin, 1=PISM SSAFD).'
           WRITE (out,50) n_nuh_interp(ng), 'n_nuh_interp',              &
      &          'nuH bilinear at Gauss points (B5.6 membrane variant).'
+          WRITE (out,50) n_ds_fem(ng), 'n_ds_fem',                      &
+     &          'FEM driving stress (B5.8: smooth b/H quad-point).'
           WRITE (out,50) n_dsbranch(ng), 'n_dsbranch',                  &
      &          'Branch-aware driving stress gradient switch.'
           WRITE (out,50) mismip_melt(ng), 'mismip_melt',                &
