@@ -702,6 +702,13 @@
 **                      area fraction of the piecewise-linear flotation      **
 **                      function (PISM grounded_cell_fraction, Feldmann      **
 **                      et al. 2014) instead of the cosine ramp              **
+** ICESHEET_PETSC        link PETSc and route the FD kernel (n_ssa_fd=1)     **
+**                      linear solve through PETSc KSP (fd_ksp=1): the      **
+**                      13-point stencil is assembled as a global SeqAIJ    **
+**                      matrix on rank 0 (LU direct solve by default;       **
+**                      -ksp_type/-pc_type CLI flags override) instead of   **
+**                      the built-in Jacobi PCG.  Requires a PETSc build    **
+**                      with Fortran bindings; define via MY_CPP_FLAGS      **
 **                                                                           **
 ** OCEAN_FIXED          freeze the ocean: read the initial conditions and    **
 **                      skip all forward time integration of the ocean       **

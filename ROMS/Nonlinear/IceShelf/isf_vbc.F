@@ -172,7 +172,7 @@
 !
       Pradj        = 12.5_r8*(Pr**(2.0_r8/3.0_r8))
       Scadj        = 12.5_r8*(Sc**(2.0_r8/3.0_r8))
-      cp_i         = 152.5_r8+7.122_r8*(273.15_r8+Tis)
+      cp_i         = 152.5_r8+7.122_r8*(273.15_r8+Tisf)
 !
 # endif
       DO j=Jstr,Jend
@@ -289,10 +289,10 @@
 !
             IF (Sm.gt.eps) THEN
               cff1 = a*(Fi(i,j,ifIgat)*Cp-Fi(i,j,ifIgas)*cp_i)
-              cff2 = Fi(i,j,ifIgas)*cp_i*(a*Sm-b+c*zice(i,j)+Tis -        &
+              cff2 = Fi(i,j,ifIgas)*cp_i*(a*Sm-b+c*zice(i,j)+Tisf -        &
      &                                  (L/cp_i)) -                     &
      &             Fi(i,j,ifIgat)*Cp*(Tm-b+c*zice(i,j)+a*Sis)
-              cff3 = Fi(i,j,ifIgas)*Sm*(cp_i*(b-c*zice(i,j)-Tis) + L) +   &
+              cff3 = Fi(i,j,ifIgas)*Sm*(cp_i*(b-c*zice(i,j)-Tisf) + L) +   &
      &               Fi(i,j,ifIgat)*Sis*Cp*(Tm-b+c*zice(i,j))
 !
               Fi(i,j,ifIsbo) = -(cff2 + SQRT(cff2**2-4.0*cff1*cff3)) /    &

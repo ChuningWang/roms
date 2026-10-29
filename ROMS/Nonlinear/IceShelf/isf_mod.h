@@ -353,6 +353,7 @@
       integer, allocatable :: n_nuh_interp(:)   ! nuH Gauss interp
       integer, allocatable :: n_ds_fem(:)      ! FEM driving stress
       integer, allocatable :: n_taper(:)        ! ice margin taper width
+      integer, allocatable :: fd_ksp(:)         ! FD linear solver (PETSc)
 !
 !  Picard iteration parameters
 !
@@ -394,7 +395,7 @@
       real(r8), parameter :: visc       = 1.95e-6_r8
 !     real(r8), parameter :: small      = 1.0e-3_r8  ! Tidal
       real(r8), parameter :: small      = 8.0e-6_r8  ! Diffusion
-      real(r8), parameter :: Tis        = -20.0_r8
+      real(r8), parameter :: Tisf        = -20.0_r8
       real(r8), parameter :: Sis        = 0.0_r8
 #endif
       real(r8), parameter :: eps        = 1.0E-14_r8
@@ -713,6 +714,9 @@
         IF (.not.allocated(n_ssa_fd)) THEN
           allocate ( n_ssa_fd(Ngrids) )
         END IF
+        IF (.not.allocated(fd_ksp)) THEN
+          allocate ( fd_ksp(Ngrids) )
+        END IF
         IF (.not.allocated(n_nuh_interp)) THEN
           allocate ( n_nuh_interp(Ngrids) )
         END IF
@@ -727,6 +731,7 @@
           n_nuh_interp(1:Ngrids)=0
           n_ds_fem(1:Ngrids)=0
           n_smooth(1:Ngrids)=0
+          fd_ksp(1:Ngrids)=0
         END IF
         IF (.not.allocated(n_taper)) THEN
           allocate ( n_taper(Ngrids) )
@@ -1149,6 +1154,7 @@
       IF (allocated(n_smooth))        deallocate ( n_smooth )
       IF (allocated(n_dsbranch))      deallocate ( n_dsbranch )
       IF (allocated(n_ssa_fd))        deallocate ( n_ssa_fd )
+      IF (allocated(fd_ksp))          deallocate ( fd_ksp )
       IF (allocated(n_nuh_interp))    deallocate ( n_nuh_interp )
       IF (allocated(n_ds_fem))       deallocate ( n_ds_fem )
       IF (allocated(n_taper))         deallocate ( n_taper )

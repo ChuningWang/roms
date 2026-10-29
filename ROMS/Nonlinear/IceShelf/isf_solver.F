@@ -112,6 +112,10 @@
       USE mp_exchange_mod, ONLY : mp_exchange2d
       USE distribute_mod,  ONLY : mp_reduce
 # endif
+# ifdef ICESHEET_PETSC
+#  include <petsc/finclude/petscksp.h>
+      USE petscksp
+# endif
 !
       implicit none
 !
@@ -695,7 +699,35 @@
           END DO
         END DO
 !
-        CALL ssa_fd_picard (ng, tile, model,                            &
+        IF (fd_ksp(ng).gt.0) THEN
+# ifdef ICESHEET_PETSC
+          CALL ssa_fd_picard_ksp (ng, tile, model,                      &
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            Istr, Iend, Jstr, Jend,               &
+     &                            pm, pn,                               &
+     &                            Si(:,:,lsold,isIhis),                 &
+     &                            nuhx, nuhy, Fi(:,:,ifIbta),           &
+     &                            fdx, fdy, B_hard,                     &
+     &                            urho, vrho,                           &
+     &                            Ru, Rv, Zu, Zv, Du, Dv,               &
+     &                            Au, Av, diag_u, diag_v)
+# else
+          IF (Master) WRITE(stdout,'(a)')                               &
+     &    ' SSA-FD WARNING: fd_ksp>0 but ICESHEET_PETSC not compiled;'// &
+     &    ' falling back to the internal PCG.'
+          CALL ssa_fd_picard (ng, tile, model,                          &
+     &                        LBi, UBi, LBj, UBj,                       &
+     &                        Istr, Iend, Jstr, Jend,                   &
+     &                        pm, pn,                                   &
+     &                        Si(:,:,lsold,isIhis),                     &
+     &                        nuhx, nuhy, Fi(:,:,ifIbta),               &
+     &                        fdx, fdy, B_hard,                         &
+     &                        urho, vrho,                               &
+     &                        Ru, Rv, Zu, Zv, Du, Dv,                   &
+     &                        Au, Av, diag_u, diag_v)
+# endif
+        ELSE
+          CALL ssa_fd_picard (ng, tile, model,                          &
      &                      LBi, UBi, LBj, UBj,                         &
      &                      Istr, Iend, Jstr, Jend,                     &
      &                      pm, pn,                                     &
@@ -705,6 +737,7 @@
      &                      urho, vrho,                                 &
      &                      Ru, Rv, Zu, Zv, Du, Dv,                     &
      &                      Au, Av, diag_u, diag_v)
+        END IF
 !
 !  Map the converged cell state back to the PSI nodes (transpose
 !  average;  boundary nodes use the available cells).
@@ -4324,5 +4357,798 @@
       RETURN
       END SUBROUTINE ssa_fd_picard
 !
+# ifdef ICESHEET_PETSC
+      SUBROUTINE ssa_fd_picard_ksp (ng, tile, model,                     &
+     &                          LBi, UBi, LBj, UBj,                      &
+     &                          Istr, Iend, Jstr, Jend,                  &
+     &                          pm, pn, hi,                              &
+     &                          nuhx, nuhy, beta,                        &
+     &                          fdx, fdy, B_hard,                        &
+     &                          urho, vrho,                              &
+     &                          Ru, Rv, Zu, Zv, Du, Dv,                  &
+     &                          Au, Av, diag_u, diag_v)
+!***********************************************************************
+!
+!  FD Picard driver with the linear solve routed through PETSc KSP
+!  (ICESHEET_PETSC, fd_ksp=1).  Counterpart of ssa_fd_picard:  the
+!  Picard loop, viscosity, speed-cap damper, relaxation and dual
+!  convergence criterion are the same;  the built-in Jacobi PCG is
+!  replaced by an explicitly assembled global matrix solved on rank
+!  0 (SeqAIJ, KSP preonly + LU direct by default;  -ksp_type and
+!  -pc_type command line flags override).  This removes the PCG
+!  divergence seen on the wall-corner MISMIP+ geometry and, as a
+!  side effect, is also cleaner in MPI:  the matrix is assembled
+!  for the full domain (anchoring identity rows on the true domain
+!  edges only), so tile seams carry no artificial zero-velocity
+!  pinning, unlike the per-tile anchoring of the PCG path.
+!
+!  Data flow:  tile interiors are gathered to rank 0 (fd_gather),
+!  the matrix/RHS are assembled from the same PISM Maxima stencil
+!  coefficients as ssa_fd_matvec (eq1/eq2 transcribed verbatim),
+!  the solved, damped and relaxed cell state is scattered back to
+!  every tile interior (fd_scatter) each Picard iteration.  The
+!  zero-velocity anchor ring and ice-free cells carry identity
+!  rows with zero right-hand sides;  cells with a vanishing
+!  diagonal fall back to identity rows driven by the local RHS,
+!  matching the replace_zero_diagonal semantics of the matvec.
+!
+      implicit none
+!
+      integer, intent(in) :: ng, tile, model
+      integer, intent(in) :: LBi, UBi, LBj, UBj
+      integer, intent(in) :: Istr, Iend, Jstr, Jend
+!
+#  ifdef ASSUMED_SHAPE
+      real(r8), intent(in)    :: pm(LBi:,LBj:)
+      real(r8), intent(in)    :: pn(LBi:,LBj:)
+      real(r8), intent(in)    :: hi(LBi:,LBj:)
+      real(r8), intent(inout) :: nuhx(LBi:,LBj:)
+      real(r8), intent(inout) :: nuhy(LBi:,LBj:)
+      real(r8), intent(in)    :: beta(LBi:,LBj:)
+      real(r8), intent(in)    :: fdx(LBi:,LBj:)
+      real(r8), intent(in)    :: fdy(LBi:,LBj:)
+      real(r8), intent(in)    :: B_hard(LBi:,LBj:)
+      real(r8), intent(inout) :: urho(LBi:,LBj:)
+      real(r8), intent(inout) :: vrho(LBi:,LBj:)
+      real(r8), intent(inout) :: Ru(LBi:,LBj:)
+      real(r8), intent(inout) :: Rv(LBi:,LBj:)
+      real(r8), intent(inout) :: Zu(LBi:,LBj:)
+      real(r8), intent(inout) :: Zv(LBi:,LBj:)
+      real(r8), intent(inout) :: Du(LBi:,LBj:)
+      real(r8), intent(inout) :: Dv(LBi:,LBj:)
+      real(r8), intent(inout) :: Au(LBi:,LBj:)
+      real(r8), intent(inout) :: Av(LBi:,LBj:)
+      real(r8), intent(inout) :: diag_u(LBi:,LBj:)
+      real(r8), intent(inout) :: diag_v(LBi:,LBj:)
+#  else
+      real(r8), intent(in)    :: pm(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)    :: pn(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)    :: hi(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: nuhx(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: nuhy(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)    :: beta(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)    :: fdx(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)    :: fdy(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)    :: B_hard(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: urho(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: vrho(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: Ru(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: Rv(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: Zu(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: Zv(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: Du(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: Dv(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: Au(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: Av(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: diag_u(LBi:UBi,LBj:UBj)
+      real(r8), intent(inout) :: diag_v(LBi:UBi,LBj:UBj)
+#  endif
+!
+!  Local variable declarations.
+!
+#  ifdef DISTRIBUTE
+      include 'mpif.h'
+#  endif
+!
+      logical :: converged
+      logical :: ring
+!
+      integer :: i, j, k, kk, ic, jc, nl_iter
+      integer :: Lm_g, Mm_g, nslab, ncell2
+      integer :: gi, gj, gn
+      integer :: Nf, Ef, Sf, Wf
+      integer :: NNE, NNW, ENE, ESE, SSW, SSE, WSW, WNW
+      integer :: iconv
+#  ifdef DISTRIBUTE
+      integer :: mpi_err, nrpc, mrank
+      integer :: myrect(4)
+      integer, allocatable :: rects(:)
+      integer, allocatable :: counts(:)
+      integer, allocatable :: displs(:)
+#  endif
+!
+      real(r8) :: eps, cff
+      real(r8) :: u_slide, u_prev, u_allow
+      real(r8) :: vel_norm, vel_change
+      real(r8) :: nl_resid
+      real(r8) :: uo_n, un_n
+      real(r8) :: cwv, cev, cnv, csv
+      real(r8) :: dx, dy, dx2, dy2, d4, d2
+      real(r8) :: bu, bv
+      real(r8), dimension(18) :: eq1
+      real(r8), dimension(18) :: eq2
+!
+      real(r8), allocatable, dimension(:,:) :: g_hi
+      real(r8), allocatable, dimension(:,:) :: g_beta
+      real(r8), allocatable, dimension(:,:) :: g_fdx
+      real(r8), allocatable, dimension(:,:) :: g_fdy
+      real(r8), allocatable, dimension(:,:) :: g_pm
+      real(r8), allocatable, dimension(:,:) :: g_pn
+      real(r8), allocatable, dimension(:,:) :: g_nuhx
+      real(r8), allocatable, dimension(:,:) :: g_nuhy
+      real(r8), allocatable, dimension(:,:) :: g_uold
+      real(r8), allocatable, dimension(:,:) :: g_vold
+      real(r8), allocatable, dimension(:,:) :: g_unew
+      real(r8), allocatable, dimension(:,:) :: g_vnew
+      real(r8), allocatable, dimension(:) :: sbuf
+      real(r8), allocatable, dimension(:) :: rbuf
+!
+!  PETSc objects and scalars.
+!
+      Mat  :: pA
+      Vec  :: pb, px, pw
+      KSP  :: pksp
+      PC   :: ppc
+      PetscInt :: ndof, i1(1), icol(18)
+      PetscScalar :: vcol(18), one
+      PetscScalar, pointer :: xv(:)
+      PetscErrorCode :: perr
+      PetscReal :: resn, rhsn
+      KSPConvergedReason :: preason
+!
+!-----------------------------------------------------------------------
+!  Setup:  global field buffers, MPI tile layout.
+!-----------------------------------------------------------------------
+!
+      eps=1.0E-16_r8
+      converged=.FALSE.
+      Lm_g=Lm(ng)
+      Mm_g=Mm(ng)
+      nslab=(Iend-Istr+1)*(Jend-Jstr+1)
+      ncell2=2*Lm_g*Mm_g
+      one=1.0d0
+!
+!  Serial (non-MPI) builds:  the KSP path requires a single tile
+!  covering the full domain;  otherwise fall back to the internal
+!  PCG (which anchors per tile).  MPI builds:  any decomposition.
+!
+#  ifndef DISTRIBUTE
+      IF (Istr.ne.1.or.Iend.ne.Lm_g.or.                           &
+     &    Jstr.ne.1.or.Jend.ne.Mm_g) THEN
+        IF (Master) WRITE(stdout,'(a)')                            &
+     &    ' SSA-FD-KSP: serial multi-tile run; using internal PCG.'
+        CALL ssa_fd_picard (ng, tile, model,                       &
+     &                      LBi, UBi, LBj, UBj,                    &
+     &                      Istr, Iend, Jstr, Jend,                &
+     &                      pm, pn, hi, nuhx, nuhy, beta,          &
+     &                      fdx, fdy, B_hard, urho, vrho,          &
+     &                      Ru, Rv, Zu, Zv, Du, Dv,                &
+     &                      Au, Av, diag_u, diag_v)
+        RETURN
+      END IF
+#  endif
+!
+      allocate ( g_hi(0:Lm_g+1,0:Mm_g+1) )
+      allocate ( g_beta(0:Lm_g+1,0:Mm_g+1) )
+      allocate ( g_fdx(0:Lm_g+1,0:Mm_g+1) )
+      allocate ( g_fdy(0:Lm_g+1,0:Mm_g+1) )
+      allocate ( g_pm(0:Lm_g+1,0:Mm_g+1) )
+      allocate ( g_pn(0:Lm_g+1,0:Mm_g+1) )
+      allocate ( g_nuhx(0:Lm_g+1,0:Mm_g+1) )
+      allocate ( g_nuhy(0:Lm_g+1,0:Mm_g+1) )
+      allocate ( g_uold(0:Lm_g+1,0:Mm_g+1) )
+      allocate ( g_vold(0:Lm_g+1,0:Mm_g+1) )
+      allocate ( g_unew(0:Lm_g+1,0:Mm_g+1) )
+      allocate ( g_vnew(0:Lm_g+1,0:Mm_g+1) )
+      allocate ( sbuf(nslab) )
+      allocate ( rbuf(Lm_g*Mm_g) )
+      g_hi=0.0_r8
+      g_beta=0.0_r8
+      g_fdx=0.0_r8
+      g_fdy=0.0_r8
+      g_pm=0.0_r8
+      g_pn=0.0_r8
+      g_nuhx=0.0_r8
+      g_nuhy=0.0_r8
+      g_uold=0.0_r8
+      g_vold=0.0_r8
+      g_unew=0.0_r8
+      g_vnew=0.0_r8
+!
+#  ifdef DISTRIBUTE
+      mrank=MyRank
+      myrect(1)=Istr
+      myrect(2)=Iend
+      myrect(3)=Jstr
+      myrect(4)=Jend
+      CALL mpi_comm_size (OCN_COMM_WORLD, nrpc, mpi_err)
+      allocate ( rects(4*nrpc) )
+      allocate ( counts(nrpc) )
+      allocate ( displs(nrpc) )
+      CALL mpi_allgather (myrect, 4, MPI_INTEGER,                   &
+     &                    rects, 4, MPI_INTEGER,                    &
+     &                    OCN_COMM_WORLD, mpi_err)
+      displs(1)=0
+      DO k=1,nrpc
+        counts(k)=(rects(4*(k-1)+2)-rects(4*(k-1)+1)+1)*           &
+     &            (rects(4*(k-1)+4)-rects(4*(k-1)+3)+1)
+        IF (k.gt.1) displs(k)=displs(k-1)+counts(k-1)
+      END DO
+#  else
+      mrank=0
+#  endif
+!
+!  Gather the solve-static fields once (rank 0 consumes them).
+!
+      CALL fd_gather (hi, g_hi)
+      CALL fd_gather (beta, g_beta)
+      CALL fd_gather (fdx, g_fdx)
+      CALL fd_gather (fdy, g_fdy)
+      CALL fd_gather (pm, g_pm)
+      CALL fd_gather (pn, g_pn)
+!
+!  PETSc lifecycle:  initialize on every rank (collective), keep
+!  all objects sequential on rank 0 (PETSC_COMM_SELF), finalize on
+!  every rank at the end of the solve.  Init/finalize cycling is
+!  supported and keeps this routine self-contained in the ROMS
+!  driver (no hooks needed in the ROMS startup/shutdown path).
+!
+      CALL PetscInitialize (perr)
+!
+      IF (mrank.eq.0) THEN
+        ndof=ncell2
+        CALL MatCreateSeqAIJ (PETSC_COMM_SELF, ndof, ndof, 18,     &
+     &                        PETSC_NULL_INTEGER_ARRAY, pA, perr)
+        CALL VecCreateSeq (PETSC_COMM_SELF, ndof, pb, perr)
+        CALL VecDuplicate (pb, px, perr)
+        CALL VecDuplicate (pb, pw, perr)
+        CALL KSPCreate (PETSC_COMM_SELF, pksp, perr)
+        CALL KSPSetType (pksp, KSPPREONLY, perr)
+        CALL KSPGetPC (pksp, ppc, perr)
+        CALL PCSetType (ppc, PCLU, perr)
+        CALL KSPSetFromOptions (pksp, perr)
+      END IF
+!
+!-----------------------------------------------------------------------
+!  Picard iteration.
+!-----------------------------------------------------------------------
+!
+      DO nl_iter=1,nl_max_iter(ng)
+!
+!  Face viscosity at the current tile velocity (tile-local, then
+!  gathered;  the assembly on rank 0 reads global faces so tile
+!  halos never enter the operator).
+!
+        CALL ssa_fd_viscosity (ng, tile, model,                     &
+     &                         LBi, UBi, LBj, UBj,                  &
+     &                         Istr, Iend, Jstr, Jend,              &
+     &                         pm, pn, hi, B_hard,                  &
+     &                         urho, vrho, nuhx, nuhy)
+!
+        CALL fd_gather (nuhx, g_nuhx)
+        CALL fd_gather (nuhy, g_nuhy)
+        CALL fd_gather (urho, g_uold)
+        CALL fd_gather (vrho, g_vold)
+!
+        IF (mrank.eq.0) THEN
+!
+!  Assemble the global operator:  eq1/eq2 coefficients verbatim
+!  from ssa_fd_matvec, global bounds replacing the tile-array
+!  bounds (cw=ce=cn=cs=0 and all switches off at the domain edge,
+!  i.e. the zero-filled ghost ring plays the no-ice neighbor).
+!
+          CALL MatZeroEntries (pA, perr)
+          CALL VecSet (pb, 0.0d0, perr)
+          CALL VecSet (px, 0.0d0, perr)
+!
+          DO j=1,Mm_g
+            DO i=1,Lm_g
+              gi=2*((j-1)*Lm_g+i-1)
+              ring=(i.eq.1.or.i.eq.Lm_g.or.                         &
+     &              j.eq.1.or.j.eq.Mm_g)
+!
+              IF (g_hi(i,j).le.0.0_r8.or.ring) THEN
+!
+!  Identity row (ice-free cell or anchored ring):  velocity zero.
+!
+                i1(1)=gi
+                icol(1)=gi
+                vcol(1)=one
+                CALL MatSetValues (pA, 1, i1, 1, icol, vcol,        &
+     &                             INSERT_VALUES, perr)
+                i1(1)=gi+1
+                icol(1)=gi+1
+                CALL MatSetValues (pA, 1, i1, 1, icol, vcol,        &
+     &                             INSERT_VALUES, perr)
+              ELSE
+!
+                IF (i.gt.1) THEN
+                  cwv=g_nuhx(i-1,j)
+                ELSE
+                  cwv=0.0_r8
+                END IF
+                IF (i.lt.Lm_g) THEN
+                  cev=g_nuhx(i,j)
+                ELSE
+                  cev=0.0_r8
+                END IF
+                IF (j.lt.Mm_g) THEN
+                  cnv=g_nuhy(i,j)
+                ELSE
+                  cnv=0.0_r8
+                END IF
+                IF (j.gt.1) THEN
+                  csv=g_nuhy(i,j-1)
+                ELSE
+                  csv=0.0_r8
+                END IF
+!
+                Nf=1; Ef=1; Sf=1; Wf=1
+                NNE=1; NNW=1
+                ENE=1; ESE=1
+                SSW=1; SSE=1
+                WSW=1; WNW=1
+                IF (j.ge.Mm_g.or.g_hi(i,j+1).le.0.0_r8) THEN
+                  Nf=0; NNE=0; NNW=0
+                END IF
+                IF (j.le.1.or.g_hi(i,j-1).le.0.0_r8) THEN
+                  Sf=0; SSW=0; SSE=0
+                END IF
+                IF (i.ge.Lm_g.or.g_hi(i+1,j).le.0.0_r8) THEN
+                  Ef=0; ENE=0; ESE=0
+                END IF
+                IF (i.le.1.or.g_hi(i-1,j).le.0.0_r8) THEN
+                  Wf=0; WSW=0; WNW=0
+                END IF
+                IF (i.lt.Lm_g.and.j.lt.Mm_g) THEN
+                  IF (g_hi(i+1,j+1).le.0.0_r8) THEN
+                    NNE=0; ENE=0
+                  END IF
+                END IF
+                IF (i.lt.Lm_g.and.j.gt.1) THEN
+                  IF (g_hi(i+1,j-1).le.0.0_r8) THEN
+                    ESE=0; SSE=0
+                  END IF
+                END IF
+                IF (i.gt.1.and.j.gt.1) THEN
+                  IF (g_hi(i-1,j-1).le.0.0_r8) THEN
+                    SSW=0; WSW=0
+                  END IF
+                END IF
+                IF (i.gt.1.and.j.lt.Mm_g) THEN
+                  IF (g_hi(i-1,j+1).le.0.0_r8) THEN
+                    WNW=0; NNW=0
+                  END IF
+                END IF
+!
+                dx=1.0_r8/g_pm(i,j)
+                dy=1.0_r8/g_pn(i,j)
+                dx2=dx*dx
+                dy2=dy*dy
+                d4=4.0_r8*dx*dy
+                d2=2.0_r8*dx*dy
+!
+                eq1(1)=0.0_r8
+                eq1(2)=-cnv*Nf/dy2
+                eq1(3)=0.0_r8
+                eq1(4)=-4.0_r8*cwv*Wf/dx2
+                eq1(5)=(cnv*Nf+csv*Sf)/dy2+                         &
+     &                 4.0_r8*(cev*Ef+cwv*Wf)/dx2
+                eq1(6)=-4.0_r8*cev*Ef/dx2
+                eq1(7)=0.0_r8
+                eq1(8)=-csv*Sf/dy2
+                eq1(9)=0.0_r8
+                eq1(10)= cwv*Wf*WNW/d2+cnv*Nf*NNW/d4
+                eq1(11)=(cnv*Nf*NNE-cnv*Nf*NNW)*Nf/d4+              &
+     &                  (cwv*Wf-cev*Ef)*Nf/d2
+                eq1(12)=-cev*Ef*ENE/d2-cnv*Nf*NNE/d4
+                eq1(13)=(cwv*Wf*WSW-cwv*Wf*WNW)*Wf/d2+              &
+     &                  (cnv*Nf-csv*Sf)*Wf/d4
+                eq1(14)=(cnv*Nf*Ef*Nf-cnv*Nf*Wf*Nf-                 &
+     &                   csv*Sf*Ef*Sf+csv*Sf*Wf*Sf)/d4+             &
+     &                  (cev*Ef*Nf-cwv*Wf*Nf-cev*Ef*Sf+             &
+     &                   cwv*Wf*Sf)/d2
+                eq1(15)=(cev*Ef*ENE-cev*Ef*ESE)*Ef/d2+              &
+     &                  (csv*Sf*Ef*Sf-cnv*Nf*Ef*Nf)/d4
+                eq1(16)=-cwv*Wf*WSW/d2-csv*Sf*SSW/d4
+                eq1(17)=(csv*Sf*SSW-csv*Sf*SSE)*Sf/d4+              &
+     &                  (cev*Ef-cwv*Wf)*Sf/d2
+                eq1(18)= cev*Ef*ESE/d2+csv*Sf*SSE/d4
+!
+                eq2(1)= cwv*Wf*WNW/d4+cnv*Nf*NNW/d2
+                eq2(2)=(cnv*Nf*NNE-cnv*Nf*NNW)*Nf/d2+               &
+     &                 (cwv*Wf-cev*Ef)*Nf/d4
+                eq2(3)=-cev*Ef*ENE/d4-cnv*Nf*NNE/d2
+                eq2(4)=(cwv*Wf*WSW-cwv*Wf*WNW)*Wf/d4+               &
+     &                 (cnv*Nf-csv*Sf)*Wf/d2
+                eq2(5)=(cnv*Nf-csv*Sf)*(cev*Ef-cwv*Wf)/d2+          &
+     &                 (cev*Ef-cwv*Wf)*(Nf-Sf)/d4
+                eq2(6)=(cev*Ef*ENE-cev*Ef*ESE)*Ef/d4+               &
+     &                 (csv*Sf*Ef*Sf-cnv*Nf*Ef*Nf)/d2
+                eq2(7)=-cwv*Wf*WSW/d4-csv*Sf*SSW/d2
+                eq2(8)=(csv*Sf*SSW-csv*Sf*SSE)*Sf/d2+               &
+     &                 (cev*Ef-cwv*Wf)*Sf/d4
+                eq2(9)= cev*Ef*ESE/d4+csv*Sf*SSE/d2
+                eq2(10)=0.0_r8
+                eq2(11)=-4.0_r8*cnv*Nf/dy2
+                eq2(12)=0.0_r8
+                eq2(13)=-cwv*Wf/dx2
+                eq2(14)=4.0_r8*(cnv*Nf+csv*Sf)/dy2+                 &
+     &                 (cev*Ef+cwv*Wf)/dx2
+                eq2(15)= cev*Ef/dx2
+                eq2(16)=0.0_r8
+                eq2(17)=-4.0_r8*csv*Sf/dy2
+                eq2(18)=0.0_r8
+!
+                bu=g_beta(i,j)
+                bv=g_beta(i,j)
+                eq1(5)=eq1(5)+bu
+                eq2(14)=eq2(14)+bv
+!
+!  u-row:  9 u-neighbour columns then 9 v-neighbour columns.
+!
+                IF (ABS(eq1(5)).lt.eps) THEN
+                  i1(1)=gi
+                  icol(1)=gi
+                  vcol(1)=one
+                  CALL MatSetValues (pA, 1, i1, 1, icol, vcol,      &
+     &                               INSERT_VALUES, perr)
+                ELSE
+                  kk=0
+                  DO jc=-1,1
+                    DO ic=-1,1
+                      gn=2*((j+jc-1)*Lm_g+i+ic-1)
+                      kk=kk+1
+                      icol(kk)=gn
+                      vcol(kk)=eq1(kk)
+                    END DO
+                  END DO
+                  DO jc=-1,1
+                    DO ic=-1,1
+                      gn=2*((j+jc-1)*Lm_g+i+ic-1)+1
+                      kk=kk+1
+                      icol(kk)=gn
+                      vcol(kk)=eq1(kk)
+                    END DO
+                  END DO
+                  i1(1)=gi
+                  CALL MatSetValues (pA, 1, i1, 18, icol, vcol,     &
+     &                               INSERT_VALUES, perr)
+                END IF
+!
+!  v-row:  9 v-neighbour columns then 9 u-neighbour columns.
+!
+                IF (ABS(eq2(14)).lt.eps) THEN
+                  i1(1)=gi+1
+                  icol(1)=gi+1
+                  vcol(1)=one
+                  CALL MatSetValues (pA, 1, i1, 1, icol, vcol,      &
+     &                               INSERT_VALUES, perr)
+                ELSE
+                  kk=0
+                  DO jc=-1,1
+                    DO ic=-1,1
+                      gn=2*((j+jc-1)*Lm_g+i+ic-1)+1
+                      kk=kk+1
+                      icol(kk)=gn
+                      vcol(kk)=eq2(kk+9)
+                    END DO
+                  END DO
+                  DO jc=-1,1
+                    DO ic=-1,1
+                      gn=2*((j+jc-1)*Lm_g+i+ic-1)
+                      kk=kk+1
+                      icol(kk)=gn
+                      vcol(kk)=eq2(kk-9)
+                    END DO
+                  END DO
+                  i1(1)=gi+1
+                  CALL MatSetValues (pA, 1, i1, 18, icol, vcol,     &
+     &                               INSERT_VALUES, perr)
+                END IF
+!
+!  Right-hand side and initial guess.
+!
+                CALL VecSetValue (pb, gi, g_fdx(i,j),               &
+     &                            INSERT_VALUES, perr)
+                CALL VecSetValue (pb, gi+1, g_fdy(i,j),             &
+     &                            INSERT_VALUES, perr)
+                CALL VecSetValue (px, gi, g_uold(i,j),              &
+     &                            INSERT_VALUES, perr)
+                CALL VecSetValue (px, gi+1, g_vold(i,j),            &
+     &                            INSERT_VALUES, perr)
+              END IF
+            END DO
+          END DO
+!
+          CALL MatAssemblyBegin (pA, MAT_FINAL_ASSEMBLY, perr)
+          CALL MatAssemblyEnd (pA, MAT_FINAL_ASSEMBLY, perr)
+          CALL VecAssemblyBegin (pb, perr)
+          CALL VecAssemblyEnd (pb, perr)
+          CALL VecAssemblyBegin (px, perr)
+          CALL VecAssemblyEnd (px, perr)
+!
+!  Zero-diagonal rows were already replaced by identity rows inside
+!  the assembly loop (same ABS(diag) < eps test as ssa_fd_matvec,
+!  beta included), so the RHS-driven identity semantics carry over.
+!
+          CALL KSPSetOperators (pksp, pA, pA, perr)
+          CALL KSPSolve (pksp, pb, px, perr)
+          CALL KSPGetConvergedReason (pksp, preason, perr)
+          IF (preason.lt.0) THEN
+            WRITE(stdout,'(a,i5)')                                  &
+     &       ' SSA-FD-KSP WARNING: KSP diverged, reason=',preason
+          END IF
+!
+#  ifdef ISF_DEBUG
+!  Linear-solve exactness probe:  ||b - A x_LU|| / ||b|| must be at
+!  roundoff level if the assembly and the direct solve are correct.
+!
+          CALL VecNorm (pb, NORM_2, rhsn, perr)
+          CALL MatMult (pA, px, pw, perr)
+          CALL VecAXPY (pw, -1.0d0, pb, perr)
+          CALL VecNorm (pw, NORM_2, resn, perr)
+          IF (rhsn.gt.eps) THEN
+            WRITE(stdout,'(a,i3,a,1p,e10.3,a,e10.3)')               &
+     &        ' FD-KSP lin probe iter',nl_iter,' ||b||=',rhsn,      &
+     &        ' rel_lin_resid=',resn/rhsn
+          ELSE
+            WRITE(stdout,'(a,i3,a,1p,e10.3)')                       &
+     &        ' FD-KSP lin probe iter',nl_iter,' ||b||=',rhsn
+          END IF
+#  endif
+!
+!  Extract, apply the speed-cap damper and the Picard relaxation.
+!
+          CALL VecGetArrayF90 (px, xv, perr)
+          DO j=1,Mm_g
+            DO i=1,Lm_g
+              gi=2*((j-1)*Lm_g+i-1)
+              g_unew(i,j)=xv(gi+1)
+              g_vnew(i,j)=xv(gi+2)
+            END DO
+          END DO
+          CALL VecRestoreArrayF90 (px, xv, perr)
+!
+          DO j=1,Mm_g
+            DO i=1,Lm_g
+              ring=(i.eq.1.or.i.eq.Lm_g.or.                         &
+     &              j.eq.1.or.j.eq.Mm_g)
+              IF (g_hi(i,j).gt.0.0_r8.and..not.ring) THEN
+                u_slide=SQRT(g_unew(i,j)**2+g_vnew(i,j)**2)
+                u_allow=1.5_r8*ssa_max_speed(ng)
+                IF (u_slide.gt.u_allow) THEN
+                  u_prev=SQRT(g_uold(i,j)**2+g_vold(i,j)**2)
+                  IF (u_prev.gt.u_allow) THEN
+                    u_allow=MAX(u_allow,0.9_r8*u_prev)
+                  END IF
+                  IF (u_slide.gt.u_allow) THEN
+                    cff=u_allow/u_slide
+                    g_unew(i,j)=cff*g_unew(i,j)
+                    g_vnew(i,j)=cff*g_vnew(i,j)
+                  END IF
+                END IF
+                g_unew(i,j)=picard_alpha(ng)*g_unew(i,j)+           &
+     &                     (1.0_r8-picard_alpha(ng))*g_uold(i,j)
+                g_vnew(i,j)=picard_alpha(ng)*g_vnew(i,j)+           &
+     &                     (1.0_r8-picard_alpha(ng))*g_vold(i,j)
+              ELSE
+                g_unew(i,j)=0.0_r8
+                g_vnew(i,j)=0.0_r8
+              END IF
+            END DO
+          END DO
+!
+!  Dual convergence criterion:  relative velocity change and the
+!  true relative residual of the frozen-viscosity system at the
+!  relaxed state.
+!
+          uo_n=0.0_r8
+          un_n=0.0_r8
+          vel_change=0.0_r8
+          DO j=1,Mm_g
+            DO i=1,Lm_g
+              ring=(i.eq.1.or.i.eq.Lm_g.or.                         &
+     &              j.eq.1.or.j.eq.Mm_g)
+              IF (g_hi(i,j).gt.0.0_r8.and..not.ring) THEN
+                uo_n=uo_n+g_uold(i,j)**2+g_vold(i,j)**2
+                un_n=un_n+g_unew(i,j)**2+g_vnew(i,j)**2
+                vel_change=vel_change+                              &
+     &            (g_unew(i,j)-g_uold(i,j))**2+                     &
+     &            (g_vnew(i,j)-g_vold(i,j))**2
+              END IF
+            END DO
+          END DO
+          vel_norm=SQRT(un_n)
+          vel_change=SQRT(vel_change)
+          IF (vel_norm.gt.eps) THEN
+            nl_resid=vel_change/vel_norm
+          ELSE
+            nl_resid=0.0_r8
+          END IF
+!
+          DO j=1,Mm_g
+            DO i=1,Lm_g
+              gi=2*((j-1)*Lm_g+i-1)
+              CALL VecSetValue (px, gi, g_unew(i,j),                &
+     &                          INSERT_VALUES, perr)
+              CALL VecSetValue (px, gi+1, g_vnew(i,j),              &
+     &                          INSERT_VALUES, perr)
+            END DO
+          END DO
+          CALL VecAssemblyBegin (px, perr)
+          CALL VecAssemblyEnd (px, perr)
+          CALL VecNorm (pb, NORM_2, rhsn, perr)
+          CALL MatMult (pA, px, pw, perr)
+          CALL VecAXPY (pw, -1.0d0, pb, perr)
+          CALL VecNorm (pw, NORM_2, resn, perr)
+          IF (rhsn.gt.eps) THEN
+            nl_resid=MAX(nl_resid,resn/rhsn)
+          END IF
+!
+          IF (nl_resid.lt.nl_tol(ng)) converged=.TRUE.
+!
+          WRITE(stdout,'(a,i3,a,1p,e9.2,a,e9.2,a,l1)')              &
+     &      ' SSA-FD-KSP Picard iter',nl_iter,' nl_resid=',         &
+     &      nl_resid,' max|u|=',vel_norm,' conv=',converged
+!
+!  The relaxed state becomes the tile state for the next
+!  iteration (scatter copies it into every tile interior).
+!
+          DO j=1,Mm_g
+            DO i=1,Lm_g
+              g_uold(i,j)=g_unew(i,j)
+              g_vold(i,j)=g_vnew(i,j)
+            END DO
+          END DO
+!
+        END IF  ! mrank.eq.0
+!
+        CALL fd_scatter (g_uold, urho)
+        CALL fd_scatter (g_vold, vrho)
+!
+        iconv=0
+        IF (converged) iconv=1
+#  ifdef DISTRIBUTE
+        CALL mpi_bcast (iconv, 1, MPI_INTEGER, 0,                   &
+     &                  OCN_COMM_WORLD, mpi_err)
+#  endif
+        IF (iconv.eq.1) converged=.TRUE.
+!
+        IF (converged) EXIT
+!
+      END DO  ! nl_iter
+!
+      IF (.not.converged.and.Master) THEN
+        WRITE(stdout,'(a,i4,a,es9.2)')                               &
+     &      ' SSA-FD-KSP WARNING: Picard not converged in ',        &
+     &      nl_max_iter(ng),' iterations; last nl_resid=',nl_resid
+      END IF
+!
+      IF (mrank.eq.0) THEN
+        CALL KSPDestroy (pksp, perr)
+        CALL VecDestroy (px, perr)
+        CALL VecDestroy (pb, perr)
+        CALL VecDestroy (pw, perr)
+        CALL MatDestroy (pA, perr)
+      END IF
+      CALL PetscFinalize (perr)
+!
+      deallocate ( g_hi, g_beta, g_fdx, g_fdy, g_pm, g_pn )
+      deallocate ( g_nuhx, g_nuhy )
+      deallocate ( g_uold, g_vold, g_unew, g_vnew )
+      deallocate ( sbuf, rbuf )
+#  ifdef DISTRIBUTE
+      deallocate ( rects, counts, displs )
+#  endif
+!
+      RETURN
+!
+      CONTAINS
+!
+!***********************************************************************
+      SUBROUTINE fd_gather (fld, gfld)
+!***********************************************************************
+!
+!  Gather one RHO-space tile-interior field into the rank-0 global
+!  buffer (ghost ring stays zero).  MPI_GATHERV in distributed
+!  runs;  direct copy in serial single-tile runs.
+!
+      real(r8), intent(in) :: fld(LBi:,LBj:)
+      real(r8), intent(out) :: gfld(0:,0:)
+!
+      integer :: ii, jj, p
+!
+#  ifdef DISTRIBUTE
+      p=0
+      DO jj=Jstr,Jend
+        DO ii=Istr,Iend
+          p=p+1
+          sbuf(p)=fld(ii,jj)
+        END DO
+      END DO
+      CALL mpi_gatherv (sbuf, nslab, MPI_DOUBLE_PRECISION,          &
+     &                  rbuf, counts, displs,                        &
+     &                  MPI_DOUBLE_PRECISION, 0,                     &
+     &                  OCN_COMM_WORLD, mpi_err)
+      IF (mrank.eq.0) THEN
+        DO k=1,nrpc
+          DO jj=rects(4*(k-1)+3),rects(4*(k-1)+4)
+            DO ii=rects(4*(k-1)+1),rects(4*(k-1)+2)
+              gfld(ii,jj)=rbuf(displs(k)+(jj-rects(4*(k-1)+3))*     &
+     &                   (rects(4*(k-1)+2)-rects(4*(k-1)+1)+1)+     &
+     &                   ii-rects(4*(k-1)+1)+1)
+            END DO
+          END DO
+        END DO
+      END IF
+#  else
+      DO jj=Jstr,Jend
+        DO ii=Istr,Iend
+          gfld(ii,jj)=fld(ii,jj)
+        END DO
+      END DO
+#  endif
+!
+      RETURN
+      END SUBROUTINE fd_gather
+!
+!***********************************************************************
+      SUBROUTINE fd_scatter (gfld, fld)
+!***********************************************************************
+!
+!  Scatter one rank-0 global field back into the tile interiors.
+!
+      real(r8), intent(in) :: gfld(0:,0:)
+      real(r8), intent(out) :: fld(LBi:,LBj:)
+!
+      integer :: ii, jj, p
+!
+#  ifdef DISTRIBUTE
+      IF (mrank.eq.0) THEN
+        DO k=1,nrpc
+          p=displs(k)
+          DO jj=rects(4*(k-1)+3),rects(4*(k-1)+4)
+            DO ii=rects(4*(k-1)+1),rects(4*(k-1)+2)
+              p=p+1
+              rbuf(p)=gfld(ii,jj)
+            END DO
+          END DO
+        END DO
+      END IF
+      CALL mpi_scatterv (rbuf, counts, displs,                      &
+     &                   MPI_DOUBLE_PRECISION, sbuf, nslab,          &
+     &                   MPI_DOUBLE_PRECISION, 0,                    &
+     &                   OCN_COMM_WORLD, mpi_err)
+      p=0
+      DO jj=Jstr,Jend
+        DO ii=Istr,Iend
+          p=p+1
+          fld(ii,jj)=sbuf(p)
+        END DO
+      END DO
+#  else
+      DO jj=Jstr,Jend
+        DO ii=Istr,Iend
+          fld(ii,jj)=gfld(ii,jj)
+        END DO
+      END DO
+#  endif
+!
+      RETURN
+      END SUBROUTINE fd_scatter
+!
+      END SUBROUTINE ssa_fd_picard_ksp
+# endif
 #endif
       END MODULE isf_solver_mod
