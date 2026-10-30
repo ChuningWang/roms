@@ -4455,12 +4455,18 @@
 !
       integer :: i, j, k, kk, ic, jc, nl_iter
       integer :: Lm_g, Mm_g, nslab, ncell2
-      integer :: gi, gj, gn
+      integer :: gi, gn
       integer :: Nf, Ef, Sf, Wf
       integer :: NNE, NNW, ENE, ESE, SSW, SSE, WSW, WNW
       integer :: iconv
+!
+!  mrank/nrpc/mpi_err are declared unconditionally:  the serial
+!  branch (mrank=0) and the rank-0 PETSc object blocks reference
+!  them outside the DISTRIBUTE guards.  nrpc/mpi_err stay unused
+!  in serial builds.
+!
+      integer :: nrpc, mrank, mpi_err
 #  ifdef DISTRIBUTE
-      integer :: mpi_err, nrpc, mrank
       integer :: myrect(4)
       integer, allocatable :: rects(:)
       integer, allocatable :: counts(:)
@@ -5017,6 +5023,22 @@
         CALL fd_scatter (g_uold, urho)
         CALL fd_scatter (g_vold, vrho)
 !
+#  ifdef DISTRIBUTE
+!  Refresh the velocity halos:  the westernmost/southernmost face
+!  viscosities of each tile read the neighbour velocity from the
+!  halo in the next Picard iteration (the eastern/northern seam
+!  faces are copied one inward by ssa_fd_viscosity and do not).
+!  Without this exchange the seam-face nuH would lag one Picard
+!  iteration behind.  Interior values are untouched, so single-
+!  tile runs are bit-identical with or without it.
+!
+        CALL mp_exchange2d (ng, tile, model, 2,                     &
+     &                      LBi, UBi, LBj, UBj,                     &
+     &                      NghostPoints,                           &
+     &                      EWperiodic(ng), NSperiodic(ng),         &
+     &                      urho, vrho)
+#  endif
+!
         iconv=0
         IF (converged) iconv=1
 #  ifdef DISTRIBUTE
@@ -5067,7 +5089,7 @@
       real(r8), intent(in) :: fld(LBi:,LBj:)
       real(r8), intent(out) :: gfld(0:,0:)
 !
-      integer :: ii, jj, p
+      integer :: ii, jj, kk, p
 !
 #  ifdef DISTRIBUTE
       p=0
@@ -5082,12 +5104,12 @@
      &                  MPI_DOUBLE_PRECISION, 0,                     &
      &                  OCN_COMM_WORLD, mpi_err)
       IF (mrank.eq.0) THEN
-        DO k=1,nrpc
-          DO jj=rects(4*(k-1)+3),rects(4*(k-1)+4)
-            DO ii=rects(4*(k-1)+1),rects(4*(k-1)+2)
-              gfld(ii,jj)=rbuf(displs(k)+(jj-rects(4*(k-1)+3))*     &
-     &                   (rects(4*(k-1)+2)-rects(4*(k-1)+1)+1)+     &
-     &                   ii-rects(4*(k-1)+1)+1)
+        DO kk=1,nrpc
+          DO jj=rects(4*(kk-1)+3),rects(4*(kk-1)+4)
+            DO ii=rects(4*(kk-1)+1),rects(4*(kk-1)+2)
+              gfld(ii,jj)=rbuf(displs(kk)+(jj-rects(4*(kk-1)+3))*   &
+     &                   (rects(4*(kk-1)+2)-rects(4*(kk-1)+1)+1)+   &
+     &                   ii-rects(4*(kk-1)+1)+1)
             END DO
           END DO
         END DO
@@ -5112,14 +5134,14 @@
       real(r8), intent(in) :: gfld(0:,0:)
       real(r8), intent(out) :: fld(LBi:,LBj:)
 !
-      integer :: ii, jj, p
+      integer :: ii, jj, kk, p
 !
 #  ifdef DISTRIBUTE
       IF (mrank.eq.0) THEN
-        DO k=1,nrpc
-          p=displs(k)
-          DO jj=rects(4*(k-1)+3),rects(4*(k-1)+4)
-            DO ii=rects(4*(k-1)+1),rects(4*(k-1)+2)
+        DO kk=1,nrpc
+          p=displs(kk)
+          DO jj=rects(4*(kk-1)+3),rects(4*(kk-1)+4)
+            DO ii=rects(4*(kk-1)+1),rects(4*(kk-1)+2)
               p=p+1
               rbuf(p)=gfld(ii,jj)
             END DO
