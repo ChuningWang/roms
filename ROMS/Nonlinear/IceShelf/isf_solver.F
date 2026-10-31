@@ -3766,7 +3766,17 @@
             eq2(3)=-ce*Ef*ENE/d4 - cn*Nf*NNE/d2
             eq2(4)=(cw*Wf*WSW-cw*Wf*WNW)*Wf/d4                            &
      &            +(cn*Nf-cs*Sf)*Wf/d2
-            eq2(5)=(cn*Nf-cs*Sf)*(ce*Ef-cw*Wf)/d2                         &
+!
+!  PISM SSAFD eq2 center cross term:  the first factor is the
+!  (E-W) SWITCH difference, not the face-coefficient difference.
+!  The transcription below had (c.e*E-c.w*W) there, producing a
+!  spurious term quadratic in nuH (O(1e16) entries across the GL
+!  band) -- the source of the FD-PCG divergence and of the LU
+!  conditioning catastrophe on realistic nuH fields.  Invisible
+!  with uniform nuH (c.e=c.w), which is why the analytic tests
+!  never caught it.
+!
+            eq2(5)=(Ef-Wf)*(cn*Nf-cs*Sf)/d2                               &
      &            +(ce*Ef-cw*Wf)*(Nf-Sf)/d4
             eq2(6)=(ce*Ef*ENE-ce*Ef*ESE)*Ef/d4                            &
      &            +(cs*Sf*Ef*Sf-cn*Nf*Ef*Nf)/d2
@@ -4940,7 +4950,7 @@
                 eq2(3)=-cev*Ef*ENE/d4-cnv*Nf*NNE/d2
                 eq2(4)=(cwv*Wf*WSW-cwv*Wf*WNW)*Wf/d4+               &
      &                 (cnv*Nf-csv*Sf)*Wf/d2
-                eq2(5)=(cnv*Nf-csv*Sf)*(cev*Ef-cwv*Wf)/d2+          &
+                eq2(5)=(Ef-Wf)*(cnv*Nf-csv*Sf)/d2+                  &
      &                 (cev*Ef-cwv*Wf)*(Nf-Sf)/d4
                 eq2(6)=(cev*Ef*ENE-cev*Ef*ESE)*Ef/d4+               &
      &                 (csv*Sf*Ef*Sf-cnv*Nf*Ef*Nf)/d2
