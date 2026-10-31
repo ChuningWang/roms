@@ -3791,15 +3791,25 @@
 !
             Au(i,j)=0.0_r8
             Av(i,j)=0.0_r8
+!
+!  The 9-point coefficients are ordered NW,N,NE,W,C,E,SW,S,SE
+!  (PISM SSAFD J-array convention, J(k)=j+1 for k=1..3 and j-1 for
+!  k=7..9), so the j offset must DESCEND with kk:  jc=1-(kk-1)/3.
+!  The previous jc=(kk-1)/3-1 flipped the S and N rows of the
+!  stencil, which makes the assembled matrix NON-symmetric
+!  (A[(i,j),(i,j+1)] = -nuh(i,j-1) vs A[(i,j+1),(i,j)] =
+!  -nuh(i,j)) -- the root cause of the FD-PCG divergence in the
+!  grounded region.  Invisible in y-symmetric test geometries.
+!
             DO kk=1,9
               ic=MOD(kk-1,3)-1
-              jc=(kk-1)/3-1
+              jc=1-(kk-1)/3
               Au(i,j)=Au(i,j)+eq1(kk)*xu(i+ic,j+jc)
               Av(i,j)=Av(i,j)+eq2(kk+9)*xv(i+ic,j+jc)
             END DO
             DO kk=10,18
               ic=MOD(kk-10,3)-1
-              jc=(kk-10)/3-1
+              jc=1-(kk-10)/3
               Au(i,j)=Au(i,j)+eq1(kk)*xv(i+ic,j+jc)
               Av(i,j)=Av(i,j)+eq2(kk-9)*xu(i+ic,j+jc)
             END DO
@@ -4471,6 +4481,7 @@
       integer :: i, j, k, kk, ic, jc, nl_iter
       integer :: Lm_g, Mm_g, nslab, ncell2
       integer :: gi, gn
+      integer :: k2
       integer :: fi_i, fi_j
       integer :: iu
       integer :: ii, jj
@@ -4957,25 +4968,40 @@
                     rm_row=MAX(rm_row,ABS(eq1(kk)))
                   END DO
                   rscale(gi+1)=1.0_r8/MAX(rm_row,1.0d-300)
+!
+!  Free-edge rows reference neighbours outside the global index
+!  range on the far side of the edge;  those columns are skipped
+!  (the ghost velocity is a Dirichlet zero in PISM SSAFD, so the
+!  column contributes nothing).  Without the skip, MatSetValues
+!  rejects the whole row and the assembled matrix loses the edge
+!  row entirely (the silent LU failure of fd_ksp=1 on MISMIP).
+!
                   kk=0
-                  DO jc=-1,1
+                  k2=0
+                  DO jc=1,-1,-1
                     DO ic=-1,1
                       gn=2*((j+jc-1)*Lm_g+i+ic-1)
                       kk=kk+1
-                      icol(kk)=gn
-                      vcol(kk)=eq1(kk)*rscale(gi+1)
+                      IF (gn.ge.0.and.gn.lt.ndof) THEN
+                        k2=k2+1
+                        icol(k2)=gn
+                        vcol(k2)=eq1(kk)*rscale(gi+1)
+                      END IF
                     END DO
                   END DO
-                  DO jc=-1,1
+                  DO jc=1,-1,-1
                     DO ic=-1,1
                       gn=2*((j+jc-1)*Lm_g+i+ic-1)+1
                       kk=kk+1
-                      icol(kk)=gn
-                      vcol(kk)=eq1(kk)*rscale(gi+1)
+                      IF (gn.ge.0.and.gn.lt.ndof) THEN
+                        k2=k2+1
+                        icol(k2)=gn
+                        vcol(k2)=eq1(kk)*rscale(gi+1)
+                      END IF
                     END DO
                   END DO
                   i1(1)=gi
-                  CALL MatSetValues (pA, 1, i1, 18, icol, vcol,     &
+                  CALL MatSetValues (pA, 1, i1, k2, icol, vcol,     &
      &                               INSERT_VALUES, perr)
                 END IF
 !
@@ -4995,24 +5021,31 @@
                   END DO
                   rscale(gi+2)=1.0_r8/MAX(rm_row,1.0d-300)
                   kk=0
-                  DO jc=-1,1
+                  k2=0
+                  DO jc=1,-1,-1
                     DO ic=-1,1
                       gn=2*((j+jc-1)*Lm_g+i+ic-1)+1
                       kk=kk+1
-                      icol(kk)=gn
-                      vcol(kk)=eq2(kk+9)*rscale(gi+2)
+                      IF (gn.ge.0.and.gn.lt.ndof) THEN
+                        k2=k2+1
+                        icol(k2)=gn
+                        vcol(k2)=eq2(kk+9)*rscale(gi+2)
+                      END IF
                     END DO
                   END DO
-                  DO jc=-1,1
+                  DO jc=1,-1,-1
                     DO ic=-1,1
                       gn=2*((j+jc-1)*Lm_g+i+ic-1)
                       kk=kk+1
-                      icol(kk)=gn
-                      vcol(kk)=eq2(kk-9)*rscale(gi+2)
+                      IF (gn.ge.0.and.gn.lt.ndof) THEN
+                        k2=k2+1
+                        icol(k2)=gn
+                        vcol(k2)=eq2(kk-9)*rscale(gi+2)
+                      END IF
                     END DO
                   END DO
                   i1(1)=gi+1
-                  CALL MatSetValues (pA, 1, i1, 18, icol, vcol,     &
+                  CALL MatSetValues (pA, 1, i1, k2, icol, vcol,     &
      &                               INSERT_VALUES, perr)
                 END IF
 !
