@@ -4539,11 +4539,8 @@
       KSP  :: pksp
       PC   :: ppc
       PetscInt :: ndof, i1(1), icol(18)
-      PetscInt :: nrw
       PetscScalar :: vcol(18), one
       PetscScalar, pointer :: xv(:)
-      PetscInt, pointer :: rcols(:)
-      PetscScalar, pointer :: rvals(:)
       PetscErrorCode :: perr
       PetscReal :: resn, rhsn
       KSPConvergedReason :: preason
@@ -4775,6 +4772,16 @@
         END DO
       END IF
 !
+!  One-shot system dump for offline matrix analysis (first SSA solve
+!  only):  row/col/val triplets exactly as inserted, plus the RHS.
+!
+      IF (mrank.eq.0) THEN
+        OPEN (371, file='ksp_dump_A.dat', status='replace',           &
+     &        action='write')
+        OPEN (372, file='ksp_dump_b.dat', status='replace',           &
+     &        action='write')
+      END IF
+!
 !-----------------------------------------------------------------------
 !  Picard iteration.
 !-----------------------------------------------------------------------
@@ -4826,6 +4833,12 @@
      &                             INSERT_VALUES, perr)
                 rscale(gi+1)=1.0_r8
                 rscale(gi+2)=1.0_r8
+                IF (nl_iter.eq.1) THEN
+                  WRITE(371,'(i7,1x,i2)') gi, 1
+                  WRITE(371,'(2i7,1x,1p,e23.16)') gi, gi, one
+                  WRITE(371,'(i7,1x,i2)') gi+1, 1
+                  WRITE(371,'(2i7,1x,1p,e23.16)') gi+1, gi+1, one
+                END IF
               ELSE
 !
                 IF (i.gt.1) THEN
@@ -4962,6 +4975,10 @@
                   CALL MatSetValues (pA, 1, i1, 1, icol, vcol,      &
      &                               INSERT_VALUES, perr)
                   rscale(gi+1)=1.0_r8
+                  IF (nl_iter.eq.1) THEN
+                    WRITE(371,'(i7,1x,i2)') gi, 1
+                    WRITE(371,'(2i7,1x,1p,e23.16)') gi, gi, one
+                  END IF
                 ELSE
                   rm_row=0.0_r8
                   DO kk=1,18
@@ -5003,6 +5020,13 @@
                   i1(1)=gi
                   CALL MatSetValues (pA, 1, i1, k2, icol, vcol,     &
      &                               INSERT_VALUES, perr)
+                  IF (nl_iter.eq.1) THEN
+                    WRITE(371,'(i7,1x,i2)') gi, k2
+                    DO k=1,k2
+                      WRITE(371,'(2i7,1x,1p,e23.16)') gi, icol(k),  &
+     &                      vcol(k)
+                    END DO
+                  END IF
                 END IF
 !
 !  v-row:  9 v-neighbour columns then 9 u-neighbour columns.
@@ -5014,6 +5038,10 @@
                   CALL MatSetValues (pA, 1, i1, 1, icol, vcol,      &
      &                               INSERT_VALUES, perr)
                   rscale(gi+2)=1.0_r8
+                  IF (nl_iter.eq.1) THEN
+                    WRITE(371,'(i7,1x,i2)') gi+1, 1
+                    WRITE(371,'(2i7,1x,1p,e23.16)') gi+1, gi+1, one
+                  END IF
                 ELSE
                   rm_row=0.0_r8
                   DO kk=10,18
@@ -5047,6 +5075,13 @@
                   i1(1)=gi+1
                   CALL MatSetValues (pA, 1, i1, k2, icol, vcol,     &
      &                               INSERT_VALUES, perr)
+                  IF (nl_iter.eq.1) THEN
+                    WRITE(371,'(i7,1x,i2)') gi+1, k2
+                    DO k=1,k2
+                      WRITE(371,'(2i7,1x,1p,e23.16)') gi+1, icol(k),&
+     &                      vcol(k)
+                    END DO
+                  END IF
                 END IF
 !
 !  Right-hand side and initial guess (LBC-pinned rows carry zero
@@ -5058,6 +5093,8 @@
      &                              INSERT_VALUES, perr)
                   CALL VecSetValue (px, gi, g_uold(i,j),            &
      &                              INSERT_VALUES, perr)
+                  IF (nl_iter.eq.1) WRITE(372,'(i7,1x,1p,e23.16)')  &
+     &              gi, g_fdx(i,j)*rscale(gi+1)
                 END IF
                 IF (.not.pin_v(i,j)) THEN
                   CALL VecSetValue (pb, gi+1, g_fdy(i,j)            &
@@ -5065,6 +5102,8 @@
      &                              INSERT_VALUES, perr)
                   CALL VecSetValue (px, gi+1, g_vold(i,j),          &
      &                              INSERT_VALUES, perr)
+                  IF (nl_iter.eq.1) WRITE(372,'(i7,1x,1p,e23.16)')  &
+     &              gi+1, g_fdy(i,j)*rscale(gi+2)
                 END IF
               END IF
             END DO
@@ -5076,6 +5115,10 @@
           CALL VecAssemblyEnd (pb, perr)
           CALL VecAssemblyBegin (px, perr)
           CALL VecAssemblyEnd (px, perr)
+          IF (nl_iter.eq.1) THEN
+            CLOSE (371)
+            CLOSE (372)
+          END IF
 !
 !  Zero-diagonal rows were already replaced by identity rows inside
 !  the assembly loop (same ABS(diag) < eps test as ssa_fd_matvec,
