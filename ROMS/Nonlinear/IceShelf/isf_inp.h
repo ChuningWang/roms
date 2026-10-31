@@ -34,7 +34,8 @@
 #ifdef AVERAGES
       integer :: nf, ns
 #endif
-      integer :: i, ic, itrc, ibnd
+      integer :: i, ic, itrc, ibnd, iice
+      integer :: iline
       logical, allocatable :: Lswitch(:)
 #ifdef T_PASSIVE
       real(r8), allocatable :: Rtracer(:,:)
@@ -78,32 +79,70 @@
 !  Read in iceshelf model parameters.
 !-----------------------------------------------------------------------
 !
+      iline=0
       DO WHILE (.true.)
         READ (inp,'(a)',ERR=10,END=20) line
         status=decode_line(line, KeyWord, Nval, Cval, Rval)
+#  ifdef ISF_DEBUG
+        IF (status.gt.0) WRITE (out,'(a,i5,a,i3,a,a)')              &
+     &    ' ISF-PARSE line',iline,' Nval=',Nval,' key=',TRIM(KeyWord)
+        iline=iline+1
+#  endif
         IF (status.gt.0) THEN
           SELECT CASE (TRIM(KeyWord))
 #ifdef ICESHEET
-            CASE ('LBC(isIhis)')
-              soff = isf_ic_brylast + isIhis
-              Npts=load_lbc(Nval, Cval, line, nline, soff, igrid,       &
-     &                      0, 0, Vname(1,idIhis), LBC)
-            CASE ('LBC(isIuis)')
-              soff = isf_ic_brylast + isIuis
-              Npts=load_lbc(Nval, Cval, line, nline, soff, igrid,       &
-     &                      0, 0, Vname(1,idIuis), LBC)
-            CASE ('LBC(isIvis)')
-              soff = isf_ic_brylast + isIvis
-              Npts=load_lbc(Nval, Cval, line, nline, soff, igrid,       &
-     &                      0, 0, Vname(1,idIvis), LBC)
+            CASE ('LBC(isIhis)', 'LBC(isIuis)', 'LBC(isIvis)',        &
+     &                'LBC(isIeis)')
 !
-!  NOTE: the isIeis boundary file carries the ice TEMPERATURE, not the
-!  enthalpy; the enthalpy boundary value is computed as h*T in isf_tibc.
+!  Map the keyword to the state-variable slot and RESET the slot
+!  switches before loading:  load_lbc only sets .TRUE. flags and
+!  never clears them, so a repeated LBC keyword for the same
+!  variable (default block plus a later override block, as in the
+!  front/land test files) would otherwise accumulate switches
+!  instead of overriding.  With the reset, the last occurrence in
+!  the isf file wins, matching user expectation.
 !
-            CASE ('LBC(isIeis)')
-              soff = isf_ic_brylast + isIeis
-              Npts=load_lbc(Nval, Cval, line, nline, soff, igrid,       &
-     &                      0, 0, Vname(1,idIeis), LBC)
+              SELECT CASE (TRIM(KeyWord))
+                CASE ('LBC(isIhis)')
+                  iice = isIhis
+                CASE ('LBC(isIuis)')
+                  iice = isIuis
+                CASE ('LBC(isIvis)')
+                  iice = isIvis
+                CASE ('LBC(isIeis)')
+                  iice = isIeis
+              END SELECT
+              soff = isf_ic_brylast + iice
+              DO ibnd = 1, 4
+                LBC(ibnd, soff, igrid)%acquire          = .FALSE.
+                LBC(ibnd, soff, igrid)%Chapman_explicit = .FALSE.
+                LBC(ibnd, soff, igrid)%Chapman_implicit = .FALSE.
+                LBC(ibnd, soff, igrid)%clamped          = .FALSE.
+                LBC(ibnd, soff, igrid)%closed           = .FALSE.
+                LBC(ibnd, soff, igrid)%Flather          = .FALSE.
+                LBC(ibnd, soff, igrid)%gradient         = .FALSE.
+                LBC(ibnd, soff, igrid)%mixed            = .FALSE.
+                LBC(ibnd, soff, igrid)%nested           = .FALSE.
+                LBC(ibnd, soff, igrid)%nudging          = .FALSE.
+                LBC(ibnd, soff, igrid)%periodic         = .FALSE.
+                LBC(ibnd, soff, igrid)%radiation        = .FALSE.
+                LBC(ibnd, soff, igrid)%reduced          = .FALSE.
+                LBC(ibnd, soff, igrid)%Shchepetkin      = .FALSE.
+              END DO
+              SELECT CASE (iice)
+                CASE (isIhis)
+                  Npts=load_lbc(Nval, Cval, line, nline, soff, igrid,  &
+     &                          0, 0, Vname(1,idIhis), LBC)
+                CASE (isIuis)
+                  Npts=load_lbc(Nval, Cval, line, nline, soff, igrid,  &
+     &                          0, 0, Vname(1,idIuis), LBC)
+                CASE (isIvis)
+                  Npts=load_lbc(Nval, Cval, line, nline, soff, igrid,  &
+     &                          0, 0, Vname(1,idIvis), LBC)
+                CASE (isIeis)
+                  Npts=load_lbc(Nval, Cval, line, nline, soff, igrid,  &
+     &                          0, 0, Vname(1,idIeis), LBC)
+              END SELECT
 #endif
             CASE ('isf_drdz')
               Npts=load_r(Nval, Rval, Ngrids, isf_drdz)
