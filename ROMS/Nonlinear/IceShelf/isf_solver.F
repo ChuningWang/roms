@@ -3789,7 +3789,7 @@
             eq2(12)=0.0_r8
             eq2(13)=-cw*Wf/dx2
             eq2(14)=4.0_r8*(cn*Nf+cs*Sf)/dy2 + (ce*Ef+cw*Wf)/dx2
-            eq2(15)= ce*Ef/dx2
+            eq2(15)=-ce*Ef/dx2
             eq2(16)=0.0_r8
             eq2(17)=-4.0_r8*cs*Sf/dy2
             eq2(18)=0.0_r8
@@ -4964,7 +4964,7 @@
                 eq2(13)=-cwv*Wf/dx2
                 eq2(14)=4.0_r8*(cnv*Nf+csv*Sf)/dy2+                 &
      &                 (cev*Ef+cwv*Wf)/dx2
-                eq2(15)= cev*Ef/dx2
+                eq2(15)=-cev*Ef/dx2
                 eq2(16)=0.0_r8
                 eq2(17)=-4.0_r8*csv*Sf/dy2
                 eq2(18)=0.0_r8
