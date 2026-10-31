@@ -552,6 +552,25 @@
             got_var(idIvnr)=.TRUE.
             S(ng)%Vid(idIvnr)=var_id(i)
           END IF
+!
+!  Perfect-restart coupling (Ci) variables:  must be recognized in
+!  the QUERY pass too, else an append-mode restart (RST name = INI
+!  name) aborts on the got_var(iCisf) check in the define section.
+!
+#  ifdef ICESHEET
+#   ifdef PERFECT_RESTART
+          DO nf=1,nIsfC
+            IF (iCisf(nf).gt.0) THEN
+              ifield=iCisf(nf)
+              IF (TRIM(var_name(i)).eq.TRIM(Vname(1,ifield))) THEN
+                got_var(ifield)=.TRUE.
+                S(ng)%Vid(ifield)=var_id(i)
+                CYCLE
+              END IF
+            END IF
+          END DO
+#   endif
+#  endif
 # endif
 # if defined ICESHEET || defined ICESHELF_THERMO
 !
@@ -1651,6 +1670,7 @@
       logical :: Cgrid
 !
       integer :: i, ifield, ifld, ic, itrc
+      integer :: sta_gtype
 !
       real(dp) :: scale
 !
@@ -1812,11 +1832,7 @@
         ifield=idIvol
         IF (VarOut(ifield,ng)) THEN
           scale=1.0_dp
-          IF ((ifld.eq.ifItdx).or.(ifld.eq.ifItdy)) THEN
-            sta_gtype=p2dvar
-          ELSE
-            sta_gtype=r2dvar
-          END IF
+          sta_gtype=r2dvar
           CALL extract_sta2d (ng, model, Cgrid, ifield, sta_gtype,         &
      &                        LBi, UBi, LBj, UBj,                       &
      &                        scale, ISF(ng)%Vi(:,:,lsnew(ng)),         &
@@ -2425,6 +2441,27 @@
             S(ng)%pioVar(idIvnr)%dkind=PIO_FOUT
             S(ng)%pioVar(idIvnr)%gtype=r2dvar
           END IF
+!
+!  Perfect-restart coupling (Ci) variables:  recognized in the QUERY
+!  pass so an append-mode restart (RST name = INI name) passes the
+!  got_var(iCisf) check in the define section.
+!
+#  ifdef ICESHEET
+#   ifdef PERFECT_RESTART
+          DO nf=1,nIsfC
+            IF (iCisf(nf).gt.0) THEN
+              ifield=iCisf(nf)
+              IF (TRIM(var_name(i)).eq.TRIM(Vname(1,ifield))) THEN
+                got_var(ifield)=.TRUE.
+                S(ng)%pioVar(ifield)%vd=var_desc(i)
+                S(ng)%pioVar(ifield)%dkind=PIO_FOUT
+                S(ng)%pioVar(ifield)%gtype=r2dvar
+                CYCLE
+              END IF
+            END IF
+          END DO
+#   endif
+#  endif
 #  endif
 #  if defined ICESHEET || defined ICESHELF_THERMO
 !
@@ -3426,7 +3463,7 @@
           END IF
           DO itrc=NAT+1,NT(ng)
             IF (LtracerIsf(itrc, ng)) THEN
-              ifield=idStrc(itrc)
+              ifield=idItrc(itrc)
               IF (VarOut(ifield,ng)) THEN
                 Vinfo( 1)=Vname(1,ifield)
                 Vinfo( 2)=Vname(2,ifield)
@@ -3544,7 +3581,7 @@
             END IF
             DO itrc=NAT+1,NT(ng)
               IF (LtracerIsf(itrc, ng)) THEN
-                ifield=idStrc(itrc)
+                ifield=idItrc(itrc)
                 IF (TRIM(var_name(i)).eq.TRIM(Vname(1,ifield))) THEN
                   got_var(ifield)=.TRUE.
                   S(ng)%pioVar(ifield)%vd=var_desc(i)
@@ -3610,7 +3647,7 @@
           END IF
           DO itrc=NAT+1,NT(ng)
             IF (LtracerIsf(itrc, ng)) THEN
-              ifield=idStrc(itrc)
+              ifield=idItrc(itrc)
               IF (.not.got_var(ifield).and.VarOut(ifield,ng)) THEN
                 IF (Master) WRITE (stdout,10) TRIM(Vname(1,ifield)),    &
      &                                        TRIM(ncname)
@@ -3827,7 +3864,7 @@
         DO itrc=NAT+1,NT(ng)
           IF (LtracerIsf(itrc, ng)) THEN
             ic=ic+1
-            ifield=idStrc(itrc)
+            ifield=idItrc(itrc)
             IF (VarOut(ifield,ng)) THEN
               scale=1.0_dp
               CALL extract_sta2d (ng, model, Cgrid, ifield, r2dvar,     &
