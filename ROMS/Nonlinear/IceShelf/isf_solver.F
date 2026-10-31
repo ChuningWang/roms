@@ -476,7 +476,12 @@
 !
         IF (n_ssa_fd(ng).gt.0) THEN
 !
-!  Map the current PSI state to cell centers (FD state mask).
+!  Map the current PSI state to cell centers (FD state mask).  The
+!  4-corner average beta_rho is the cell-centered drag consumed by
+!  the FD drivers (PISM samples tauc at cell centers);  before the
+!  2026-10-31 rewiring it was computed but never used -- the FD
+!  operators sampled the PSI field at cell centers instead, a
+!  half-cell offset of the drag.
 !
           DO j=LBj,UBj
             DO i=LBi,UBi
@@ -706,7 +711,7 @@
      &                            Istr, Iend, Jstr, Jend,               &
      &                            pm, pn,                               &
      &                            Si(:,:,lsold,isIhis),                 &
-     &                            nuhx, nuhy, Fi(:,:,ifIbta),           &
+     &                            nuhx, nuhy, beta_rho,           &
      &                            fdx, fdy, B_hard,                     &
      &                            urho, vrho,                           &
      &                            Ru, Rv, Zu, Zv, Du, Dv,               &
@@ -720,7 +725,7 @@
      &                        Istr, Iend, Jstr, Jend,                   &
      &                        pm, pn,                                   &
      &                        Si(:,:,lsold,isIhis),                     &
-     &                        nuhx, nuhy, Fi(:,:,ifIbta),               &
+     &                        nuhx, nuhy, beta_rho,               &
      &                        fdx, fdy, B_hard,                         &
      &                        urho, vrho,                               &
      &                        Ru, Rv, Zu, Zv, Du, Dv,                   &
@@ -732,7 +737,7 @@
      &                      Istr, Iend, Jstr, Jend,                     &
      &                      pm, pn,                                     &
      &                      Si(:,:,lsold,isIhis),                       &
-     &                      nuhx, nuhy, Fi(:,:,ifIbta),                 &
+     &                      nuhx, nuhy, beta_rho,                 &
      &                      fdx, fdy, B_hard,                           &
      &                      urho, vrho,                                 &
      &                      Ru, Rv, Zu, Zv, Du, Dv,                     &
@@ -4378,19 +4383,26 @@
 !  -pc_type command line flags override).  This removes the PCG
 !  divergence seen on the wall-corner MISMIP+ geometry and, as a
 !  side effect, is also cleaner in MPI:  the matrix is assembled
-!  for the full domain (anchoring identity rows on the true domain
-!  edges only), so tile seams carry no artificial zero-velocity
-!  pinning, unlike the per-tile anchoring of the PCG path.
+!  for the full domain with anchoring only on the LBC-flagged
+!  edges, so tile seams carry no artificial zero-velocity pinning,
+!  unlike the per-tile anchoring of the PCG path.
 !
 !  Data flow:  tile interiors are gathered to rank 0 (fd_gather),
 !  the matrix/RHS are assembled from the same PISM Maxima stencil
 !  coefficients as ssa_fd_matvec (eq1/eq2 transcribed verbatim),
 !  the solved, damped and relaxed cell state is scattered back to
 !  every tile interior (fd_scatter) each Picard iteration.  The
-!  zero-velocity anchor ring and ice-free cells carry identity
-!  rows with zero right-hand sides;  cells with a vanishing
-!  diagonal fall back to identity rows driven by the local RHS,
-!  matching the replace_zero_diagonal semantics of the matvec.
+!  anchoring is LBC-aware and per component (like ssa_lbc_zero on
+!  the FE path):  domain edges flagged closed/clamped in the
+!  ice-state LBC carry identity rows with zero right-hand sides,
+!  and one reference ice cell is pinned when a component has no
+!  Dirichlet edge at all (rigid-translation null space of a free
+!  component under a direct solve).  Unconditional edge anchoring
+!  would pin free (gradient) edges and crush y-uniform flow through
+!  the membrane stiffness -- the 250x front-test discrepancy.
+!  Cells with a vanishing diagonal fall back to identity rows
+!  driven by the local RHS, matching the replace_zero_diagonal
+!  semantics of the matvec.
 !
       implicit none
 !
@@ -4451,11 +4463,17 @@
 #  endif
 !
       logical :: converged
-      logical :: ring
+!
+      logical :: ancu_w, ancu_e, ancu_s, ancu_n
+      logical :: ancv_w, ancv_e, ancv_s, ancv_n
+      logical :: hasu, hasv
 !
       integer :: i, j, k, kk, ic, jc, nl_iter
       integer :: Lm_g, Mm_g, nslab, ncell2
       integer :: gi, gn
+      integer :: fi_i, fi_j
+      integer :: iu
+      integer :: ii, jj
       integer :: Nf, Ef, Sf, Wf
       integer :: NNE, NNW, ENE, ESE, SSW, SSE, WSW, WNW
       integer :: iconv
@@ -4474,6 +4492,7 @@
 #  endif
 !
       real(r8) :: eps, cff
+      real(r8) :: rm_row
       real(r8) :: u_slide, u_prev, u_allow
       real(r8) :: vel_norm, vel_change
       real(r8) :: nl_resid
@@ -4497,7 +4516,10 @@
       real(r8), allocatable, dimension(:,:) :: g_unew
       real(r8), allocatable, dimension(:,:) :: g_vnew
       real(r8), allocatable, dimension(:) :: sbuf
+      real(r8), allocatable, dimension(:) :: rscale
       real(r8), allocatable, dimension(:) :: rbuf
+      logical, allocatable, dimension(:,:) :: pin_u
+      logical, allocatable, dimension(:,:) :: pin_v
 !
 !  PETSc objects and scalars.
 !
@@ -4506,8 +4528,11 @@
       KSP  :: pksp
       PC   :: ppc
       PetscInt :: ndof, i1(1), icol(18)
+      PetscInt :: nrw
       PetscScalar :: vcol(18), one
       PetscScalar, pointer :: xv(:)
+      PetscInt, pointer :: rcols(:)
+      PetscScalar, pointer :: rvals(:)
       PetscErrorCode :: perr
       PetscReal :: resn, rhsn
       KSPConvergedReason :: preason
@@ -4558,6 +4583,9 @@
       allocate ( g_vnew(0:Lm_g+1,0:Mm_g+1) )
       allocate ( sbuf(nslab) )
       allocate ( rbuf(Lm_g*Mm_g) )
+      allocate ( pin_u(Lm_g,Mm_g) )
+      allocate ( pin_v(Lm_g,Mm_g) )
+      allocate ( rscale(ncell2) )
       g_hi=0.0_r8
       g_beta=0.0_r8
       g_fdx=0.0_r8
@@ -4626,6 +4654,117 @@
       END IF
 !
 !-----------------------------------------------------------------------
+!  LBC-aware anchoring (rank 0).  Identity rows are placed on the
+!  edges flagged closed/clamped in the ice-state LBC, per velocity
+!  component -- the same per-edge/per-component logic as ssa_lbc_zero
+!  on the FE path.  Unconditional domain-edge anchoring would pin
+!  free (gradient) edges and crush any y-uniform flow through the
+!  membrane stiffness (found as the 250x front-test discrepancy).
+!  If a component has no closed/clamped edge at all, one reference
+!  ice cell is pinned to zero to remove the rigid-translation null
+!  space (the direct solve cannot tolerate a singular matrix;  the
+!  physical solution has that component zero at the pinned cell).
+!-----------------------------------------------------------------------
+!
+      IF (mrank.eq.0) THEN
+        IF (fd_ksp(ng).eq.2) THEN
+!
+!         Legacy semantics (fd_ksp=2):  unconditional domain-edge
+!         anchoring, both components -- the pre-LBC-aware behavior.
+!         Use for MISMIP-type diagnostic runs where the LU solve is
+!         known to behave;  the free-edge crushing of y-uniform flow
+!         (the 250x front-test artifact) is part of this mode.
+!
+          ancu_w=.TRUE.
+          ancu_e=.TRUE.
+          ancu_s=.TRUE.
+          ancu_n=.TRUE.
+          ancv_w=.TRUE.
+          ancv_e=.TRUE.
+          ancv_s=.TRUE.
+          ancv_n=.TRUE.
+          hasu=.TRUE.
+          hasv=.TRUE.
+        ELSE
+!
+!         LBC-aware anchoring (fd_ksp=1):  read the ice-state LBC.
+!
+        ancu_w=LBC(iwest ,ibISF(isIuis),ng)%clamped.or.               &
+     &         LBC(iwest ,ibISF(isIuis),ng)%closed
+        ancu_e=LBC(ieast ,ibISF(isIuis),ng)%clamped.or.               &
+     &         LBC(ieast ,ibISF(isIuis),ng)%closed
+        ancu_s=LBC(isouth,ibISF(isIuis),ng)%clamped.or.               &
+     &         LBC(isouth,ibISF(isIuis),ng)%closed
+        ancu_n=LBC(inorth,ibISF(isIuis),ng)%clamped.or.               &
+     &         LBC(inorth,ibISF(isIuis),ng)%closed
+        ancv_w=LBC(iwest ,ibISF(isIvis),ng)%clamped.or.               &
+     &         LBC(iwest ,ibISF(isIvis),ng)%closed
+        ancv_e=LBC(ieast ,ibISF(isIvis),ng)%clamped.or.               &
+     &         LBC(ieast ,ibISF(isIvis),ng)%closed
+        ancv_s=LBC(isouth,ibISF(isIvis),ng)%clamped.or.               &
+     &         LBC(isouth,ibISF(isIvis),ng)%closed
+        ancv_n=LBC(inorth,ibISF(isIvis),ng)%clamped.or.               &
+     &         LBC(inorth,ibISF(isIvis),ng)%closed
+        hasu=ancu_w.or.ancu_e.or.ancu_s.or.ancu_n
+        hasv=ancv_w.or.ancv_e.or.ancv_s.or.ancv_n
+        END IF
+!
+#  ifdef ISF_DEBUG
+        WRITE(stdout,'(a,4i4)') ' FD-KSP LBC slots (u,v):',         &
+     &      ibISF(isIuis), ibISF(isIvis)
+        WRITE(stdout,'(a,8l2)') ' FD-KSP anchor flags u(w,e,s,n)'//  &
+     &      ' v(w,e,s,n):',                                          &
+     &      ancu_w,ancu_e,ancu_s,ancu_n,ancv_w,ancv_e,ancv_s,ancv_n
+        DO kk=1,2
+          IF (kk.eq.1) THEN
+            iu=ibISF(isIuis)
+          ELSE
+            iu=ibISF(isIvis)
+          END IF
+          WRITE(stdout,'(a,i3,4(a,2l2))') ' FD-KSP slot',iu,        &
+     &       ' W(c,g)',LBC(iwest,iu,ng)%closed,                     &
+     &                   LBC(iwest,iu,ng)%gradient,                 &
+     &       ' E(c,g)',LBC(ieast,iu,ng)%closed,                     &
+     &                   LBC(ieast,iu,ng)%gradient,                 &
+     &       ' S(c,g)',LBC(isouth,iu,ng)%closed,                    &
+     &                   LBC(isouth,iu,ng)%gradient,                &
+     &       ' N(c,g)',LBC(inorth,iu,ng)%closed,                    &
+     &                   LBC(inorth,iu,ng)%gradient
+        END DO
+#  endif
+!
+!  Reference cell for a component without any Dirichlet edge:  the
+!  first ice cell in scan order (deterministic).
+!
+        fi_i=0
+        fi_j=0
+        DO j=1,Mm_g
+          DO i=1,Lm_g
+            IF (fi_i.eq.0.and.g_hi(i,j).gt.0.0_r8) THEN
+              fi_i=i
+              fi_j=j
+            END IF
+          END DO
+        END DO
+        DO j=1,Mm_g
+          DO i=1,Lm_g
+            pin_u(i,j)=(g_hi(i,j).le.0.0_r8).or.                      &
+     &                 (i.eq.1    .and.ancu_w).or.                    &
+     &                 (i.eq.Lm_g.and.ancu_e).or.                    &
+     &                 (j.eq.1    .and.ancu_s).or.                    &
+     &                 (j.eq.Mm_g.and.ancu_n).or.                    &
+     &                 (.not.hasu.and.i.eq.fi_i.and.j.eq.fi_j)
+            pin_v(i,j)=(g_hi(i,j).le.0.0_r8).or.                      &
+     &                 (i.eq.1    .and.ancv_w).or.                    &
+     &                 (i.eq.Lm_g.and.ancv_e).or.                    &
+     &                 (j.eq.1    .and.ancv_s).or.                    &
+     &                 (j.eq.Mm_g.and.ancv_n).or.                    &
+     &                 (.not.hasv.and.i.eq.fi_i.and.j.eq.fi_j)
+          END DO
+        END DO
+      END IF
+!
+!-----------------------------------------------------------------------
 !  Picard iteration.
 !-----------------------------------------------------------------------
 !
@@ -4660,12 +4799,10 @@
           DO j=1,Mm_g
             DO i=1,Lm_g
               gi=2*((j-1)*Lm_g+i-1)
-              ring=(i.eq.1.or.i.eq.Lm_g.or.                         &
-     &              j.eq.1.or.j.eq.Mm_g)
 !
-              IF (g_hi(i,j).le.0.0_r8.or.ring) THEN
+              IF (g_hi(i,j).le.0.0_r8) THEN
 !
-!  Identity row (ice-free cell or anchored ring):  velocity zero.
+!  Identity rows (ice-free cell):  velocity zero.
 !
                 i1(1)=gi
                 icol(1)=gi
@@ -4676,6 +4813,8 @@
                 icol(1)=gi+1
                 CALL MatSetValues (pA, 1, i1, 1, icol, vcol,        &
      &                             INSERT_VALUES, perr)
+                rscale(gi+1)=1.0_r8
+                rscale(gi+2)=1.0_r8
               ELSE
 !
                 IF (i.gt.1) THEN
@@ -4802,21 +4941,29 @@
                 eq2(14)=eq2(14)+bv
 !
 !  u-row:  9 u-neighbour columns then 9 v-neighbour columns.
+!  LBC-pinned rows (and the translation reference cell) become
+!  identity rows with zero right-hand side.
 !
-                IF (ABS(eq1(5)).lt.eps) THEN
+                IF (pin_u(i,j).or.ABS(eq1(5)).lt.eps) THEN
                   i1(1)=gi
                   icol(1)=gi
                   vcol(1)=one
                   CALL MatSetValues (pA, 1, i1, 1, icol, vcol,      &
      &                               INSERT_VALUES, perr)
+                  rscale(gi+1)=1.0_r8
                 ELSE
+                  rm_row=0.0_r8
+                  DO kk=1,18
+                    rm_row=MAX(rm_row,ABS(eq1(kk)))
+                  END DO
+                  rscale(gi+1)=1.0_r8/MAX(rm_row,1.0d-300)
                   kk=0
                   DO jc=-1,1
                     DO ic=-1,1
                       gn=2*((j+jc-1)*Lm_g+i+ic-1)
                       kk=kk+1
                       icol(kk)=gn
-                      vcol(kk)=eq1(kk)
+                      vcol(kk)=eq1(kk)*rscale(gi+1)
                     END DO
                   END DO
                   DO jc=-1,1
@@ -4824,7 +4971,7 @@
                       gn=2*((j+jc-1)*Lm_g+i+ic-1)+1
                       kk=kk+1
                       icol(kk)=gn
-                      vcol(kk)=eq1(kk)
+                      vcol(kk)=eq1(kk)*rscale(gi+1)
                     END DO
                   END DO
                   i1(1)=gi
@@ -4834,20 +4981,26 @@
 !
 !  v-row:  9 v-neighbour columns then 9 u-neighbour columns.
 !
-                IF (ABS(eq2(14)).lt.eps) THEN
+                IF (pin_v(i,j).or.ABS(eq2(14)).lt.eps) THEN
                   i1(1)=gi+1
                   icol(1)=gi+1
                   vcol(1)=one
                   CALL MatSetValues (pA, 1, i1, 1, icol, vcol,      &
      &                               INSERT_VALUES, perr)
+                  rscale(gi+2)=1.0_r8
                 ELSE
+                  rm_row=0.0_r8
+                  DO kk=10,18
+                    rm_row=MAX(rm_row,ABS(eq2(kk)))
+                  END DO
+                  rscale(gi+2)=1.0_r8/MAX(rm_row,1.0d-300)
                   kk=0
                   DO jc=-1,1
                     DO ic=-1,1
                       gn=2*((j+jc-1)*Lm_g+i+ic-1)+1
                       kk=kk+1
                       icol(kk)=gn
-                      vcol(kk)=eq2(kk+9)
+                      vcol(kk)=eq2(kk+9)*rscale(gi+2)
                     END DO
                   END DO
                   DO jc=-1,1
@@ -4855,7 +5008,7 @@
                       gn=2*((j+jc-1)*Lm_g+i+ic-1)
                       kk=kk+1
                       icol(kk)=gn
-                      vcol(kk)=eq2(kk-9)
+                      vcol(kk)=eq2(kk-9)*rscale(gi+2)
                     END DO
                   END DO
                   i1(1)=gi+1
@@ -4863,16 +5016,23 @@
      &                               INSERT_VALUES, perr)
                 END IF
 !
-!  Right-hand side and initial guess.
+!  Right-hand side and initial guess (LBC-pinned rows carry zero
+!  right-hand side and zero initial guess;  zero-diagonal fallback
+!  rows keep the local-RHS identity semantics).
 !
-                CALL VecSetValue (pb, gi, g_fdx(i,j),               &
-     &                            INSERT_VALUES, perr)
-                CALL VecSetValue (pb, gi+1, g_fdy(i,j),             &
-     &                            INSERT_VALUES, perr)
-                CALL VecSetValue (px, gi, g_uold(i,j),              &
-     &                            INSERT_VALUES, perr)
-                CALL VecSetValue (px, gi+1, g_vold(i,j),            &
-     &                            INSERT_VALUES, perr)
+                IF (.not.pin_u(i,j)) THEN
+                  CALL VecSetValue (pb, gi, g_fdx(i,j)*rscale(gi+1),&
+     &                              INSERT_VALUES, perr)
+                  CALL VecSetValue (px, gi, g_uold(i,j),            &
+     &                              INSERT_VALUES, perr)
+                END IF
+                IF (.not.pin_v(i,j)) THEN
+                  CALL VecSetValue (pb, gi+1, g_fdy(i,j)            &
+     &                              *rscale(gi+2),                  &
+     &                              INSERT_VALUES, perr)
+                  CALL VecSetValue (px, gi+1, g_vold(i,j),          &
+     &                              INSERT_VALUES, perr)
+                END IF
               END IF
             END DO
           END DO
@@ -4895,6 +5055,14 @@
             WRITE(stdout,'(a,i5)')                                  &
      &       ' SSA-FD-KSP WARNING: KSP diverged, reason=',preason
           END IF
+!
+#  ifdef ISF_DEBUG
+          CALL VecNorm (px, NORM_INFINITY, resn, perr)
+          WRITE(stdout,'(a,i4,a,i8,a,1p,e10.3)')                    &
+     &      ' FD-KSP solve reason=',preason,' perr=',perr,          &
+     &      ' max|x|=',resn
+#  endif
+!
 !
 #  ifdef ISF_DEBUG
 !  Linear-solve exactness probe:  ||b - A x_LU|| / ||b|| must be at
@@ -4928,9 +5096,7 @@
 !
           DO j=1,Mm_g
             DO i=1,Lm_g
-              ring=(i.eq.1.or.i.eq.Lm_g.or.                         &
-     &              j.eq.1.or.j.eq.Mm_g)
-              IF (g_hi(i,j).gt.0.0_r8.and..not.ring) THEN
+              IF (g_hi(i,j).gt.0.0_r8) THEN
                 u_slide=SQRT(g_unew(i,j)**2+g_vnew(i,j)**2)
                 u_allow=1.5_r8*ssa_max_speed(ng)
                 IF (u_slide.gt.u_allow) THEN
@@ -4944,10 +5110,18 @@
                     g_vnew(i,j)=cff*g_vnew(i,j)
                   END IF
                 END IF
-                g_unew(i,j)=picard_alpha(ng)*g_unew(i,j)+           &
-     &                     (1.0_r8-picard_alpha(ng))*g_uold(i,j)
-                g_vnew(i,j)=picard_alpha(ng)*g_vnew(i,j)+           &
-     &                     (1.0_r8-picard_alpha(ng))*g_vold(i,j)
+                IF (.not.pin_u(i,j)) THEN
+                  g_unew(i,j)=picard_alpha(ng)*g_unew(i,j)+         &
+     &                       (1.0_r8-picard_alpha(ng))*g_uold(i,j)
+                ELSE
+                  g_unew(i,j)=0.0_r8
+                END IF
+                IF (.not.pin_v(i,j)) THEN
+                  g_vnew(i,j)=picard_alpha(ng)*g_vnew(i,j)+         &
+     &                       (1.0_r8-picard_alpha(ng))*g_vold(i,j)
+                ELSE
+                  g_vnew(i,j)=0.0_r8
+                END IF
               ELSE
                 g_unew(i,j)=0.0_r8
                 g_vnew(i,j)=0.0_r8
@@ -4964,14 +5138,19 @@
           vel_change=0.0_r8
           DO j=1,Mm_g
             DO i=1,Lm_g
-              ring=(i.eq.1.or.i.eq.Lm_g.or.                         &
-     &              j.eq.1.or.j.eq.Mm_g)
-              IF (g_hi(i,j).gt.0.0_r8.and..not.ring) THEN
-                uo_n=uo_n+g_uold(i,j)**2+g_vold(i,j)**2
-                un_n=un_n+g_unew(i,j)**2+g_vnew(i,j)**2
-                vel_change=vel_change+                              &
-     &            (g_unew(i,j)-g_uold(i,j))**2+                     &
-     &            (g_vnew(i,j)-g_vold(i,j))**2
+              IF (g_hi(i,j).gt.0.0_r8) THEN
+                IF (.not.pin_u(i,j)) THEN
+                  uo_n=uo_n+g_uold(i,j)**2
+                  un_n=un_n+g_unew(i,j)**2
+                  vel_change=vel_change+                            &
+     &              (g_unew(i,j)-g_uold(i,j))**2
+                END IF
+                IF (.not.pin_v(i,j)) THEN
+                  uo_n=uo_n+g_vold(i,j)**2
+                  un_n=un_n+g_vnew(i,j)**2
+                  vel_change=vel_change+                            &
+     &              (g_vnew(i,j)-g_vold(i,j))**2
+                END IF
               END IF
             END DO
           END DO
@@ -5070,6 +5249,8 @@
       deallocate ( g_nuhx, g_nuhy )
       deallocate ( g_uold, g_vold, g_unew, g_vnew )
       deallocate ( sbuf, rbuf )
+      deallocate ( pin_u, pin_v )
+      deallocate ( rscale )
 #  ifdef DISTRIBUTE
       deallocate ( rects, counts, displs )
 #  endif
