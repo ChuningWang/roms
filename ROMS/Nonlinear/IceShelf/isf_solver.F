@@ -4813,6 +4813,21 @@
         CALL fd_gather (urho, g_uold)
         CALL fd_gather (vrho, g_vold)
 !
+#  ifdef ISF_DEBUG
+        IF (nl_iter.eq.1) THEN
+          cff=0.0_r8
+          DO jj=1,Mm_g
+            DO ii=1,Lm_g
+              cff=MAX(cff,ABS(g_beta(ii,jj)))
+            END DO
+          END DO
+          WRITE(stdout,'(a,1p,e10.3,a,1p,e10.3,a,1p,e10.3)')        &
+     &      ' FD-KSP inputs: max|g_beta|=',cff,                     &
+     &      ' max|g_nuhx|=',MAXVAL(g_nuhx),                         &
+     &      ' max|g_fdx|=',MAXVAL(ABS(g_fdx))
+        END IF
+#  endif
+!
         IF (mrank.eq.0) THEN
 !
 !  Assemble the global operator:  eq1/eq2 coefficients verbatim
