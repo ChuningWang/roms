@@ -3497,8 +3497,18 @@
             wsum=0.0_r8
             hx=0.0_r8
             hy=0.0_r8
+!
+!  PISM SSAFD driving-stress gradient:  the two one-sided differences
+!  enter with the SAME sign, (h.c-h.w)/dx + (h.e-h.c)/dx over
+!  (west+east), summing to the centered difference.  The negative sign
+!  on the west term below (found 2026-11-05 by the Python per-cell
+!  recompute) turned the sum into a second difference divided by a
+!  first-difference denominator:  fdx vanished on uniform-slope
+!  interiors (the 2 km equilibrium FD collapse) while staying correct
+!  on zero-slope geometry (the front test).
+!
             IF (cw.eq.cc.and.cc.ne.0) THEN
-              hx=hx-(sfld(i,j)-sfld(i-1,j))*pm(i,j)
+              hx=hx+(sfld(i,j)-sfld(i-1,j))*pm(i,j)
               wsum=wsum+1.0_r8
             END IF
             IF (ce.eq.cc.and.cc.ne.0) THEN
@@ -3506,7 +3516,7 @@
               wsum=wsum+1.0_r8
             END IF
             IF (cs.eq.cc.and.cc.ne.0) THEN
-              hy=hy-(sfld(i,j)-sfld(i,j-1))*pn(i,j)
+              hy=hy+(sfld(i,j)-sfld(i,j-1))*pn(i,j)
               wsum=wsum+1.0_r8
             END IF
             IF (cn.eq.cc.and.cc.ne.0) THEN
