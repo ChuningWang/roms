@@ -3397,6 +3397,7 @@
       real(r8) :: cff
 !
       real(r8) :: D_c, D_n
+      real(r8) :: wsumx, wsumy
       real(r8) :: hx, hy, Pice, Pwat, dp, wc
       real(r8) :: wsum
       real(r8), dimension(LBi:UBi,LBj:UBj) :: sfld
@@ -3494,7 +3495,8 @@
 !  Ice-free neighbors are excluded (zs=0 extension would fake a
 !  cliff;  the cliff force is the delta_p term below).
 !
-            wsum=0.0_r8
+            wsumx=0.0_r8
+            wsumy=0.0_r8
             hx=0.0_r8
             hy=0.0_r8
 !
@@ -3507,25 +3509,33 @@
 !  interiors (the 2 km equilibrium FD collapse) while staying correct
 !  on zero-slope geometry (the front test).
 !
+!
+!  The x and y gradient normalizations are SEPARATE:  PISM divides
+!  h_x by (west+east) and h_y by (south+north).  Sharing one wsum
+!  (the 2026-11-05 verification find) divided each interior gradient
+!  by 4 instead of 2, halving both driving-stress components.
+!
             IF (cw.eq.cc.and.cc.ne.0) THEN
               hx=hx+(sfld(i,j)-sfld(i-1,j))*pm(i,j)
-              wsum=wsum+1.0_r8
+              wsumx=wsumx+1.0_r8
             END IF
             IF (ce.eq.cc.and.cc.ne.0) THEN
               hx=hx+(sfld(i+1,j)-sfld(i,j))*pm(i,j)
-              wsum=wsum+1.0_r8
+              wsumx=wsumx+1.0_r8
             END IF
             IF (cs.eq.cc.and.cc.ne.0) THEN
               hy=hy+(sfld(i,j)-sfld(i,j-1))*pn(i,j)
-              wsum=wsum+1.0_r8
+              wsumy=wsumy+1.0_r8
             END IF
             IF (cn.eq.cc.and.cc.ne.0) THEN
               hy=hy+(sfld(i,j+1)-sfld(i,j))*pn(i,j)
-              wsum=wsum+1.0_r8
+              wsumy=wsumy+1.0_r8
             END IF
-            IF (wsum.gt.0.0_r8) THEN
-              hx=hx/wsum
-              hy=hy/wsum
+            IF (wsumx.gt.0.0_r8) THEN
+              hx=hx/wsumx
+            END IF
+            IF (wsumy.gt.0.0_r8) THEN
+              hy=hy/wsumy
             END IF
 !
 !  Floating cells at the ice front:  halve the gradient (PISM's
