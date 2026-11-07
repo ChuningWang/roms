@@ -2429,55 +2429,39 @@
       front_n=(rmask_ist(i  ,j+1).eq.0.0_r8)
       front_s=(rmask_ist(i  ,j-1).eq.0.0_r8)
 !
-!  At a physical domain edge the neighbour cell is the ghost ring.
-!  Its rmask_ist IS computed (isf_masks covers Istr-1..IendR) and
-!  exchanged, from the ghost-ring ice state -- which is the user's
-!  declaration of what lies beyond the domain (ice continuation or
-!  ocean).  The mask value is therefore authoritative for gradient
-!  (free) edges:  ghost ice means the ice continues and the face
-!  carries no pressure jump (no front);  ghost ocean means an open
-!  front and the load applies.  Closed and clamped edges are walls
-!  and never fronts regardless of the ghost.  (2026-11-08:  the
-!  former unconditional override "gradient edge => front" ignored
-!  the ghost ice and loaded every gradient domain edge with the
-!  full front pressure -- normal AND tangential-row components --
-!  even where the ice continued;  the FD path (ssa_fd_driving
-!  delta_p) consults the actual neighbour state and never had the
-!  inconsistency.  See work_plan 2026-11-08.)
+!  At a physical domain edge the neighbour cell does not exist and
+!  the ghost mask is not consulted:  the edge status comes from the
+!  LBC alone.  A free (gradient) edge is open ocean (a front);  a
+!  closed or clamped edge is a wall (never a front).  (2026-11-08
+!  correction:  an experiment replacing the gradient override with
+!  the ghost-ring mask value -- intended to let ice-continuation
+!  edges stay load-free -- killed the MISMIP+ east-edge front load,
+!  because the restart's ghost ring holds generator-filled ice at
+!  the calving front.  The LBC rule stands.  Ice-continuation edges
+!  would need a distinct LBC type plus the membrane-traction
+!  operator term;  see work_plan 2026-11-08.)
 !
       IF (.not.EWperiodic(ng)) THEN
         IF (i.eq.Iend) THEN
           IF (DOMAIN(ng)%Eastern_Edge(tile)) THEN
-            IF (LBC(ieast,ibISF(isIuis),ng)%closed .or.                 &
-     &          LBC(ieast,ibISF(isIuis),ng)%clamped) THEN
-              front_e=.FALSE.
-            END IF
+            front_e=LBC(ieast,ibISF(isIuis),ng)%gradient
           END IF
         END IF
         IF (i.eq.Istr) THEN
           IF (DOMAIN(ng)%Western_Edge(tile)) THEN
-            IF (LBC(iwest,ibISF(isIuis),ng)%closed .or.                 &
-     &          LBC(iwest,ibISF(isIuis),ng)%clamped) THEN
-              front_w=.FALSE.
-            END IF
+            front_w=LBC(iwest,ibISF(isIuis),ng)%gradient
           END IF
         END IF
       END IF
       IF (.not.NSperiodic(ng)) THEN
         IF (j.eq.Jend) THEN
           IF (DOMAIN(ng)%Northern_Edge(tile)) THEN
-            IF (LBC(inorth,ibISF(isIvis),ng)%closed .or.                &
-     &          LBC(inorth,ibISF(isIvis),ng)%clamped) THEN
-              front_n=.FALSE.
-            END IF
+            front_n=LBC(inorth,ibISF(isIvis),ng)%gradient
           END IF
         END IF
         IF (j.eq.Jstr) THEN
           IF (DOMAIN(ng)%Southern_Edge(tile)) THEN
-            IF (LBC(isouth,ibISF(isIvis),ng)%closed .or.                &
-     &          LBC(isouth,ibISF(isIvis),ng)%clamped) THEN
-              front_s=.FALSE.
-            END IF
+            front_s=LBC(isouth,ibISF(isIvis),ng)%gradient
           END IF
         END IF
       END IF
