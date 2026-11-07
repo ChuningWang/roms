@@ -1009,6 +1009,7 @@
 !
         END DO  ! cg_iter
 !
+!
 !-----------------------------------------------------------------------
 !  Post-CG robustness measures:  speed cap, Picard relaxation, then
 !  a single pibc + halo refresh (below) before the consistency
@@ -1247,6 +1248,11 @@
             WRITE(stdout,'(A,I3,A,ES12.4,A,ES12.4,A,L1)')               &
      &          '  Picard iter ',nl_iter,' nl_resid=',nl_resid,         &
      &          ' max|u|=',u_slide,' conv=',converged
+            IF (rhs_norm.gt.eps) THEN
+              WRITE(stdout,'(A,ES12.4)')                                &
+     &          '  Picard true-resid ||Au-b||/||b|| =',                 &
+     &          SQRT(resid_norm/rhs_norm)
+            END IF
           END IF
         END IF
 # endif
@@ -2408,39 +2414,55 @@
       front_n=(rmask_ist(i  ,j+1).eq.0.0_r8)
       front_s=(rmask_ist(i  ,j-1).eq.0.0_r8)
 !
-!  At a physical domain edge the neighbour cell does not exist and
-!  the ghost mask is not consulted:  the edge status comes from the
-!  LBC alone.  A free (gradient) edge is open ocean (a front);  a
-!  closed or clamped edge is a wall (never a front).  Overriding in
-!  BOTH directions matters:  leaving the zero-ghost mask value in
-!  place at closed/clamped edges declared every ice cell at the
-!  wall a front -- the spurious wall load landed on the Dirichlet
-!  boundary nodes (inert for the velocity solution, but polluting
-!  the residual norms and the is_taudx/is_taudy diagnostics), and
-!  ssa_land_margin flagged a spurious land margin (driving-stress
-!  taper) along the wall.
+!  At a physical domain edge the neighbour cell is the ghost ring.
+!  Its rmask_ist IS computed (isf_masks covers Istr-1..IendR) and
+!  exchanged, from the ghost-ring ice state -- which is the user's
+!  declaration of what lies beyond the domain (ice continuation or
+!  ocean).  The mask value is therefore authoritative for gradient
+!  (free) edges:  ghost ice means the ice continues and the face
+!  carries no pressure jump (no front);  ghost ocean means an open
+!  front and the load applies.  Closed and clamped edges are walls
+!  and never fronts regardless of the ghost.  (2026-11-08:  the
+!  former unconditional override "gradient edge => front" ignored
+!  the ghost ice and loaded every gradient domain edge with the
+!  full front pressure -- normal AND tangential-row components --
+!  even where the ice continued;  the FD path (ssa_fd_driving
+!  delta_p) consults the actual neighbour state and never had the
+!  inconsistency.  See work_plan 2026-11-08.)
 !
       IF (.not.EWperiodic(ng)) THEN
         IF (i.eq.Iend) THEN
           IF (DOMAIN(ng)%Eastern_Edge(tile)) THEN
-            front_e=LBC(ieast,ibISF(isIuis),ng)%gradient
+            IF (LBC(ieast,ibISF(isIuis),ng)%closed .or.                 &
+     &          LBC(ieast,ibISF(isIuis),ng)%clamped) THEN
+              front_e=.FALSE.
+            END IF
           END IF
         END IF
         IF (i.eq.Istr) THEN
           IF (DOMAIN(ng)%Western_Edge(tile)) THEN
-            front_w=LBC(iwest,ibISF(isIuis),ng)%gradient
+            IF (LBC(iwest,ibISF(isIuis),ng)%closed .or.                 &
+     &          LBC(iwest,ibISF(isIuis),ng)%clamped) THEN
+              front_w=.FALSE.
+            END IF
           END IF
         END IF
       END IF
       IF (.not.NSperiodic(ng)) THEN
         IF (j.eq.Jend) THEN
           IF (DOMAIN(ng)%Northern_Edge(tile)) THEN
-            front_n=LBC(inorth,ibISF(isIvis),ng)%gradient
+            IF (LBC(inorth,ibISF(isIvis),ng)%closed .or.                &
+     &          LBC(inorth,ibISF(isIvis),ng)%clamped) THEN
+              front_n=.FALSE.
+            END IF
           END IF
         END IF
         IF (j.eq.Jstr) THEN
           IF (DOMAIN(ng)%Southern_Edge(tile)) THEN
-            front_s=LBC(isouth,ibISF(isIvis),ng)%gradient
+            IF (LBC(isouth,ibISF(isIvis),ng)%closed .or.                &
+     &          LBC(isouth,ibISF(isIvis),ng)%clamped) THEN
+              front_s=.FALSE.
+            END IF
           END IF
         END IF
       END IF
@@ -3196,6 +3218,7 @@
 !  complete contribution of all its elements through the ring
 !  assembly above (seam elements are integrated by the tile that
 !  owns the node).
+!
 !
       RETURN
       END SUBROUTINE ssa_matvec
