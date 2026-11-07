@@ -167,6 +167,32 @@
         END DO
       END IF
 !
+!  Perfect restarts skip the block above, but Fi(ifItis) (the
+!  temperature diagnostic) is excluded from the restart read
+!  (isf_get_state_*) and stays at its zero initialization -- the
+!  first post-restart melt/SMB enthalpy terms in isf_advection then
+!  use T=0 (energy-budget error).  Recompute T = E/H for both time
+!  levels from the restart enthalpy.
+!
+      IF (PerfectRST(ng)) THEN
+        DO j=JstrB,JendB
+          DO i=IstrB,IendB
+            IF (Si(i,j,lsold,isIhis).gt.0.0_r8) THEN
+              Fi(i,j,ifItis)=Si(i,j,lsold,isIeis)/                      &
+     &                       Si(i,j,lsold,isIhis)
+            ELSE
+              Fi(i,j,ifItis)=0.0_r8
+            END IF
+            IF (Si(i,j,lsnew,isIhis).gt.0.0_r8) THEN
+              Fi(i,j,ifItis)=Si(i,j,lsnew,isIeis)/                      &
+     &                       Si(i,j,lsnew,isIhis)
+            ELSE
+              Fi(i,j,ifItis)=0.0_r8
+            END IF
+          END DO
+        END DO
+      END IF
+!
 !-----------------------------------------------------------------------
 !  Apply lateral boundary conditions to the iceshelf state variables
 !  for both time levels.
