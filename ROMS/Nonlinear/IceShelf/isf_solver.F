@@ -779,6 +779,21 @@
           END DO
         END DO
 !
+!  FD diagnostics:  the cell-centred effective viscosity for the
+!  is_nuH output (the mean of the cell's four face values from the
+!  last Picard iteration;  the FE path fills this in ssa_viscosity).
+!
+        DO j=Jstr,Iend
+          DO i=Istr,Iend
+            IF (Si(i,j,lsold,isIhis).gt.0.0_r8) THEN
+              Fi(i,j,ifInuh)=0.25_r8*(nuhx(i-1,j)+nuhx(i,j)+            &
+     &                                nuhy(i,j-1)+nuhy(i,j))
+            ELSE
+              Fi(i,j,ifInuh)=0.0_r8
+            END IF
+          END DO
+        END DO
+!
       ELSE
 !
       DO nl_iter=1,nl_max_iter(ng)
@@ -3575,17 +3590,6 @@
 !  delta_p = H*(P_ice - P_water) per open face, along the outward
 !  normal.  Fjord-wall override:  ice-free neighbor with bed above
 !  the ice surface gets no pressure difference.
-#  ifdef ISF_DEBUG
-          cff=0.0_r8
-          DO jj=MAX(LBj,Jstr-1),MIN(UBj,Jend)
-            DO ii=MAX(LBi,Istr-1),MIN(UBi,Iend)
-              IF (hi(ii,jj).gt.0.0_r8) cff=MAX(cff,ABS(fdx(ii,jj)))
-            END DO
-          END DO
-          IF (Master) WRITE (*,*) 'FD-DRIVE probe: max|fdx| =', cff,    &
-     &        ' at iic=', iic(ng)
-#  endif
-!
 !  PISM average_water_column_pressure:  the water column at the
 !  interface runs from the ice bottom (max(bed, flotation depth))
 !  up to sea level -- NOT from the sea bed (a floating front would
@@ -3638,6 +3642,17 @@
           END IF
         END DO
       END DO
+!
+#  ifdef ISF_DEBUG
+      cff=0.0_r8
+      DO j=MAX(LBj,Jstr-1),MIN(UBj,Jend)
+        DO i=MAX(LBi,Istr-1),MIN(UBi,Iend)
+          cff=MAX(cff,ABS(fdx(i,j)))
+        END DO
+      END DO
+      IF (Master) WRITE (*,*) 'FD-DRIVE probe: max|fdx| =', cff,        &
+     &    ' at iic=', iic(ng)
+#  endif
 !
       RETURN
       END SUBROUTINE ssa_fd_driving
