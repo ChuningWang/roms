@@ -194,9 +194,14 @@
             ELSE
 !
 !  Floating ice: cavity exists, zice from hydrostatic equilibrium.
+!  The free-surface term is first-order:  a positive zeta raises the
+!  sea surface, submerging the base deeper,  zice = -(rho_i/rho0)H
+!  + (1-rho_i/rho0)*zeta.  At zeta=0 (MISMIP+, OCEAN_FIXED) this is
+!  the previous expression bit-exactly.
 !
               rmask_isf(i,j)=1.0_r8
-              zice(i,j)=-(rho_i/rho0)*hice(i,j)
+              zice(i,j)=(1.0_r8-rho_i/rho0)*zeta(i,j)                   &
+     &                  -(rho_i/rho0)*hice(i,j)
             END IF
           ELSE
 !

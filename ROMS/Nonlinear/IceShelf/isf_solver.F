@@ -1113,6 +1113,22 @@
      &                      Si(:,:,lsnew,isIvis))
 # endif
 !
+!  Serial periodic runs:  refresh the wrapped ghost cells of the
+!  velocity pair after the CG (the viscosity and the next matvec
+!  read the ghost neighbours of the interior edge rows).  MPI runs
+!  exchange above;  non-periodic serial runs have no wrap.
+!
+# ifndef DISTRIBUTE
+        IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+          CALL exchange_p2d_tile (ng, tile,                             &
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            Si(:,:,lsnew,isIuis))
+          CALL exchange_p2d_tile (ng, tile,                             &
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            Si(:,:,lsnew,isIvis))
+        END IF
+# endif
+!
 !  Refresh the velocity halo and the Dirichlet BCs after the cap
 !  and relaxation, then recompute the viscosity so nuH is
 !  consistent with the relaxed velocity used in the next Picard
