@@ -1743,6 +1743,8 @@
               S(ib,ifield,igrid)%acquire = .TRUE.
             CASE ('CLO')
               S(ib,ifield,igrid)%closed = .TRUE.
+            CASE ('CNT')
+              S(ib,ifield,igrid)%continuation = .TRUE.
             CASE ('FLA')
               S(ib,ifield,igrid)%Flather = .TRUE.
               S(ib,ifield,igrid)%acquire = .TRUE.

@@ -361,6 +361,7 @@
         logical :: Chapman_implicit
         logical :: clamped
         logical :: closed
+        logical :: continuation
         logical :: Flather
         logical :: gradient
         logical :: mixed

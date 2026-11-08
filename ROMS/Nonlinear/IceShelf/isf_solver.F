@@ -2444,14 +2444,12 @@
 !  would need a distinct LBC type plus the membrane-traction
 !  operator term;  see work_plan 2026-11-08.)
 !
-!  Edge semantics (n_edge_front):  1 (default) -- a gradient domain
 !  edge is an open front (the LBC-alone rule;  MISMIP+ east edge).
 !  0 -- the ghost-ring mask decides (ghost ice = continuation, no
 !  front;  ghost ocean = open front), and ssa_matvec supplies the
 !  membrane traction of the continuing ice (the SSA_TEST front
 !  channel symmetry edges).
 !
-      IF (n_edge_front(ng).eq.1) THEN
         IF (.not.EWperiodic(ng)) THEN
           IF (i.eq.Iend) THEN
             IF (DOMAIN(ng)%Eastern_Edge(tile)) THEN
@@ -2476,7 +2474,6 @@
             END IF
           END IF
         END IF
-      END IF
 !
       RETURN
       END SUBROUTINE ssa_front_faces
@@ -3125,33 +3122,28 @@
         DO i=IstrC,IendC
           IF (nuH(i,j).gt.0.0_r8) THEN
 !
-!  Continuation-edge membrane traction (n_edge_front=0 only):  at a
-!  free (gradient) domain edge whose ghost ring holds ice the sheet
-!  continues, and the row convention +int N:grad(phi) = b carries
-!  the boundary integral +oint (N.n) phi in the OPERATOR.  Inert at
-!  the default n_edge_front=1 (every gradient edge is then a front
-!  and carries the ssa_front_load pressure instead).
+!  Continuation-edge membrane traction (LBC type Cnt):  at a Cnt
+!  domain edge the sheet continues beyond the domain (declared by
+!  the user, no ghost-state test), and the row convention
+!  +int N:grad(phi) = b carries the boundary integral +oint (N.n) phi
+!  in the OPERATOR.  Inert unless the edge LBC is Cnt (a gradient
+!  edge is an open front and carries the ssa_front_load pressure
+!  instead;  a closed edge is a wall).
 !
             cont_s=.FALSE.; cont_n=.FALSE.
             cont_w=.FALSE.; cont_e=.FALSE.
-            IF (n_edge_front(ng).eq.0) THEN
-              IF ((.not.EWperiodic(ng)).and.(.not.NSperiodic(ng))) THEN
-                IF ((j.eq.Jstr).and.DOMAIN(ng)%Southern_Edge(tile)) THEN
-                  cont_s=LBC(isouth,ibISF(isIvis),ng)%gradient .and.    &
-     &                   (rmask_ist(i,j-1).eq.1.0_r8)
-                END IF
-                IF ((j.eq.Jend).and.DOMAIN(ng)%Northern_Edge(tile)) THEN
-                  cont_n=LBC(inorth,ibISF(isIvis),ng)%gradient .and.    &
-     &                   (rmask_ist(i,j+1).eq.1.0_r8)
-                END IF
-                IF ((i.eq.Istr).and.DOMAIN(ng)%Western_Edge(tile)) THEN
-                  cont_w=LBC(iwest,ibISF(isIuis),ng)%gradient .and.     &
-     &                   (rmask_ist(i-1,j).eq.1.0_r8)
-                END IF
-                IF ((i.eq.Iend).and.DOMAIN(ng)%Eastern_Edge(tile)) THEN
-                  cont_e=LBC(ieast,ibISF(isIuis),ng)%gradient .and.     &
-     &                   (rmask_ist(i+1,j).eq.1.0_r8)
-                END IF
+            IF ((.not.EWperiodic(ng)).and.(.not.NSperiodic(ng))) THEN
+              IF ((j.eq.Jstr).and.DOMAIN(ng)%Southern_Edge(tile)) THEN
+                cont_s=LBC(isouth,ibISF(isIvis),ng)%continuation
+              END IF
+              IF ((j.eq.Jend).and.DOMAIN(ng)%Northern_Edge(tile)) THEN
+                cont_n=LBC(inorth,ibISF(isIvis),ng)%continuation
+              END IF
+              IF ((i.eq.Istr).and.DOMAIN(ng)%Western_Edge(tile)) THEN
+                cont_w=LBC(iwest,ibISF(isIuis),ng)%continuation
+              END IF
+              IF ((i.eq.Iend).and.DOMAIN(ng)%Eastern_Edge(tile)) THEN
+                cont_e=LBC(ieast,ibISF(isIuis),ng)%continuation
               END IF
             END IF
             IF (cont_s.or.cont_n.or.cont_w.or.cont_e) THEN

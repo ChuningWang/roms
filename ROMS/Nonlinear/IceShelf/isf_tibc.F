@@ -134,7 +134,8 @@
               ti(Istr-1,j)=ti(Istr-1,j)*GRID(ng)%rmask(Istr-1,j)
 # endif
             END DO
-          ELSE IF (LBC(iwest,ibISF(isIeis),ng)%gradient .or.            &
+          ELSE IF (LBC(iwest,ibISF(isIeis),ng)%gradient .or.                        &
+     &             LBC(iwest,ibISF(isIeis),ng)%continuation .or.            &
      &             LBC(iwest,ibISF(isIeis),ng)%closed) THEN
             DO j=Jstr,Jend
               ei(Istr-1,j)=hi(Istr,j)*ti(Istr,j)
@@ -172,7 +173,8 @@
               ti(Iend+1,j)=ti(Iend+1,j)*GRID(ng)%rmask(Iend+1,j)
 # endif
             END DO
-          ELSE IF (LBC(ieast,ibISF(isIeis),ng)%gradient .or.            &
+          ELSE IF (LBC(ieast,ibISF(isIeis),ng)%gradient .or.                        &
+     &             LBC(ieast,ibISF(isIeis),ng)%continuation .or.            &
      &             LBC(ieast,ibISF(isIeis),ng)%closed) THEN
             DO j=Jstr,Jend
               ei(Iend+1,j)=hi(Iend,j)*ti(Iend,j)
@@ -213,7 +215,8 @@
               ti(i,Jstr-1)=ti(i,Jstr-1)*GRID(ng)%rmask(i,Jstr-1)
 # endif
             END DO
-          ELSE IF (LBC(isouth,ibISF(isIeis),ng)%gradient .or.           &
+          ELSE IF (LBC(isouth,ibISF(isIeis),ng)%gradient .or.                        &
+     &             LBC(isouth,ibISF(isIeis),ng)%continuation .or.           &
      &             LBC(isouth,ibISF(isIeis),ng)%closed) THEN
             DO i=Istr,Iend
               ei(i,Jstr-1)=hi(i,Jstr)*ti(i,Jstr)
@@ -251,7 +254,8 @@
               ti(i,Jend+1)=ti(i,Jend+1)*GRID(ng)%rmask(i,Jend+1)
 # endif
             END DO
-          ELSE IF (LBC(inorth,ibISF(isIeis),ng)%gradient .or.           &
+          ELSE IF (LBC(inorth,ibISF(isIeis),ng)%gradient .or.                        &
+     &             LBC(inorth,ibISF(isIeis),ng)%continuation .or.           &
      &             LBC(inorth,ibISF(isIeis),ng)%closed) THEN
             DO i=Istr,Iend
               ei(i,Jend+1)=hi(i,Jend)*ti(i,Jend)

@@ -354,7 +354,6 @@
       integer, allocatable :: n_ds_fem(:)      ! FEM driving stress
       integer, allocatable :: n_taper(:)        ! ice margin taper width
       integer, allocatable :: fd_ksp(:)         ! FD linear solver (PETSc)
-      integer, allocatable :: n_edge_front(:)   ! gradient edge semantics
 !
 !  Picard iteration parameters
 !
@@ -718,9 +717,6 @@
         IF (.not.allocated(fd_ksp)) THEN
           allocate ( fd_ksp(Ngrids) )
         END IF
-        IF (.not.allocated(n_edge_front)) THEN
-          allocate ( n_edge_front(Ngrids) )
-        END IF
         IF (.not.allocated(n_nuh_interp)) THEN
           allocate ( n_nuh_interp(Ngrids) )
         END IF
@@ -736,7 +732,6 @@
           n_ds_fem(1:Ngrids)=0
           n_smooth(1:Ngrids)=0
           fd_ksp(1:Ngrids)=0
-          n_edge_front(1:Ngrids)=1
         END IF
         IF (.not.allocated(n_taper)) THEN
           allocate ( n_taper(Ngrids) )
@@ -1160,7 +1155,6 @@
       IF (allocated(n_dsbranch))      deallocate ( n_dsbranch )
       IF (allocated(n_ssa_fd))        deallocate ( n_ssa_fd )
       IF (allocated(fd_ksp))          deallocate ( fd_ksp )
-      IF (allocated(n_edge_front))    deallocate ( n_edge_front )
       IF (allocated(n_nuh_interp))    deallocate ( n_nuh_interp )
       IF (allocated(n_ds_fem))       deallocate ( n_ds_fem )
       IF (allocated(n_taper))         deallocate ( n_taper )
