@@ -825,11 +825,12 @@
 !
           CALL ssa_matvec (ng, tile, model,                             &
      &                     LBi, UBi, LBj, UBj,                          &
+     &                     Istr, Iend, Jstr, Jend,                    &
      &                     IstrC, IendC, JstrC, JendC,                  &
      &                     IstrP, IendP, JstrP, JendP,                  &
      &                     DPhi, phi_tab,                               &
      &                     fac_dx, fac_dy, fac_jac,                     &
-     &                     pmask_act,                                   &
+     &                     pmask_act, rmask_ist,                        &
      &                     Fi(:,:,ifInuh),                              &
      &                     Fi(:,:,ifIbta),                              &
      &                     Si(:,:,lsnew,isIuis),                        &
@@ -917,11 +918,12 @@
 !
           CALL ssa_matvec (ng, tile, model,                             &
      &                     LBi, UBi, LBj, UBj,                          &
+     &                     Istr, Iend, Jstr, Jend,                    &
      &                     IstrC, IendC, JstrC, JendC,                  &
      &                     IstrP, IendP, JstrP, JendP,                  &
      &                     DPhi, phi_tab,                               &
      &                     fac_dx, fac_dy, fac_jac,                     &
-     &                     pmask_act,                                   &
+     &                     pmask_act, rmask_ist,                        &
      &                     Fi(:,:,ifInuh),                              &
      &                     Fi(:,:,ifIbta),                              &
      &                     Du, Dv,                                      &
@@ -1133,11 +1135,12 @@
 !
         CALL ssa_matvec (ng, tile, model,                               &
      &                   LBi, UBi, LBj, UBj,                            &
+     &                     Istr, Iend, Jstr, Jend,                    &
      &                   IstrC, IendC, JstrC, JendC,                    &
      &                   IstrP, IendP, JstrP, JendP,                    &
      &                   DPhi, phi_tab,                                 &
      &                   fac_dx, fac_dy, fac_jac,                       &
-     &                   pmask_act,                                     &
+     &                   pmask_act, rmask_ist,                          &
      &                   Fi(:,:,ifInuh),                                &
      &                   Fi(:,:,ifIbta),                                &
      &                   Si(:,:,lsnew,isIuis),                          &
@@ -2441,27 +2444,36 @@
 !  would need a distinct LBC type plus the membrane-traction
 !  operator term;  see work_plan 2026-11-08.)
 !
-      IF (.not.EWperiodic(ng)) THEN
-        IF (i.eq.Iend) THEN
-          IF (DOMAIN(ng)%Eastern_Edge(tile)) THEN
-            front_e=LBC(ieast,ibISF(isIuis),ng)%gradient
+!  Edge semantics (n_edge_front):  1 (default) -- a gradient domain
+!  edge is an open front (the LBC-alone rule;  MISMIP+ east edge).
+!  0 -- the ghost-ring mask decides (ghost ice = continuation, no
+!  front;  ghost ocean = open front), and ssa_matvec supplies the
+!  membrane traction of the continuing ice (the SSA_TEST front
+!  channel symmetry edges).
+!
+      IF (n_edge_front(ng).eq.1) THEN
+        IF (.not.EWperiodic(ng)) THEN
+          IF (i.eq.Iend) THEN
+            IF (DOMAIN(ng)%Eastern_Edge(tile)) THEN
+              front_e=LBC(ieast,ibISF(isIuis),ng)%gradient
+            END IF
+          END IF
+          IF (i.eq.Istr) THEN
+            IF (DOMAIN(ng)%Western_Edge(tile)) THEN
+              front_w=LBC(iwest,ibISF(isIuis),ng)%gradient
+            END IF
           END IF
         END IF
-        IF (i.eq.Istr) THEN
-          IF (DOMAIN(ng)%Western_Edge(tile)) THEN
-            front_w=LBC(iwest,ibISF(isIuis),ng)%gradient
+        IF (.not.NSperiodic(ng)) THEN
+          IF (j.eq.Jend) THEN
+            IF (DOMAIN(ng)%Northern_Edge(tile)) THEN
+              front_n=LBC(inorth,ibISF(isIvis),ng)%gradient
+            END IF
           END IF
-        END IF
-      END IF
-      IF (.not.NSperiodic(ng)) THEN
-        IF (j.eq.Jend) THEN
-          IF (DOMAIN(ng)%Northern_Edge(tile)) THEN
-            front_n=LBC(inorth,ibISF(isIvis),ng)%gradient
-          END IF
-        END IF
-        IF (j.eq.Jstr) THEN
-          IF (DOMAIN(ng)%Southern_Edge(tile)) THEN
-            front_s=LBC(isouth,ibISF(isIvis),ng)%gradient
+          IF (j.eq.Jstr) THEN
+            IF (DOMAIN(ng)%Southern_Edge(tile)) THEN
+              front_s=LBC(isouth,ibISF(isIvis),ng)%gradient
+            END IF
           END IF
         END IF
       END IF
@@ -2862,6 +2874,7 @@
       real(r8), intent(in)  :: fac_dy(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: fac_jac(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: pmask_act(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: rmask_ist(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: nuH(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: beta(LBi:UBi,LBj:UBj)
       real(r8), intent(out) :: diag_u(LBi:UBi,LBj:UBj)
@@ -2978,11 +2991,12 @@
 !***********************************************************************
       SUBROUTINE ssa_matvec (ng, tile, model,                           &
      &                       LBi, UBi, LBj, UBj,                        &
+     &                       Istr, Iend, Jstr, Jend,                    &
      &                       IstrC, IendC, JstrC, JendC,                &
      &                       IstrP, IendP, JstrP, JendP,                &
      &                       DPhi, phi_tab,                             &
      &                       fac_dx, fac_dy, fac_jac,                   &
-     &                       pmask_act,                                 &
+     &                       pmask_act, rmask_ist,                      &
      &                       nuH, beta,                                 &
      &                       xu, xv,                                    &
      &                       Au, Av)
@@ -3018,6 +3032,7 @@
 !
       integer, intent(in) :: ng, tile, model
       integer, intent(in) :: LBi, UBi, LBj, UBj
+      integer, intent(in) :: Istr, Iend, Jstr, Jend
       integer, intent(in) :: IstrC, IendC, JstrC, JendC
       integer, intent(in) :: IstrP, IendP, JstrP, JendP
 !
@@ -3028,6 +3043,7 @@
       real(r8), intent(in)  :: fac_dy(LBi:,LBj:)
       real(r8), intent(in)  :: fac_jac(LBi:,LBj:)
       real(r8), intent(in)  :: pmask_act(LBi:,LBj:)
+      real(r8), intent(in)  :: rmask_ist(LBi:,LBj:)
       real(r8), intent(in)  :: nuH(LBi:,LBj:)
       real(r8), intent(in)  :: beta(LBi:,LBj:)
       real(r8), intent(inout) :: xu(LBi:,LBj:)
@@ -3039,6 +3055,7 @@
       real(r8), intent(in)  :: fac_dy(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: fac_jac(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: pmask_act(LBi:UBi,LBj:UBj)
+      real(r8), intent(in)  :: rmask_ist(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: nuH(LBi:UBi,LBj:UBj)
       real(r8), intent(in)  :: beta(LBi:UBi,LBj:UBj)
       real(r8), intent(inout) :: xu(LBi:UBi,LBj:UBj)
@@ -3053,6 +3070,8 @@
 !
       real(r8), dimension(4) :: dpx, dpy, phv4
       real(r8) :: uq, vq, exx, eyy, exy, nuhq
+      real(r8) :: exx_e, eyy_e, Nxx_e, Nyy_e
+      logical :: cont_s, cont_n, cont_w, cont_e
 !
 !-----------------------------------------------------------------------
 !  Exchange the INPUT halos before assembly:  the ring cells
@@ -3105,6 +3124,72 @@
       DO j=JstrC,JendC
         DO i=IstrC,IendC
           IF (nuH(i,j).gt.0.0_r8) THEN
+!
+!  Continuation-edge membrane traction (n_edge_front=0 only):  at a
+!  free (gradient) domain edge whose ghost ring holds ice the sheet
+!  continues, and the row convention +int N:grad(phi) = b carries
+!  the boundary integral +oint (N.n) phi in the OPERATOR.  Inert at
+!  the default n_edge_front=1 (every gradient edge is then a front
+!  and carries the ssa_front_load pressure instead).
+!
+            cont_s=.FALSE.; cont_n=.FALSE.
+            cont_w=.FALSE.; cont_e=.FALSE.
+            IF (n_edge_front(ng).eq.0) THEN
+              IF ((.not.EWperiodic(ng)).and.(.not.NSperiodic(ng))) THEN
+                IF ((j.eq.Jstr).and.DOMAIN(ng)%Southern_Edge(tile)) THEN
+                  cont_s=LBC(isouth,ibISF(isIvis),ng)%gradient .and.    &
+     &                   (rmask_ist(i,j-1).eq.1.0_r8)
+                END IF
+                IF ((j.eq.Jend).and.DOMAIN(ng)%Northern_Edge(tile)) THEN
+                  cont_n=LBC(inorth,ibISF(isIvis),ng)%gradient .and.    &
+     &                   (rmask_ist(i,j+1).eq.1.0_r8)
+                END IF
+                IF ((i.eq.Istr).and.DOMAIN(ng)%Western_Edge(tile)) THEN
+                  cont_w=LBC(iwest,ibISF(isIuis),ng)%gradient .and.     &
+     &                   (rmask_ist(i-1,j).eq.1.0_r8)
+                END IF
+                IF ((i.eq.Iend).and.DOMAIN(ng)%Eastern_Edge(tile)) THEN
+                  cont_e=LBC(ieast,ibISF(isIuis),ng)%gradient .and.     &
+     &                   (rmask_ist(i+1,j).eq.1.0_r8)
+                END IF
+              END IF
+            END IF
+            IF (cont_s.or.cont_n.or.cont_w.or.cont_e) THEN
+              exx_e=0.5_r8*((xu(i+1,j  )-xu(i,  j  ))+                  &
+     &                      (xu(i+1,j+1)-xu(i,  j+1)))*fac_dx(i,j)*0.5_r8
+              eyy_e=0.5_r8*((xv(i,  j+1)-xv(i,  j  ))+                  &
+     &                      (xv(i+1,j+1)-xv(i+1,j  )))*fac_dy(i,j)*0.5_r8
+              Nxx_e=2.0_r8*nuH(i,j)*(2.0_r8*exx_e+eyy_e)
+              Nyy_e=2.0_r8*nuH(i,j)*(2.0_r8*eyy_e+exx_e)
+!
+!  South:  (N.n)_y = -N_yy -> the operator gains +N_yy*dx/2 per node.
+!  North:  -N_yy*dx/2.  West:  +N_xx*dy/2.  East:  -N_xx*dy/2.
+!
+              IF (cont_s) THEN
+                IF (pmask_act(i,j).eq.1.0_r8)                           &
+     &            Av(i,j)=Av(i,j)+Nyy_e/fac_dy(i,j)
+                IF (pmask_act(i+1,j).eq.1.0_r8)                         &
+     &            Av(i+1,j)=Av(i+1,j)+Nyy_e/fac_dy(i,j)
+              END IF
+              IF (cont_n) THEN
+                IF (pmask_act(i,j+1).eq.1.0_r8)                         &
+     &            Av(i,j+1)=Av(i,j+1)-Nyy_e/fac_dy(i,j)
+                IF (pmask_act(i+1,j+1).eq.1.0_r8)                       &
+     &            Av(i+1,j+1)=Av(i+1,j+1)-Nyy_e/fac_dy(i,j)
+              END IF
+              IF (cont_w) THEN
+                IF (pmask_act(i,j).eq.1.0_r8)                           &
+     &            Au(i,j)=Au(i,j)+Nxx_e/fac_dx(i,j)
+                IF (pmask_act(i,j+1).eq.1.0_r8)                         &
+     &            Au(i,j+1)=Au(i,j+1)+Nxx_e/fac_dx(i,j)
+              END IF
+              IF (cont_e) THEN
+                IF (pmask_act(i+1,j).eq.1.0_r8)                         &
+     &            Au(i+1,j)=Au(i+1,j)-Nxx_e/fac_dx(i,j)
+                IF (pmask_act(i+1,j+1).eq.1.0_r8)                       &
+     &            Au(i+1,j+1)=Au(i+1,j+1)-Nxx_e/fac_dx(i,j)
+              END IF
+            END IF
 !
             DO nq=1,4
 !

@@ -259,6 +259,8 @@
               Npts=load_i(Nval, Rval, Ngrids, n_ssa_fd)
             CASE ('fd_ksp')
               Npts=load_i(Nval, Rval, Ngrids, fd_ksp)
+            CASE ('n_edge_front')
+              Npts=load_i(Nval, Rval, Ngrids, n_edge_front)
             CASE ('n_nuh_interp')
               Npts=load_i(Nval, Rval, Ngrids, n_nuh_interp)
             CASE ('n_ds_fem')
@@ -1309,6 +1311,8 @@
      &          'FD solver switch (0=FE Q1 Galerkin, 1=PISM SSAFD).'
           WRITE (out,50) fd_ksp(ng), 'fd_ksp',                          &
      &          'FD linear solver (0=Jacobi PCG, 1=PETSc KSP direct).'
+          WRITE (out,50) n_edge_front(ng), 'n_edge_front',              &
+     &          'Gradient edge: 1=front (LBC) 0=continuation.'
           WRITE (out,50) n_nuh_interp(ng), 'n_nuh_interp',              &
      &          'nuH bilinear at Gauss points (B5.6 membrane variant).'
           WRITE (out,50) n_ds_fem(ng), 'n_ds_fem',                      &
