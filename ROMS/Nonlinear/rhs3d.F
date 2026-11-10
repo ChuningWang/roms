@@ -1870,6 +1870,13 @@
           cff=om_u(i,j)*on_u(i,j)
           cff1= sustr(i,j)*cff
           cff2=-bustr(i,j)*cff
+#ifdef ISF_DEBUG
+          IF (iic(ng).eq.ntstart(ng).and.j.eq.25.and.                   &
+     &        tile.eq.1.and.i.ge.161.and.i.le.172) THEN
+            WRITE(6,'(a,i5,3es12.4)') ' RU3D-DBG i,intg,sstr,bstr=',     &
+     &            i, rufrc(i,j), cff1, cff2
+          END IF
+#endif
           rufrc(i,j)=rufrc(i,j)+cff1+cff2
 #  ifdef WET_DRY
           rufrc(i,j)=rufrc(i,j)*umask_wet(i,j)

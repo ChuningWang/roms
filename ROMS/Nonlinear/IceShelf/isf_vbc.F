@@ -166,6 +166,48 @@
 !  fluxes over the ice base.
 !-----------------------------------------------------------------------
 !
+#ifdef ISF_DEBUG
+      IF (iic(ng).le.ntstart(ng)+1) THEN
+        cff=0.0_r8
+        Tm_theta=0.0_r8
+        Sm=0.0_r8
+        melt=0.0_r8
+        DO j=Jstr,Jend
+          DO i=Istr,Iend
+            IF (rmask_isf(i,j).eq.1.0_r8) THEN
+              cff=cff+1.0_r8
+              DO k=1,N(ng)
+                IF (.not.Oi(i,j,k,ioHsbl).gt.-1.0e10_r8)                &
+     &            melt=melt+1.0_r8
+                IF (Oi(i,j,k,ioHsbl).ne.Oi(i,j,k,ioHsbl))               &
+     &            Tm_theta=Tm_theta+1.0_r8
+                IF (t(i,j,k,nrhs,itemp).ne.t(i,j,k,nrhs,itemp))         &
+     &            Sm=Sm+1.0_r8
+              END DO
+            END IF
+          END DO
+        END DO
+        WRITE(6,'(a,i3,i9)') ' ISF-VBC-DBG tile, iic = ', tile, iic(ng)
+        WRITE(6,'(a,4(es12.4))') ' ISF-VBC-DBG nCav,nOiBad,nTBad=',      &
+     &                            cff, Tm_theta, Sm, melt
+        IF (cff.gt.0.5_r8) THEN
+          cff1=1.0e30_r8
+          cff2=-1.0e30_r8
+          cff3=0.0_r8
+          DO j=Jstr,Jend
+            DO i=Istr,Iend
+              IF (rmask_isf(i,j).eq.1.0_r8) THEN
+                cff1=MIN(cff1,Fi(i,j,ifImel))
+                cff2=MAX(cff2,Fi(i,j,ifImel))
+                cff3=MAX(cff3,ABS(stflx(i,j,itemp)))
+              END IF
+            END DO
+          END DO
+          WRITE(6,'(a,3(es12.4))') ' ISF-VBC-DBG melt min,max,stflx=',   &
+     &                              cff1, cff2, cff3
+        END IF
+      END IF
+#endif
 # ifdef ICESHELF_THERMO
 !
 !  Define constants for the 3-Equation formula
@@ -931,7 +973,8 @@
         epsi = epsi - thetad
       END DO
       write(6,*) ' WARNING!',                                           &
-     & ' in-situ temperature calculation has not converged!', i, j
+     & ' in-situ temperature calculation has not converged!', i, j,     &
+     & ' S,theta,Pres=', Sal, theta, Pres
       RETURN
       END SUBROUTINE potit
 !

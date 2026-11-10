@@ -606,6 +606,7 @@
 !
       real(r8) :: cff, cff1, cff2, cff3, cff4, cff5, cff6, cff7
       real(r8) :: fac, fac1, fac2, fac3
+      real(r8) :: melt, Tm_theta
 !
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: Dgrad
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: Dnew
@@ -655,6 +656,61 @@
 #endif
 
 #include "set_bounds.h"
+!
+#ifdef ISF_DEBUG
+      IF (iic(ng).le.ntstart(ng)+1.and.PREDICTOR_2D_STEP(ng)) THEN
+        cff=0.0_r8
+        cff1=0.0_r8
+        cff2=0.0_r8
+        cff3=0.0_r8
+        cff4=0.0_r8
+        cff5=0.0_r8
+        cff6=0.0_r8
+        cff7=0.0_r8
+        melt=0.0_r8
+        Tm_theta=0.0_r8
+        DO j=JstrR,JendR
+          DO i=IstrR,IendR
+            IF (rufrc(i,j).ne.rufrc(i,j)) cff=cff+1.0_r8
+            IF (zeta(i,j,kstp).ne.zeta(i,j,kstp)) cff1=cff1+1.0_r8
+            IF (zeta(i,j,krhs).ne.zeta(i,j,krhs)) cff2=cff2+1.0_r8
+            IF (zeta(i,j,knew).ne.zeta(i,j,knew)) cff3=cff3+1.0_r8
+            IF (hw(i,j).ne.hw(i,j)) cff4=cff4+1.0_r8
+            IF (Dnew(i,j).ne.Dnew(i,j)) cff5=cff5+1.0_r8
+            IF (rhs_ubar(i,j).ne.rhs_ubar(i,j)) cff6=cff6+1.0_r8
+            IF (Zt_avg1(i,j).ne.Zt_avg1(i,j)) cff7=cff7+1.0_r8
+          END DO
+        END DO
+        DO j=Jstr,Jend
+          DO i=IstrU,Iend
+            IF (ubar(i,j,knew).ne.ubar(i,j,knew)) melt=melt+1.0_r8
+            IF (DUon(i,j).ne.DUon(i,j)) Tm_theta=Tm_theta+1.0_r8
+          END DO
+        END DO
+        WRITE(6,'(a,i3,i9,i5)') ' S2D-DBG tile,iic,iif= ',               &
+     &                          tile, iic(ng), iif(ng)
+        IF (iif(ng).eq.1.and.tile.eq.1) THEN
+          WRITE(6,'(a,i9)') ' RUFRC-ROW j=27 i=250..289 iic=', iic(ng)
+          WRITE(6,'(5es13.4)') (rufrc(i,27),i=250,290)
+        END IF
+        WRITE(6,'(a,4(es12.4))') ' S2D-DBG nRufrc,nZks,nZkr,nZkn=',     &
+     &                            cff, cff1, cff2, cff3
+        WRITE(6,'(a,4(es12.4))') ' S2D-DBG nUkn,nDUon,nWt1,nWt2=',       &
+     &                            melt, Tm_theta,                      &
+     &                            weight(1,MAX(iif(ng)-1,0),ng),       &
+     &                            weight(2,MAX(iif(ng)-1,0),ng)
+        IF (tile.eq.1.and.iic(ng).le.ntstart(ng)+2) THEN
+          IF (iif(ng).eq.1.or.iif(ng).eq.2.or.iif(ng).eq.3.or.          &
+     &        iif(ng).eq.5.or.iif(ng).eq.10.or.iif(ng).eq.20.or.        &
+     &        iif(ng).eq.40.or.iif(ng).eq.84) THEN
+            WRITE(6,'(a,i9,i5)') ' ZROW-DBG iic,iif=',                  &
+     &                            iic(ng), iif(ng)
+            WRITE(6,'(8es11.3)') (zeta(i,27,knew),i=250,289)
+            WRITE(6,'(8es11.3)') (ubar(i,27,knew),i=250,289)
+          END IF
+        END IF
+      END IF
+#endif
 !
       ptsk=3-kstp
       CORRECTOR_2D_STEP=.not.PREDICTOR_2D_STEP(ng)
@@ -836,6 +892,16 @@
             DO i=IstrR,IendR
               Zt_avg1(i,j)=Zt_avg1(i,j)+cff1*zeta(i,j,krhs)
             END DO
+#ifdef ISF_DEBUG
+            DO i=IstrR,IendR
+              IF (iic(ng).le.ntstart(ng)+1.and.                         &
+     &            Zt_avg1(i,j).ne.Zt_avg1(i,j)) THEN
+                WRITE(6,'(a,2i5,3es12.4)') ' ZTA1-DBG iif,j,zta,cff=',  &
+     &                iif(ng), j, Zt_avg1(i,j), cff1, zeta(i,j,krhs)
+                EXIT
+              END IF
+            END DO
+#endif
             DO i=Istr,IendR
               DU_avg1(i,j)=DU_avg1(i,j)+cff1*DUon(i,j)
 # ifdef WEC
@@ -977,6 +1043,15 @@
             Dnew(i,j)=zeta_new(i,j)+hw(i,j)
 #else
             Dnew(i,j)=zeta_new(i,j)+h(i,j)
+#endif
+#ifdef ISF_DEBUG
+            IF (iic(ng).eq.ntstart(ng).and.iif(ng).eq.1) THEN
+              IF (zeta_new(i,j).ne.zeta_new(i,j)) THEN
+                WRITE(6,'(a,2i5,6(es12.4))') ' ZETA-DBG i,j=',  &
+     &                i, j, DUon(i,j), DUon(i+1,j), DVom(i,j),           &
+     &                DVom(i,j+1), hw(i,j), rhs_zeta(i,j)
+              END IF
+            END IF
 #endif
 !
             zwrk(i,j)=0.5_r8*(zeta(i,j,kstp)+zeta_new(i,j))
@@ -1192,6 +1267,21 @@
 #endif
      &                   (gzeta2(i-1,j)-                                &
      &                    gzeta2(i  ,j)))
+#ifdef ICESHEET_PUMP2D
+!
+!  Ice-roof loading (shelf pump) as a barotropic pressure gradient:
+!  the roof pressure's variable part -GRho*rho(N)*zice gives a force
+!  +GRho*rho(N)*grad(zice) per unit mass.  Entering it here (every
+!  fast step, same hw scaling as the zeta pg) instead of through the
+!  3D pg integral (once per baroclinic step via rufrc) keeps the
+!  front-load/roof-pressure pair discretely consistent and removes
+!  the 2Dx sawtooth seed (2026-11-10 D3).  The ATM_PRESS block below
+!  is matched in form.
+!
+          rhs_ubar(i,j)=rhs_ubar(i,j)+GRho*1000.0_r8*on_u(i,j)*         &
+     &                  0.5_r8*(hw(i-1,j)+hw(i,j))*                     &
+     &                  (zice(i,j)-zice(i-1,j))
+#endif
 #if defined ATM_PRESS && !defined SOLVE3D
           rhs_ubar(i,j)=rhs_ubar(i,j)-                                  &
      &                  fac3*on_u(i,j)*                                 &
@@ -1260,6 +1350,11 @@
 #endif
      &                     (gzeta2(i,j-1)-                              &
      &                      gzeta2(i,j  )))
+#ifdef ICESHEET_PUMP2D
+            rhs_vbar(i,j)=rhs_vbar(i,j)+GRho*1000.0_r8*om_v(i,j)*       &
+     &                    0.5_r8*(hw(i,j-1)+hw(i,j))*                   &
+     &                    (zice(i,j)-zice(i,j-1))
+#endif
 #if defined ATM_PRESS && !defined SOLVE3D
             rhs_vbar(i,j)=rhs_vbar(i,j)-                                &
      &                    fac3*om_v(i,j)*                               &
@@ -2634,6 +2729,10 @@
 #ifdef WET_DRY
         cff2=1.0_r8/cff1
 #endif
+#ifdef ISF_DEBUG
+        cff3=0.0_r8
+        cff4=0.0_r8
+#endif
         DO j=Jstr,Jend
           DO i=IstrU,Iend
             cff=(pm(i,j)+pm(i-1,j))*(pn(i,j)+pn(i-1,j))
@@ -2656,6 +2755,17 @@
               ru(i,j,0,nstp)=rufrc(i,j)
             END IF
 # endif
+#ifdef ISF_DEBUG
+            IF (iic(ng).eq.ntstart(ng).and.iif(ng).eq.1) THEN
+              IF ((Dnew(i,j)+Dnew(i-1,j)).eq.0.0_r8) cff3=cff3+1.0_r8
+              IF (ubar(i,j,knew).ne.ubar(i,j,knew)) THEN
+                cff4=cff4+1.0_r8
+                WRITE(6,'(a,2i5,5(es12.4))') ' MOM-DBG uNaN i,j=',   &
+     &                i, j, hw(i,j), hw(i-1,j), Dnew(i,j), Dnew(i-1,j),  &
+     &                Dnew(i,j)+Dnew(i-1,j)
+              END IF
+            END IF
+#endif
 #endif
 #if defined NESTING && !defined SOLVE3D
             DU_flux(i,j)=ubar(i,j,knew)*                                &

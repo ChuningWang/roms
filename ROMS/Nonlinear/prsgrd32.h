@@ -142,6 +142,8 @@
 !
 #ifdef ICESHELF
       USE mod_isf,         ONLY : isf_drdz
+      USE mod_scalars,     ONLY : iic, ntstart
+      USE mod_parallel,    ONLY : Master
 #endif
       USE mod_param
       USE mod_scalars
@@ -328,6 +330,19 @@
 !  Compute XI-component pressure gradient term.
 !-----------------------------------------------------------------------
 !
+#ifdef ISF_DEBUG
+      IF (iic(ng).eq.ntstart(ng).and.Master) THEN
+        cff=0.0_r8
+        cff1=0.0_r8
+        DO i=200,289
+          cff=MAX(cff,ABS(rho(i,27,N(ng))-2.0_r8*rho(i+1,27,N(ng))      &
+     &                    +rho(i+2,27,N(ng))))
+          cff1=MAX(cff1,ABS(rho(i,27,N(ng))))
+        END DO
+        WRITE(6,'(a,es12.4,a,es12.4)')                                  &
+     &    ' RHO-DBG row27 d2rho max=',cff,' rho max=',cff1
+      END IF
+#endif
       DO k=N(ng),1,-1
         DO j=Jstr,Jend
           DO i=IstrU-1,Iend+1

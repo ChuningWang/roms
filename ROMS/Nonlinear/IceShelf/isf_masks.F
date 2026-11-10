@@ -177,20 +177,29 @@
 !               construction as the WET_DRY criterion)
 !    floating:  rho_i * H <= rho0 * (zeta + h - Dcrit)
 !    ice-free:  H <= 0
-!
       DO j=JstrR,JendR
         DO i=IstrR,IendR
           IF (hice(i,j).gt.0.0_r8) THEN
             IF (rho_i*hice(i,j).gt.                                     &
      &          rho0*(zeta(i,j)+h(i,j)-Dcrit(ng)-eps)) THEN
 !
-!  Grounded ice: no cavity. set water column depth to Dcrit(ng)+eps
+!  Grounded ice: no cavity.  Set the water column to a nominal film
+!  just below the wet/dry threshold:  zice = ice-base elevation =
+!  bed + 0.999*Dcrit + eps.  Where the bed stands above sea level
+!  (h < 0, e.g. the MISMIP+ inland high) this zice is positive;  that
+!  is the correct bed elevation and keeps the s-coordinate a valid
+!  film column (clamping zice at zero here instead left h+zice
+!  negative, the vertical grid degenerate, and the dry cells' tracers
+!  exploded - 2026-11-08 coupled0 diagnosis).  The wet/dry masks keep
+!  these cells dry:  zeta+h+zice = 0.999*Dcrit+eps < Dcrit+eps.
 !
               rmask_isf(i,j)=0.0_r8
-!  Clamp at zero (sign convention: zice <= 0):  in ultra-shallow
-!  water (depth < Dcrit) the film expression can turn positive.
-              zice(i,j)=MIN(-zeta(i,j)-h(i,j)+Dcrit(ng)+eps,           &
-     &                      0.0_r8)
+!  Film set 0.1% BELOW the wet/dry threshold so the dry state is
+!  decided by a margin, not by floating-point rounding of the
+!  zeta+h+zice round-trip (an exactly-threshold film flickered the
+!  wet/dry masks every barotropic substep - 2026-11-08 diagnosis).
+              zice(i,j)=-zeta(i,j)-h(i,j)+Dcrit(ng)*(1.0_r8-1.0e-3_r8)  &
+     &                  +eps
             ELSE
 !
 !  Floating ice: cavity exists, zice from hydrostatic equilibrium.

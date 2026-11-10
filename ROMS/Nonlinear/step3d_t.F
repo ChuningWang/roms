@@ -318,6 +318,7 @@
       real(r8) :: eps1 = 1.0E-12_r8
 
       real(r8) :: cff, cff1, cff2, cff3
+      real(r8) :: melt
       real(r8) :: betaL, betaR, betaD, betaU
       real(r8) :: rL, rR, rD, rU, rkaL, rkaR, rkaD, rkaU
       real(r8) :: a1, b1, sw, sw_eta, sw_xi
@@ -352,6 +353,31 @@
       real(r8), allocatable :: Wa(:,:,:)
 
 # include "set_bounds.h"
+!
+#ifdef ISF_DEBUG
+      IF (iic(ng).le.ntstart(ng)+1) THEN
+        cff=0.0_r8
+        cff1=0.0_r8
+        cff2=0.0_r8
+        cff3=0.0_r8
+        melt=0.0_r8
+        DO j=Jstr,Jend
+          DO i=Istr,Iend
+            DO k=1,N(ng)
+              IF (Huon(i,j,k).ne.Huon(i,j,k)) cff=cff+1.0_r8
+              IF (Hvom(i,j,k).ne.Hvom(i,j,k)) cff1=cff1+1.0_r8
+              IF (W(i,j,k).ne.W(i,j,k))       cff2=cff2+1.0_r8
+              IF (t(i,j,k,nstp,itemp).ne.t(i,j,k,nstp,itemp))           &
+     &          cff3=cff3+1.0_r8
+              IF (Hz(i,j,k).ne.Hz(i,j,k))     melt=melt+1.0_r8
+            END DO
+          END DO
+        END DO
+        WRITE(6,'(a,i3,i9)') ' TSTEP-DBG tile, iic = ', tile, iic(ng)
+        WRITE(6,'(a,5(es12.4))') ' TSTEP-DBG nHu,nHv,nW,nT,nHz=',        &
+     &                            cff, cff1, cff2, cff3, melt
+      END IF
+#endif
 
 # ifdef NESTING
 !

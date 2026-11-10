@@ -133,6 +133,29 @@
 
 # include "set_bounds.h"
 !
+#ifdef ISF_DEBUG
+      IF (iic(ng).le.ntstart(ng)+1) THEN
+        cff_r=0.0_r8
+        cff1_r=0.0_r8
+        cff2_r=0.0_r8
+        cff_w=0.0_r8
+        DO j=JstrR,JendR
+          DO i=IstrR,IendR
+            IF (Zt_avg1(i,j).ne.Zt_avg1(i,j)) cff_r=cff_r+1.0_r8
+            IF (zice(i,j).ne.zice(i,j)) cff2_r=cff2_r+1.0_r8
+            IF (h(i,j)+zice(i,j).le.0.0_r8) cff_w=cff_w+1.0_r8
+          END DO
+        END DO
+        WRITE(6,'(a,i3,i9)') ' SDEP-DBG tile, iic = ', tile, iic(ng)
+        WRITE(6,'(a,3(es12.4))') ' SDEP-DBG nZta1,nZice,nHw0=',          &
+     &                            cff_r, cff2_r, cff_w
+        IF (tile.eq.1) THEN
+          WRITE(6,'(a)') ' ZTA1ROW-DBG:'
+          WRITE(6,'(8es11.3)') (Zt_avg1(i,27),i=250,289)
+        END IF
+      END IF
+#endif
+!
 !-----------------------------------------------------------------------
 !  Original formulation: Compute vertical depths (meters, negative) at
 !                        RHO- and W-points, and vertical grid
@@ -169,6 +192,13 @@
               hwater=h(i,j)
 # ifdef ICESHELF
               hwater=hwater+zice(i,j)
+              !
+              !  Nominal minimum water column:  the s-coordinate needs a
+              !  positive column thickness.  Cells whose ice base is at or
+              !  below the bed (grounded ice over bathymetry above sea
+              !  level, h+zice <= 0) get a nominal film;  the wet/dry
+              !  masks exclude them from the dynamics.
+              IF (hwater.le.0.0_r8) hwater=eps
 # endif
               hinv=1.0_r8/hwater
               z_w0=cff_w+cff1_w*hwater
@@ -220,6 +250,13 @@
               hwater=h(i,j)
 # ifdef ICESHELF
               hwater=hwater+zice(i,j)
+              !
+              !  Nominal minimum water column:  the s-coordinate needs a
+              !  positive column thickness.  Cells whose ice base is at or
+              !  below the bed (grounded ice over bathymetry above sea
+              !  level, h+zice <= 0) get a nominal film;  the wet/dry
+              !  masks exclude them from the dynamics.
+              IF (hwater.le.0.0_r8) hwater=eps
 # endif
               hinv=1.0_r8/(hc(ng)+hwater)
               cff2_r=(cff_r+cff1_r*hwater)*hinv
@@ -420,6 +457,13 @@
               hwater=h(i,j)
 # ifdef ICESHELF
               hwater=hwater+zice(i,j)
+              !
+              !  Nominal minimum water column:  the s-coordinate needs a
+              !  positive column thickness.  Cells whose ice base is at or
+              !  below the bed (grounded ice over bathymetry above sea
+              !  level, h+zice <= 0) get a nominal film;  the wet/dry
+              !  masks exclude them from the dynamics.
+              IF (hwater.le.0.0_r8) hwater=eps
 # endif
               hinv=1.0_r8/hwater
               z_w0=cff_w+cff1_w*hwater
@@ -472,6 +516,13 @@
               hwater=h(i,j)
 # ifdef ICESHELF
               hwater=hwater+zice(i,j)
+              !
+              !  Nominal minimum water column:  the s-coordinate needs a
+              !  positive column thickness.  Cells whose ice base is at or
+              !  below the bed (grounded ice over bathymetry above sea
+              !  level, h+zice <= 0) get a nominal film;  the wet/dry
+              !  masks exclude them from the dynamics.
+              IF (hwater.le.0.0_r8) hwater=eps
 # endif
               hinv=1.0_r8/(hc(ng)+hwater)
               cff2_r=(cff_r+cff1_r*hwater)*hinv
@@ -626,6 +677,13 @@
             hwater=h(i,j)
 #  ifdef ICESHELF
             hwater=hwater+zice(i,j)
+            !
+            !  Nominal minimum water column:  the s-coordinate needs a
+            !  positive column thickness.  Cells whose ice base is at or
+            !  below the bed (grounded ice over bathymetry above sea
+            !  level, h+zice <= 0) get a nominal film;  the wet/dry
+            !  masks exclude them from the dynamics.
+            IF (hwater.le.0.0_r8) hwater=eps
 #  endif
             hinv=1.0_r8/hwater
             Zw(0)=-h(i,j)
@@ -649,6 +707,13 @@
             hwater=h(i,j)
 #  ifdef ICESHELF
             hwater=hwater+zice(i,j)
+            !
+            !  Nominal minimum water column:  the s-coordinate needs a
+            !  positive column thickness.  Cells whose ice base is at or
+            !  below the bed (grounded ice over bathymetry above sea
+            !  level, h+zice <= 0) get a nominal film;  the wet/dry
+            !  masks exclude them from the dynamics.
+            IF (hwater.le.0.0_r8) hwater=eps
 #  endif
             hinv=1.0_r8/hwater
             Zw(0)=-h(i,j)
@@ -672,6 +737,13 @@
             hwater=h(i,j)
 #  ifdef ICESHELF
             hwater=hwater+zice(i,j)
+            !
+            !  Nominal minimum water column:  the s-coordinate needs a
+            !  positive column thickness.  Cells whose ice base is at or
+            !  below the bed (grounded ice over bathymetry above sea
+            !  level, h+zice <= 0) get a nominal film;  the wet/dry
+            !  masks exclude them from the dynamics.
+            IF (hwater.le.0.0_r8) hwater=eps
 #  endif
             hinv=1.0_r8/hwater
             Zw(0)=-h(i,j)
@@ -695,6 +767,13 @@
             hwater=h(i,j)
 #  ifdef ICESHELF
             hwater=hwater+zice(i,j)
+            !
+            !  Nominal minimum water column:  the s-coordinate needs a
+            !  positive column thickness.  Cells whose ice base is at or
+            !  below the bed (grounded ice over bathymetry above sea
+            !  level, h+zice <= 0) get a nominal film;  the wet/dry
+            !  masks exclude them from the dynamics.
+            IF (hwater.le.0.0_r8) hwater=eps
 #  endif
             hinv=1.0_r8/hwater
             Zw(0)=-h(i,j)
@@ -731,6 +810,13 @@
             hwater=h(i,j)
 #  ifdef ICESHELF
             hwater=hwater+zice(i,j)
+            !
+            !  Nominal minimum water column:  the s-coordinate needs a
+            !  positive column thickness.  Cells whose ice base is at or
+            !  below the bed (grounded ice over bathymetry above sea
+            !  level, h+zice <= 0) get a nominal film;  the wet/dry
+            !  masks exclude them from the dynamics.
+            IF (hwater.le.0.0_r8) hwater=eps
 #  endif
             hinv=1.0_r8/(hc(ng)+hwater)
             Zw(0)=-h(i,j)
@@ -755,6 +841,13 @@
             hwater=h(i,j)
 #  ifdef ICESHELF
             hwater=hwater+zice(i,j)
+            !
+            !  Nominal minimum water column:  the s-coordinate needs a
+            !  positive column thickness.  Cells whose ice base is at or
+            !  below the bed (grounded ice over bathymetry above sea
+            !  level, h+zice <= 0) get a nominal film;  the wet/dry
+            !  masks exclude them from the dynamics.
+            IF (hwater.le.0.0_r8) hwater=eps
 #  endif
             hinv=1.0_r8/(hc(ng)+hwater)
             Zw(0)=-h(i,j)
@@ -779,6 +872,13 @@
             hwater=h(i,j)
 #  ifdef ICESHELF
             hwater=hwater+zice(i,j)
+            !
+            !  Nominal minimum water column:  the s-coordinate needs a
+            !  positive column thickness.  Cells whose ice base is at or
+            !  below the bed (grounded ice over bathymetry above sea
+            !  level, h+zice <= 0) get a nominal film;  the wet/dry
+            !  masks exclude them from the dynamics.
+            IF (hwater.le.0.0_r8) hwater=eps
 #  endif
             hinv=1.0_r8/(hc(ng)+hwater)
             Zw(0)=-h(i,j)
@@ -803,6 +903,13 @@
             hwater=h(i,j)
 #  ifdef ICESHELF
             hwater=hwater+zice(i,j)
+            !
+            !  Nominal minimum water column:  the s-coordinate needs a
+            !  positive column thickness.  Cells whose ice base is at or
+            !  below the bed (grounded ice over bathymetry above sea
+            !  level, h+zice <= 0) get a nominal film;  the wet/dry
+            !  masks exclude them from the dynamics.
+            IF (hwater.le.0.0_r8) hwater=eps
 #  endif
             hinv=1.0_r8/(hc(ng)+hwater)
             Zw(0)=-h(i,j)

@@ -3083,7 +3083,7 @@
 !
       real(r8), dimension(4) :: dpx, dpy, phv4
       real(r8) :: uq, vq, exx, eyy, exy, nuhq
-      real(r8) :: exx_e, eyy_e, Nxx_e, Nyy_e
+      real(r8) :: exx_e, eyy_e, Nxx_e, Nyy_e, Nxy_e, dudy_e, dvdx_e
       logical :: cont_s, cont_n, cont_w, cont_e
 !
 !-----------------------------------------------------------------------
@@ -3167,35 +3167,69 @@
      &                      (xu(i+1,j+1)-xu(i,  j+1)))*fac_dx(i,j)*0.5_r8
               eyy_e=0.5_r8*((xv(i,  j+1)-xv(i,  j  ))+                  &
      &                      (xv(i+1,j+1)-xv(i+1,j  )))*fac_dy(i,j)*0.5_r8
+              dudy_e=0.5_r8*((xu(i,  j+1)-xu(i,  j  ))+                 &
+     &                      (xu(i+1,j+1)-xu(i+1,j  )))*fac_dy(i,j)*0.5_r8
+              dvdx_e=0.5_r8*((xv(i+1,j  )-xv(i,  j  ))+                 &
+     &                      (xv(i+1,j+1)-xv(i,  j+1)))*fac_dx(i,j)*0.5_r8
               Nxx_e=2.0_r8*nuH(i,j)*(2.0_r8*exx_e+eyy_e)
               Nyy_e=2.0_r8*nuH(i,j)*(2.0_r8*eyy_e+exx_e)
+              Nxy_e=2.0_r8*nuH(i,j)*0.5_r8*(dudy_e+dvdx_e)
 !
-!  South:  (N.n)_y = -N_yy -> the operator gains +N_yy*dx/2 per node.
-!  North:  -N_yy*dx/2.  West:  +N_xx*dy/2.  East:  -N_xx*dy/2.
+!  Line-load metrics (2026-11-09 review fix, bit-neutral on square
+!  grids):  the south/north faces are y-normal and run along x, so the
+!  per-node Q1 line weight is dx/2 = 1/fac_dx;  the west/east faces are
+!  x-normal and run along y, per-node weight dy/2 = 1/fac_dy (same
+!  convention as the analytically validated ssa_front_load dxf/dyf).
+!  Sign bookkeeping from the row convention +int N:grad(phi) = b, i.e.
+!  the operator gains -oint (N.n) phi (2026-11-09:  the tangential
+!  (N.n) components added;  south/west add, north/east subtract, the
+!  tangential stress lands in the OTHER velocity row):
+!  South:  (N.n)_x = -N_xy, (N.n)_y = -N_yy -> Au += +N_xy*dx/2,
+!          Av += +N_yy*dx/2.
+!  North:  both signs flip.
+!  West:   (N.n)_x = -N_xx, (N.n)_y = -N_xy -> Au += +N_xx*dy/2,
+!          Av += +N_xy*dy/2.
+!  East:   both signs flip.
 !
               IF (cont_s) THEN
-                IF (pmask_act(i,j).eq.1.0_r8)                           &
-     &            Av(i,j)=Av(i,j)+Nyy_e/fac_dy(i,j)
-                IF (pmask_act(i+1,j).eq.1.0_r8)                         &
-     &            Av(i+1,j)=Av(i+1,j)+Nyy_e/fac_dy(i,j)
+                IF (pmask_act(i,j).eq.1.0_r8) THEN
+                  Au(i,j)=Au(i,j)+Nxy_e/fac_dx(i,j)
+                  Av(i,j)=Av(i,j)+Nyy_e/fac_dx(i,j)
+                END IF
+                IF (pmask_act(i+1,j).eq.1.0_r8) THEN
+                  Au(i+1,j)=Au(i+1,j)+Nxy_e/fac_dx(i,j)
+                  Av(i+1,j)=Av(i+1,j)+Nyy_e/fac_dx(i,j)
+                END IF
               END IF
               IF (cont_n) THEN
-                IF (pmask_act(i,j+1).eq.1.0_r8)                         &
-     &            Av(i,j+1)=Av(i,j+1)-Nyy_e/fac_dy(i,j)
-                IF (pmask_act(i+1,j+1).eq.1.0_r8)                       &
-     &            Av(i+1,j+1)=Av(i+1,j+1)-Nyy_e/fac_dy(i,j)
+                IF (pmask_act(i,j+1).eq.1.0_r8) THEN
+                  Au(i,j+1)=Au(i,j+1)-Nxy_e/fac_dx(i,j)
+                  Av(i,j+1)=Av(i,j+1)-Nyy_e/fac_dx(i,j)
+                END IF
+                IF (pmask_act(i+1,j+1).eq.1.0_r8) THEN
+                  Au(i+1,j+1)=Au(i+1,j+1)-Nxy_e/fac_dx(i,j)
+                  Av(i+1,j+1)=Av(i+1,j+1)-Nyy_e/fac_dx(i,j)
+                END IF
               END IF
               IF (cont_w) THEN
-                IF (pmask_act(i,j).eq.1.0_r8)                           &
-     &            Au(i,j)=Au(i,j)+Nxx_e/fac_dx(i,j)
-                IF (pmask_act(i,j+1).eq.1.0_r8)                         &
-     &            Au(i,j+1)=Au(i,j+1)+Nxx_e/fac_dx(i,j)
+                IF (pmask_act(i,j).eq.1.0_r8) THEN
+                  Au(i,j)=Au(i,j)+Nxx_e/fac_dy(i,j)
+                  Av(i,j)=Av(i,j)+Nxy_e/fac_dy(i,j)
+                END IF
+                IF (pmask_act(i,j+1).eq.1.0_r8) THEN
+                  Au(i,j+1)=Au(i,j+1)+Nxx_e/fac_dy(i,j)
+                  Av(i,j+1)=Av(i,j+1)+Nxy_e/fac_dy(i,j)
+                END IF
               END IF
               IF (cont_e) THEN
-                IF (pmask_act(i+1,j).eq.1.0_r8)                         &
-     &            Au(i+1,j)=Au(i+1,j)-Nxx_e/fac_dx(i,j)
-                IF (pmask_act(i+1,j+1).eq.1.0_r8)                       &
-     &            Au(i+1,j+1)=Au(i+1,j+1)-Nxx_e/fac_dx(i,j)
+                IF (pmask_act(i+1,j).eq.1.0_r8) THEN
+                  Au(i+1,j)=Au(i+1,j)-Nxx_e/fac_dy(i,j)
+                  Av(i+1,j)=Av(i+1,j)-Nxy_e/fac_dy(i,j)
+                END IF
+                IF (pmask_act(i+1,j+1).eq.1.0_r8) THEN
+                  Au(i+1,j+1)=Au(i+1,j+1)-Nxx_e/fac_dy(i,j)
+                  Av(i+1,j+1)=Av(i+1,j+1)-Nxy_e/fac_dy(i,j)
+                END IF
               END IF
             END IF
 !
