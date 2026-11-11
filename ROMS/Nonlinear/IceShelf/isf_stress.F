@@ -104,7 +104,9 @@
      &                       IminS, ImaxS, JminS, JmaxS,                &
      &                       nrhs(ng), lsnew(ng),                       &
      &                       GRID(ng) % rmask_isf,                      &
+# ifdef ICESHEET
      &                       GRID(ng) % rmask_ist,                      &
+# endif
 # if defined ICESHELF_LOGDRAG
      &                       GRID(ng) % ZoSur_isf,                      &
      &                       GRID(ng) % z_r,                            &
@@ -140,7 +142,10 @@
      &                             LBi, UBi, LBj, UBj,                  &
      &                             IminS, ImaxS, JminS, JmaxS,          &
      &                             nrhs, lsnew,                         &
-     &                             rmask_isf, rmask_ist,                &
+     &                             rmask_isf,                            &
+# ifdef ICESHEET
+     &                             rmask_ist,                            &
+# endif
 # if defined ICESHELF_LOGDRAG
      &                             ZoSur_isf, z_r, z_w,                 &
 # elif defined ICESHELF_QDRAG
@@ -178,7 +183,9 @@
 !
 # ifdef ASSUMED_SHAPE
       real(r8), intent(in) :: rmask_isf(LBi:,LBj:)
+# ifdef ICESHEET
       real(r8), intent(in) :: rmask_ist(LBi:,LBj:)
+# endif
 #  if defined ICESHELF_LOGDRAG
       real(r8), intent(in) :: ZoSur_isf(LBi:,LBj:)
       real(r8), intent(in) :: z_r(LBi:,LBj:,:)
@@ -204,7 +211,9 @@
       real(r8), intent(inout) :: svstr(LBi:,LBj:)
 # else
       real(r8), intent(in) :: rmask_isf(LBi:UBi,LBj:UBj)
+# ifdef ICESHEET
       real(r8), intent(in) :: rmask_ist(LBi:UBi,LBj:UBj)
+# endif
 #  if defined ICESHELF_LOGDRAG
       real(r8), intent(in) :: ZoSur_isf(LBi:UBi,LBj:UBj)
       real(r8), intent(in) :: z_r(LBi:UBi,LBj:UBj,N(ng))
@@ -429,6 +438,7 @@
 !  forcing diffusing into the film beneath grounded ice.  rmask_ist
 !  is the ice-presence mask (hice > 0).
 !
+# ifdef ICESHEET
       DO itrc=1,NT(ng)
         DO j=JstrR,JendR
           DO i=IstrR,IendR
@@ -437,13 +447,31 @@
           END DO
         END DO
       END DO
-# ifdef SHORTWAVE
+#  ifdef SHORTWAVE
       DO j=JstrR,JendR
         DO i=IstrR,IendR
           srflx(i,j)=srflx(i,j)*                                        &
      &            (1.0_r8-MAX(rmask_isf(i,j),rmask_ist(i,j)))
         END DO
       END DO
+#  endif
+# else
+      DO itrc=1,NT(ng)
+        DO j=JstrR,JendR
+          DO i=IstrR,IendR
+            stflx(i,j,itrc)=stflx(i,j,itrc)*                            &
+     &            (1.0_r8-rmask_isf(i,j))
+          END DO
+        END DO
+      END DO
+#  ifdef SHORTWAVE
+      DO j=JstrR,JendR
+        DO i=IstrR,IendR
+          srflx(i,j)=srflx(i,j)*                                        &
+     &            (1.0_r8-rmask_isf(i,j))
+        END DO
+      END DO
+#  endif
 # endif
 !
 # ifdef ICESHELF_THERMO

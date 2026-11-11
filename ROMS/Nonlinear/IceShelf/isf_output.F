@@ -314,11 +314,19 @@
 !  points and need the PSI grid declaration (a pre-existing bug
 !  defined and wrote them on the RHO grid, misaligning the fields).
 !
+# ifdef ICESHEET
+# ifdef ICESHEET
               IF ((nf.eq.ifItdx).or.(nf.eq.ifItdy)) THEN
                 isfgrd => p2dgrd
               ELSE
                 isfgrd => t2dgrd
               END IF
+# else
+              isfgrd => t2dgrd
+# endif
+# else
+              isfgrd => t2dgrd
+# endif
               Vinfo( 1)=Vname(1,ifield)
               Vinfo( 2)=Vname(2,ifield)
               Vinfo( 3)=Vname(3,ifield)
@@ -977,8 +985,12 @@
 !  pre-existing bug: the history fields were garbled).  The PSI
 !  diagnostics are masked by the PSI mask below.
 !
+# ifdef ICESHEET
             IF ((ifld.eq.ifItdx).or.(ifld.eq.ifItdy)) THEN
               gtype=gfactor*p2dvar
+# else
+            IF (.FALSE.) THEN
+# endif
 #  ifdef MASKING
               isfMask => GRID(ng) % pmask
 #  endif
@@ -1803,11 +1815,15 @@
           ifield=iFisf(ifld)
           IF (VarOut(ifield,ng)) THEN
             scale=1.0_dp
+# ifdef ICESHEET
             IF ((ifld.eq.ifItdx).or.(ifld.eq.ifItdy)) THEN
               sta_gtype=p2dvar
             ELSE
               sta_gtype=r2dvar
             END IF
+# else
+            sta_gtype=r2dvar
+# endif
             CALL extract_sta2d (ng, model, Cgrid, ifield, sta_gtype,    &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          scale, ISF(ng)%Fi(:,:,ifld),            &
@@ -2175,6 +2191,7 @@
 !  points and need the PSI grid declaration (review finding M-2:
 !  the 2026-09-14 PSI fix was applied to the nf90 path only).
 !
+# ifdef ICESHEET
               IF ((nf.eq.ifItdx).or.(nf.eq.ifItdy)) THEN
                 isfgrd => p2dgrd
                 S(ng)%pioVar(ifield)%gtype=p2dvar
@@ -2182,6 +2199,10 @@
                 isfgrd => t2dgrd
                 S(ng)%pioVar(ifield)%gtype=r2dvar
               END IF
+# else
+              isfgrd => t2dgrd
+              S(ng)%pioVar(ifield)%gtype=r2dvar
+# endif
               Vinfo( 1)=Vname(1,ifield)
               Vinfo( 2)=Vname(2,ifield)
               Vinfo( 3)=Vname(3,ifield)
@@ -2920,12 +2941,16 @@
 !  diagnostic lives at RHO points (review finding M-2: this dispatch
 !  existed in the nf90 path only).
 !
+# ifdef ICESHEET
             IF ((ifld.eq.ifItdx).or.(ifld.eq.ifItdy)) THEN
               IF (S(ng)%pioVar(ifield)%dkind.eq.PIO_double) THEN
                 ioDesc => ioDesc_dp_p2dvar(ng)
               ELSE
                 ioDesc => ioDesc_sp_p2dvar(ng)
               END IF
+# else
+            IF (.FALSE.) THEN
+# endif
 #   ifdef MASKING
               isfMask => GRID(ng) % pmask
 #   endif
@@ -3817,11 +3842,15 @@
           ifield=iFisf(ifld)
           IF (VarOut(ifield,ng)) THEN
             scale=1.0_dp
+# ifdef ICESHEET
             IF ((ifld.eq.ifItdx).or.(ifld.eq.ifItdy)) THEN
               sta_gtype=p2dvar
             ELSE
               sta_gtype=r2dvar
             END IF
+# else
+            sta_gtype=r2dvar
+# endif
             CALL extract_sta2d (ng, model, Cgrid, ifield, sta_gtype,       &
      &                          LBi, UBi, LBj, UBj,                     &
      &                          scale, ISF(ng)%Fi(:,:,ifld),            &
