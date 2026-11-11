@@ -198,7 +198,7 @@
               !  below the bed (grounded ice over bathymetry above sea
               !  level, h+zice <= 0) get a nominal film;  the wet/dry
               !  masks exclude them from the dynamics.
-              IF (hwater.le.0.0_r8) hwater=eps
+              IF (hwater.le.0.0_r8) hwater=Dcrit(ng)
 # endif
               hinv=1.0_r8/hwater
               z_w0=cff_w+cff1_w*hwater
@@ -256,7 +256,7 @@
               !  below the bed (grounded ice over bathymetry above sea
               !  level, h+zice <= 0) get a nominal film;  the wet/dry
               !  masks exclude them from the dynamics.
-              IF (hwater.le.0.0_r8) hwater=eps
+              IF (hwater.le.0.0_r8) hwater=Dcrit(ng)
 # endif
               hinv=1.0_r8/(hc(ng)+hwater)
               cff2_r=(cff_r+cff1_r*hwater)*hinv
@@ -463,7 +463,7 @@
               !  below the bed (grounded ice over bathymetry above sea
               !  level, h+zice <= 0) get a nominal film;  the wet/dry
               !  masks exclude them from the dynamics.
-              IF (hwater.le.0.0_r8) hwater=eps
+              IF (hwater.le.0.0_r8) hwater=Dcrit(ng)
 # endif
               hinv=1.0_r8/hwater
               z_w0=cff_w+cff1_w*hwater
@@ -522,7 +522,7 @@
               !  below the bed (grounded ice over bathymetry above sea
               !  level, h+zice <= 0) get a nominal film;  the wet/dry
               !  masks exclude them from the dynamics.
-              IF (hwater.le.0.0_r8) hwater=eps
+              IF (hwater.le.0.0_r8) hwater=Dcrit(ng)
 # endif
               hinv=1.0_r8/(hc(ng)+hwater)
               cff2_r=(cff_r+cff1_r*hwater)*hinv
@@ -683,7 +683,7 @@
             !  below the bed (grounded ice over bathymetry above sea
             !  level, h+zice <= 0) get a nominal film;  the wet/dry
             !  masks exclude them from the dynamics.
-            IF (hwater.le.0.0_r8) hwater=eps
+            IF (hwater.le.0.0_r8) hwater=Dcrit(ng)
 #  endif
             hinv=1.0_r8/hwater
             Zw(0)=-h(i,j)
@@ -713,7 +713,7 @@
             !  below the bed (grounded ice over bathymetry above sea
             !  level, h+zice <= 0) get a nominal film;  the wet/dry
             !  masks exclude them from the dynamics.
-            IF (hwater.le.0.0_r8) hwater=eps
+            IF (hwater.le.0.0_r8) hwater=Dcrit(ng)
 #  endif
             hinv=1.0_r8/hwater
             Zw(0)=-h(i,j)
@@ -743,7 +743,7 @@
             !  below the bed (grounded ice over bathymetry above sea
             !  level, h+zice <= 0) get a nominal film;  the wet/dry
             !  masks exclude them from the dynamics.
-            IF (hwater.le.0.0_r8) hwater=eps
+            IF (hwater.le.0.0_r8) hwater=Dcrit(ng)
 #  endif
             hinv=1.0_r8/hwater
             Zw(0)=-h(i,j)
@@ -773,7 +773,7 @@
             !  below the bed (grounded ice over bathymetry above sea
             !  level, h+zice <= 0) get a nominal film;  the wet/dry
             !  masks exclude them from the dynamics.
-            IF (hwater.le.0.0_r8) hwater=eps
+            IF (hwater.le.0.0_r8) hwater=Dcrit(ng)
 #  endif
             hinv=1.0_r8/hwater
             Zw(0)=-h(i,j)
@@ -816,7 +816,7 @@
             !  below the bed (grounded ice over bathymetry above sea
             !  level, h+zice <= 0) get a nominal film;  the wet/dry
             !  masks exclude them from the dynamics.
-            IF (hwater.le.0.0_r8) hwater=eps
+            IF (hwater.le.0.0_r8) hwater=Dcrit(ng)
 #  endif
             hinv=1.0_r8/(hc(ng)+hwater)
             Zw(0)=-h(i,j)
@@ -847,7 +847,7 @@
             !  below the bed (grounded ice over bathymetry above sea
             !  level, h+zice <= 0) get a nominal film;  the wet/dry
             !  masks exclude them from the dynamics.
-            IF (hwater.le.0.0_r8) hwater=eps
+            IF (hwater.le.0.0_r8) hwater=Dcrit(ng)
 #  endif
             hinv=1.0_r8/(hc(ng)+hwater)
             Zw(0)=-h(i,j)
@@ -878,7 +878,7 @@
             !  below the bed (grounded ice over bathymetry above sea
             !  level, h+zice <= 0) get a nominal film;  the wet/dry
             !  masks exclude them from the dynamics.
-            IF (hwater.le.0.0_r8) hwater=eps
+            IF (hwater.le.0.0_r8) hwater=Dcrit(ng)
 #  endif
             hinv=1.0_r8/(hc(ng)+hwater)
             Zw(0)=-h(i,j)
@@ -909,7 +909,7 @@
             !  below the bed (grounded ice over bathymetry above sea
             !  level, h+zice <= 0) get a nominal film;  the wet/dry
             !  masks exclude them from the dynamics.
-            IF (hwater.le.0.0_r8) hwater=eps
+            IF (hwater.le.0.0_r8) hwater=Dcrit(ng)
 #  endif
             hinv=1.0_r8/(hc(ng)+hwater)
             Zw(0)=-h(i,j)

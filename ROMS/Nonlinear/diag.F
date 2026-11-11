@@ -94,6 +94,8 @@
 !***********************************************************************
 !
       USE mod_param
+      USE mod_grid, ONLY : GRID
+
       USE mod_parallel
       USE mod_iounits
       USE mod_scalars
@@ -154,6 +156,7 @@
       integer :: NSUB, i, ispace, j, k, trd
       integer :: idia, istep
       integer :: my_max_Ci, my_max_Cj, my_max_Ck
+      integer :: my_max_rhoi, my_max_rhoj, my_max_rhok
 #ifdef DISTRIBUTE
 # ifdef SOLVE3D
       integer, parameter :: Nreduce = 5
@@ -176,6 +179,10 @@
       real(r8) :: my_Cv, my_max_Cv
 #ifdef SOLVE3D
       real(r8) :: my_Cw, my_max_Cw
+# ifdef ICESHELF
+      logical :: my_dry
+      real(r8), pointer :: zice_dg(:,:)
+# endif
 #endif
       real(r8) :: my_maxspeed, u2v2
 #ifdef SOLVE3D
@@ -189,6 +196,9 @@
       character (len=60) :: frmt
 
 #include "set_bounds.h"
+# ifdef ICESHELF
+      zice_dg => GRID(ng) % zice
+# endif
 !
 !-----------------------------------------------------------------------
 !  Compute and report out volume averaged kinetic, potential
@@ -244,8 +254,19 @@
      &              dt(ng)*pm(i,j)
               my_Cv=0.5_r8*ABS(v(i,j,k,idia)+v(i,j+1,k,idia))*          &
      &              dt(ng)*pn(i,j)
+#  ifdef ICESHELF
+!  Dry cells and film columns are excluded from the vertical CFL
+!  diagnostic (Cw=592 at w=0 in floor columns - 2026-11-12).
+              my_dry=(h(i,j).le.0.0_r8).or.                            &
+     &               (zeta(i,j,idia)+h(i,j)+zice_dg(i,j)               &
+     &                .le.Dcrit(ng))
+              IF ((.not.my_dry).and.(Hz(i,j,k).gt.1.0_r8)) THEN
+#  endif
               my_Cw=0.5_r8*ABS(wvel(i,j,k-1)+wvel(i,j,k))*              &
      &              dt(ng)/Hz(i,j,k)
+#  ifdef ICESHELF
+              END IF
+#  endif
               my_C=my_Cu+my_Cv+my_Cw
               IF (my_C.gt.my_max_C) THEN
                 my_max_C =my_C
@@ -257,7 +278,27 @@
                 my_max_Ck=k
               END IF
               my_maxspeed=MAX(my_maxspeed,SQRT(0.5_r8*u2v2))
+#  ifdef ICESHELF
+!  DRY cells (wetdry geometric criterion) are excluded from the
+!  density blow-up screen:  their tracers evolve through unmasked
+!  mixing paths and carry no ocean meaning.  The Hz<1 guard became
+!  ineffective once degenerate columns got the Dcrit floor (Hz~1.1m)
+!  - coupled1 tripped MaxDensity=200 at a dry coastal knife cell
+!  with garbage T (2026-11-11).
+              my_dry=(h(i,j).le.0.0_r8).or.                            &
+     &               (zeta(i,j,idia)+h(i,j)+zice_dg(i,j)               &
+     &                .le.Dcrit(ng))
+              IF ((.not.my_dry).and.(Hz(i,j,k).gt.1.0_r8)) THEN
+                IF (rho(i,j,k).gt.my_maxrho) THEN
+                  my_maxrho=rho(i,j,k)
+                  my_max_rhoi=i
+                  my_max_rhoj=j
+                  my_max_rhok=k
+                END IF
+              END IF
+#  else
               my_maxrho=MAX(my_maxrho,rho(i,j,k))
+#  endif
             END DO
           END DO
 #else
@@ -511,6 +552,15 @@
 !
           WRITE (kechar,'(1pe8.1)') avgke
           WRITE (pechar,'(1pe8.1)') avgpe
+# ifdef ISF_DEBUG
+          IF (exit_flag.eq.1.or.iic(ng).le.ntstart(ng)+14) THEN
+            WRITE (6,'(a,i9)') ' DIAG-DBG iic ',iic(ng)
+            WRITE (6,'(a,2a10,2es13.4)') ' DIAG-DBG kec,pec,spd,rho=',  &
+     &            kechar, pechar, maxspeed(ng), maxrho(ng)
+            WRITE (6,'(a,3i5)') ' DIAG-DBG rho-loc ijk=',              &
+     &            my_max_rhoi, my_max_rhoj, my_max_rhok
+          END IF
+# endif
           DO i=1,8
             IF ((kechar(i:i).eq.'N').or.(pechar(i:i).eq.'N').or.        &
      &          (kechar(i:i).eq.'n').or.(pechar(i:i).eq.'n').or.        &
@@ -541,6 +591,11 @@
             blowup_string='MaxDensity = '//maxvalchar
           END IF
 #endif
+# ifdef ISF_DEBUG
+          IF (exit_flag.eq.1.and.Master) THEN
+            WRITE (6,'(a,a)') ' DIAG-TRIP ', TRIM(blowup_string)
+          END IF
+# endif
 !
 !  Reset global reduction variables for the next call.
 !

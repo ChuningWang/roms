@@ -1663,21 +1663,29 @@
 !  neighbour reads must stay inside the array on domain-edge
 !  tiles (out-of-bounds = no such neighbour = skip).
 !
-            IF (i.gt.LBi.and.rmask_ist(i-1,j).eq.1.0_r8) THEN
+            IF (i.gt.LBi) THEN
+              IF (rmask_ist(i-1,j).eq.1.0_r8) THEN
               cff=cff+zs_smooth(i-1,j)
               cff1=cff1+1.0_r8
             END IF
-            IF (i.lt.UBi.and.rmask_ist(i+1,j).eq.1.0_r8) THEN
+            END IF
+            IF (i.lt.UBi) THEN
+              IF (rmask_ist(i+1,j).eq.1.0_r8) THEN
               cff=cff+zs_smooth(i+1,j)
               cff1=cff1+1.0_r8
             END IF
-            IF (j.gt.LBj.and.rmask_ist(i,j-1).eq.1.0_r8) THEN
+            END IF
+            IF (j.gt.LBj) THEN
+              IF (rmask_ist(i,j-1).eq.1.0_r8) THEN
               cff=cff+zs_smooth(i,j-1)
               cff1=cff1+1.0_r8
             END IF
-            IF (j.lt.UBj.and.rmask_ist(i,j+1).eq.1.0_r8) THEN
+            END IF
+            IF (j.lt.UBj) THEN
+              IF (rmask_ist(i,j+1).eq.1.0_r8) THEN
               cff=cff+zs_smooth(i,j+1)
               cff1=cff1+1.0_r8
+            END IF
             END IF
             IF (cff1.gt.0.0_r8) THEN
               zs_smooth(i,j)=cff/cff1
@@ -1715,29 +1723,33 @@
 !  nondeterminism).  An out-of-bounds neighbour is treated as
 !  ice-free (no-flux), which is exactly the boundary semantics.
 !
-              IF (i.lt.UBi.and.                                         &
-     &            rmask_ist(i+1,j  ).eq.1.0_r8) THEN
+              IF (i.lt.UBi) THEN
+                IF (rmask_ist(i+1,j  ).eq.1.0_r8) THEN
                 zs_sum=zs_sum+zs_smooth(i+1,j  )
               ELSE
                 zs_sum=zs_sum+zs_smooth(i  ,j  )
               END IF
-              IF (i.gt.LBi.and.                                         &
-     &            rmask_ist(i-1,j  ).eq.1.0_r8) THEN
+              END IF
+              IF (i.gt.LBi) THEN
+                IF (rmask_ist(i-1,j  ).eq.1.0_r8) THEN
                 zs_sum=zs_sum+zs_smooth(i-1,j  )
               ELSE
                 zs_sum=zs_sum+zs_smooth(i  ,j  )
               END IF
-              IF (j.lt.UBj.and.                                         &
-     &            rmask_ist(i  ,j+1).eq.1.0_r8) THEN
+              END IF
+              IF (j.lt.UBj) THEN
+                IF (rmask_ist(i  ,j+1).eq.1.0_r8) THEN
                 zs_sum=zs_sum+zs_smooth(i  ,j+1)
               ELSE
                 zs_sum=zs_sum+zs_smooth(i  ,j  )
               END IF
-              IF (j.gt.LBj.and.                                         &
-     &            rmask_ist(i  ,j-1).eq.1.0_r8) THEN
+              END IF
+              IF (j.gt.LBj) THEN
+                IF (rmask_ist(i  ,j-1).eq.1.0_r8) THEN
                 zs_sum=zs_sum+zs_smooth(i  ,j-1)
               ELSE
                 zs_sum=zs_sum+zs_smooth(i  ,j  )
+              END IF
               END IF
               zs_smooth_temp(i,j)=zs_sum/5.0_r8
             ELSE
@@ -2443,10 +2455,30 @@
       real(r8), intent(in) :: rmask_ist(LBi:UBi,LBj:UBj)
 # endif
 !
-      front_e=(rmask_ist(i+1,j  ).eq.0.0_r8)
-      front_w=(rmask_ist(i-1,j  ).eq.0.0_r8)
-      front_n=(rmask_ist(i  ,j+1).eq.0.0_r8)
-      front_s=(rmask_ist(i  ,j-1).eq.0.0_r8)
+!  Neighbour-mask reads are bounds-guarded with nested IFs:  an
+!  .and.-guarded read is NOT short-circuit safe (gfortran -fcheck
+!  evaluates both operands;  and at a domain-edge tile i-1/j-1 falls
+!  outside the allocation - the unguarded production read returned
+!  garbage masks and wrong front faces, the coupled1 step-24 death
+!  chain;  debug build caught it as rmask_ist(-1) - 2026-11-11).
+!  A missing neighbour means no front on that side (the LBC section
+!  below overrides the physical-edge faces regardless).
+      front_e=.FALSE.
+      front_w=.FALSE.
+      front_n=.FALSE.
+      front_s=.FALSE.
+      IF (i.lt.UBi) THEN
+        IF (rmask_ist(i+1,j  ).eq.0.0_r8) front_e=.TRUE.
+      END IF
+      IF (i.gt.LBi) THEN
+        IF (rmask_ist(i-1,j  ).eq.0.0_r8) front_w=.TRUE.
+      END IF
+      IF (j.lt.UBj) THEN
+        IF (rmask_ist(i  ,j+1).eq.0.0_r8) front_n=.TRUE.
+      END IF
+      IF (j.gt.LBj) THEN
+        IF (rmask_ist(i  ,j-1).eq.0.0_r8) front_s=.TRUE.
+      END IF
 !
 !  At a physical domain edge the neighbour cell does not exist and
 !  the ghost mask is not consulted:  the edge status comes from the

@@ -213,12 +213,32 @@
           wetdry(i,j)=wetdry(i,j)*rmask(i,j)
 # endif
 # ifdef ICESHELF
-          IF ((zeta(i,j)+h(i,j)+zice(i,j)).le.(Dcrit(ng)+eps)) THEN
-# else
-          IF ((zeta(i,j)+h(i,j)).le.(Dcrit(ng)+eps)) THEN
-# endif
+!  Ice-covered cells (zice<0, floating cavity or grounded film): the
+!  wet/dry state is GEOMETRIC - the cavity exists iff the ice-base
+!  elevation leaves a column deeper than Dcrit.  Including zeta here
+!  let the spin-up zeta bump (+1-2 m) transiently wet the Dcrit film
+!  cells every barotropic substep;  the full grounding-line forcing
+!  in such a column then produced 35 m/s garbage speeds (2026-11-12
+!  D5 final diagnosis).  Open-ocean cells keep the standard zeta test.
+!  Bed above sea level (h<=0, e.g. the MISMIP+/MISOMIP inland high):
+!  PERMANENTLY dry - no ocean can exist there regardless of zice
+!  (the grounded-ice film gives zice=bed+film>0 there, whose positive
+!  sign must not be read as open ocean;  coupled1 died at step 2 with
+!  an 11.5 m/s jet from such a phantom 390 m column - 2026-11-11).
+          IF (h(i,j).le.0.0_r8) THEN
+            wetdry(i,j)=0.0_r8
+          ELSE IF (zice(i,j).lt.0.0_r8) THEN
+            IF ((h(i,j)+zice(i,j)).le.(Dcrit(ng)+eps)) THEN
+              wetdry(i,j)=0.0_r8
+            END IF
+          ELSE IF ((zeta(i,j)+h(i,j)+zice(i,j)).le.(Dcrit(ng)+eps)) THEN
             wetdry(i,j)=0.0_r8
           END IF
+# else
+          IF ((zeta(i,j)+h(i,j)).le.(Dcrit(ng)+eps)) THEN
+            wetdry(i,j)=0.0_r8
+          END IF
+# endif
         END DO
       END DO
 !
@@ -484,12 +504,32 @@
           wetdry(i,j)=wetdry(i,j)*rmask(i,j)
 # endif
 # ifdef ICESHELF
-          IF ((zeta(i,j)+h(i,j)+zice(i,j)).le.(Dcrit(ng)+eps)) THEN
-# else
-          IF ((zeta(i,j)+h(i,j)).le.(Dcrit(ng)+eps)) THEN
-# endif
+!  Ice-covered cells (zice<0, floating cavity or grounded film): the
+!  wet/dry state is GEOMETRIC - the cavity exists iff the ice-base
+!  elevation leaves a column deeper than Dcrit.  Including zeta here
+!  let the spin-up zeta bump (+1-2 m) transiently wet the Dcrit film
+!  cells every barotropic substep;  the full grounding-line forcing
+!  in such a column then produced 35 m/s garbage speeds (2026-11-12
+!  D5 final diagnosis).  Open-ocean cells keep the standard zeta test.
+!  Bed above sea level (h<=0, e.g. the MISMIP+/MISOMIP inland high):
+!  PERMANENTLY dry - no ocean can exist there regardless of zice
+!  (the grounded-ice film gives zice=bed+film>0 there, whose positive
+!  sign must not be read as open ocean;  coupled1 died at step 2 with
+!  an 11.5 m/s jet from such a phantom 390 m column - 2026-11-11).
+          IF (h(i,j).le.0.0_r8) THEN
+            wetdry(i,j)=0.0_r8
+          ELSE IF (zice(i,j).lt.0.0_r8) THEN
+            IF ((h(i,j)+zice(i,j)).le.(Dcrit(ng)+eps)) THEN
+              wetdry(i,j)=0.0_r8
+            END IF
+          ELSE IF ((zeta(i,j)+h(i,j)+zice(i,j)).le.(Dcrit(ng)+eps)) THEN
             wetdry(i,j)=0.0_r8
           END IF
+# else
+          IF ((zeta(i,j)+h(i,j)).le.(Dcrit(ng)+eps)) THEN
+            wetdry(i,j)=0.0_r8
+          END IF
+# endif
         END DO
       END DO
 !
