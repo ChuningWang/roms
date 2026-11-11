@@ -1725,31 +1725,39 @@
 !
               IF (i.lt.UBi) THEN
                 IF (rmask_ist(i+1,j  ).eq.1.0_r8) THEN
-                zs_sum=zs_sum+zs_smooth(i+1,j  )
+                  zs_sum=zs_sum+zs_smooth(i+1,j  )
+                ELSE
+                  zs_sum=zs_sum+zs_smooth(i  ,j  )
+                END IF
               ELSE
                 zs_sum=zs_sum+zs_smooth(i  ,j  )
-              END IF
               END IF
               IF (i.gt.LBi) THEN
                 IF (rmask_ist(i-1,j  ).eq.1.0_r8) THEN
-                zs_sum=zs_sum+zs_smooth(i-1,j  )
+                  zs_sum=zs_sum+zs_smooth(i-1,j  )
+                ELSE
+                  zs_sum=zs_sum+zs_smooth(i  ,j  )
+                END IF
               ELSE
                 zs_sum=zs_sum+zs_smooth(i  ,j  )
-              END IF
               END IF
               IF (j.lt.UBj) THEN
                 IF (rmask_ist(i  ,j+1).eq.1.0_r8) THEN
-                zs_sum=zs_sum+zs_smooth(i  ,j+1)
+                  zs_sum=zs_sum+zs_smooth(i  ,j+1)
+                ELSE
+                  zs_sum=zs_sum+zs_smooth(i  ,j  )
+                END IF
               ELSE
                 zs_sum=zs_sum+zs_smooth(i  ,j  )
-              END IF
               END IF
               IF (j.gt.LBj) THEN
                 IF (rmask_ist(i  ,j-1).eq.1.0_r8) THEN
-                zs_sum=zs_sum+zs_smooth(i  ,j-1)
+                  zs_sum=zs_sum+zs_smooth(i  ,j-1)
+                ELSE
+                  zs_sum=zs_sum+zs_smooth(i  ,j  )
+                END IF
               ELSE
                 zs_sum=zs_sum+zs_smooth(i  ,j  )
-              END IF
               END IF
               zs_smooth_temp(i,j)=zs_sum/5.0_r8
             ELSE

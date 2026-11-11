@@ -349,6 +349,11 @@
             END DO
 # endif
 !
+# ifdef ISF_DEBUG
+            IF (Master) WRITE(6,'(a,i9,a,i4)')                            &
+     &          ' EF-DBG iic=',iic(GridNumber(1,nl)),' exit_flag=',       &
+     &          exit_flag
+# endif
 !-----------------------------------------------------------------------
 !  Compute horizontal mass fluxes (Hz*u/n and Hz*v/m), density related
 !  quatities and report global diagnostics.

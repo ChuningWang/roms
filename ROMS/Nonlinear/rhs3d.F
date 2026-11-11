@@ -246,6 +246,9 @@
 !
       USE mod_param
       USE mod_clima
+# if defined ICESHELF && defined ICESHEET_PUMP2D
+      USE mod_grid, ONLY : GRID
+# endif
       USE mod_scalars
 !
 !  Imported variable declarations.
@@ -1878,6 +1881,21 @@
           END IF
 #endif
           rufrc(i,j)=rufrc(i,j)+cff1+cff2
+#  if defined ICESHELF && defined ICESHEET_PUMP2D
+!
+!  The ice-roof pump force enters the 2D momentum equations every
+!  fast step (step2d_LF_AM3, after the rufrc conversion).  Subtract
+!  the identical force from the baroclinic integral here so the
+!  pump is counted exactly once per substep (mode-splitting
+!  consistency;  2026-11-12 D5 fix).
+!
+          rufrc(i,j)=rufrc(i,j)-g*(1000.0_r8/rho0)*on_u(i,j)*           &
+     &               0.5_r8*((GRID(ng)%h(i-1,j)+                        &
+     &                       GRID(ng)%zice(i-1,j))+                     &
+     &                      (GRID(ng)%h(i,j  )+                        &
+     &                       GRID(ng)%zice(i,j  )))*                    &
+     &               (GRID(ng)%zice(i,j)-GRID(ng)%zice(i-1,j))
+#  endif
 #  ifdef WET_DRY
           rufrc(i,j)=rufrc(i,j)*umask_wet(i,j)
 #  endif
@@ -1991,6 +2009,14 @@
             cff1= svstr(i,j)*cff
             cff2=-bvstr(i,j)*cff
             rvfrc(i,j)=rvfrc(i,j)+cff1+cff2
+#  if defined ICESHELF && defined ICESHEET_PUMP2D
+          rvfrc(i,j)=rvfrc(i,j)-g*(1000.0_r8/rho0)*om_v(i,j)*           &
+     &               0.5_r8*((GRID(ng)%h(i,j-1)+                        &
+     &                       GRID(ng)%zice(i,j-1))+                     &
+     &                      (GRID(ng)%h(i,j  )+                        &
+     &                       GRID(ng)%zice(i,j  )))*                    &
+     &               (GRID(ng)%zice(i,j)-GRID(ng)%zice(i,j-1))
+#  endif
 #  ifdef WET_DRY
             rvfrc(i,j)=rvfrc(i,j)*vmask_wet(i,j)
 #  endif

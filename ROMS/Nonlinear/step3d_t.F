@@ -355,6 +355,13 @@
 # include "set_bounds.h"
 !
 #ifdef ISF_DEBUG
+      IF (iic(ng).le.ntstart(ng)+4) THEN
+        WRITE(6,'(a,i9,2f10.3)') ' T0-DBG iic,in(122,0)=',            &
+     &        iic(ng), t(122,0,1,nstp,itemp), t(122,0,1,nnew,itemp)
+      END IF
+#endif
+!
+#ifdef ISF_DEBUG
       IF (iic(ng).le.ntstart(ng)+1) THEN
         cff=0.0_r8
         cff1=0.0_r8
@@ -2083,6 +2090,12 @@
         IF (allocated(Wa))    deallocate (Wa)
       END IF
 !
+#ifdef ISF_DEBUG
+      IF (iic(ng).le.ntstart(ng)+4) THEN
+        WRITE(6,'(a,i9,2f10.3)') ' T1-DBG iic,out(122,0)=',           &
+     &        iic(ng), t(122,0,1,nstp,itemp), t(122,0,1,nnew,itemp)
+      END IF
+#endif
       RETURN
       END SUBROUTINE step3d_t_tile
 #endif

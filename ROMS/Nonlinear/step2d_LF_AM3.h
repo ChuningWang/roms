@@ -714,6 +714,13 @@
 !
       ptsk=3-kstp
       CORRECTOR_2D_STEP=.not.PREDICTOR_2D_STEP(ng)
+# ifdef ISF_DEBUG
+      IF (iic(ng).le.ntstart(ng).and.iif(ng).le.2) THEN
+        WRITE(6,'(a,2i4,2i9,2l2)') ' FLOW-DBG t,iif,iic,ntf,P,C=',      &
+     &        tile, iif(ng), iic(ng), ntfirst(ng),                     &
+     &        PREDICTOR_2D_STEP(ng), CORRECTOR_2D_STEP
+      END IF
+# endif
 !
 !-----------------------------------------------------------------------
 !  Compute total depth (m) and vertically integrated mass fluxes.
@@ -1267,21 +1274,6 @@
 #endif
      &                   (gzeta2(i-1,j)-                                &
      &                    gzeta2(i  ,j)))
-#ifdef ICESHEET_PUMP2D
-!
-!  Ice-roof loading (shelf pump) as a barotropic pressure gradient:
-!  the roof pressure's variable part -GRho*rho(N)*zice gives a force
-!  +GRho*rho(N)*grad(zice) per unit mass.  Entering it here (every
-!  fast step, same hw scaling as the zeta pg) instead of through the
-!  3D pg integral (once per baroclinic step via rufrc) keeps the
-!  front-load/roof-pressure pair discretely consistent and removes
-!  the 2Dx sawtooth seed (2026-11-10 D3).  The ATM_PRESS block below
-!  is matched in form.
-!
-          rhs_ubar(i,j)=rhs_ubar(i,j)+GRho*1000.0_r8*on_u(i,j)*         &
-     &                  0.5_r8*(hw(i-1,j)+hw(i,j))*                     &
-     &                  (zice(i,j)-zice(i-1,j))
-#endif
 #if defined ATM_PRESS && !defined SOLVE3D
           rhs_ubar(i,j)=rhs_ubar(i,j)-                                  &
      &                  fac3*on_u(i,j)*                                 &
@@ -1350,11 +1342,6 @@
 #endif
      &                     (gzeta2(i,j-1)-                              &
      &                      gzeta2(i,j  )))
-#ifdef ICESHEET_PUMP2D
-            rhs_vbar(i,j)=rhs_vbar(i,j)+GRho*1000.0_r8*om_v(i,j)*       &
-     &                    0.5_r8*(hw(i,j-1)+hw(i,j))*                   &
-     &                    (zice(i,j)-zice(i,j-1))
-#endif
 #if defined ATM_PRESS && !defined SOLVE3D
             rhs_vbar(i,j)=rhs_vbar(i,j)-                                &
      &                    fac3*om_v(i,j)*                               &
@@ -2460,6 +2447,14 @@
 !
       IF (FIRST_2D_STEP.and.PREDICTOR_2D_STEP(ng)) THEN
         IF (iic(ng).eq.ntfirst(ng)) THEN
+# ifdef ISF_DEBUG
+          IF (iic(ng).le.ntstart(ng)+1) THEN
+            WRITE(6,'(a,2i9,2es13.4)') ' CONV-DBG iic,ntfirst:',        &
+     &            iic(ng), ntfirst(ng)
+            WRITE(6,'(a,1pe13.4)') ' CONV-DBG rufrc150,pg150:',         &
+     &            rufrc(150,20), rhs_ubar(150,20)
+          END IF
+# endif
           DO j=Jstr,Jend
             DO i=IstrU,Iend
               rufrc(i,j)=rufrc(i,j)-rhs_ubar(i,j)
@@ -2643,6 +2638,14 @@
           END DO
         END IF
       ELSE
+# ifdef ISF_DEBUG
+        IF (iic(ng).le.ntstart(ng)+1.and.                                &
+     &      (iif(ng).le.3.or.iif(ng).eq.84)) THEN
+          WRITE(6,'(a,i9,i4)') ' RUFS-DBG iic,iif= ',iic(ng),iif(ng)
+          WRITE(6,'(a,3es13.4)') '  i=100(int) ',(rufrc(i,20),i=100,100)
+          WRITE(6,'(a,3es13.4)') '  i=150(int) ',(rufrc(i,20),i=150,150)
+        END IF
+# endif
         DO j=Jstr,Jend
           DO i=IstrU,Iend
             rhs_ubar(i,j)=rhs_ubar(i,j)+rufrc(i,j)
@@ -2704,6 +2707,62 @@
       END DO
 #endif
 !
+#ifdef ICESHEET_PUMP2D
+!  RETIRED 2026-11-10:  this split is algebraically a NO-OP (rhs3d
+!  subtracts the identical force that step2d adds, both acting every
+!  substep) - probe-verified: net per-substep force identical to the
+!  unsplit baseline at every sampled point.  Do not re-enable.
+!
+!  Ice-roof loading (shelf pump) as a barotropic pressure gradient,
+!  entered AFTER the rufrc/rvfrc conversion so the conversion snapshot
+!  never contains it:  the 3D side carries the pump inside the pg
+!  integral, and rhs3d subtracts exactly this force from rufrc/rvfrc
+!  when assembling them, so the net pump felt by the fast steps is
+!  exactly once per substep (mode-splitting consistency;  2026-11-12
+!  D5 fix - entering it before the conversion double-counted it 84x
+!  and blew up in one step, entering it only in 3D left the 2D/3D
+!  imbalance that grew the south-wall pile secularly).
+!
+# ifdef ISF_DEBUG
+      IF (iic(ng).le.ntstart(ng)+1.and.                                &
+     &    (iif(ng).le.3.or.iif(ng).eq.84)) THEN
+        WRITE(6,'(a,3es13.4)') '  PMP-DBG pg@150 ',rhs_ubar(150,20)
+        WRITE(6,'(a,1pe13.4)') '  PMP-DBG pump@150 ',               &
+     &        g*(1000.0_r8/rho0)*on_u(150,20)*                        &
+     &        0.5_r8*(hw(149,20)+hw(150,20))*                         &
+     &        (zice(150,20)-zice(149,20))
+      END IF
+# endif
+      DO j=Jstr,Jend
+        DO i=IstrU,Iend
+!
+!  Wet/wet gate:  a face against a dry cell (grounded-ice film or
+!  land) is a WALL - the pressure difference there is borne by the
+!  wall reaction, not a body force.  Pumping the full draft jump
+!  (up to ~300 m across the grounding-line film boundary) into the
+!  fast steps blew the top-cell vertical CFL in one step, and the
+!  same wall-face force inside the 3D integral is the seed of the
+!  MISMIP+ 2Dx sawtooth (2026-11-12 D5).
+!
+          IF (ABS(umask_wet(i,j)).gt.0.5_r8.and.                         &
+     &        ABS(umask_wet(i-1,j)).gt.0.5_r8) THEN
+            rhs_ubar(i,j)=rhs_ubar(i,j)+g*(1000.0_r8/rho0)*on_u(i,j)*   &
+     &                  0.5_r8*(hw(i-1,j)+hw(i,j))*                     &
+     &                  (zice(i,j)-zice(i-1,j))
+          END IF
+        END DO
+      END DO
+      DO j=JstrV,Jend
+        DO i=Istr,Iend
+          IF (ABS(vmask_wet(i,j)).gt.0.5_r8.and.                         &
+     &        ABS(vmask_wet(i,j-1)).gt.0.5_r8) THEN
+            rhs_vbar(i,j)=rhs_vbar(i,j)+g*(1000.0_r8/rho0)*om_v(i,j)*   &
+     &                  0.5_r8*(hw(i,j-1)+hw(i,j))*                     &
+     &                  (zice(i,j)-zice(i,j-1))
+          END IF
+        END DO
+      END DO
+#endif
 !=======================================================================
 !  Time step 2D momentum equations.
 !=======================================================================

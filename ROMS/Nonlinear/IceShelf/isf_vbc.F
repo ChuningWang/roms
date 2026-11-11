@@ -156,6 +156,11 @@
       integer :: i, j, k, ic, itrc
       real(r8) :: Pradj, Scadj, cp_i
       real(r8) :: Sm, Tm, turb, ct
+# ifdef ISF_DEBUG
+      real(r8) :: frz_maxSb
+      integer :: frz_i, frz_j
+      save    frz_maxSb, frz_i, frz_j
+# endif
       real(r8) :: Tm_theta, tracer_amb
       real(r8) :: cff, cff1, cff2, cff3
       real(r8) :: melt
@@ -166,6 +171,11 @@
 !  fluxes over the ice base.
 !-----------------------------------------------------------------------
 !
+#ifdef ISF_DEBUG
+      frz_maxSb=0.0_r8
+      frz_i=0
+      frz_j=0
+#endif
 #ifdef ISF_DEBUG
       IF (iic(ng).le.ntstart(ng)+1) THEN
         cff=0.0_r8
@@ -207,6 +217,7 @@
      &                              cff1, cff2, cff3
         END IF
       END IF
+!
 #endif
 # ifdef ICESHELF_THERMO
 !
@@ -378,6 +389,13 @@
      &                           (Fi(i,j,ifItbo)-Tm)
               stflx(i,j,isalt) = (Fi(i,j,ifIgas)+melt)*                   &
      &                           (Fi(i,j,ifIsbo)-Sm)
+# ifdef ISF_DEBUG
+              IF (Fi(i,j,ifIsbo).gt.frz_maxSb) THEN
+                frz_maxSb=Fi(i,j,ifIsbo)
+                frz_i=i
+                frz_j=j
+              END IF
+# endif
             ELSE
               Fi(i,j,ifIsbo)   = Sm
               Fi(i,j,ifItbo)   = Tm
@@ -496,6 +514,12 @@
       END DO
 # endif
 !
+# ifdef ISF_DEBUG
+      IF (iic(ng).le.ntstart(ng)+40.and.frz_i.gt.0) THEN
+        WRITE(6,'(a,i9,2i5,es12.4)') ' FRZ-DBG iic,ij,Sbmax=',            &
+     &        iic(ng), frz_i, frz_j, frz_maxSb
+      END IF
+# endif
       RETURN
       END SUBROUTINE isf_vbc_tile
 !
