@@ -121,7 +121,7 @@
           ng=GridNumber(ig,nl)
           DO tile=first_tile(ng),last_tile(ng),+1
 # ifdef ISF_DEBUG
-            IF (Master) WRITE(6,'(a,a,i9)') ' SENTINEL > isf_stress iic=', iic(ng)
+            IF (Master) WRITE(6,'(a,i9)') ' SENTINEL > isf_stress iic=', iic(ng)
 # endif
             CALL isf_stress (ng, tile, iNLM)
           END DO
@@ -170,7 +170,7 @@
           ng=GridNumber(ig,nl)
           DO tile=first_tile(ng),last_tile(ng),+1
 # ifdef ISF_DEBUG
-            IF (Master) WRITE(6,'(a,a,i9)') ' SENTINEL > isf_vbc iic=', iic(ng)
+            IF (Master) WRITE(6,'(a,i9)') ' SENTINEL > isf_vbc iic=', iic(ng)
 # endif
             CALL isf_vbc (ng, tile, model)
           END DO
@@ -212,7 +212,7 @@
             lsnew(ng)=3-lsold(ng)
             DO tile=first_tile(ng),last_tile(ng),+1
 # ifdef ISF_DEBUG
-            IF (Master) WRITE(6,'(a,a,i9)') ' SENTINEL > isf_ssa iic=', iic(ng)
+            IF (Master) WRITE(6,'(a,i9)') ' SENTINEL > isf_ssa iic=', iic(ng)
 # endif
               CALL isf_ssa (ng, tile, model)
             END DO
@@ -246,7 +246,7 @@
           IF (iic(ng).gt.ntstart(ng)) THEN
             DO tile=first_tile(ng),last_tile(ng),+1
 # ifdef ISF_DEBUG
-            IF (Master) WRITE(6,'(a,a,i9)') ' SENTINEL > isf_advection iic=', iic(ng)
+            IF (Master) WRITE(6,'(a,i9)') ' SENTINEL > isf_advection iic=', iic(ng)
 # endif
               CALL isf_advection (ng, tile, model)
             END DO
@@ -260,14 +260,14 @@
 !
           DO tile=first_tile(ng),last_tile(ng),+1
 # ifdef ISF_DEBUG
-            IF (Master) WRITE(6,'(a,a,i9)') ' SENTINEL > isf_bc2d iic=', iic(ng)
+            IF (Master) WRITE(6,'(a,i9)') ' SENTINEL > isf_bc2d iic=', iic(ng)
 # endif
             CALL isf_bc2d (ng, tile, model)
           END DO
 !$OMP BARRIER
           DO tile=first_tile(ng),last_tile(ng),+1
 # ifdef ISF_DEBUG
-            IF (Master) WRITE(6,'(a,a,i9)') ' SENTINEL > isf_tibc iic=', iic(ng)
+            IF (Master) WRITE(6,'(a,i9)') ' SENTINEL > isf_tibc iic=', iic(ng)
 # endif
             CALL isf_tibc (ng, tile, model)
           END DO
@@ -282,7 +282,7 @@
 !
           DO tile=first_tile(ng),last_tile(ng),+1
 # ifdef ISF_DEBUG
-            IF (Master) WRITE(6,'(a,a,i9)') ' SENTINEL > isf_calving iic=', iic(ng)
+            IF (Master) WRITE(6,'(a,i9)') ' SENTINEL > isf_calving iic=', iic(ng)
 # endif
             CALL isf_calving_mask (ng, tile, model)
           END DO
@@ -320,7 +320,7 @@
 # endif
             DO tile=first_tile(ng),last_tile(ng),+1
 # ifdef ISF_DEBUG
-            IF (Master) WRITE(6,'(a,a,i9)') ' SENTINEL > isf_masks iic=', iic(ng)
+            IF (Master) WRITE(6,'(a,i9)') ' SENTINEL > isf_masks iic=', iic(ng)
 # endif
               CALL isf_masks (ng, tile, iNLM)
             END DO
