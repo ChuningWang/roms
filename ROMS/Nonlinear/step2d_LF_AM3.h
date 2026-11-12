@@ -957,6 +957,31 @@
 !  cases, we need i+1 and j+1 values for spatial/temporal interpolation.
 # endif
 !
+#ifdef ICESHEET_ZETA_FILTER
+!
+!  Shapiro filter on the free surface at the end of the barotropic
+!  loop (applied once per baroclinic step, at the auxiliary step).
+!  The 2Dx zeta mode is a spurious computational mode of the C-grid
+!  centered-difference pressure gradient (its grad is identically
+!  zero for alternating patterns) — completely decoupled from the
+!  dynamics and undamped by any velocity-based viscosity.  Grid-scale
+!  noise injected at each baroclinic coupling accumulates in this
+!  mode (lambda ~ 0.004/step, coupled1 2026-11-12).  A single 2nd-
+!  order Shapiro pass eliminates the 2Dx component exactly while
+!  preserving uniform/linear fields.
+!
+      IF (iif(ng).eq.(nfast(ng)+1)) THEN
+        WRITE(6,'(a,i9,i5)') ' SHAPIRO-DBG iic,iif=',iic(ng),iif(ng)
+        DO j=JstrR,JendR
+          DO i=IstrR,IendR
+            zeta(i,j,knew)=zeta(i,j,knew)+0.25_r8*(                   &
+     &                       zeta(i-1,j,knew)-2.0_r8*zeta(i,j,knew)+   &
+     &                       zeta(i+1,j,knew))
+          END DO
+        END DO
+      END IF
+#endif
+
       IF ((iif(ng).eq.(nfast(ng)+1)).and.PREDICTOR_2D_STEP(ng)) THEN
         IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
           CALL exchange_r2d_tile (ng, tile,                             &
