@@ -609,6 +609,9 @@
       real(r8) :: melt, Tm_theta
 !
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: Dgrad
+# ifdef ICESHEET_RUFRC_REFRESH
+      real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: zeta_snap
+# endif
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: Dnew
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: Drhs
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: Drhs_p
@@ -2459,6 +2462,9 @@
             DO i=IstrU,Iend
               rufrc(i,j)=rufrc(i,j)-rhs_ubar(i,j)
               rhs_ubar(i,j)=rhs_ubar(i,j)+rufrc(i,j)
+# ifdef ICESHEET_RUFRC_REFRESH
+              zeta_snap(i,j)=zeta(i,j,krhs)
+# endif
               ru(i,j,0,nstp)=rufrc(i,j)
 # ifdef DIAGNOSTICS_UV
               DO idiag=1,M2pgrd
@@ -2680,6 +2686,38 @@
 # endif
           END DO
         END DO
+!
+# ifdef ICESHEET_RUFRC_REFRESH
+!
+!  rufrc zeta-refresh correction (2026-11-12 lambda root-cure):
+!  the frozen rufrc's zeta-gradient component was deduped against
+!  the 2D pg at the SNAPSHOT zeta.  As zeta evolves during the
+!  fast substeps, the dedup goes stale (the per-coupling-event
+!  error injection, lambda ~ 0.02-0.04/step).  Refresh the
+!  zeta-dependent part using the CURRENT zeta — this is the
+!  zeta-dependence that the retired PUMP2D lacked entirely.
+!
+!    correction = 0.5*g*(hw_w+hw_e)*[(grad zeta)_now-(grad zeta)_snap]
+!
+        DO j=Jstr,Jend
+          DO i=IstrU,Iend
+            rhs_ubar(i,j)=rhs_ubar(i,j)+                               &
+     &          0.5_r8*g*on_u(i,j)*                                   &
+     &          0.5_r8*(hw(i-1,j)+hw(i,j))*                           &
+     &          ((zeta(i,j,krhs)-zeta(i-1,j,krhs))-                     &
+     &           (zeta_snap(i,j)-zeta_snap(i-1,j)))
+          END DO
+        END DO
+        DO j=JstrV,Jend
+          DO i=Istr,Iend
+            rhs_vbar(i,j)=rhs_vbar(i,j)+                               &
+     &          0.5_r8*g*om_v(i,j)*                                   &
+     &          0.5_r8*(hw(i,j-1)+hw(i,j))*                           &
+     &          ((zeta(i,j,krhs)-zeta(i,j-1,krhs))-                     &
+     &           (zeta_snap(i,j)-zeta_snap(i,j-1)))
+          END DO
+        END DO
+# endif
       END IF
 #else
 !
