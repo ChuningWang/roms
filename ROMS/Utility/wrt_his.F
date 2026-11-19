@@ -423,7 +423,8 @@
         exit_flag=3
         ioerror=status
         RETURN
-      END IF# endif
+      END IF
+# endif
 !
 !  Write out ice shelf mask at RHO-points.
 !
@@ -2688,7 +2689,7 @@
         RETURN
       END IF
 #  ifdef ICESHELF
-# ifdef ICESHEET
+#  ifdef ICESHEET
 !
 !  Write out ice sheet mask at RHO-points.
 !
@@ -2769,7 +2770,7 @@
         exit_flag=3
         ioerror=status
         RETURN
-      END IF# endif
+      END IF
 !
 !  Write out ice shelf mask at RHO-points.
 !
@@ -2982,14 +2983,15 @@
      &                     GRID(ng) % rmask,                            &
 #  endif
      &                     OCEAN(ng) % rzeta(:,:,KOUT))
-        IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
-          IF (Master) THEN
-            WRITE (stdout,20) TRIM(Vname(1,idRzet)), HIS(ng)%Rindex
-          END IF
-          exit_flag=3
-          ioerror=status
-          RETURN
+      IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
+        IF (Master) THEN
+          WRITE (stdout,20) TRIM(Vname(1,idVist)), HIS(ng)%Rindex
         END IF
+        exit_flag=3
+        ioerror=status
+        RETURN
+      END IF
+#  endif
 # endif
       END IF
 
