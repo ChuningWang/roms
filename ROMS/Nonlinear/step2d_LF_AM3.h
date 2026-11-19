@@ -600,6 +600,9 @@
       logical :: CORRECTOR_2D_STEP
 !
       integer :: i, is, j, ptsk
+#ifdef ICESHEET_ZETA_FILTER
+      integer :: kz
+#endif
 #ifdef DIAGNOSTICS_UV
       integer :: idiag
 #endif
@@ -609,6 +612,9 @@
       real(r8) :: melt, Tm_theta
 !
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: Dgrad
+# ifdef ICESHEET_ZETA_FILTER
+      real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: zfil
+# endif
 # ifdef ICESHEET_RUFRC_REFRESH
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: zeta_snap
 # endif
@@ -957,31 +963,6 @@
 !  cases, we need i+1 and j+1 values for spatial/temporal interpolation.
 # endif
 !
-#ifdef ICESHEET_ZETA_FILTER
-!
-!  Shapiro filter on the free surface at the end of the barotropic
-!  loop (applied once per baroclinic step, at the auxiliary step).
-!  The 2Dx zeta mode is a spurious computational mode of the C-grid
-!  centered-difference pressure gradient (its grad is identically
-!  zero for alternating patterns) — completely decoupled from the
-!  dynamics and undamped by any velocity-based viscosity.  Grid-scale
-!  noise injected at each baroclinic coupling accumulates in this
-!  mode (lambda ~ 0.004/step, coupled1 2026-11-12).  A single 2nd-
-!  order Shapiro pass eliminates the 2Dx component exactly while
-!  preserving uniform/linear fields.
-!
-      IF (iif(ng).eq.(nfast(ng)+1)) THEN
-        WRITE(6,'(a,i9,i5)') ' SHAPIRO-DBG iic,iif=',iic(ng),iif(ng)
-        DO j=JstrR,JendR
-          DO i=IstrR,IendR
-            zeta(i,j,knew)=zeta(i,j,knew)+0.25_r8*(                   &
-     &                       zeta(i-1,j,knew)-2.0_r8*zeta(i,j,knew)+   &
-     &                       zeta(i+1,j,knew))
-          END DO
-        END DO
-      END IF
-#endif
-
       IF ((iif(ng).eq.(nfast(ng)+1)).and.PREDICTOR_2D_STEP(ng)) THEN
         IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
           CALL exchange_r2d_tile (ng, tile,                             &
@@ -1017,6 +998,37 @@
 #  endif
 # endif
       END IF
+#ifdef ICESHEET_ZETA_FILTER
+!
+!  Checkerboard cleaner on the fast-averaged free surface at the end
+!  of the barotropic loop (auxiliary step, after Zt_avg1 is finalized
+!  and exchanged).  History of this experiment series:
+!
+!  2026-11-12 attempt: filtered zeta(:,:,knew) at the auxiliary --
+!  in the LF-AM3 path knew=3 is the PREDICTOR SCRATCH level (rewritten
+!  by every substep predictor): a dead write, output bit-identical.
+!
+!  2026-11-19 diagnosis (coupled1 DT=4s 467-step run, his_l0.nc): the
+!  2dx mode is a y-uniform +- alternating patch at x=671-699 km in the
+!  open ocean EAST of the calving front (no ice: is_h=0, gfrac=0,
+!  h=720 m flat), rows 12-29; ice fields are static during growth;
+!  melt/Ustar deviations sub-dominant (ratio 1.2-1.4 over ~350 steps
+!  vs zeta ~6x).  The 3D depths see the surface through Zt_avg1
+!  (set_depth), so the baroclinic pressure-gradient feedback path
+!  runs through Zt_avg1 -- that is the field filtered here.
+!
+!  2026-11-19 blunt variant (filter Zt_avg1 + all zeta levels, all
+!  wet cells) suppressed the mode (lambda < 0) but ALSO diffused the
+!  legitimate grid-scale corner-pile structure (perturbation >100 m
+!  in the y-edge bands, mode band untouched) and killed the run at
+!  step 44.  This version is therefore cell-restricted: interior
+!  points only (no ghost reads -- closed-boundary ghosts are not
+!  maintained), wet cells only, ice-free cells only (zice==0: the
+!  checkerboard habitat east of the calving front).  One 2nd-order
+!  Shapiro pass (x then y) annihilates the pure checkerboard exactly,
+!  conserves mass, and damps smooth modes at O((dx/L)^4).
+!
+#endif
 #endif
 #ifdef WET_DRY
 !
@@ -1259,6 +1271,101 @@
      &                    EWperiodic(ng), NSperiodic(ng),               &
      &                    zeta(:,:,knew))
 #endif
+      IF ((iif(ng).eq.nfast(ng)).and.(.not.PREDICTOR_2D_STEP(ng))) THEN
+!
+!  Zt_avg1 only (the 3D-visible fast-average surface).  Cell-restricted:
+!  interior points only (no ghost reads -- closed-boundary ghosts are
+!  not maintained), wet cells only, and ice-free cells only (zice==0:
+!  the checkerboard habitat east of the calving front).  The corner
+!  pile and the ice-front/GL structures carry legitimate grid-scale
+!  signal and are left untouched (2026-11-19 blunt-filter run: the
+!  unguarded filter diffused the corner pile by >100 m and killed the
+!  run at step 44 while still suppressing the mode, lambda<0).
+!  x-pass fills the j-halo rows so the y-pass reads fresh scratch.
+!
+        DO j=JstrR,JendR
+          DO i=IstrR,IendR
+            IF (rmask_full(i,j).gt.0.0_r8.and.                          &
+     &          zice(i,j).eq.0.0_r8) THEN
+              zfil(i,j)=0.25_r8*(Zt_avg1(i-1,j)+2.0_r8*Zt_avg1(i,j)+    &
+     &                           Zt_avg1(i+1,j))
+            ELSE
+              zfil(i,j)=Zt_avg1(i,j)
+            END IF
+          END DO
+        END DO
+        DO j=Jstr+1,Jend-1
+          DO i=Istr+1,Iend-1
+            IF (rmask_full(i,j).gt.0.0_r8.and.                          &
+     &          zice(i,j).eq.0.0_r8) THEN
+              Zt_avg1(i,j)=0.25_r8*(zfil(i,j-1)+2.0_r8*zfil(i,j)+       &
+     &                              zfil(i,j+1))
+            END IF
+          END DO
+        END DO
+!
+!  Also clean the three instant zeta time levels with the same
+!  cell restriction.  2026-11-19 sweep: filtering Zt_avg1 alone left
+!  lambda unchanged (0.0042 vs 0.0039 control) -- the feedback loop
+!  lives in the BT zeta levels themselves (the LF update carries the
+!  old-level checkerboard forward); the blunt variant suppressed the
+!  mode (lambda < 0) precisely because it filtered the levels.  The
+!  pile/front damage came from unrestricted cells, not from touching
+!  the levels.
+!
+        DO kz=1,3
+          DO j=JstrR,JendR
+            DO i=IstrR,IendR
+              IF (rmask_full(i,j).gt.0.0_r8.and.                        &
+     &            zice(i,j).eq.0.0_r8) THEN
+                zfil(i,j)=0.25_r8*(zeta(i-1,j,kz)+2.0_r8*zeta(i,j,kz)+  &
+     &                             zeta(i+1,j,kz))
+              ELSE
+                zfil(i,j)=zeta(i,j,kz)
+              END IF
+            END DO
+          END DO
+          DO j=Jstr+1,Jend-1
+            DO i=Istr+1,Iend-1
+              IF (rmask_full(i,j).gt.0.0_r8.and.                        &
+     &            zice(i,j).eq.0.0_r8) THEN
+                zeta(i,j,kz)=0.25_r8*(zfil(i,j-1)+2.0_r8*zfil(i,j)+     &
+     &                                zfil(i,j+1))
+              END IF
+            END DO
+          END DO
+        END DO
+# ifdef ISF_DEBUG
+        IF (MOD(iic(ng),100).eq.0.and.tile.eq.0) THEN
+          WRITE(6,'(a,i9)') ' ZFILTER applied iic=',iic(ng)
+        END IF
+# endif
+!
+!  Re-exchange the filtered fields (periodic ghosts / tile seams).
+!
+        IF (EWperiodic(ng).or.NSperiodic(ng)) THEN
+          CALL exchange_r2d_tile (ng, tile,                             &
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            Zt_avg1)
+          CALL exchange_r2d_tile (ng, tile,                             &
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            zeta(:,:,1))
+          CALL exchange_r2d_tile (ng, tile,                             &
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            zeta(:,:,2))
+          CALL exchange_r2d_tile (ng, tile,                             &
+     &                            LBi, UBi, LBj, UBj,                   &
+     &                            zeta(:,:,3))
+        END IF
+# ifdef DISTRIBUTE
+        CALL mp_exchange2d (ng, tile, iNLM, 4,                          &
+     &                      LBi, UBi, LBj, UBj,                         &
+     &                      NghostPoints,                               &
+     &                      EWperiodic(ng), NSperiodic(ng),             &
+     &                      Zt_avg1, zeta(:,:,1), zeta(:,:,2),          &
+     &                      zeta(:,:,3))
+# endif
+      END IF
 !
 !=======================================================================
 !  Compute right-hand-side for the 2D momentum equations.
