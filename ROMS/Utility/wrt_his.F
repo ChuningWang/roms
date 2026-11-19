@@ -2771,6 +2771,7 @@
         ioerror=status
         RETURN
       END IF
+#  endif
 !
 !  Write out ice shelf mask at RHO-points.
 !
@@ -2985,13 +2986,12 @@
      &                     OCEAN(ng) % rzeta(:,:,KOUT))
       IF (FoundError(status, PIO_noerr, __LINE__, MyFile)) THEN
         IF (Master) THEN
-          WRITE (stdout,20) TRIM(Vname(1,idVist)), HIS(ng)%Rindex
+          WRITE (stdout,20) TRIM(Vname(1,idRzet)), HIS(ng)%Rindex
         END IF
         exit_flag=3
         ioerror=status
         RETURN
       END IF
-#  endif
 # endif
       END IF
 

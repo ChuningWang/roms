@@ -181,6 +181,7 @@
       real(r8) :: my_Cw, my_max_Cw
 # ifdef ICESHELF
       logical :: my_dry_arr(IminS:ImaxS)
+      real(r8) :: my_dry_eps
       real(r8), pointer :: zice_dg(:,:)
 # endif
 #endif
@@ -242,10 +243,20 @@
 # ifdef ICESHELF
 !  Hoist the dry-cell criterion out of the k loop:  it depends only
 !  on (i,j), not k — computing it at every level is 36x redundant.
+!  Branches mirror the wetdry geometric criterion (zeta-independent
+!  test for ice-covered columns), so the diagnostic exclusion matches
+!  the dynamics' dry set exactly (same eps margin as wetdry.F).
+          my_dry_eps=1.0E-10_r8
           DO i=Istr,Iend
-            my_dry_arr(i)=(h(i,j).le.0.0_r8).or.                         &
-     &             (zeta(i,j,idia)+h(i,j)+zice_dg(i,j)                   &
-     &              .le.Dcrit(ng))
+            IF (h(i,j).le.0.0_r8) THEN
+              my_dry_arr(i)=.TRUE.
+            ELSE IF (zice_dg(i,j).lt.0.0_r8) THEN
+              my_dry_arr(i)=(h(i,j)+zice_dg(i,j)                        &
+     &                       .le.Dcrit(ng)+my_dry_eps)
+            ELSE
+              my_dry_arr(i)=(zeta(i,j,idia)+h(i,j)+zice_dg(i,j)         &
+     &                       .le.Dcrit(ng)+my_dry_eps)
+            END IF
           END DO
 # endif
           DO k=N(ng),1,-1
@@ -271,6 +282,11 @@
               my_Cw=0.5_r8*ABS(wvel(i,j,k-1)+wvel(i,j,k))*              &
      &              dt(ng)/Hz(i,j,k)
 #  ifdef ICESHELF
+              ELSE
+!  Dry/excluded cells must not inherit the previous level's Cw: the
+!  my_C below runs unconditionally and a stale Cw corrupts the
+!  max-Courant diagnostic (2026-11-20 review).
+              my_Cw=0.0_r8
               END IF
 #  endif
               my_C=my_Cu+my_Cv+my_Cw
@@ -290,7 +306,7 @@
 !  mixing paths and carry no ocean meaning.  The Hz<1 guard became
 !  ineffective once degenerate columns got the Dcrit floor (Hz~1.1m)
 !  - coupled1 tripped MaxDensity=200 at a dry coastal knife cell
-!  with garbage T (2021-11-11).
+!  with garbage T (2026-11-11).
               IF ((.not.my_dry_arr(i)).and.(Hz(i,j,k).gt.1.0_r8)) THEN
                 IF (rho(i,j,k).gt.my_maxrho) THEN
                   my_maxrho=rho(i,j,k)

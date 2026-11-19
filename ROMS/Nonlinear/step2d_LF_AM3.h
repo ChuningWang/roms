@@ -600,6 +600,9 @@
       logical :: CORRECTOR_2D_STEP
 !
       integer :: i, is, j, ptsk
+#if defined ICESHEET_ZETA_FILTER && defined ICESHEET
+      integer :: kz
+#endif
 #ifdef DIAGNOSTICS_UV
       integer :: idiag
 #endif
@@ -609,6 +612,9 @@
       real(r8) :: melt, Tm_theta
 !
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: Dgrad
+#if defined ICESHEET_ZETA_FILTER && defined ICESHEET
+      real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: zfil
+#endif
 # ifdef ICESHEET_RUFRC_REFRESH
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: zeta_snap
 # endif
