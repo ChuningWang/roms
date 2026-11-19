@@ -357,6 +357,7 @@
         RETURN
       END IF
 # ifdef ICESHELF
+# ifdef ICESHEET
 !
 !  Write out ice sheet mask at RHO-points.
 !
@@ -422,7 +423,7 @@
         exit_flag=3
         ioerror=status
         RETURN
-      END IF
+      END IF# endif
 !
 !  Write out ice shelf mask at RHO-points.
 !
@@ -2687,6 +2688,7 @@
         RETURN
       END IF
 #  ifdef ICESHELF
+# ifdef ICESHEET
 !
 !  Write out ice sheet mask at RHO-points.
 !
@@ -2767,7 +2769,7 @@
         exit_flag=3
         ioerror=status
         RETURN
-      END IF
+      END IF# endif
 !
 !  Write out ice shelf mask at RHO-points.
 !
