@@ -142,6 +142,9 @@
 !
 #ifdef ICESHELF
       USE mod_isf,         ONLY : isf_drdz
+# ifdef ICESHEET
+      USE mod_isf,         ONLY : n_sig_smooth
+# endif
       USE mod_scalars,     ONLY : iic, ntstart
       USE mod_parallel,    ONLY : Master
 #endif
@@ -245,6 +248,13 @@
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: aux
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: dRx
       real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: dZx
+#if defined ICESHELF && defined ICESHEET
+      integer :: npass
+
+      real(r8) :: num, den
+      real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: zice_s
+      real(r8), dimension(IminS:ImaxS,JminS:JmaxS) :: zice_w
+#endif
 !
 #include "set_bounds.h"
 !
@@ -255,6 +265,71 @@
       GRho=g/rho0
       GRho0=1000.0_r8*GRho
       HalfGRho=0.5_r8*GRho
+#if defined ICESHELF && defined ICESHEET
+!
+!  Smooth the ice draft used by the surface ice pressure (sigma-term)
+!  ONLY.  The actual zice field is NOT modified: masks, thermodynamics
+!  and cavity geometry keep the instantaneous draft.  Rationale: the
+!  grid-scale component of the zice gradient in the sigma-term
+!  re-excites the 2-dx C-grid zeta mode at every baroclinic coupling
+!  in coupled ice-sheet runs (work_plan 2026-11-12).  The filter is
+!  normalized over ice-covered stencil members so the calving-front
+!  draft is preserved and open-ocean cells stay ice-free (no spurious
+!  front pressure spreading).  n_sig_smooth = 0 is bit-identical.
+!  Neighbor reads use directly the extended scratch range below; the
+!  zice load is clamped to array bounds (global edge tiles duplicate
+!  the edge value there, harmless).
+!
+!  2026-11-19: NEGATIVE RESULT.  Coupled1 DT=4s 500-step sweep:
+!  lambda = 0.0039/0.0056/0.0090 per step at L = 0/1/2 (L = 3 dies
+!  at step 113); L >= 1 also inflates the initial mode seed 30-50x.
+!  Attenuating the grid-scale zice gradient does NOT reduce lambda,
+!  falsifying the sigma-term zice-gradient driver hypothesis.
+!  Retained flag-off (default 0) for reproducibility of the sweep.
+!
+      DO j=MAX(JstrV-1-n_sig_smooth(ng),JminS),                         &
+     &     MIN(Jend+n_sig_smooth(ng),JmaxS)
+        DO i=MAX(IstrU-1-n_sig_smooth(ng),IminS),                       &
+     &       MIN(Iend+n_sig_smooth(ng),ImaxS)
+          zice_s(i,j)=zice(MIN(MAX(i,LBi),UBi),                         &
+     &                     MIN(MAX(j,LBj),UBj))
+        END DO
+      END DO
+      DO npass=1,n_sig_smooth(ng)
+        DO j=JstrV-1,Jend
+          DO i=IstrU-1,Iend
+            IF (zice_s(i,j).lt.0.0_r8) THEN
+              num=0.5_r8*zice_s(i,j)
+              den=0.5_r8
+              IF (zice_s(i-1,j).lt.0.0_r8) THEN
+                num=num+0.125_r8*zice_s(i-1,j)
+                den=den+0.125_r8
+              END IF
+              IF (zice_s(i+1,j).lt.0.0_r8) THEN
+                num=num+0.125_r8*zice_s(i+1,j)
+                den=den+0.125_r8
+              END IF
+              IF (zice_s(i,j-1).lt.0.0_r8) THEN
+                num=num+0.125_r8*zice_s(i,j-1)
+                den=den+0.125_r8
+              END IF
+              IF (zice_s(i,j+1).lt.0.0_r8) THEN
+                num=num+0.125_r8*zice_s(i,j+1)
+                den=den+0.125_r8
+              END IF
+              zice_w(i,j)=num/den
+            ELSE
+              zice_w(i,j)=zice_s(i,j)
+            END IF
+          END DO
+        END DO
+        DO j=JstrV-1,Jend
+          DO i=IstrU-1,Iend
+            zice_s(i,j)=zice_w(i,j)
+          END DO
+        END DO
+      END DO
+#endif
 #ifdef ATM_PRESS
       OneAtm=1013.25_r8                  ! 1 atm = 1013.25 mb
       fac=100.0_r8/rho0
@@ -292,9 +367,15 @@
      &         (z_w(i,j,N(ng))-z_r(i,j,N(ng)))*cff1
           P(i,j,N(ng))=g*z_w(i,j,N(ng))+                                &
 #ifdef ICESHELF
+# if defined ICESHEET
+     &                 g*(-zice_s(i,j))-                                &
+     &                 GRho*zice_s(i,j)*(rho(i,j,N(ng)) +               &
+     &                                 0.5_r8*isf_drdz(ng)*zice_s(i,j))+&
+# else
      &                 g*(-zice(i,j))-                                  &
      &                 GRho*zice(i,j)*(rho(i,j,N(ng)) +                 &
      &                                 0.5_r8*isf_drdz(ng)*zice(i,j))+  &
+# endif
 #endif
 #ifdef WEC_VF
      &                 zetat(i,j)+                                      &

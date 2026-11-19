@@ -267,6 +267,20 @@
             CASE ('n_taper')
               Npts=load_i(Nval, Rval, Ngrids, n_taper)
 !
+!  Sigma-term smoothing passes for the baroclinic pressure gradient
+!  (prsgrd): a mask-normalized 1-2-1 smoothed draft is used ONLY in
+!  the surface ice pressure computation; actual zice is untouched.
+!  0 = off (bit-identical).  Clamped to [0,3]; each pass consumes one
+!  halo ring.
+!
+            CASE ('n_sig_smooth')
+              Npts=load_i(Nval, Rval, Ngrids, n_sig_smooth)
+              IF (ANY(n_sig_smooth(1:Ngrids).lt.0).or.                 &
+     &            ANY(n_sig_smooth(1:Ngrids).gt.3)) THEN
+                IF (Master) WRITE (out,98)
+                n_sig_smooth(1:Ngrids)=MIN(MAX(n_sig_smooth(1:Ngrids),0),3)
+              END IF
+!
 !  Picard iteration parameters
 !
             CASE ('picard_alpha')
@@ -1300,6 +1314,8 @@
      &          'Surface elevation smoothing iterations.'
           WRITE (out,50) n_taper(ng), 'n_taper',                        &
      &          'Ice margin taper width [cells].'
+          WRITE (out,50) n_sig_smooth(ng), 'n_sig_smooth',              &
+     &          'Sigma-term zice smoothing passes [prsgrd].'
           WRITE (out,60) picard_alpha(ng), 'picard_alpha',              &
      &          'Picard relaxation factor (0 < alpha <= 1).'
           WRITE (out,60) H_calve(ng), 'H_calve',                        &
@@ -1831,6 +1847,7 @@
   97  FORMAT (/,' READ_IsfPar - unsupported LBC keyword for ice state',   &
      &        ' component ',i1,' (1=H, 2=u, 3=v, 4=T)',                      &
      &        /,14x,'use Clamped, Gradient or Closed only')
+  98  FORMAT (/,' READ_IsfPar - n_sig_smooth outside [0,3], clamped')
  180  FORMAT (10x,l1,2x,a,t32,a,i2.2,':',1x,a)
  185  FORMAT (10x,l1,2x,a,'(',i2.2,')',t32,a,i2.2,':',1x,a)
 !

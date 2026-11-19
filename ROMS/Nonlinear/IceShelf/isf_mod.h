@@ -354,6 +354,7 @@
       integer, allocatable :: n_ds_fem(:)      ! FEM driving stress
       integer, allocatable :: n_taper(:)        ! ice margin taper width
       integer, allocatable :: fd_ksp(:)         ! FD linear solver (PETSc)
+      integer, allocatable :: n_sig_smooth(:)   ! sigma-term zice smoothing passes
 !
 !  Picard iteration parameters
 !
@@ -737,6 +738,11 @@
           allocate ( n_taper(Ngrids) )
           Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
           n_taper(1:Ngrids)=0
+        END IF
+        IF (.not.allocated(n_sig_smooth)) THEN
+          allocate ( n_sig_smooth(Ngrids) )
+          Dmem(1)=Dmem(1)+REAL(Ngrids,r8)
+          n_sig_smooth(1:Ngrids)=0
         END IF
         IF (.not.allocated(picard_alpha)) THEN
           allocate ( picard_alpha(Ngrids) )
@@ -1158,6 +1164,7 @@
       IF (allocated(n_nuh_interp))    deallocate ( n_nuh_interp )
       IF (allocated(n_ds_fem))       deallocate ( n_ds_fem )
       IF (allocated(n_taper))         deallocate ( n_taper )
+      IF (allocated(n_sig_smooth))    deallocate ( n_sig_smooth )
       IF (allocated(picard_alpha))    deallocate ( picard_alpha )
       IF (allocated(H_calve))         deallocate ( H_calve )
       IF (allocated(min_his))         deallocate ( min_his )
