@@ -1775,6 +1775,17 @@
 # ifdef WET_DRY
           ru(i,j,1,nrhs)=ru(i,j,1,nrhs)*umask_wet(i,j)
 # endif
+# ifdef ISF_DEBUG
+          IF (iic(ng).eq.ntstart(ng).and.tile.eq.0) THEN
+            DO k=1,N(ng)
+              IF (ru(i,j,k,nrhs).ne.ru(i,j,k,nrhs)) THEN
+                WRITE(6,'(a,3i4,2(es12.4))') ' RU-NAN i,j,k=', i, j, k,  &
+     &                ru(i,j,k,nrhs), Hz(i,j,k)
+                EXIT
+              END IF
+            END DO
+          END IF
+# endif
           rufrc(i,j)=ru(i,j,1,nrhs)
 # ifdef DIAGNOSTICS_UV
           DiaRUfrc(i,j,3,M2pgrd)=DiaRU(i,j,1,nrhs,M3pgrd)

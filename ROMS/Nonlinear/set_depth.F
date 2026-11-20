@@ -230,8 +230,17 @@
           DO i=IstrT,IendT
 # if defined WET_DRY
 #  ifdef ICESHELF
-            IF ((h(i,j)+zice(i,j)+hc(ng)).eq.0.0_r8) THEN
-              h(i,j)=eps-hc(ng)-zice(i,j)
+            IF ((h(i,j)+zice(i,j)).le.0.0_r8) THEN
+!  Grounded cells whose ice base is at or below the bed (h+zice <= 0):
+!  repair h so the column is exactly Dcrit.  Without this the Dcrit
+!  floor in the k loop below spreads the nominal film over layers
+!  that hang BELOW z_w(0)=-h (the S-layers reference zice, the
+!  z_w(0) reference does not), inverting the vertical grid (Hz<0)
+!  and NaN-ing the 3D RHS at the grounding line -- 0*NaN then
+!  defeats the wet/dry masks (2026-11-20, ISOMIP+ Ocean3 yearly-
+!  geometry segments).  Cells with a genuine 0.1-m film (h+zice=
+!  Dcrit) already satisfy this and keep their column.
+              h(i,j)=Dcrit(ng)-zice(i,j)
             END IF
 #  else
             IF ((h(i,j)+hc(ng)).eq.0.0_r8) THEN
@@ -496,8 +505,17 @@
           DO i=IstrT,IendT
 # if defined WET_DRY
 #  ifdef ICESHELF
-            IF ((h(i,j)+zice(i,j)+hc(ng)).eq.0.0_r8) THEN
-              h(i,j)=eps-hc(ng)-zice(i,j)
+            IF ((h(i,j)+zice(i,j)).le.0.0_r8) THEN
+!  Grounded cells whose ice base is at or below the bed (h+zice <= 0):
+!  repair h so the column is exactly Dcrit.  Without this the Dcrit
+!  floor in the k loop below spreads the nominal film over layers
+!  that hang BELOW z_w(0)=-h (the S-layers reference zice, the
+!  z_w(0) reference does not), inverting the vertical grid (Hz<0)
+!  and NaN-ing the 3D RHS at the grounding line -- 0*NaN then
+!  defeats the wet/dry masks (2026-11-20, ISOMIP+ Ocean3 yearly-
+!  geometry segments).  Cells with a genuine 0.1-m film (h+zice=
+!  Dcrit) already satisfy this and keep their column.
+              h(i,j)=Dcrit(ng)-zice(i,j)
             END IF
 #  else
             IF ((h(i,j)+hc(ng)).eq.0.0_r8) THEN

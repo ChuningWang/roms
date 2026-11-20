@@ -1047,6 +1047,18 @@
 !
       IF (FIRST_2D_STEP) THEN
         cff1=dtfast(ng)
+# ifdef ISF_DEBUG
+        DO j=JstrV-1,Jend
+          DO i=IstrU-1,Iend
+            IF (rhs_ubar(i,j).ne.rhs_ubar(i,j).and.iif(ng).eq.1         &
+     &          .and.tile.eq.0) THEN
+              WRITE(6,'(a,2i5,6(es12.4))') ' UBAR-NAN i,j=', i, j,      &
+     &            rhs_ubar(i,j), rufrc(i,j), gzeta(i-1,j),              &
+     &            gzeta(i,j), hw(i-1,j), hw(i,j)
+            END IF
+          END DO
+        END DO
+# endif
         DO j=JstrV-1,Jend
           DO i=IstrU-1,Iend
             rhs_zeta(i,j)=(DUon(i,j)-DUon(i+1,j))+                      &
